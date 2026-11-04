@@ -55,6 +55,18 @@ Executed under the ELITE plan §9, session `.kilo/sessions/20261103-dev-elite-im
 
 This addendum records execution facts only; it does not approve product scope, certification, or release.
 
+## 2026-11-04 addendum #4 (Slice 7: P0-2 git + P1-7 rate limit + P1-8 user admin)
+
+| Item | Disposition | Evidence |
+|---|---|---|
+| P0-2 git repository | Root repo `main`: initial commit `cd66388` (ARES workspace + shared governance; 6 nested independent repos and plan dirs excluded via .gitignore; staged content scanned — no real secrets), feature commit `8a79adf`. All subsequent claims are revision-bound. | `git log --oneline` |
+| P1-7 login rate limiting | `LoginRateLimiter` (5 consecutive failures -> 15 min lockout, success resets, case-insensitive, checked before credential work) | 5 tests + locked-account-with-correct-password integration test |
+| P1-8 user administration | `/admin/users` list/create/toggle, ROLE_MANAGE via **live DB query** (`has_permission_db` — role assignments effective immediately), CSRF everywhere, self-deactivation rejected, created user verified login+post e2e | 4 integration tests |
+| P2-2 dependency cleanup | tauri removed from workspace deps; `TAURI_IN_LOCK=0` | build/test green |
+| Full baseline | fmt/clippy -D warnings/test --locked/audit all EXIT=0; **50 tests passed, 0 failed** | session tests/20261104-0500-slice7.log @ 8a79adf |
+
+This addendum records execution facts only; it does not approve product scope, certification, or release.
+
 ## 2026-11-04 addendum #3 (Slice 6: balanced double-entry + authentication)
 
 | Item | Disposition | Evidence |

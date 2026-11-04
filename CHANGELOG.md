@@ -2,6 +2,20 @@
 
 本檔記錄根 workspace（`core/`、`platform/`、`web/`、`crates/flaps_bridge`）的實際變更。格式參考 Keep a Changelog。子專案（ekpi-platform、Wellfit、SyncMesh）各自有變更記錄。
 
+## [Unreleased] — 2026-11-04（第三輪：治理、防爆破、帳號管理）
+
+### Added
+- **根 workspace 版控（P0-2）**：`git init -b main`＋初始提交 `cd66388`——.gitignore 裁定範圍（排除 6 個嵌套獨立 repo、計畫目錄、target 7GB、本機 DB）；staged 內容安全掃描（無真實秘密）；此後證據綁修訂版。
+- **登入速率限制（P1-7）**：`LoginRateLimiter`——每帳號 5 次連續失敗鎖定 15 分鐘（成功重置；鎖定訊息含剩餘秒數；大小寫不敏感；檢查先於憑證驗證）。
+- **帳號管理 UI（P1-8）**：`/admin/users`（清單＋建立＋啟停），ROLE_MANAGE **即時 DB 查詢**把關；使用者名稱規範（3–32、小寫/數字/_/-）、密碼 ≥8、角色白名單；自我停用拒絕；全表單 CSRF。
+
+### Changed
+- RBAC 檢查改為**即時 DB 查詢**（`has_permission_db`）——角色指派於啟動後即時生效（原 in-memory 快照不一致）。
+- 移除無人使用的 tauri workspace 依賴（P2-2；Cargo.lock tauri 條目歸零）。
+
+### Security
+- 暴力破解防護（P1-7）＋帳號停用（停用後登入被拒，測試覆蓋）。
+
 ## [Unreleased] — 2026-11-04（第二輪：複式記帳＋認證）
 
 ### Added
