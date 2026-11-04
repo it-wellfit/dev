@@ -956,6 +956,14 @@ async fn ai_suggest(
     session: Extension<Session>,
     Form(form): Form<DraftParseForm>,
 ) -> Response {
+    // CSRF (T-08): synchronizer token check before any work.
+    if form.csrf_token != session.csrf_token {
+        return (
+            StatusCode::FORBIDDEN,
+            "CSRF 驗證失敗；請重新整理頁面後再操作。".to_string(),
+        )
+            .into_response();
+    }
     // AIS-001: flag gate (default OFF) - 503 with enablement guidance.
     if !ai_suggest_enabled(&state).await {
         let template = AiSuggestionTemplate {
@@ -1032,6 +1040,21 @@ async fn ai_suggest(
     };
 
     // AIS-002: rendered as a SUGGESTION ONLY - nothing is stored or posted.
+    // OQ-10-1: request audited WITHOUT the raw text (T-04 log masking); only
+    // the length and prompt version are recorded.
+    let _ = sqlx::query(
+        "INSERT INTO audit_log (log_id, transaction_id, event_type, event_data, performed_by) \
+         VALUES (?, NULL, 'AI_SUGGEST_REQUESTED', ?, ?)",
+    )
+    .bind(uuid::Uuid::new_v4().to_string())
+    .bind(format!(
+        "{{\"text_len\":{},\"prompt_version\":\"v1\",\"schema_gate\":\"passed\"}}",
+        text.len()
+    ))
+    .bind(&session.user_id)
+    .execute(&state.pool)
+    .await;
+
     let template = AiSuggestionTemplate {
         acting_user: session.user_id.clone(),
         csrf_token: session.csrf_token.clone(),
@@ -1455,20 +1478,33 @@ async fn import_preview(
     }
 
     let mut bytes: Option<Vec<u8>> = None;
+    let mut form_csrf: Option<String> = None;
     while let Some(field) = match multipart.next_field().await {
         Ok(f) => f,
         Err(e) => {
             return (StatusCode::BAD_REQUEST, format!("上傳格式錯誤：{e}")).into_response();
         }
     } {
-        if field.name() == Some("file") {
-            match field.bytes().await {
+        match field.name() {
+            Some("csrf_token") => {
+                form_csrf = field.text().await.ok();
+            }
+            Some("file") => match field.bytes().await {
                 Ok(b) => bytes = Some(b.to_vec()),
                 Err(e) => {
                     return (StatusCode::BAD_REQUEST, format!("讀取檔案失敗：{e}")).into_response()
                 }
-            }
+            },
+            _ => {}
         }
+    }
+    // CSRF (T-08): multipart forms carry the synchronizer token too.
+    if form_csrf.as_deref() != Some(&session.csrf_token) {
+        return (
+            StatusCode::FORBIDDEN,
+            "CSRF 驗證失敗；請重新整理頁面後再操作。".to_string(),
+        )
+            .into_response();
     }
     let Some(data) = bytes else {
         return (StatusCode::BAD_REQUEST, "缺少檔案欄位 file。".to_string()).into_response();
@@ -3133,10 +3169,11 @@ mod tests {
     // Slice 8 acceptance: import pipeline (IMP-001..003)
     // ------------------------------------------------------------------
 
-    fn csv_multipart(csv_text: &str) -> (header::HeaderValue, Body) {
+    fn csv_multipart(csv_text: &str, csrf: &str) -> (header::HeaderValue, Body) {
         let boundary = "X-BOUNDARY-TEST";
         let body = format!(
-            "--{boundary}\r\nContent-Disposition: form-data; name=\"file\"; filename=\"rows.csv\"\r\n\
+            "--{boundary}\r\nContent-Disposition: form-data; name=\"csrf_token\"\r\n\r\n{csrf}\r\n\
+             --{boundary}\r\nContent-Disposition: form-data; name=\"file\"; filename=\"rows.csv\"\r\n\
              Content-Type: text/csv\r\n\r\n{csv_text}\r\n--{boundary}--\r\n"
         );
         (
@@ -3160,26 +3197,13 @@ mod tests {
         s
     }
 
-    #[allow(dead_code)]
-    async fn run_import_preview(app: &Router, csv_text: &str) -> (StatusCode, Option<String>) {
-        let (ctype, body) = csv_multipart(csv_text);
-        let request = Request::builder()
-            .method("POST")
-            .uri("/import/preview")
-            .header(header::CONTENT_TYPE, ctype)
-            .body(body)
-            .unwrap();
-        let (status, _, location) = send(app.clone(), request).await;
-        (status, location)
-    }
-
     #[tokio::test]
     async fn import_preview_reports_and_persists_no_ledger_effects() {
         let (app, pool) = test_app().await;
         seed_credentials(&pool).await;
-        let (cookie, _csrf) = login(&app, &pool, "admin", TEST_ADMIN_PASSWORD).await;
+        let (cookie, csrf) = login(&app, &pool, "admin", TEST_ADMIN_PASSWORD).await;
 
-        let (ctype, body) = csv_multipart(&sample_csv(3, 0));
+        let (ctype, body) = csv_multipart(&sample_csv(3, 0), &csrf);
         let request = Request::builder()
             .method("POST")
             .uri("/import/preview")
@@ -3214,7 +3238,7 @@ mod tests {
         let (cookie, csrf) = login(&app, &pool, "admin", TEST_ADMIN_PASSWORD).await;
 
         // IMP-002: 2 good rows + 1 bad row (3-decimal amount).
-        let (ctype, body) = csv_multipart(&sample_csv(2, 1));
+        let (ctype, body) = csv_multipart(&sample_csv(2, 1), &csrf);
         let request = Request::builder()
             .method("POST")
             .uri("/import/preview")
@@ -3260,7 +3284,7 @@ mod tests {
         seed_credentials(&pool).await;
         let (cookie, csrf) = login(&app, &pool, "admin", TEST_ADMIN_PASSWORD).await;
 
-        let (ctype, body) = csv_multipart(&sample_csv(1, 0));
+        let (ctype, body) = csv_multipart(&sample_csv(1, 0), &csrf);
         let request = Request::builder()
             .method("POST")
             .uri("/import/preview")
@@ -3644,13 +3668,15 @@ mod tests {
 
     #[tokio::test]
     async fn ai_suggest_disabled_by_default_returns_503() {
-        let (app, _pool, cookie, _csrf) = seeded_app_with_admin().await;
+        let (app, _pool, cookie, csrf) = seeded_app_with_admin().await;
         let request = Request::builder()
             .method("POST")
             .uri("/drafts/ai_suggest")
             .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
             .header(header::COOKIE, cookie)
-            .body(Body::from("csrf_token=x&text=支付租金 12000 元"))
+            .body(Body::from(format!(
+                "csrf_token={csrf}&text=支付租金 12000 元"
+            )))
             .unwrap();
         let (status, body, _) = send(app, request).await;
         // AIS-001: feature flag defaults to OFF -> explicit 503 with guidance.

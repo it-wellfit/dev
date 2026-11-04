@@ -104,7 +104,36 @@
                     </tbody>
                 </table>
             </div>
-            <p class="section-note">停用為可逆操作；密碼重設請由管理員以本頁重新建立帳號（舊帳號先停用）。</p>
+            <p class="section-note">停用為可逆操作；停用會立即撤銷該帳號的全部工作階段。</p>
+        </section>
+
+        <section aria-labelledby="reset-title">
+            <h2 id="reset-title">重設密碼</h2>
+            <form method="post" action="/admin/users/reset_password">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <fieldset>
+                    <legend>密碼輪換（重設後該帳號的全部工作階段立即失效，並寫入稽核）</legend>
+
+                    <div class="form-row">
+                        <label for="reset-user">目標帳號 <span aria-hidden="true">*</span></label>
+                        <select class="input" id="reset-user" name="user_id" required>
+                            {% for u in users %}
+                            <option value="{{ u.user_id }}">{{ u.username }}（{{ u.user_id }}）</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-row">
+                        <label for="new-password">新密碼 <span aria-hidden="true">*</span></label>
+                        <input class="input" type="password" id="new-password" name="new_password" autocomplete="new-password" minlength="8" required>
+                        <p class="hint">至少 8 字元；請透過安全管道告知當事人，系統不會顯示。</p>
+                    </div>
+                </fieldset>
+
+                <div class="form-actions">
+                    <button class="btn btn-primary" type="submit">重設密碼</button>
+                </div>
+            </form>
         </section>
     </main>
 </body>
