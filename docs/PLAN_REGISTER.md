@@ -55,6 +55,19 @@ Executed under the ELITE plan §9, session `.kilo/sessions/20261103-dev-elite-im
 
 This addendum records execution facts only; it does not approve product scope, certification, or release.
 
+## 2026-11-04 addendum #5 (Slice 8: data acquisition and insight layer)
+
+| Item | Disposition | Evidence |
+|---|---|---|
+| Layer A import | Two-phase CSV pipeline: preview (dry-run, SHA-256, no ledger effects) + confirm (replay-guarded 409, valid rows only, batch audit) | IMP-001..003 integration tests; curl smoke 303/409 |
+| Layer B wizard | /new three-step guided posting with rule-name errors and from_draft/from_batch prefill | WIZ-001 test |
+| Layer C drafts | flaps_core::parser (rule-table, evidence cards, deterministic) + /drafts/parse, human confirmation required | DRAFT-001 test; parser unit tests |
+| Layer D insight | Server-rendered SVG chart (zero-JS), /reports/monthly + .csv (LEDGER_READ), print CSS | RPT-001 + ZJS-001 tests; curl smoke |
+| 3D ruling | Interactive 3D conflicts with zero-JS charter; SVG+CSV-export alternative delivered; constitutional exemption deferred (OQ-8-1) | plan v2 section 12.4 |
+| Baseline | fmt/clippy/test/audit all EXIT=0; 62 tests passed 0 failed | session tests/20261104-0800-slice8-final.log @ 662ff39 |
+
+This addendum records execution facts only; it does not approve product scope, certification, or release.
+
 ## 2026-11-04 addendum #4 (Slice 7: P0-2 git + P1-7 rate limit + P1-8 user admin)
 
 | Item | Disposition | Evidence |

@@ -2,6 +2,22 @@
 
 本檔記錄根 workspace（`core/`、`platform/`、`web/`、`crates/flaps_bridge`）的實際變更。格式參考 Keep a Changelog。子專案（ekpi-platform、Wellfit、SyncMesh）各自有變更記錄。
 
+## [Unreleased] — 2026-11-04（第四輪：Slice 8 資料獲取與洞察層）
+
+### Added
+- **快速匯入（Layer A）**：兩段式 CSV/TSV 管線——`POST /import/preview`（multipart ≤2MB／5,000 列，逐列規則驗證、乾跑報告、SHA-256 指紋，**零帳務副作用**）→ `POST /import/confirm`（CSRF、狀態機重放防護 409、僅合格列登帳、批次稽核 `IMPORT_CONFIRMED`）。
+- **引導式登帳精靈（Layer B）**：`GET /new` 三步流程（模板選擇→借貸填寫→確認摘要）；錯誤停留原步並顯示**規則名稱**（WIZ-001）；支援 `from_draft`／`from_batch` 預填並標示來源。
+- **草稿解析（Layer C）**：`flaps_core::parser`——規則表驅動的非結構化文字解析（日期三格式、金額、借貸箭號、科目關鍵字對映），每欄位附**依據卡**（規則＋命中文字）；`POST /drafts/parse` 儲存草稿，**人工確認必經**，AI 不直接落地（H3 模型不變）。
+- **洞察層（Layer D）**：dashboard 伺服器端 **SVG 月度借貸長條圖**（零 JS，僅整數聚合生成，safe filter 已審核）；`GET /reports/monthly`（科目借貸彙計）與 `.csv` 匯出（LEDGER_READ、整數分）；`@media print` 列印樣式。
+- `migrations/0003_import_and_drafts.sql`（import_batches/import_rows/drafts）＋重放測試。
+- Slice 8 驗收測試：IMP-001~003、WIZ-001、DRAFT-001、RPT-001、ZJS-001（`<script>` 計數 = 0 含 SVG 頁）。
+
+### Security
+- 匯入預檢無副作用、確認有重放防護、批次級稽核事件；報表與匯出受 LEDGER_READ 把關；解析器純規則（AI 建議與落地分離）。
+
+### Notes
+- 互動式 3D 視覺化與 Strict Zero-JS 憲章衝突，裁定為 Open Question OQ-8-1（零 JS 內以 SVG＋CSV 出場替代；豁免需另立 ADR）。
+
 ## [Unreleased] — 2026-11-04（第三輪：治理、防爆破、帳號管理）
 
 ### Added
