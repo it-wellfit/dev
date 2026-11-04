@@ -1,0 +1,45 @@
+﻿[workspace]
+resolver = "2"
+members = [
+    "core",
+    "platform",
+    "web",
+    "crates/flaps_bridge",
+]
+
+
+[workspace.dependencies]
+# Core dependencies
+axum = "0.7"
+tokio = { version = "1.0", features = ["full"] }
+
+# Database
+sqlx = { version = "0.8", features = ["runtime-tokio", "macros", "sqlite"] }
+
+# Web framework
+tauri = "2.0"
+
+# AI clients
+reqwest = { version = "0.12", features = ["json", "native-tls"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "1.0"
+
+# Windows COM support
+windows = { package = "windows", version = "0.58", features = ["Win32_Foundation", "Win32_System_Com"] }
+
+
+
+# State management
+web-sys = "0.3"
+
+
+[profile.release]
+opt-level = 3
+codegen-units = 1
+lto = true
+panic = "abort"
+split-debuginfo = "info"
+
+
+

@@ -1,0 +1,1469 @@
+﻿<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flaps ERP - 企業資源規劃系統</title>
+    <style>
+        :root {
+            --primary: #1e3a5f;
+            --primary-light: #2d5a87;
+            --secondary: #4a90e2;
+            --accent: #00bcd4;
+            --success: #28a745;
+            --warning: #ffc107;
+            --danger: #dc3545;
+            --info: #17a2b8;
+            --bg: #f5f7fa;
+            --card-bg: #ffffff;
+            --text: #333333;
+            --text-muted: #666666;
+            --border: #e0e0e0;
+            --shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans TC', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+        }
+
+        .app-container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 260px;
+            background: var(--primary);
+            color: white;
+            padding: 20px 0;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+            z-index: 100;
+        }
+
+        .sidebar-header {
+            padding: 0 20px 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            margin-bottom: 20px;
+        }
+
+        .sidebar-header h1 {
+            font-size: 1.5em;
+            margin-bottom: 5px;
+        }
+
+        .sidebar-header p {
+            font-size: 0.85em;
+            opacity: 0.7;
+        }
+
+        .sidebar-nav {
+            list-style: none;
+        }
+
+        .sidebar-nav li {
+            margin-bottom: 2px;
+        }
+
+        .sidebar-nav a {
+            display: flex;
+            align-items: center;
+            padding: 12px 20px;
+            color: rgba(255,255,255,0.8);
+            text-decoration: none;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+        }
+
+        .sidebar-nav a:hover {
+            background: rgba(255,255,255,0.1);
+            color: white;
+        }
+
+        .sidebar-nav a.active {
+            background: rgba(255,255,255,0.15);
+            color: white;
+            border-left-color: var(--accent);
+        }
+
+        .sidebar-nav a .icon {
+            margin-right: 10px;
+            width: 20px;
+            text-align: center;
+        }
+
+        .sidebar-section {
+            padding: 10px 20px 5px;
+            font-size: 0.75em;
+            text-transform: uppercase;
+            opacity: 0.5;
+            letter-spacing: 1px;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            margin-left: 260px;
+            padding: 20px;
+        }
+
+        .header-bar {
+            background: var(--card-bg);
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-bar h2 {
+            font-size: 1.3em;
+            color: var(--primary);
+        }
+
+        .header-bar .status {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 500;
+        }
+
+        .status-badge.mock { background: #fff3cd; color: #856404; }
+        .status-badge.real { background: #d4edda; color: #155724; }
+        .status-badge.error { background: #f8d7da; color: #721c24; }
+
+        /* Cards */
+        .card {
+            background: var(--card-bg);
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: var(--shadow);
+            margin-bottom: 20px;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .card-header h3 {
+            font-size: 1.1em;
+            color: var(--primary);
+        }
+
+        /* Dashboard Grid */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: var(--card-bg);
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: var(--shadow);
+            border-left: 4px solid var(--secondary);
+        }
+
+        .stat-card .label {
+            font-size: 0.85em;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
+
+        .stat-card .value {
+            font-size: 2em;
+            font-weight: bold;
+            color: var(--primary);
+        }
+
+        .stat-card .sub {
+            font-size: 0.8em;
+            color: var(--text-muted);
+            margin-top: 5px;
+        }
+
+        /* API Status Grid */
+        .api-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+        }
+
+        .api-card {
+            background: var(--card-bg);
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: var(--shadow);
+            border-left: 4px solid var(--info);
+        }
+
+        .api-card .name {
+            font-weight: 600;
+            color: var(--primary);
+            margin-bottom: 5px;
+        }
+
+        .api-card .endpoint {
+            font-size: 0.8em;
+            color: var(--text-muted);
+            font-family: monospace;
+            margin-bottom: 8px;
+        }
+
+        .api-card .status-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 8px;
+        }
+
+        .api-status {
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            font-weight: 500;
+        }
+
+        .api-status.pass { background: #d4edda; color: #155724; }
+        .api-status.fail { background: #f8d7da; color: #721c24; }
+        .api-status.pending { background: #fff3cd; color: #856404; }
+        .api-status.mock { background: #cce5ff; color: #004085; }
+
+        /* Tables */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .data-table th, .data-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .data-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .data-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        /* Forms */
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: var(--text);
+        }
+
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            font-size: 1em;
+        }
+
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+            outline: none;
+            border-color: var(--secondary);
+            box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.2);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .btn-primary { background: var(--secondary); color: white; }
+        .btn-primary:hover { background: var(--primary-light); }
+        .btn-success { background: var(--success); color: white; }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-secondary { background: #6c757d; color: white; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* Alerts */
+        .alert {
+            padding: 12px 15px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+
+        .alert-success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .alert-error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .alert-warning { background: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
+        .alert-info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+
+        /* Page sections */
+        .page { display: none; }
+        .page.active { display: block; }
+
+        /* Loading */
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-muted);
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid var(--secondary);
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .sidebar { width: 60px; }
+            .sidebar-header h1, .sidebar-header p, .sidebar-nav a span, .sidebar-section { display: none; }
+            .sidebar-nav a { justify-content: center; padding: 12px; }
+            .sidebar-nav a .icon { margin-right: 0; }
+            .main-content { margin-left: 60px; }
+        }
+
+        /* Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-overlay.active { display: flex; }
+
+        .modal {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5em;
+            cursor: pointer;
+            color: var(--text-muted);
+        }
+
+        /* Utility */
+        .text-muted { color: var(--text-muted); }
+        .text-success { color: var(--success); }
+        .text-danger { color: var(--danger); }
+        .text-warning { color: var(--warning); }
+        .mt-10 { margin-top: 10px; }
+        .mb-10 { margin-bottom: 10px; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <h1>🏦 Flaps ERP</h1>
+                <p>銀行金流整合平台</p>
+            </div>
+            <div class="sidebar-section">總覽</div>
+            <ul class="sidebar-nav">
+                <li><a href="#" class="active" onclick="showPage('dashboard')"><span class="icon">📊</span><span>系統總覽</span></a></li>
+                <li><a href="#" onclick="showPage('api-center')"><span class="icon">🔌</span><span>API 服務中心</span></a></li>
+                <li><a href="#" onclick="showPage('connection-check')"><span class="icon">🔗</span><span>連線檢查</span></a></li>
+                <li><a href="#" onclick="showPage('security-check')"><span class="icon">🔒</span><span>資安檢查</span></a></li>
+            </ul>
+            <div class="sidebar-section">台幣業務</div>
+            <ul class="sidebar-nav">
+                <li><a href="#" onclick="showPage('twd-payment')"><span class="icon">💰</span><span>台幣付款放行</span></a></li>
+                <li><a href="#" onclick="showPage('twd-query')"><span class="icon">🔍</span><span>台幣交易查詢</span></a></li>
+                <li><a href="#" onclick="showPage('statements')"><span class="icon">📋</span><span>交易明細查詢</span></a></li>
+            </ul>
+            <div class="sidebar-section">外幣業務</div>
+            <ul class="sidebar-nav">
+                <li><a href="#" onclick="showPage('fx-payment')"><span class="icon">💱</span><span>外幣付款預檢</span></a></li>
+                <li><a href="#" onclick="showPage('fx-query')"><span class="icon">🔍</span><span>外幣交易查詢</span></a></li>
+            </ul>
+            <div class="sidebar-section">帳戶管理</div>
+            <ul class="sidebar-nav">
+                <li><a href="#" onclick="showPage('balance')"><span class="icon">💳</span><span>帳戶餘額查詢</span></a></li>
+                <li><a href="#" onclick="showPage('accounts')"><span class="icon">📁</span><span>帳戶管理</span></a></li>
+            </ul>
+            <div class="sidebar-section">工具</div>
+            <ul class="sidebar-nav">
+                <li><a href="#" onclick="showPage('error-codes')"><span class="icon">⚠️</span><span>錯誤代碼查詢</span></a></li>
+                <li><a href="#" onclick="showPage('test-records')"><span class="icon">📝</span><span>測試紀錄</span></a></li>
+                <li><a href="#" onclick="showPage('pdf-preview')"><span class="icon">📄</span><span>PDF 結果預覽</span></a></li>
+                <li><a href="#" onclick="showPage('release-gate')"><span class="icon">✅</span><span>上線驗收中心</span></a></li>
+            </ul>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="header-bar">
+                <h2 id="page-title">系統總覽</h2>
+                <div class="status">
+                    <span class="status-badge mock" id="mode-badge">模擬模式</span>
+                    <span class="text-muted" id="last-update">最後更新: --</span>
+                </div>
+            </div>
+
+            <!-- Dashboard Page -->
+            <div id="page-dashboard" class="page active">
+                <div class="dashboard-grid">
+                    <div class="stat-card">
+                        <div class="label">總交易數</div>
+                        <div class="value" id="stat-total-tx">0</div>
+                        <div class="sub">所有時間</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">總交易金額</div>
+                        <div class="value" id="stat-total-amount">NT$0</div>
+                        <div class="sub">TWD</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">啟用帳戶</div>
+                        <div class="value" id="stat-active-accounts">0</div>
+                        <div class="sub">銀行帳戶</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">待處理交易</div>
+                        <div class="value" id="stat-pending">0</div>
+                        <div class="sub">需要處理</div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3>8 項銀行 API 服務狀態</h3>
+                        <button class="btn btn-primary" onclick="refreshApiStatus()">重新檢查</button>
+                    </div>
+                    <div class="api-grid" id="api-status-grid">
+                        <div class="loading"><div class="spinner"></div>載入中...</div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3>系統健康狀態</h3>
+                    </div>
+                    <div id="system-health">
+                        <div class="loading"><div class="spinner"></div>載入中...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- API Center Page -->
+            <div id="page-api-center" class="page">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>API 服務詳細規格</h3>
+                    </div>
+                    <div id="api-detail">
+                        <div class="loading"><div class="spinner"></div>載入中...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TWD Payment Page -->
+            <div id="page-twd-payment" class="page">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>台幣付款放行</h3>
+                    </div>
+                    <div id="twd-payment-form">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>付款帳號</label>
+                                <input type="text" id="twd-payer-account" placeholder="付款帳號" value="1234567890123">
+                            </div>
+                            <div class="form-group">
+                                <label>付款統編</label>
+                                <input type="text" id="twd-payer-id" placeholder="付款統編" value="1234567890">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>收款銀行代碼</label>
+                                <input type="text" id="twd-payee-bank" placeholder="013" value="013">
+                            </div>
+                            <div class="form-group">
+                                <label>收款分行代碼</label>
+                                <input type="text" id="twd-payee-branch" placeholder="0001" value="0001">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>收款帳號</label>
+                                <input type="text" id="twd-payee-account" placeholder="收款帳號" value="9876543210">
+                            </div>
+                            <div class="form-group">
+                                <label>收款人名稱</label>
+                                <input type="text" id="twd-payee-name" placeholder="收款人" value="測試收款人">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>付款日期 (YYYYMMDD)</label>
+                                <input type="text" id="twd-tx-date" placeholder="20261028" value="20261028">
+                            </div>
+                            <div class="form-group">
+                                <label>付款金額</label>
+                                <input type="text" id="twd-tx-amt" placeholder="100000" value="100000">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>手續費負擔別 (0=外, 1=內)</label>
+                                <select id="twd-charge-fee">
+                                    <option value="0">0 - 外付 (付款人負擔)</option>
+                                    <option value="1">1 - 內含 (收款人負擔)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>交易序號 (txSeq)</label>
+                                <input type="text" id="twd-tx-seq" placeholder="TX-001" value="TX-001">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>備註</label>
+                            <textarea id="twd-memo" rows="2" placeholder="付款備註">測試付款</textarea>
+                        </div>
+                        <button class="btn btn-primary" onclick="submitTwdPayment()">送出付款</button>
+                    </div>
+                    <div id="twd-payment-result" class="mt-10"></div>
+                </div>
+            </div>
+
+            <!-- TWD Query Page -->
+            <div id="page-twd-query" class="page">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>台幣交易狀態查詢</h3>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>付款統編</label>
+                            <input type="text" id="twd-query-payer" placeholder="付款統編" value="1234567890">
+                        </div>
+                        <div class="form-group">
+                            <label>交易序號 (txSeq)</label>
+                            <input type="text" id="twd-query-txseq" placeholder="TX-001" value="TX-001">
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" onclick="queryTwdStatus()">查詢狀態</button>
+                    <div id="twd-query-result" class="mt-10"></div>
+                </div>
+            </div>
+
+            <!-- Statements Page -->
+            <div id="page-statements" class="page">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>交易明細查詢</h3>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>公司統編</label>
+                            <input type="text" id="stmt-company" placeholder="公司統編" value="12345678">
+                        </div>
+                        <div class="form-group">
+                            <label>查詢帳號</label>
+                            <input type="text" id="stmt-account" placeholder="查詢帳號" value="1234567890123">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>起始日期 (YYYYMMDD)</label>
+                            <input type="text" id="stmt-start-date" placeholder="20261001" value="20261001">
+                        </div>
+                        <div class="form-group">
+                            <label>結束日期 (YYYYMMDD)</label>
+                            <input type="text" id="stmt-end-date" placeholder="20261031" value="20261031">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>排序方式</label>
+                            <select id="stmt-order">
+                                <option value="1">新到舊</option>
+                                <option value="2">舊到新</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>起始筆序</label>
+                            <input type="text" id="stmt-start-index" placeholder="1" value="1">
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" onclick="queryStatements()">查詢明細</button>
+                    <div id="stmt-result" class="mt-10"></div>
+                </div>
+            </div>
+
+            <!-- FX Payment Page -->
+            <div id="page-fx-payment" class="page">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>外幣付款預檢</h3>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>付款幣別</label>
+                            <select id="fx-pay-currency">
+                                <option value="USD">USD</option>
+                                <option value="EUR">EUR</option>
+                                <option value="JPY">JPY</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>付款金額</label>
+                            <input type="text" id="fx-pay-amount" placeholder="1000" value="1000">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>收款人名稱</label>
+                            <input type="text" id="fx-payee-name" placeholder="收款人" value="Test Payee">
+                        </div>
+                        <div class="form-group">
+                            <label>SWIFT CODE</label>
+                            <input type="text" id="fx-swift" placeholder="SWIFT CODE" value="CHASUS33">
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" onclick="validateFxPayment()">預檢</button>
+                    <button class="btn btn-success" onclick="createFxPayment()">送出付款</button>
+                    <div id="fx-payment-result" class="mt-10"></div>
+                </div>
+            </div>
+
+            <!-- FX Query Page -->
+            <div id="page-fx-query" class="page">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>外幣交易查詢</h3>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>付款統編</label>
+                            <input type="text" id="fx-query-payer" placeholder="付款統編" value="1234567890">
+                        </div>
+                        <div class="form-group">
+                            <label>交易序號</label>
+                            <input type="text" id="fx-query-txseq" placeholder="FX-TX-001" value="FX-TX-001">
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" onclick="queryFxStatus()">查詢狀態</button>
+                    <div id="fx-query-result" class="mt-10"></div>
+                </div>
+            </div>
+
+            <!-- Balance Page -->
+            <div id="page-balance" class="page">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>帳戶餘額查詢</h3>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>公司統編</label>
+                            <input type="text" id="bal-company" placeholder="公司統編" value="12345678">
+                        </div>
+                        <div class="form-group">
+                            <label>幣別</label>
+                            <select id="bal-currency">
+                                <option value="TWD">TWD</option>
+                                <option value="USD">USD</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>查詢帳號</label>
+                        <input type="text" id="bal-account" placeholder="查詢帳號" value="1234567890123">
+                    </div>
+                    <button class="btn btn-primary" onclick="queryBalance()">查詢餘額</button>
+                    <div id="balance-result" class="mt-10"></div>
+                </div>
+            </div>
+
+            <!-- Accounts Page -->
+            <div id="page-accounts" class="page">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>帳戶管理</h3>
+                    </div>
+                    <div id="accounts-list">
+                        <div class="loading"><div class="spinner"></div>載入中...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Error Codes Page -->
+            <div id="page-error-codes" class="page">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>錯誤代碼查詢</h3>
+                    </div>
+                    <div class="form-group">
+                        <input type="text" id="error-search" placeholder="搜尋錯誤代碼或描述..." oninput="filterErrorCodes()">
+                    </div>
+                    <div id="error-codes-list">
+                        <div class="loading"><div class="spinner"></div>載入中...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Test Records Page -->
+            <div id="page-test-records" class="page">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>測試紀錄</h3>
+                    </div>
+                    <div id="test-records-list">
+                        <div class="loading"><div class="spinner"></div>載入中...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PDF Preview Page -->
+            <div id="page-pdf-preview" class="page">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>PDF 結果預覽</h3>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>付款統編</label>
+                            <input type="text" id="pdf-payer" placeholder="付款統編" value="1234567890">
+                        </div>
+                        <div class="form-group">
+                            <label>交易序號</label>
+                            <input type="text" id="pdf-txseq" placeholder="TX-001" value="TX-001">
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" onclick="queryPrintResult()">取得 PDF</button>
+                    <div id="pdf-preview-result" class="mt-10"></div>
+                    <div id="pdf-viewer" class="mt-10"></div>
+                </div>
+            </div>
+
+            <!-- Connection Check Page -->
+            <div id="page-connection-check" class="page">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>連線檢查中心</h3>
+                        <button class="btn btn-primary" onclick="runConnectionCheck()">執行檢查</button>
+                    </div>
+                    <div id="connection-check-result">
+                        <div class="loading"><div class="spinner"></div>載入中...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Security Check Page -->
+            <div id="page-security-check" class="page">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>資安檢查中心</h3>
+                        <button class="btn btn-primary" onclick="runSecurityCheck()">執行檢查</button>
+                    </div>
+                    <div id="security-check-result">
+                        <div class="loading"><div class="spinner"></div>載入中...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Release Gate Page -->
+            <div id="page-release-gate" class="page">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>上線驗收中心</h3>
+                    </div>
+                    <div id="release-checklist">
+                        <div class="loading"><div class="spinner"></div>載入中...</div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Application State
+        let appState = {
+            currentPage: 'dashboard',
+            mockMode: true,
+            apiStatus: [],
+            errorCodes: [],
+            testRecords: [],
+        };
+
+        // Page titles
+        const pageTitles = {
+            'dashboard': '系統總覽',
+            'api-center': 'API 服務中心',
+            'connection-check': '連線檢查中心',
+            'security-check': '資安檢查中心',
+            'twd-payment': '台幣付款放行',
+            'twd-query': '台幣交易查詢',
+            'statements': '交易明細查詢',
+            'fx-payment': '外幣付款預檢',
+            'fx-query': '外幣交易查詢',
+            'balance': '帳戶餘額查詢',
+            'accounts': '帳戶管理',
+            'error-codes': '錯誤代碼查詢',
+            'test-records': '測試紀錄',
+            'pdf-preview': 'PDF 結果預覽',
+            'release-gate': '上線驗收中心',
+        };
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadInitialData();
+            showPage('dashboard');
+        });
+
+        function showPage(pageId) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.sidebar-nav a').forEach(a => a.classList.remove('active'));
+
+            const page = document.getElementById('page-' + pageId);
+            if (page) page.classList.add('active');
+
+            const navLink = document.querySelector(`[onclick*="showPage('${pageId}')"]`);
+            if (navLink) navLink.classList.add('active');
+
+            document.getElementById('page-title').textContent = pageTitles[pageId] || pageId;
+            appState.currentPage = pageId;
+
+            // Load page-specific data
+            switch (pageId) {
+                case 'dashboard': loadDashboard(); break;
+                case 'api-center': loadApiCenter(); break;
+                case 'error-codes': loadErrorCodes(); break;
+                case 'test-records': loadTestRecords(); break;
+                case 'accounts': loadAccounts(); break;
+                case 'connection-check': runConnectionCheck(); break;
+                case 'security-check': runSecurityCheck(); break;
+                case 'release-gate': loadReleaseChecklist(); break;
+            }
+        }
+
+        async function loadInitialData() {
+            try {
+                const status = await invoke('bankpay_get_api_status');
+                appState.apiStatus = status;
+                updateModeBadge();
+            } catch (e) {
+                console.error('Failed to load initial data:', e);
+            }
+        }
+
+        function updateModeBadge() {
+            const badge = document.getElementById('mode-badge');
+            if (appState.mockMode) {
+                badge.textContent = '模擬模式';
+                badge.className = 'status-badge mock';
+            } else {
+                badge.textContent = '正式模式';
+                badge.className = 'status-badge real';
+            }
+        }
+
+        async function loadDashboard() {
+            try {
+                const data = await invoke('get_dashboard_data');
+                document.getElementById('stat-total-tx').textContent = data.total_transactions;
+                document.getElementById('stat-total-amount').textContent = 'NT$' + data.total_amount.toLocaleString();
+                document.getElementById('stat-active-accounts').textContent = data.active_accounts;
+                document.getElementById('stat-pending').textContent = data.pending_transactions;
+
+                // Load API status
+                const apis = await invoke('bankpay_get_api_status');
+                const grid = document.getElementById('api-status-grid');
+                grid.innerHTML = apis.map(api => `
+                    <div class="api-card">
+                        <div class="name">${api.name}</div>
+                        <div class="endpoint">${api.endpoint}</div>
+                        <div class="text-muted" style="font-size:0.85em">${api.purpose}</div>
+                        <div class="status-row">
+                            <span class="api-status ${api.status === 'mock_pass' ? 'mock' : api.result.includes('通過') ? 'pass' : 'pending'}">${api.result}</span>
+                            <span class="text-muted">${api.response_time_ms || '-'}ms</span>
+                        </div>
+                    </div>
+                `).join('');
+
+                // System health
+                const health = document.getElementById('system-health');
+                health.innerHTML = `
+                    <div class="form-row">
+                        <div><strong>TLS 版本:</strong> ${data.system_health.connection_status.tls_version}</div>
+                        <div><strong>2-Way SSL:</strong> ${data.system_health.connection_status.two_way_ssl ? '✓' : '✗'}</div>
+                        <div><strong>Port 8443:</strong> ${data.system_health.connection_status.port_8443 ? '✓' : '✗'}</div>
+                        <div><strong>Port 9443:</strong> ${data.system_health.connection_status.port_9443 ? '✓' : '✗'}</div>
+                    </div>
+                `;
+
+                document.getElementById('last-update').textContent = '最後更新: ' + new Date().toLocaleString('zh-TW');
+            } catch (e) {
+                console.error('Failed to load dashboard:', e);
+            }
+        }
+
+        async function refreshApiStatus() {
+            await loadDashboard();
+        }
+
+        async function loadApiCenter() {
+            const container = document.getElementById('api-detail');
+            const apis = await invoke('bankpay_get_api_status');
+            container.innerHTML = apis.map(api => `
+                <div class="card" style="margin-bottom:15px">
+                    <div class="card-header">
+                        <h3>${api.name}</h3>
+                        <span class="api-status ${api.status === 'mock_pass' ? 'mock' : 'pass'}">${api.result}</span>
+                    </div>
+                    <div style="font-family:monospace;font-size:0.9em;color:var(--text-muted);margin-bottom:10px">${api.endpoint}</div>
+                    <div>${api.purpose}</div>
+                    <div class="mt-10 text-muted">環境: ${api.environment} | 回應時間: ${api.response_time_ms || '-'}ms</div>
+                </div>
+            `).join('');
+        }
+
+        async function submitTwdPayment() {
+            const request = {
+                payer_account_no: document.getElementById('twd-payer-account').value,
+                payer_id: document.getElementById('twd-payer-id').value,
+                payee_bank_id: document.getElementById('twd-payee-bank').value,
+                payee_branch_id: document.getElementById('twd-payee-branch').value,
+                payee_account_no: document.getElementById('twd-payee-account').value,
+                payee_name: document.getElementById('twd-payee-name').value,
+                tx_date: document.getElementById('twd-tx-date').value,
+                tx_amt: document.getElementById('twd-tx-amt').value,
+                charge_fee_type: document.getElementById('twd-charge-fee').value,
+                memo: document.getElementById('twd-memo').value,
+                tx_seq: document.getElementById('twd-tx-seq').value,
+            };
+
+            try {
+                const result = await invoke('bankpay_create_twd_payment', { request });
+                document.getElementById('twd-payment-result').innerHTML = `
+                    <div class="alert alert-success">
+                        <strong>付款成功 (模擬模式)</strong><br>
+                        訊息 ID: ${result.msg_id}<br>
+                        狀態碼: ${result.code}<br>
+                        訊息: ${result.message}
+                    </div>
+                `;
+            } catch (e) {
+                document.getElementById('twd-payment-result').innerHTML = `
+                    <div class="alert alert-error">錯誤: ${e}</div>
+                `;
+            }
+        }
+
+        async function queryTwdStatus() {
+            const payerIxd = document.getElementById('twd-query-payer').value;
+            const txSeq = document.getElementById('twd-query-txseq').value;
+            try {
+                const result = await invoke('bankpay_query_twd_status', { payerIxd, txSeq });
+                document.getElementById('twd-query-result').innerHTML = `
+                    <div class="alert alert-success">
+                        <strong>查詢成功</strong><br>
+                        狀態: ${result.tx_status || 'N/A'}<br>
+                        銀行參考號: ${result.bank_ref || 'N/A'}<br>
+                        金額: ${result.tx_amt || 'N/A'}<br>
+                        日期: ${result.tx_date || 'N/A'}
+                    </div>
+                `;
+            } catch (e) {
+                document.getElementById('twd-query-result').innerHTML = `<div class="alert alert-error">錯誤: ${e}</div>`;
+            }
+        }
+
+        async function queryStatements() {
+            const companyId = document.getElementById('stmt-company').value;
+            const demandDeptAcc = document.getElementById('stmt-account').value;
+            const sTxDate = document.getElementById('stmt-start-date').value;
+            const eTxDate = document.getElementById('stmt-end-date').value;
+            const orderDescType = document.getElementById('stmt-order').value;
+            const queryStartIndex = document.getElementById('stmt-start-index').value;
+            try {
+                const result = await invoke('bankpay_query_statements', { companyId, demandDeptAcc, sTxDate, eTxDate, orderDescType, queryStartIndex });
+                document.getElementById('stmt-result').innerHTML = `
+                    <div class="alert alert-success">
+                        <strong>查詢成功</strong><br>
+                        狀態碼: ${result.code}<br>
+                        訊息: ${result.message}<br>
+                        總筆數: ${result.totalCount || 0}
+                    </div>
+                `;
+            } catch (e) {
+                document.getElementById('stmt-result').innerHTML = `<div class="alert alert-error">錯誤: ${e}</div>`;
+            }
+        }
+
+        async function validateFxPayment() {
+            const request = {
+                payCurrency: document.getElementById('fx-pay-currency').value,
+                payAmount: document.getElementById('fx-pay-amount').value,
+                payeeName: document.getElementById('fx-payee-name').value,
+                swiftCode: document.getElementById('fx-swift').value,
+            };
+            try {
+                const result = await invoke('bankpay_validate_fx_payment', { request });
+                document.getElementById('fx-payment-result').innerHTML = `
+                    <div class="alert alert-success">
+                        <strong>預檢成功</strong><br>
+                        檢核結果: ${result.validationResult}<br>
+                        匯率: ${result.exchangeRate}<br>
+                        手續費: ${result.fee}<br>
+                        總金額: ${result.totalAmount}
+                    </div>
+                `;
+            } catch (e) {
+                document.getElementById('fx-payment-result').innerHTML = `<div class="alert alert-error">錯誤: ${e}</div>`;
+            }
+        }
+
+        async function createFxPayment() {
+            const request = {
+                txSeq: 'FX-TX-' + Date.now(),
+                payCurrency: document.getElementById('fx-pay-currency').value,
+                payAmount: document.getElementById('fx-pay-amount').value,
+            };
+            try {
+                const result = await invoke('bankpay_create_fx_payment', { request });
+                document.getElementById('fx-payment-result').innerHTML = `
+                    <div class="alert alert-success">
+                        <strong>外幣付款成功 (模擬模式)</strong><br>
+                        交易序號: ${result.txSeq}<br>
+                        銀行參考號: ${result.bankRef}<br>
+                        狀態: ${result.status}
+                    </div>
+                `;
+            } catch (e) {
+                document.getElementById('fx-payment-result').innerHTML = `<div class="alert alert-error">錯誤: ${e}</div>`;
+            }
+        }
+
+        async function queryFxStatus() {
+            const payerId = document.getElementById('fx-query-payer').value;
+            const txSeq = document.getElementById('fx-query-txseq').value;
+            try {
+                const result = await invoke('bankpay_query_fx_status', { payerId, txSeq });
+                document.getElementById('fx-query-result').innerHTML = `
+                    <div class="alert alert-success">
+                        <strong>查詢成功</strong><br>
+                        狀態: ${result.txStatus}<br>
+                        銀行參考號: ${result.bankRef}<br>
+                        匯率: ${result.exchangeRate}<br>
+                        手續費: ${result.chargeFee}
+                    </div>
+                `;
+            } catch (e) {
+                document.getElementById('fx-query-result').innerHTML = `<div class="alert alert-error">錯誤: ${e}</div>`;
+            }
+        }
+
+        async function queryBalance() {
+            const companyId = document.getElementById('bal-company').value;
+            const currType = document.getElementById('bal-currency').value;
+            const demandDeptAcc = document.getElementById('bal-account').value;
+            try {
+                const result = await invoke('bankpay_query_balance', { companyId, currType, demandDeptAcc });
+                document.getElementById('balance-result').innerHTML = `
+                    <div class="alert alert-success">
+                        <strong>查詢成功</strong><br>
+                        帳號: ${result.account_no}<br>
+                        幣別: ${result.currency}<br>
+                        可用餘額: ${result.available_balance}<br>
+                        帳面餘額: ${result.ledger_balance}<br>
+                        待處理金額: ${result.pending_amount}
+                    </div>
+                `;
+            } catch (e) {
+                document.getElementById('balance-result').innerHTML = `<div class="alert alert-error">錯誤: ${e}</div>`;
+            }
+        }
+
+        async function loadAccounts() {
+            try {
+                const accounts = await invoke('get_accounts');
+                const container = document.getElementById('accounts-list');
+                container.innerHTML = `
+                    <table class="data-table">
+                        <thead><tr><th>代碼</th><th>名稱</th><th>類型</th><th>幣別</th><th>餘額</th><th>狀態</th></tr></thead>
+                        <tbody>
+                            ${accounts.map(a => `
+                                <tr>
+                                    <td>${a.code}</td>
+                                    <td>${a.name}</td>
+                                    <td>${a.account_type}</td>
+                                    <td>${a.currency}</td>
+                                    <td>${a.balance.toLocaleString()}</td>
+                                    <td>${a.is_active ? '✓ 啟用' : '✗ 停用'}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+            } catch (e) {
+                console.error('Failed to load accounts:', e);
+            }
+        }
+
+        async function loadErrorCodes() {
+            try {
+                const codes = await invoke('get_error_codes');
+                appState.errorCodes = codes;
+                renderErrorCodes(codes);
+            } catch (e) {
+                console.error('Failed to load error codes:', e);
+            }
+        }
+
+        function filterErrorCodes() {
+            const search = document.getElementById('error-search').value.toLowerCase();
+            const filtered = appState.errorCodes.filter(c =>
+                c.code.toLowerCase().includes(search) ||
+                c.description.toLowerCase().includes(search) ||
+                c.category.toLowerCase().includes(search)
+            );
+            renderErrorCodes(filtered);
+        }
+
+        function renderErrorCodes(codes) {
+            const container = document.getElementById('error-codes-list');
+            container.innerHTML = `
+                <table class="data-table">
+                    <thead><tr><th>代碼</th><th>說明</th><th>類別</th><th>建議動作</th></tr></thead>
+                    <tbody>
+                        ${codes.map(c => `
+                            <tr>
+                                <td><strong>${c.code}</strong></td>
+                                <td>${c.description}</td>
+                                <td>${c.category}</td>
+                                <td>${c.action}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        async function loadTestRecords() {
+            try {
+                const records = await invoke('get_test_records');
+                appState.testRecords = records;
+                const container = document.getElementById('test-records-list');
+                container.innerHTML = `
+                    <table class="data-table">
+                        <thead><tr><th>API 名稱</th><th>測試類型</th><th>結果</th><th>時間</th><th>耗時 (ms)</th></tr></thead>
+                        <tbody>
+                            ${records.map(r => `
+                                <tr>
+                                    <td>${r.api_name}</td>
+                                    <td>${r.test_type}</td>
+                                    <td>${r.result}</td>
+                                    <td>${new Date(r.timestamp).toLocaleString('zh-TW')}</td>
+                                    <td>${r.duration_ms}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+            } catch (e) {
+                console.error('Failed to load test records:', e);
+            }
+        }
+
+        async function queryPrintResult() {
+            const payerIxd = document.getElementById('pdf-payer').value;
+            const txSeq = document.getElementById('pdf-txseq').value;
+            try {
+                const result = await invoke('bankpay_query_print_result', { payerIxd, txSeq });
+                if (result.pdf_base64) {
+                    const pdfBlob = base64ToBlob(result.pdf_base64, 'application/pdf');
+                    const url = URL.createObjectURL(pdfBlob);
+                    document.getElementById('pdf-preview-result').innerHTML = `
+                        <div class="alert alert-success">
+                            <strong>PDF 取得成功</strong><br>
+                            檔名: ${result.file_name}<br>
+                            <a href="${url}" download="${result.file_name}" class="btn btn-primary">下載 PDF</a>
+                        </div>
+                    `;
+                    document.getElementById('pdf-viewer').innerHTML = `
+                        <iframe src="${url}" style="width:100%;height:500px;border:1px solid var(--border);border-radius:4px"></iframe>
+                    `;
+                }
+            } catch (e) {
+                document.getElementById('pdf-preview-result').innerHTML = `<div class="alert alert-error">錯誤: ${e}</div>`;
+            }
+        }
+
+        function base64ToBlob(base64, type) {
+            const binary = atob(base64);
+            const bytes = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i++) {
+                bytes[i] = binary.charCodeAt(i);
+            }
+            return new Blob([bytes], { type });
+        }
+
+        async function runConnectionCheck() {
+            try {
+                const result = await invoke('run_connection_check');
+                document.getElementById('connection-check-result').innerHTML = `
+                    <table class="data-table">
+                        <tr><td><strong>TLS 版本</strong></td><td>${result.tls_version}</td><td>${result.tls_ok ? '✓' : '✗'}</td></tr>
+                        <tr><td><strong>2-Way SSL</strong></td><td>${result.two_way_ssl ? '已啟用' : '未啟用'}</td><td>${result.two_way_ssl ? '✓' : '✗'}</td></tr>
+                        <tr><td><strong>憑證狀態</strong></td><td>${result.cert_status}</td><td>${result.cert_status === '有效' ? '✓' : '✗'}</td></tr>
+                        <tr><td><strong>憑證到期日</strong></td><td>${result.cert_expiry || 'N/A'}</td><td>-</td></tr>
+                        <tr><td><strong>Port 8443 (內部)</strong></td><td>${result.port_8443 ? '正常' : '異常'}</td><td>${result.port_8443 ? '✓' : '✗'}</td></tr>
+                        <tr><td><strong>Port 9443 (外部)</strong></td><td>${result.port_9443 ? '正常' : '異常'}</td><td>${result.port_9443 ? '✓' : '✗'}</td></tr>
+                        <tr><td><strong>安全元件</strong></td><td>${result.security_component ? '正常' : '異常'}</td><td>${result.security_component ? '✓' : '✗'}</td></tr>
+                        <tr><td><strong>設備綁定</strong></td><td>${result.device_binding ? '已綁定' : '未綁定'}</td><td>${result.device_binding ? '✓' : '✗'}</td></tr>
+                    </table>
+                `;
+            } catch (e) {
+                document.getElementById('connection-check-result').innerHTML = `<div class="alert alert-error">錯誤: ${e}</div>`;
+            }
+        }
+
+        async function runSecurityCheck() {
+            try {
+                const result = await invoke('run_security_check');
+                document.getElementById('security-check-result').innerHTML = `
+                    <table class="data-table">
+                        <tr><td><strong>憑證固定 (Pinning)</strong></td><td>${result.cert_pinning ? '✓ 已啟用' : '✗ 未啟用'}</td></tr>
+                        <tr><td><strong>Source-System 設定</strong></td><td>${result.source_system_id ? '✓ 已設定' : '✗ 未設定'}</td></tr>
+                        <tr><td><strong>WDAC 啟用</strong></td><td>${result.wdac_enabled ? '✓ 已啟用' : '✗ 未啟用'}</td></tr>
+                        <tr><td><strong>模擬模式</strong></td><td>${result.mock_mode ? '⚠ 模擬模式' : '✓ 正式模式'}</td></tr>
+                        <tr><td><strong>敏感資料遮罩</strong></td><td>${result.sensitive_data_masked ? '✓ 已遮罩' : '✗ 未遮罩'}</td></tr>
+                        <tr><td><strong>CSRF 防護</strong></td><td>${result.csrf_protection ? '✓ 已啟用' : '✗ 未啟用'}</td></tr>
+                        <tr><td><strong>XSS 防護</strong></td><td>${result.xss_protection ? '✓ 已啟用' : '✗ 未啟用'}</td></tr>
+                    </table>
+                `;
+            } catch (e) {
+                document.getElementById('security-check-result').innerHTML = `<div class="alert alert-error">錯誤: ${e}</div>`;
+            }
+        }
+
+        async function loadReleaseChecklist() {
+            try {
+                const items = await invoke('get_release_checklist');
+                const container = document.getElementById('release-checklist');
+                const passed = items.filter(i => i.status === '通過').length;
+                const pending = items.filter(i => i.status === '待確認' || i.status === '待測試' || i.status === '待完成').length;
+                const notStarted = items.filter(i => i.status === '未開始').length;
+
+                container.innerHTML = `
+                    <div class="dashboard-grid" style="margin-bottom:20px">
+                        <div class="stat-card"><div class="label">通過</div><div class="value text-success">${passed}</div></div>
+                        <div class="stat-card"><div class="label">待處理</div><div class="value text-warning">${pending}</div></div>
+                        <div class="stat-card"><div class="label">未開始</div><div class="value text-muted">${notStarted}</div></div>
+                        <div class="stat-card"><div class="label">總計</div><div class="value">${items.length}</div></div>
+                    </div>
+                    <table class="data-table">
+                        <thead><tr><th>ID</th><th>類別</th><th>檢查項目</th><th>負責</th><th>狀態</th><th>證據</th></tr></thead>
+                        <tbody>
+                            ${items.map(i => `
+                                <tr>
+                                    <td>${i.id}</td>
+                                    <td>${i.category}</td>
+                                    <td>${i.item}</td>
+                                    <td>${i.responsible}</td>
+                                    <td><span class="api-status ${i.status === '通過' ? 'pass' : i.status === '未開始' ? 'pending' : 'mock'}">${i.status}</span></td>
+                                    <td>${i.evidence || '-'}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+            } catch (e) {
+                console.error('Failed to load release checklist:', e);
+            }
+        }
+
+        // Tauri invoke wrapper
+        async function invoke(cmd, args = {}) {
+            if (window.__TAURI__) {
+                return window.__TAURI__.core.invoke(cmd, args);
+            }
+            // Fallback for development (mock)
+            if (!window.__mockNoticeShown) {
+                window.__mockNoticeShown = true;
+                console.info('[Demo Mode] Tauri backend not available - using mock data. Deploy with the Tauri app for live bank integration.');
+            }
+            return mockInvoke(cmd, args);
+        }
+
+        // Mock invoke for development
+        // Mock data constants for demo mode
+        const MOCK_ERROR_CODES = [
+            { code: '910000', description: 'Success', category: 'Success', action: 'Process response data' },
+            { code: '910001', description: 'Insufficient query conditions', category: 'Validation', action: 'Check query conditions' },
+            { code: '910004', description: 'No data found', category: 'Data', action: 'Verify query conditions' },
+            { code: '910032', description: 'Query host source not provided', category: 'Config', action: 'Set Source-System' },
+            { code: '910063', description: 'Required information insufficient', category: 'Validation', action: 'Provide required fields' },
+            { code: '910064', description: 'Third-party transaction release not agreed', category: 'Business', action: 'Contact bank to agree' },
+            { code: '910065', description: 'Signature verification failed', category: 'Security', action: 'Check certificate' },
+            { code: '910066', description: 'CN comparison failed', category: 'Security', action: 'Check certificate CN' },
+            { code: '910067', description: 'Data decryption failed', category: 'Security', action: 'Check encryption settings' },
+            { code: '910068', description: 'Transaction data write to bank failed', category: 'Bank', action: 'Retry or contact bank' },
+            { code: '910069', description: 'Transaction data validation error', category: 'Validation', action: 'Check field formats' },
+            { code: '910070', description: 'External system connection data error', category: 'Config', action: 'Check agreed data' },
+            { code: '910071', description: 'Agreed business not yet enabled', category: 'Business', action: 'Contact bank to enable' },
+            { code: '910072', description: 'Query condition error', category: 'Validation', action: 'Correct query conditions' },
+            { code: '910073', description: 'Exceeds 500 record query limit', category: 'Limit', action: 'Query in batches' },
+            { code: '910074', description: 'Release certificate data query anomaly', category: 'Security', action: 'Check certificate' },
+            { code: '910075', description: 'Highest security control not FXML', category: 'Security', action: 'Use FXML certificate' },
+            { code: '910097', description: 'Submit operator does not exist', category: 'Auth', action: 'Verify operator account' },
+            { code: '910098', description: 'Submit operator status anomaly', category: 'Auth', action: 'Check operator status' },
+            { code: '910099', description: 'Submit process does not exist', category: 'Process', action: 'Verify process settings' },
+            { code: '910144', description: 'Message anomaly', category: 'Protocol', action: 'Check message format' },
+            { code: '999999', description: 'Unknown error', category: 'Unknown', action: 'Contact technical support' },
+        ];
+
+        const MOCK_TEST_RECORDS = [
+            { id: 'test_001', api_name: 'TWD Payment Release', test_type: 'Mock', result: 'Pass', timestamp: '2026-10-30T08:00:00Z', duration_ms: 45 },
+            { id: 'test_002', api_name: 'TWD Status Query', test_type: 'Mock', result: 'Pass', timestamp: '2026-10-30T08:01:00Z', duration_ms: 32 },
+            { id: 'test_003', api_name: 'Statements Query', test_type: 'Mock', result: 'Pass', timestamp: '2026-10-30T08:02:00Z', duration_ms: 28 },
+            { id: 'test_004', api_name: 'FX Validate', test_type: 'Mock', result: 'Pass', timestamp: '2026-10-30T08:03:00Z', duration_ms: 50 },
+            { id: 'test_005', api_name: 'FX Payment', test_type: 'Mock', result: 'Pass', timestamp: '2026-10-30T08:04:00Z', duration_ms: 55 },
+            { id: 'test_006', api_name: 'FX Status Query', test_type: 'Mock', result: 'Pass', timestamp: '2026-10-30T08:05:00Z', duration_ms: 30 },
+            { id: 'test_007', api_name: 'Balance Query', test_type: 'Mock', result: 'Pass', timestamp: '2026-10-30T08:06:00Z', duration_ms: 25 },
+            { id: 'test_008', api_name: 'Print Result', test_type: 'Mock', result: 'Pass', timestamp: '2026-10-30T08:07:00Z', duration_ms: 60 },
+        ];
+
+        const MOCK_RELEASE_CHECKLIST = [
+            { id: 'RC-01', category: 'Spec', item: 'Complete spec inventory', responsible: 'Architect', verification: 'Document review', status: 'Pass', evidence: 'TRACEABILITY_MATRIX.md' },
+            { id: 'RC-02', category: 'Spec', item: '8 APIs fully cross-referenced', responsible: 'Developer', verification: 'Unit + Integration tests', status: 'Pass', evidence: '50 tests pass' },
+            { id: 'RC-03', category: 'Spec', item: 'Spec ambiguities formally confirmed', responsible: 'PM', verification: 'Confirmation record', status: 'Pending', evidence: null },
+            { id: 'RC-04', category: 'Test', item: 'Required field & format tests pass', responsible: 'QA', verification: 'Unit tests', status: 'Pass', evidence: '33 unit tests' },
+            { id: 'RC-05', category: 'Test', item: 'API normal & error scenario tests pass', responsible: 'QA', verification: 'Integration tests', status: 'Pass', evidence: '17 integration tests' },
+            { id: 'RC-06', category: 'Test', item: 'Transaction status logic tests pass', responsible: 'QA', verification: 'Unit tests', status: 'Pass', evidence: 'status code tests' },
+            { id: 'RC-07', category: 'Test', item: '500-record pagination tests pass', responsible: 'QA', verification: 'Integration tests', status: 'Pending', evidence: null },
+            { id: 'RC-08', category: 'Test', item: 'PDF print tests pass', responsible: 'QA', verification: 'Integration tests', status: 'Pass', evidence: 'pdf preview test' },
+            { id: 'RC-09', category: 'Security', item: 'TLS & mutual cert verification complete', responsible: 'Security', verification: 'Connection test', status: 'Pass', evidence: 'rustls config' },
+            { id: 'RC-10', category: 'Security', item: 'Network ports & firewall rules confirmed', responsible: 'Network', verification: 'Network check', status: 'Pending', evidence: null },
+            { id: 'RC-11', category: 'Security', item: 'Permissions & approval flow confirmed', responsible: 'Security', verification: 'Permission test', status: 'Pending', evidence: null },
+            { id: 'RC-12', category: 'Security', item: 'Security audit complete', responsible: 'Security', verification: 'Security scan', status: 'Pending', evidence: null },
+            { id: 'RC-13', category: 'Acceptance', item: 'UAT complete', responsible: 'Business', verification: 'UAT test', status: 'Not Started', evidence: null },
+            { id: 'RC-14', category: 'Acceptance', item: 'Business sign-off complete', responsible: 'Business', verification: 'Sign-off', status: 'Not Started', evidence: null },
+            { id: 'RC-15', category: 'Acceptance', item: 'Bank-side confirmation complete', responsible: 'PM', verification: 'Confirmation record', status: 'Not Started', evidence: null },
+            { id: 'RC-16', category: 'Document', item: 'Operations manual complete', responsible: 'Tech Writer', verification: 'Document review', status: 'Pending', evidence: null },
+            { id: 'RC-17', category: 'Ops', item: 'Logging & monitoring complete', responsible: 'DevOps', verification: 'Monitoring test', status: 'Pending', evidence: null },
+            { id: 'RC-18', category: 'Ops', item: 'Backup & recovery confirmed', responsible: 'DevOps', verification: 'Recovery drill', status: 'Pending', evidence: null },
+            { id: 'RC-19', category: 'Ops', item: 'Rollback deployment plan complete', responsible: 'DevOps', verification: 'Rollback test', status: 'Pending', evidence: null },
+            { id: 'RC-20', category: 'Sign-off', item: 'Production release sign-off complete', responsible: 'Owner', verification: 'Sign-off form', status: 'Not Started', evidence: null },
+        ];
+
+        async function mockInvoke(cmd, args) {
+            // instant mock response
+            if (cmd === 'get_dashboard_data') {
+                return { total_transactions: 150, total_amount: 500000, active_accounts: 45, pending_transactions: 12, avg_processing_time: 0.5, system_health: { overall: '模擬模式', connection_status: { tls_version: 'TLS 1.2', tls_ok: true, two_way_ssl: true, cert_status: '有效', cert_expiry: '2027-01-01', port_8443: true, port_9443: true, security_component: true, device_binding: true }, security_status: { cert_pinning: true, source_system_id: true, wdac_enabled: true, mock_mode: true, sensitive_data_masked: true, csrf_protection: true, xss_protection: true }, last_check: new Date().toISOString() } };
+            }
+            if (cmd === 'bankpay_get_api_status') {
+                return [
+                    { id: 'twd_payment', name: '台幣付款放行', endpoint: '/payment/createTwdPaymentInstruction', purpose: '提交台幣付款指示', environment: 'Dev', last_check: new Date().toISOString(), result: '模擬測試通過', response_time_ms: 45, status: 'mock_pass' },
+                    { id: 'twd_status', name: '台幣交易狀態查詢', endpoint: '/payment/retrieveTwdPaymentInstructionResult', purpose: '查詢台幣交易狀態', environment: 'Dev', last_check: new Date().toISOString(), result: '模擬測試通過', response_time_ms: 32, status: 'mock_pass' },
+                    { id: 'statements', name: '交易明細查詢', endpoint: '/account/retrieveStatements', purpose: '查詢帳戶交易明細', environment: 'Dev', last_check: new Date().toISOString(), result: '模擬測試通過', response_time_ms: 28, status: 'mock_pass' },
+                    { id: 'fx_validate', name: '外幣交易檢核計算', endpoint: '/payment/validateFxPaymentInstruction', purpose: '外幣付款預先檢核', environment: 'Dev', last_check: new Date().toISOString(), result: '模擬測試通過', response_time_ms: 50, status: 'mock_pass' },
+                    { id: 'fx_payment', name: '外幣付款放行', endpoint: '/payment/createFxPaymentInstruction', purpose: '提交外幣付款指示', environment: 'Dev', last_check: new Date().toISOString(), result: '模擬測試通過', response_time_ms: 55, status: 'mock_pass' },
+                    { id: 'fx_status', name: '外幣交易狀態查詢', endpoint: '/payment/retrieveFxPaymentInstructionResult', purpose: '查詢外幣交易狀態', environment: 'Dev', last_check: new Date().toISOString(), result: '模擬測試通過', response_time_ms: 30, status: 'mock_pass' },
+                    { id: 'balance', name: '帳戶餘額查詢', endpoint: '/account/retrieveAccountBalance', purpose: '查詢帳戶餘額', environment: 'Dev', last_check: new Date().toISOString(), result: '模擬測試通過', response_time_ms: 25, status: 'mock_pass' },
+                    { id: 'print_result', name: '台幣付款結果列印', endpoint: '/payment/retrieveTwdPaymentInstructionPrintResult', purpose: '取得付款結果 PDF', environment: 'Dev', last_check: new Date().toISOString(), result: '模擬測試通過', response_time_ms: 60, status: 'mock_pass' },
+                ];
+            }
+            if (cmd === 'get_accounts') return [{ id: 'acc_001', code: '1000', name: 'Assets', account_type: 'ASSETS', currency: 'TWD', balance: 500000, is_active: true }, { id: 'acc_002', code: '2000', name: 'Liabilities', account_type: 'LIABILITIES', currency: 'TWD', balance: 100000, is_active: true }];
+            if (cmd === 'get_error_codes') return MOCK_ERROR_CODES;
+            if (cmd === 'get_test_records') return MOCK_TEST_RECORDS;
+            if (cmd === 'get_release_checklist') return MOCK_RELEASE_CHECKLIST;
+            if (cmd === 'run_connection_check') return { tls_version: 'TLS 1.2', tls_ok: true, two_way_ssl: true, cert_status: '有效', cert_expiry: '2027-01-01', port_8443: true, port_9443: true, security_component: true, device_binding: true };
+            if (cmd === 'run_security_check') return { cert_pinning: true, source_system_id: true, wdac_enabled: true, mock_mode: true, sensitive_data_masked: true, csrf_protection: true, xss_protection: true };
+            if (cmd === 'bankpay_create_twd_payment') return { msg_id: 'MOCK' + Date.now(), log_id: 'MOCK-LOG-001', response_time: new Date().toLocaleString(), code: '910000', message: 'SUCCESS (Mock Mode)', more_info: null, data_count: '1', tx_record_list: [] };
+            if (cmd === 'bankpay_query_twd_status') return { msg_id: 'MOCK' + Date.now(), log_id: 'MOCK-LOG-002', response_time: new Date().toLocaleString(), code: '910000', message: 'SUCCESS (Mock Mode)', tx_status: '0000', bank_ref: 'BANK-REF-001', tx_amt: '100000', tx_date: '20261030', error_message: null };
+            if (cmd === 'bankpay_query_statements') return { msg_id: 'MOCK' + Date.now(), log_id: 'MOCK-LOG-003', response_time: new Date().toLocaleString(), code: '910000', message: 'SUCCESS (Mock Mode)', total_count: 1, statements: [], has_more: false };
+            if (cmd === 'bankpay_validate_fx_payment') return { msg_id: 'MOCK' + Date.now(), log_id: 'MOCK-LOG-004', response_time: new Date().toLocaleString(), code: '910000', message: 'SUCCESS (Mock Mode)', validation_result: '3000', validation_message: 'Validation passed', exchange_rate: '31.5', fee: '500', total_amount: '31500' };
+            if (cmd === 'bankpay_create_fx_payment') return { msg_id: 'MOCK' + Date.now(), log_id: 'MOCK-LOG-005', response_time: new Date().toLocaleString(), code: '910000', message: 'SUCCESS (Mock Mode)', tx_seq: 'FX-TX-001', bank_ref: 'FX-BANK-REF-001', status: '0000' };
+            if (cmd === 'bankpay_query_fx_status') return { msg_id: 'MOCK' + Date.now(), log_id: 'MOCK-LOG-006', response_time: new Date().toLocaleString(), code: '910000', message: 'SUCCESS (Mock Mode)', tx_status: '0000', bank_ref: 'FX-BANK-REF-001', tx_amt: '31500', tx_date: '20261030', exchange_rate: '31.5', charge_fee: '500', error_message: null };
+            if (cmd === 'bankpay_query_balance') return { msg_id: 'MOCK' + Date.now(), log_id: 'MOCK-LOG-007', response_time: new Date().toLocaleString(), code: '910000', message: 'SUCCESS (Mock Mode)', account_no: '1234567890123', currency: 'TWD', available_balance: '500000.00', ledger_balance: '500000.00', pending_amount: '0.00' };
+            if (cmd === 'bankpay_query_print_result') { const pdfText = '%PDF-1.4\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] >>\nendobj\nxref\n0 4\n0000000000 65535 f \n0000000009 0000000000 n \n0000000058 0000000000 n \n0000000115 0000000000 n \ntrailer\n<< /Size 4 /Root 1 0 R >>\nstartxref\n190\n%%EOF'; return { msg_id: 'MOCK' + Date.now(), log_id: 'MOCK-LOG-008', response_time: new Date().toLocaleString(), code: '910000', message: 'SUCCESS (Mock Mode)', pdf_base64: btoa(pdfText), file_name: 'payment_result_MOCK.pdf' }; }
+            if (cmd === 'get_system_health') return { overall: 'Mock Mode', last_check: new Date().toISOString() };
+            if (cmd === 'get_transactions') return [];
+            if (cmd === 'create_transaction') return 'txn_mock_' + Date.now();
+            if (cmd === 'get_transaction') return { id: 'txn_001', account_id: 'acc_001', amount: 1000, currency: 'TWD', description: 'Mock transaction', date: '2026-10-30', status: 'COMPLETED', created_by: 'admin' };
+            if (cmd === 'get_account_balance') return 500000.0;
+            if (cmd === 'verify_certificate') return true;
+            if (cmd === 'approve_release_item') return 'Item approved';
+            return null;
+        }
+    </script>
+</body>
+</html>
+
+
+
+

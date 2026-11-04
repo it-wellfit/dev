@@ -1,0 +1,90 @@
+﻿cargo :     Checking platform v0.0.1 (C:\Users\stephanie.huang\Desktop\新人訓練\Projects\2026\Dev\platform)
+位於 線路:4 字元:1
++ cargo clippy --all-targets -- -D warnings 2>&1 | Out-File -FilePath " ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (    Checking pl...6\Dev\platform):String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+error: you should consider adding a `Default` implementation for `SearchEngine`
+  --> platform\src\search.rs:20:5
+   |
+20 | /     pub fn new() -> Self {
+21 | |         Self {
+22 | |             documents: Arc::new(RwLock::new(HashMap::new())),
+23 | |             index: Arc::new(RwLock::new(Vec::new())),
+24 | |         }
+25 | |     }
+   | |_____^
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.99.0/index.html#new_without_def
+ault
+   = note: `-D clippy::new-without-default` implied by `-D warnings`
+   = help: to override `-D warnings` add `#[allow(clippy::new_without_default)]`
+help: try adding this
+   |
+74 ~ }
+75 + 
+76 + impl Default for SearchEngine {
+77 +     fn default() -> Self {
+78 +         Self::new()
+79 +     }
+80 + }
+   |
+
+error: casting to the same type is unnecessary (`i64` -> `i64`)
+  --> platform\src\ai\model_orchestrator.rs:88:29
+   |
+88 |                 last_check: chrono::Utc::now().timestamp() as i64,
+   |                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: try: `chrono::Utc::now().timestamp()`
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.99.0/index.html#unnecessary_cas
+t
+   = note: `-D clippy::unnecessary-cast` implied by `-D warnings`
+   = help: to override `-D warnings` add `#[allow(clippy::unnecessary_cast)]`
+
+error: casting to the same type is unnecessary (`i64` -> `i64`)
+   --> platform\src\ai\model_orchestrator.rs:104:33
+    |
+104 |                     last_check: chrono::Utc::now().timestamp() as i64,
+    |                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: try: `chrono::Utc::now().timestamp()`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.99.0/index.html#unnecessary_ca
+st
+
+error: casting to the same type is unnecessary (`i64` -> `i64`)
+   --> platform\src\ai\model_orchestrator.rs:121:33
+    |
+121 |                     last_check: chrono::Utc::now().timestamp() as i64,
+    |                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: try: `chrono::Utc::now().timestamp()`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.99.0/index.html#unnecessary_ca
+st
+
+error: casting to the same type is unnecessary (`i64` -> `i64`)
+   --> platform\src\ai\model_orchestrator.rs:162:51
+    |
+162 |                         model_status.last_check = chrono::Utc::now().timestamp() as i64;
+    |                                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: try: `chrono::Utc::
+now().timestamp()`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.99.0/index.html#unnecessary_ca
+st
+
+error: you seem to want to iterate on a map's values
+   --> platform\src\ai\model_orchestrator.rs:263:32
+    |
+263 |             for (_, status) in models.iter_mut() {
+    |                                ^^^^^^^^^^^^^^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.99.0/index.html#for_kv_map
+    = note: `-D clippy::for-kv-map` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::for_kv_map)]`
+help: use the corresponding method
+    |
+263 -             for (_, status) in models.iter_mut() {
+263 +             for status in models.values_mut() {
+    |
+
+error: could not compile `platform` (lib test) due to 6 previous errors
+warning: build failed, waiting for other jobs to finish...
+error: could not compile `platform` (lib) due to 6 previous errors

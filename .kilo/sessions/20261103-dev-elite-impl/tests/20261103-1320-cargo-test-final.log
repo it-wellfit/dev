@@ -1,0 +1,34 @@
+﻿cargo :    Compiling platform v0.0.1 (C:\Users\stephanie.huang\Desktop\新人訓練\Projects\2026\Dev\platform)
+位於 線路:4 字元:148
++ ... -First 3; "FMT_CHECK=$LASTEXITCODE"; cargo test --locked 2>&1 | Out-F ...
++                                          ~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (   Compiling pl...6\Dev\platform):String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 3.13s
+     Running unittests src\lib.rs (target\debug\deps\flaps_bridge-f2b120b80865bba6.exe)
+
+running 7 tests
+test real_com_tests::real_com_not_active_by_default ... ok
+test tests::empty_batch_is_rejected ... ok
+test tests::mock_envelope_matches_measured_floor ... ok
+test tests::failure_restores_pending_calls_atomically ... ok
+test tests::batch_flush_returns_all_results_in_order ... ok
+test tests::max_batch_splits_large_queues ... ok
+test tests::batching_beats_per_call_under_measured_envelope ... FAILED
+
+failures:
+
+---- tests::batching_beats_per_call_under_measured_envelope stdout ----
+
+thread 'tests::batching_beats_per_call_under_measured_envelope' (26156) panicked at crates\flaps_bridge\src\lib.rs:330:9:
+batched (539.9151ms) must beat per-call (539.2336ms)
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    tests::batching_beats_per_call_under_measured_envelope
+
+test result: FAILED. 6 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.08s
+
+error: test failed, to rerun pass `-p flaps_bridge --lib`

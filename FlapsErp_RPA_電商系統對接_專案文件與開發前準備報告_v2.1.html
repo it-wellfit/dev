@@ -1,0 +1,863 @@
+﻿<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<title>輔翼 ERP (FlapsErp) 對接 RPA 與電商系統 — 專案文件與開發前準備報告 (v2.1)</title>
+
+<style>
+  body { font-family: "Microsoft JhengHei", "PingFang TC", "Segoe UI", sans-serif; font-size: 10pt; line-height: 1.5; color: #1a1a1a; margin: 0; padding: 0; }
+  .page { width: 210mm; min-height: 297mm; margin: 0 auto; padding: 20mm 16mm; background: #fff; box-sizing: border-box; }
+  h1 { font-size: 18pt; color: #0b3d66; border-bottom: 2.5px solid #0b3d66; padding-bottom: 6px; margin-top: 22px; page-break-after: avoid; }
+  h2 { font-size: 14pt; color: #14537d; border-bottom: 1.5px solid #14537d; padding-bottom: 4px; margin-top: 20px; page-break-after: avoid; }
+  h3 { font-size: 11pt; color: #2e6e8e; margin-top: 16px; page-break-after: avoid; }
+  h4 { font-size: 10pt; color: #333; margin-top: 12px; }
+  p { margin: 6px 0; text-align: justify; }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0; page-break-inside: avoid; font-size: 9pt; }
+  th, td { border: 1px solid #9db2c8; padding: 5px 7px; text-align: left; vertical-align: top; }
+  th { background: #e8f0f7; color: #0b3d66; font-weight: bold; }
+  tr:nth-child(even) td { background: #f4f8fb; }
+  .cover { text-align: center; padding-top: 55mm; }
+  .cover .title { font-size: 24pt; font-weight: bold; color: #0b3d66; line-height: 1.4; }
+  .cover .subtitle { font-size: 12.5pt; color: #444; margin-top: 12mm; }
+  .cover .meta { margin-top: 18mm; font-size: 9.5pt; text-align: left; display: inline-block; }
+  .toc { page-break-after: always; }
+  .toc ol { list-style: none; padding-left: 0; }
+  .toc li { margin: 6px 0; font-size: 10pt; }
+  .toc li.l2 { padding-left: 22px; font-size: 9pt; color: #444; }
+  .tag-must { background:#d9ead3; color:#274e13; padding:1px 6px; border-radius:3px; font-size:8.5pt; }
+  .tag-should { background:#fff2cc; color:#7f6000; padding:1px 6px; border-radius:3px; font-size:8.5pt; }
+  .tag-could { background:#dae8fc; color:#0b3d66; padding:1px 6px; border-radius:3px; font-size:8.5pt; }
+  .tag-wont { background:#f4cccc; color:#660000; padding:1px 6px; border-radius:3px; font-size:8.5pt; }
+  .open-q { border-left: 4px solid #e06666; background: #fdf3f3; padding: 8px 12px; margin: 10px 0; page-break-inside: avoid; }
+  .open-q .qid { font-weight: bold; color: #b00; }
+  .small { font-size: 8.5pt; color: #666; }
+  .footer { margin-top: 30px; font-size: 8.5pt; color: #666; border-top: 1px solid #ccc; padding-top: 6px; }
+  .break { page-break-before: always; }
+  .raci th, .raci td { text-align: center; }
+  .raci td { font-weight: bold; }
+  .raci td.R { background:#d9ead3; }
+  .raci td.A { background:#b6d7a8; }
+  .raci td.C { background:#dae8fc; }
+  .raci td.I { background:#f4cccc; }
+  .deliverable-list { border:1px solid #9db2c8; background:#fbfdff; padding:10px; page-break-inside:avoid; }
+  .deliverable-list h4 { margin-top:0; }
+  .note { background:#fff8e1; border:1px solid #ffe082; padding:8px 12px; margin:10px 0; font-size:9pt; page-break-inside:avoid; }
+  .diagram-box { border: 2px solid #0b3d66; border-radius: 8px; padding: 12px; margin: 12px 0; background: #fbfdff; page-break-inside: avoid; }
+  .diagram-box h4 { margin-top: 0; font-size: 10pt; color: #0b3d66; border-bottom: 1px solid #d5dee8; padding-bottom: 4px; margin-bottom: 8px; }
+  .diagram-layer { border: 1px solid #9db2c8; border-radius: 6px; padding: 8px; margin: 6px 0; background: #fff; }
+  .diagram-layer-title { font-weight: bold; color: #0b3d66; font-size: 9pt; margin-bottom: 4px; }
+  .diagram-node { display: inline-block; border: 1px solid #14537d; border-radius: 4px; padding: 4px 8px; margin: 3px; font-size: 8.5pt; background: #e8f0f7; color: #0b3d66; }
+  .diagram-node.ecomm { background: #ffe6cc; border-color: #d79b00; color: #333; }
+  .diagram-node.rpa { background: #d9ead3; border-color: #609030; color: #333; }
+  .diagram-node.erp { background: #dae8fc; border-color: #0b3d66; color: #333; }
+  .diagram-node.store { background: #f4cccc; border-color: #990000; color: #333; }
+  .diagram-arrow { text-align: center; color: #14537d; font-size: 14pt; margin: 2px 0; }
+  .diagram-flow { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 4px; margin: 8px 0; }
+  .diagram-flow .node { border: 1px solid #14537d; border-radius: 4px; padding: 6px 10px; font-size: 8.5pt; background: #e8f0f7; color: #0b3d66; white-space: nowrap; }
+  .diagram-flow .arrow { color: #14537d; font-size: 16pt; }
+  .gantt-bar { height: 18px; border-radius: 3px; margin: 2px 0; position: relative; }
+  .gantt-label { font-size: 8pt; color: #333; margin-right: 8px; display: inline-block; width: 120px; text-align: right; }
+  .gantt-container { margin: 8px 0; }
+  .gantt-row { display: flex; align-items: center; margin: 2px 0; }
+  .gantt-track { flex: 1; height: 18px; background: #f0f0f0; border-radius: 3px; position: relative; overflow: hidden; }
+  .gantt-fill { height: 100%; border-radius: 3px; position: absolute; top: 0; }
+  .seq-msg { padding: 3px 0; font-size: 8.5pt; border-bottom: 1px dashed #d5dee8; }
+  .seq-msg .from { color: #0b3d66; font-weight: bold; }
+  .seq-msg .to { color: #14537d; font-weight: bold; }
+  .seq-msg .msg { color: #333; }
+  .wbs-tree { margin: 8px 0; }
+  .wbs-node { padding: 4px 8px; margin: 2px 0; border-radius: 4px; font-size: 8.5pt; }
+  .wbs-root { background: #0b3d66; color: #fff; font-weight: bold; text-align: center; }
+  .wbs-phase { background: #14537d; color: #fff; margin-left: 20px; }
+  .wbs-task { background: #e8f0f7; color: #333; margin-left: 40px; border: 1px solid #9db2c8; }</style>
+</head>
+<body>
+
+<div class="page">
+  <div class="cover">
+    <div class="title">輔翼 ERP (FlapsErp)<br>對接 RPA 與電商系統<br>專案文件與開發前準備報告</div>
+    <div class="subtitle">專案代碼：FLAPS-RPA-ECOM-2026 &nbsp;|&nbsp; 版本：v2.1（Gate 1 修正版） &nbsp;|&nbsp; 狀態：開發前準備 / 待主管評審</div>
+    <div class="meta">
+      <p>撰寫單位：資訊組 / 自動化專案團隊</p>
+      <p>撰寫日期：2026-10-27 &nbsp;|&nbsp; 修訂日期：2026-11-03（v2.1：Gate 1 修正包）</p>
+      <p>預計啟動日：2026-11-02 (T0)</p>
+      <p>預計工期：13 週工作期＋1 週結案（約 3 個月）</p>
+      <p>交付格式：HTML 結構化來源檔（含 HTML/CSS 內嵌專業圖示、離線可讀；可用 Microsoft Word 開啟另存 .docx，或以瀏覽器列印為 .pdf)</p>
+      <p>本文件依據本地掃描結果 (C:\SYSTEM_PROGRAM_DIRECTORY\FlapsErp) 與公開技術資料編寫；電商系統端資訊若不足，標示為「待確認問題 (OQ)」，未臆測。v2.1 已納入 Gate 1 審查修正（摘要見 §12.3）。</p>
+    </div>
+  </div>
+
+  <div class="toc">
+    <h1>目錄</h1>
+    <ol>
+      <li><a href="#sec1">1. 專案概覽</a>
+        <ol>
+          <li class="l2"><a href="#sec1-1">1.1 專案目標與成功指標</a></li>
+          <li class="l2"><a href="#sec1-2">1.2 範圍與邊界（納入 / 排除）</a></li>
+          <li class="l2"><a href="#sec1-3">1.3 待確認問題清單 (Open Questions)</a></li>
+          <li class="l2"><a href="#sec1-4">1.4 專業交付物規格清單</a></li>
+        </ol>
+      </li>
+      <li><a href="#sec2">2. 利害關係人與需求分析</a>
+        <ol>
+          <li class="l2"><a href="#sec2-1">2.1 利害關係人登記冊</a></li>
+          <li class="l2"><a href="#sec2-2">2.2 功能需求清單 (FR)</a></li>
+          <li class="l2"><a href="#sec2-3">2.3 非功能需求清單 (NFR)</a></li>
+          <li class="l2"><a href="#sec2-4">2.4 MoSCoW 優先分類</a></li>
+        </ol>
+      </li>
+      <li><a href="#sec3">3. 系統分析與設計（含專業圖示）</a>
+        <ol>
+          <li class="l2"><a href="#sec3-1">3.1 系統架構圖</a></li>
+          <li class="l2"><a href="#sec3-2">3.2 資料流程圖與交易規格</a></li>
+          <li class="l2"><a href="#sec3-3">3.3 業務流程序列圖</a></li>
+          <li class="l2"><a href="#sec3-4">3.4 介面設計規格矩陣</a></li>
+          <li class="l2"><a href="#sec3-5">3.5 技術選型與選型理由</a></li>
+          <li class="l2"><a href="#sec3-6">3.6 FlapsErp 本機物件規格（逆向分析結果）</a></li>
+        </ol>
+      </li>
+      <li><a href="#sec4">4. 技術方案與開發環境</a>
+        <ol>
+          <li class="l2"><a href="#sec4-1">4.1 環境規格</a></li>
+          <li class="l2"><a href="#sec4-2">4.2 工具鏈與安全標準</a></li>
+        </ol>
+      </li>
+      <li><a href="#sec5">5. 開發計畫與 WBS</a>
+        <ol>
+          <li class="l2"><a href="#sec5-1">5.1 WBS 表</a></li>
+          <li class="l2"><a href="#sec5-2">5.2 WBS 圖</a></li>
+        </ol>
+      </li>
+      <li><a href="#sec6">6. 時程規劃與里程碑</a>
+        <ol>
+          <li class="l2"><a href="#sec6-1">6.1 時程表</a></li>
+          <li class="l2"><a href="#sec6-2">6.2 甘特圖</a></li>
+          <li class="l2"><a href="#sec6-3">6.3 里程碑與驗收門檻</a></li>
+        </ol>
+      </li>
+      <li><a href="#sec7">7. 資源配置與 RACI 責任矩陣</a>
+        <ol>
+          <li class="l2"><a href="#sec7-1">7.1 角色定義</a></li>
+          <li class="l2"><a href="#sec7-2">7.2 RACI 矩陣</a></li>
+          <li class="l2"><a href="#sec7-3">7.3 溝通機制</a></li>
+        </ol>
+      </li>
+      <li><a href="#sec8">8. 風險評估與因應措施</a>
+        <ol>
+          <li class="l2"><a href="#sec8-1">8.1 風險登記冊</a></li>
+        </ol>
+      </li>
+      <li><a href="#sec9">9. 測試與品質保證策略</a>
+        <ol>
+          <li class="l2"><a href="#sec9-1">9.1 測試層級與覆蓋率</a></li>
+          <li class="l2"><a href="#sec9-2">9.2 驗收標準</a></li>
+        </ol>
+      </li>
+      <li><a href="#sec10">10. 部署與維運計畫</a>
+        <ol>
+          <li class="l2"><a href="#sec10-1">10.1 環境與發布</a></li>
+          <li class="l2"><a href="#sec10-2">10.2 監控、備份與回滾</a></li>
+        </ol>
+      </li>
+      <li><a href="#sec11">11. 系統流程最佳化建議</a></li>
+      <li><a href="#sec12">12. 附錄：詞彙表與參考文件</a></li>
+    </ol>
+    <p class="small">所有日期以專案啟動日 T0 = 2026-11-02 為基準；圖示以 HTML/CSS 內嵌繪製、離線可讀，開啟 HTML 後即可在瀏覽器查看與列印。</p>
+  </div>
+<div class="break">
+<h1 id="sec1">1. 專案概覽</h1>
+
+<h2 id="sec1-1">1.1 專案目標與成功指標</h2>
+<p>本專案以免費、開源、本機優先方式，將輔翼 ERP (FlapsErp，Electron 桌面版，安裝於 C:\SYSTEM_PROGRAM_DIRECTORY\FlapsErp) 與電商系統打通，實現訂單、庫存、客戶、出貨與退貨資料的自動化對接，減少人工重複輸入與對帳。</p>
+
+<table>
+  <tr><th>目標 ID</th><th>目標描述</th><th>量化成功指標 (KPI)</th><th>驗證方法</th></tr>
+  <tr><td>G1</td><td>訂單/庫存/客戶資料雙向自動對接</td><td>單筆對接 ≤ 5 秒 (API) 或 ≤ 30 秒 (UI RPA)</td><td>效能測試報告，樣本 ≥ 50 筆</td></tr>
+  <tr><td>G2</td><td>資料一致性 ≥ 99.5%</td><td>雙端比對差異率 ≤ 0.5%，差異進入人工複核佇列</td><td>每日對帧報告，稽核抽查</td></tr>
+  <tr><td>G3</td><td>系統可用性 ≥ 99%（24/7 口徑）</td><td>月計劃停機 ≤ 4.32 小時＋非計劃停機 ≤ 1 小時（合計 5.32 小時 ≤ 月 1% = 7.2 小時）</td><td>監控系統報告</td></tr>
+  <tr><td>G4</td><td>失敗自動恢復 ≤ 5 分鐘</td><td>連續失敗 5 次觸發斷路器，自動重試 ≤ 3 次並告警</td><td>故障注入測試，告警紀錄</td></tr>
+  <tr><td>G5</td><td>零機密資料外洩</td><td>傳輸 TLS 1.2+，日誌敏感欄位遮蔽率 100%</td><td>滲透測試報告，日誌掃描</td></tr>
+  <tr><td>G6</td><td>授權成本為零</td><td>OpenRPA (MPL-2.0) + Windmill 原生二進位，無商業授權</td><td>授權清單審核</td></tr>
+</table>
+
+<h2 id="sec1-2">1.2 範圍與邊界</h2>
+<h3>納入 (In Scope)</h3>
+<ul>
+  <li>FlapsErp 與電商系統之間訂單、庫存、客戶、出貨、退貨資料的自動讀取與寫入。</li>
+  <li>三層對接模式：優先 API/服務層；次選 OpenRPA 桌面 UI 自動化 (winax/COM)；最後資料庫直讀做補強對帳。</li>
+  <li>繁體中文編碼轉換 (內部 UTF-8 ↔ 電商系統 CP950/Big5，透過 iconv-lite)。</li>
+  <li>OpenRPA + PowerShell + Windmill (原生二進位部署，不含 Docker)。</li>
+  <li>幂等控制（穩定業務鍵：訂單／出庫單／退貨單編號等）、雙端對帧、異常佇列與人工複核。</li>
+  <li>開發/測試/生產環境建置；發布、監控、備份、回滾 SOP。</li>
+</ul>
+<h3>排除 (Out of Scope)</h3>
+<ul>
+  <li>電商系統端原始程式碼修改或逆向工程；微服務、Kubernetes、Kafka、向量資料庫、複雜事件架構。</li>
+  <li>商業 RPA 授權 (UiPath/Automation Anywhere 企業版)、Docker 容器化。</li>
+  <li>非訂單/庫存/客戶對接之其他業務模組；電商前端頁面與行銷功能。</li>
+</ul>
+
+<h2 id="sec1-3">1.3 待確認問題清單 (Open Questions)</h2>
+<div class="open-q"><p><span class="qid">OQ-01:</span> 電商系統是否開放 REST/SOAP/GraphQL/WebService/TCP 介面？請提供 OpenAPI 規格、認證方式 (OAuth2/JWT/API Key)、速率限制。</p></div>
+<div class="open-q"><p><span class="qid">OQ-02:</span> 電商系統是否提供 COM/ActiveX 物件或 DLL？請提供 CLSID/ProgID 與方法清單。</p></div>
+<div class="open-q"><p><span class="qid">OQ-03:</span> 電商系統資料庫類型 (MSSQL/MySQL/PostgreSQL/Oracle/其他)、連線字串與權限 (僅讀/受限寫入)？</p></div>
+<div class="open-q"><p><span class="qid">OQ-04:</span> 電商系統訂單狀態機 (待付款/已付款/已出貨/已完成/退貨中/已取消) 與 FlapsErp 如何對映？</p></div>
+<div class="open-q"><p><span class="qid">OQ-05:</span> 對接欄位清單、資料型態、長度上限與繁體中文編碼 (CP950/Big5/UTF-8) 確認。</p></div>
+<div class="open-q"><p><span class="qid">OQ-06:</span> 電商系統視窗解析度、縮放比例、元素屬性 (ID/Name/Class) 是否固定？</p></div>
+<div class="open-q"><p><span class="qid">OQ-07:</span> 電商系統端對接負責人聯絡窗口與技術支援 SLA 回應時間。</p></div>
+<div class="open-q"><p><span class="qid">OQ-08:</span> FlapsErp 執行期行為是否需以 Fiddler/Process Monitor 擷取以確認 IPC 與介面端點？</p></div>
+
+<h2 id="sec1-4">1.4 專業交付物規格清單</h2>
+<div class="deliverable-list">
+<h4>A. 管理類文件</h4>
+<table>
+  <tr><th>代號</th><th>文件名稱</th><th>規格說明</th><th>版本</th><th>負責</th><th>產出</th></tr>
+  <tr><td>DEL-M01</td><td>專案憲章 (Project Charter)</td><td>專案目的、目標、範圍、里程碑、預算、關鍵利害關係人與授權簽核。</td><td>v1.0</td><td>PMT</td><td>T0+0 週</td></tr>
+  <tr><td>DEL-M02</td><td>需求規格書 (FRS)</td><td>FR/NFR、MoSCoW 分類、驗收標準、OQ 釐清紀錄。</td><td>v1.0</td><td>BA</td><td>T0+2 週</td></tr>
+  <tr><td>DEL-M03</td><td>專案進度計畫</td><td>WBS、甘特圖、關鍵路徑、里程碑、資源負載。</td><td>v1.0</td><td>PMT</td><td>T0+1 週</td></tr>
+  <tr><td>DEL-M04</td><td>風險登記冊</td><td>風險 ID、描述、機率、影響、分數、因應措施、觸發條件、負責人。</td><td>v1.0</td><td>PMT</td><td>T0+2 週</td></tr>
+  <tr><td>DEL-M05</td><td>溝通管理計畫</td><td>會議節奏、報告頻率、升級路徑、利害關係人聯絡清單。</td><td>v1.0</td><td>PMT</td><td>T0+1 週</td></tr>
+  <tr><td>DEL-M06</td><td>週度狀態報告</td><td>進度百分比、已完成、下週計畫、風險、決策需求。</td><td>v1.0+</td><td>PMT</td><td>每週五</td></tr>
+  <tr><td>DEL-M07</td><td>專案總結報告</td><td>目標達成度、經驗教訓、移交清單、後續建議。</td><td>v1.0</td><td>PMT</td><td>T0+13 週</td></tr>
+</table>
+</div>
+<div class="deliverable-list">
+<h4>B. 系統設計類文件</h4>
+<table>
+  <tr><th>代號</th><th>文件名稱</th><th>規格說明</th><th>版本</th><th>負責</th><th>產出</th></tr>
+  <tr><td>DEL-D01</td><td>系統架構設計文件</td><td>系統架構圖、模組劃分、技術棧、部署架構、安全架構。</td><td>v1.0</td><td>ARCH</td><td>T0+4 週</td></tr>
+  <tr><td>DEL-D02</td><td>介面設計規格</td><td>INT-01~06 協議、格式、頻率、延遲要求、錯誤處理。</td><td>v1.0</td><td>ARCH</td><td>T0+3 週</td></tr>
+  <tr><td>DEL-D03</td><td>資料流程規格</td><td>訂單/庫存/客戶資料來源、轉換、目的地、幂等鍵規則。</td><td>v1.0</td><td>ARCH</td><td>T0+3 週</td></tr>
+  <tr><td>DEL-D04</td><td>資料庫/檔案儲存規格</td><td>SQLite/CSV 儲存結構、欄位型態、編碼、備份策略。</td><td>v1.0</td><td>DEV</td><td>T0+4 週</td></tr>
+  <tr><td>DEL-D05</td><td>RPA 工作流規格</td><td>OpenRPA 工作流節點、元素辨識規則、重試邏輯、例外處理。</td><td>v1.0</td><td>DEV</td><td>T0+5 週</td></tr>
+</table>
+</div>
+<div class="deliverable-list">
+<h4>C. 開發與測試類文件</h4>
+<table>
+  <tr><th>代號</th><th>文件名稱</th><th>規格說明</th><th>版本</th><th>負責</th><th>產出</th></tr>
+  <tr><td>DEL-DV01</td><td>原始程式碼與 RPA 工作流</td><td>MOD-01~07 程式碼、OpenRPA 工作流、PowerShell 腳本，納入 Git。</td><td>v1.0</td><td>DEV</td><td>T0+9 週</td></tr>
+  <tr><td>DEL-DV02</td><td>單元測試報告</td><td>測試案例、覆蓋率 ≥ 80%、Pass/Fail 結果、缺陷紀錄。</td><td>v1.0</td><td>DEV/QA</td><td>T0+8 週</td></tr>
+  <tr><td>DEL-DV03</td><td>整合測試報告</td><td>INT-01~06 介面測試結果、幂等與對帧邏輯驗證。</td><td>v1.0</td><td>QA</td><td>T0+9 週</td></tr>
+  <tr><td>DEL-DV04</td><td>效能與安全測試報告</td><td>單筆延遲、日處理量、TLS 加密、敏感欄位遮蔽 100%、滲透測試。</td><td>v1.0</td><td>QA/SEC</td><td>T0+10 週</td></tr>
+  <tr><td>DEL-DV05</td><td>UAT 驗收報告與簽核單</td><td>業務驗收結果、驗收標準達成度、業務負責人簽核。</td><td>v1.0</td><td>QA/BIZ-ERP/BIZ-ECOM</td><td>T0+11 週</td></tr>
+</table>
+</div>
+<div class="deliverable-list">
+<h4>D. 部署與維運類文件</h4>
+<table>
+  <tr><th>代號</th><th>文件名稱</th><th>規格說明</th><th>版本</th><th>負責</th><th>產出</th></tr>
+  <tr><td>DEL-O01</td><td>部署手冊</td><td>環境建置步驟、Windmill 排序設定、FlapsErp DLL 註冊 (registerDLL.ps1)、部署/回滾程序。</td><td>v1.0</td><td>OPS</td><td>T0+10 週</td></tr>
+  <tr><td>DEL-O02</td><td>維運手冊</td><td>監控指標、告警閾值、備份策略、日常維護 SOP、故障處理流程。</td><td>v1.0</td><td>OPS</td><td>T0+11 週</td></tr>
+  <tr><td>DEL-O03</td><td>操作手冊</td><td>業務使用者 RPA 對接操作指南、異常佇列複核流程。</td><td>v1.0</td><td>BA/OPS</td><td>T0+11 週</td></tr>
+</table>
+</div>
+<div class="deliverable-list">
+<h4>E. 模型與規格類交付物</h4>
+<table>
+  <tr><th>代號</th><th>規格名稱</th><th>內容摘要</th><th>格式</th><th>負責</th></tr>
+  <tr><td>DEL-S01</td><td>系統架構模型規格</td><td>三層對接模式 (API / OpenRPA UI / 資料庫直讀) 元件圖與節點連線。</td><td>圖表 + 文字</td><td>ARCH</td></tr>
+  <tr><td>DEL-S02</td><td>業務流程規格</td><td>訂單/庫存/客戶/退貨同步 BPMN 流程與決策表。</td><td>BPMN 圖 + 決策表</td><td>BA</td></tr>
+  <tr><td>DEL-S03</td><td>資料模型規格</td><td>訂單、庫存、客戶、出貨實體欄位定義、型態、約束與對映表。</td><td>ER 圖 + 對映表</td><td>ARCH</td></tr>
+  <tr><td>DEL-S04</td><td>介面規格</td><td>API 端點、請求/回應格式、錯誤代碼、認證機制、速率限制。</td><td>OpenAPI 3.0 / 文字</td><td>ARCH</td></tr>
+  <tr><td>DEL-S05</td><td>RPA 元素辨識規格</td><td>電商系統視窗元素 ID/Name/Class/座標、圖像辨識閾值 (0.90~0.95)、等待逾時。</td><td>元素清單表</td><td>DEV</td></tr>
+  <tr><td>DEL-S06</td><td>FlapsErp 本機物件規格</td><td>winax/COM、ffi-napi、serialport、iconv-lite (CP950/Big5)、jspdf 呼叫規範與 DLL 註冊清單。</td><td>技術規格書</td><td>DEV</td></tr>
+</table>
+</div>
+</div>
+<div class="break">
+<h1 id="sec2">2. 利害關係人與需求分析</h1>
+
+<h2 id="sec2-1">2.1 利害關係人登記冊</h2>
+<table>
+  <tr><th>角色代號</th><th>具名角色 / 職稱</th><th>主要職責</th><th>參與階段</th><th>聯絡方式</th></tr>
+  <tr><td>PMT</td><td>專案經理</td><td>整體規劃、進度控制、風險管理、跨部門協調、會議主持</td><td>全期</td><td>待確認</td></tr>
+  <tr><td>BA</td><td>業務分析師</td><td>需求斂集、電商訂單/庫存欄位對映、業務規則確認、驗收標準定義</td><td>第 1–3 週</td><td>待確認</td></tr>
+  <tr><td>ARCH</td><td>系統架構師</td><td>系統架構設計、技術選型、介面設計、資料模型、安全規範</td><td>第 1–4 週</td><td>待確認</td></tr>
+  <tr><td>DEV</td><td>開發工程師 (×1~2)</td><td>RPA 工作流開發、PowerShell 膠合腳本、電商 API 對接、單元測試</td><td>第 4–9 週</td><td>待確認</td></tr>
+  <tr><td>QA</td><td>品質保證工程師</td><td>測試計畫、測試案例、缺陷追蹤、驗收測試支援</td><td>第 7–11 週</td><td>待確認</td></tr>
+  <tr><td>OPS</td><td>維運工程師</td><td>環境建置、部署、監控、備份、回滾、日常維護</td><td>第 10–13 週</td><td>待確認</td></tr>
+  <tr><td>BIZ-ERP</td><td>輔翼 ERP 業務負責人</td><td>確認 FlapsErp 訂單/庫存作業流程、欄位定義、異常處理權限</td><td>第 1–3 週、驗收</td><td>待確認</td></tr>
+  <tr><td>BIZ-ECOM</td><td>電商系統業務負責人</td><td>確認電商系統介面、訂單狀態機、欄位對映、對帧標準</td><td>第 1–3 週、驗收</td><td>待確認</td></tr>
+  <tr><td>SEC</td><td>資安與合規負責人</td><td>審核身分驗證、加密、稽核日誌、敏感資料 (信用卡/身分證) 遮蔽</td><td>第 4–6 週、驗收</td><td>待確認</td></tr>
+</table>
+
+<h2 id="sec2-2">2.2 功能需求清單 (FR)</h2>
+<table>
+  <tr><th>需求 ID</th><th>需求名稱</th><th>需求描述 (可執行)</th><th>優先</th><th>驗證方法</th></tr>
+  <tr><td>FR-01</td><td>電商訂單同步至 FlapsErp</td><td>從電商系統 API 或 OpenRPA UI 自動化擷取新訂單，寫入 FlapsErp 訂單模組；每日處理量 ≥ 200 筆。</td><td><span class="tag-must">Must</span></td><td>整合測試，計算平均處理時間</td></tr>
+  <tr><td>FR-02</td><td>FlapsErp 出庫單同步至電商系統</td><td>FlapsErp 產出出庫單後，透過 API 或 OpenRPA 寫入電商系統並取得回傳單據編號；寫入失敗自動重試 3 次。</td><td><span class="tag-must">Must</span></td><td>整合測試，模擬成功/失敗情境</td></tr>
+  <tr><td>FR-03</td><td>庫存同步</td><td>FlapsErp 庫存變動自動同步至電商系統庫存欄位，防止超賣；庫存差異進入待複核佇列。</td><td><span class="tag-must">Must</span></td><td>庫存對帧測試</td></tr>
+  <tr><td>FR-04</td><td>客戶資料同步</td><td>電商新客戶資料同步至 FlapsErp 客戶檔；欄位對映 (姓名、電話、地址、Email) 100% 正確。</td><td><span class="tag-must">Must</span></td><td>欄位對映抽查</td></tr>
+  <tr><td>FR-05</td><td>幂等控制</td><td>每筆交易以「穩定業務鍵」（訂單編號／出庫單編號／退貨單編號等）作為幂等鍵，防止重複寫入；時間戳僅作稽核欄位，不參與去重判定；重複提交時回傳既有單據編號而不建立新筆錄。</td><td><span class="tag-must">Must</span></td><td>幂等測試，故意重複發送相同交易鍵</td></tr>
+  <tr><td>FR-06</td><td>繁體中文編碼轉換</td><td>內部 UTF-8 與電商系統 CP950/Big5 之間透過 iconv-lite 轉換，確保訂單/客戶欄位零亂碼；轉換失敗時拋出可讀錯誤。</td><td><span class="tag-must">Must</span></td><td>編碼測試，檢查 Big5 欄位顯示</td></tr>
+  <tr><td>FR-07</td><td>雙端對帧</td><td>每日自動比對 FlapsErp 與電商系統之訂單編號、金額、日期、狀態；差異進入待人工複核佇列。</td><td><span class="tag-must">Must</span></td><td>對帧測試，人工複核紀錄</td></tr>
+  <tr><td>FR-08</td><td>異常告警</td><td>對接失敗、斷路器觸發、資料不一致時，透過 PowerShell 發送告警 (Email/Teams/簡訊)；告警延遲 ≤ 5 分鐘。</td><td><span class="tag-must">Must</span></td><td>故障注入測試，檢查告警紀錄</td></tr>
+  <tr><td>FR-09</td><td>稽核日誌</td><td>記錄每一筆對接的時間、操作者帳號、欄位、輸入值、輸出結果、狀態；日誌保留 ≥ 1 年。</td><td><span class="tag-must">Must</span></td><td>稽核抽查，日誌完整性檢查</td></tr>
+  <tr><td>FR-10</td><td>人工複核介面</td><td>提供待人工複核佇列，顯示差異欄位與建議處理方式；人工確認後更新兩端狀態。</td><td><span class="tag-should">Should</span></td><td>UI 測試，人工操作驗證</td></tr>
+  <tr><td>FR-11</td><td>排程與自動執行</td><td>Windmill 排程於離峰時段 (每日 02:00–06:00) 自動執行對接；執行失敗自動重試。</td><td><span class="tag-should">Should</span></td><td>排程測試，檢查執行紀錄</td></tr>
+  <tr><td>FR-12</td><td>備份與還原</td><td>對接資料與設定每日備份，備份檔案加密；支援單筆交易邏輯回滾。</td><td><span class="tag-should">Should</span></td><td>備份/還原演練，驗證資料一致性</td></tr>
+  <tr><td>FR-13</td><td>異常偵測 (智能化，可選)</td><td>以 Isolation Forest 等輕量模型偵測對接異常模式，自動標記高風險筆錄。</td><td><span class="tag-could">Could</span></td><td>異常偵測模型驗證，準確率 ≥ 90%</td></tr>
+  <tr><td>FR-14</td><td>多語言介面</td><td>OpenRPA 與維運介面支援繁體中文。</td><td><span class="tag-could">Could</span></td><td>語言切換測試</td></tr>
+</table>
+
+<h2 id="sec2-3">2.3 非功能需求清單 (NFR)</h2>
+<table>
+  <tr><th>需求 ID</th><th>類別</th><th>需求描述 (量化)</th><th>優先</th><th>驗證方法</th></tr>
+  <tr><td>NFR-01</td><td>效能</td><td>單筆對接延遲：API 模式 ≤ 5 秒，UI RPA 模式 ≤ 30 秒；日處理量 ≥ 200 筆。</td><td><span class="tag-must">Must</span></td><td>負載測試，計時樣本 ≥ 50 筆</td></tr>
+  <tr><td>NFR-02</td><td>可用性</td><td>系統可用性 ≥ 99%（24/7 口徑） (月計劃停機 ≤ 4.32 小時，非計劃停機 ≤ 1 小時)。</td><td><span class="tag-must">Must</span></td><td>監控報告，可用性計算</td></tr>
+  <tr><td>NFR-03</td><td>可靠性</td><td>失敗自動恢復 ≤ 5 分鐘；連續失敗 5 次觸發斷路器；自動重試 ≤ 3 次 (指數退避 5s/15s/30s)。</td><td><span class="tag-must">Must</span></td><td>故障注入測試</td></tr>
+  <tr><td>NFR-04</td><td>安全性</td><td>傳輸層 TLS 1.2+；API 金鑰儲存於 Windows 認證管理員或環境變數；日誌中敏感欄位 (信用卡、身分證、客戶手機) 遮蔽率 100%。</td><td><span class="tag-must">Must</span></td><td>滲透測試，日誌掃描</td></tr>
+  <tr><td>NFR-05</td><td>可維護性</td><td>程式碼註解覆蓋率 ≥ 80%；RPA 工作流模組化，單一模組 ≤ 500 行；文件更新與程式碼同步。</td><td><span class="tag-should">Should</span></td><td>程式碼審查，靜態分析</td></tr>
+  <tr><td>NFR-06</td><td>可擴展性</td><td>支援新增至多 3 種電商系統對接 (如平台 A、平台 B)，無需修改核心模組。</td><td><span class="tag-could">Could</span></td><td>架構審查，新增對接試點</td></tr>
+  <tr><td>NFR-07</td><td>法遵</td><td>符合個人資料保護法與企業資安政策；稽核日誌保留 ≥ 1 年。</td><td><span class="tag-must">Must</span></td><td>合規審核，日誌保留檢查</td></tr>
+</table>
+
+<h2 id="sec2-4">2.4 MoSCoW 優先分類摘要</h2>
+<table>
+  <tr><th>分類</th><th>定義</th><th>需求 ID 範例</th><th>工期佔比</th></tr>
+  <tr><td><span class="tag-must">Must</span></td><td>必須交付，否則專案失敗</td><td>FR-01~09, NFR-01~04, NFR-07</td><td>60%</td></tr>
+  <tr><td><span class="tag-should">Should</span></td><td>重要，資源許可時交付</td><td>FR-10~12, NFR-05, NFR-06</td><td>25%</td></tr>
+  <tr><td><span class="tag-could">Could</span></td><td>可有可無，時間剩餘時考慮</td><td>FR-13~14</td><td>10%</td></tr>
+  <tr><td><span class="tag-wont">Won't</span></td><td>本期不交付</td><td>微服務、Kubernetes、Docker、商業 RPA 授權、電商前端設計</td><td>5%</td></tr>
+</table>
+</div>
+<div class="break">
+<h1 id="sec3">3. 系統分析與設計</h1>
+
+<h2 id="sec3-1">3.1 系統架構圖</h2>
+<div class="diagram-box">
+<h4>圖 3.1-1 系統整體架構圖</h4>
+<div class="diagram-layer" style="background:#e8f0f7;">
+  <div class="diagram-layer-title">使用者層</div>
+  <span class="diagram-node">電商使用者 (下單/查詢)</span>
+  <span class="diagram-node">FlapsErp 操作員 (出庫/對帳)</span>
+</div>
+<div class="diagram-arrow">&#8595;</div>
+<div class="diagram-layer" style="background:#ffe6cc;">
+  <div class="diagram-layer-title">電商系統層 (第三方)</div>
+  <span class="diagram-node ecomm">電商前端 (Web/APP)</span>
+  <span class="diagram-node ecomm">電商 API (REST/SOAP/GraphQL)</span>
+  <span class="diagram-node ecomm">電商資料庫 (訂單/庫存/客戶)</span>
+</div>
+<div class="diagram-arrow">&#8595; &#8593;</div>
+<div class="diagram-layer" style="background:#d9ead3;">
+  <div class="diagram-layer-title">自動化對接層 (RPA)</div>
+  <span class="diagram-node rpa">OpenRPA 工作流 (桌面 UI 自動化 / API 呼叫)</span>
+  <span class="diagram-node rpa">PowerShell 膠合腳本 (資料搬移 / 編碼轉換 / 告警)</span>
+  <span class="diagram-node rpa">Windmill 排序平台 (定時觸發 / 斷路器 / 重試)</span>
+</div>
+<div class="diagram-arrow">&#8595; &#8593;</div>
+<div class="diagram-layer" style="background:#dae8fc;">
+  <div class="diagram-layer-title">輔翼 ERP 層 (FlapsErp)</div>
+  <span class="diagram-node erp">FlapsErp 桌面程式 (Electron + Vue2)</span>
+  <span class="diagram-node erp">winax / COM (原生 ActiveX 物件)</span>
+  <span class="diagram-node erp">ffi-napi / DLL (原生函式呼叫)</span>
+  <span class="diagram-node erp">iconv-lite (UTF-8 &lt;-&gt; CP950/Big5)</span>
+</div>
+<div class="diagram-arrow">&#8595;</div>
+<div class="diagram-layer" style="background:#f4cccc;">
+  <div class="diagram-layer-title">本地儲存層</div>
+  <span class="diagram-node store">SQLite / CSV (對帧資料 + 稽核日誌)</span>
+  <span class="diagram-node store">加密備份檔案 (AES-256)</span>
+</div>
+</div>
+
+<h2 id="sec3-2">3.2 資料流程圖與交易規格</h2>
+<div class="diagram-box">
+<h4>圖 3.2-1 對接資料流程圖 (主要交易)</h4>
+<div class="diagram-flow">
+  <span class="node ecomm">電商系統<br/>新訂單產生</span>
+  <span class="arrow">&#8594;</span>
+  <span class="node rpa">OpenRPA<br/>擷取訂單/API拉取</span>
+  <span class="arrow">&#8594;</span>
+  <span class="node rpa">PowerShell<br/>編碼轉換 UTF-8&lt;-&gt;CP950</span>
+  <span class="arrow">&#8594;</span>
+  <span class="node erp">FlapsErp<br/>寫入訂單模組</span>
+</div>
+<div class="diagram-flow">
+  <span class="node erp">FlapsErp<br/>出庫作業</span>
+  <span class="arrow">&#8594;</span>
+  <span class="node rpa">OpenRPA<br/>寫入出貨狀態</span>
+  <span class="arrow">&#8594;</span>
+  <span class="node ecomm">電商系統<br/>回傳單據編號</span>
+</div>
+<div class="diagram-flow">
+  <span class="node store">幂等鍵檢查<br/>(穩定業務鍵)</span>
+  <span class="arrow">&#8594;</span>
+  <span class="node store">雙端對帧比對<br/>(單號/金額/日期/狀態)</span>
+  <span class="arrow">&#8594;</span>
+  <span class="node store">差異進入<br/>人工複核佇列</span>
+</div>
+</div>
+
+<table>
+  <tr><th>交易代號</th><th>交易名稱</th><th>來源</th><th>目標</th><th>關鍵欄位</th><th>幂等鍵</th><th>頻率</th><th>延遲要求</th></tr>
+  <tr><td>TXN-01</td><td>電商訂單 → FlapsErp</td><td>電商系統</td><td>FlapsErp</td><td>訂單編號、客戶ID、金額、訂單日期、商品明細</td><td>電商訂單編號（穩定業務鍵）</td><td>事件驅動（即時）；備援輪詢每 15 分鐘</td><td>≤ 30 秒（事件驅動）；輪詢備援 ≤ 15 分鐘</td></tr>
+  <tr><td>TXN-02</td><td>FlapsErp 出庫 → 電商系統</td><td>FlapsErp</td><td>電商系統</td><td>出庫單編號、訂單編號、出貨日期、物流單號、狀態</td><td>FlapsErp 出庫單編號（穩定業務鍵）</td><td>事件驅動</td><td>≤ 5 秒</td></tr>
+  <tr><td>TXN-03</td><td>庫存同步</td><td>FlapsErp</td><td>電商系統</td><td>商品ID、庫存數量、倉庫別</td><td>商品ID+倉庫別+快照日期（穩定業務鍵）</td><td>每日</td><td>≤ 5 分鐘</td></tr>
+  <tr><td>TXN-04</td><td>客戶同步</td><td>電商系統</td><td>FlapsErp</td><td>客戶ID、姓名、電話、地址、Email</td><td>電商客戶ID（穩定業務鍵）</td><td>每日</td><td>≤ 5 分鐘</td></tr>
+  <tr><td>TXN-05</td><td>退貨同步</td><td>電商系統</td><td>FlapsErp</td><td>退貨單編號、訂單編號、退貨金額、退貨原因</td><td>電商退貨單編號（穩定業務鍵）</td><td>每日</td><td>≤ 30 秒</td></tr>
+</table>
+
+<h2 id="sec3-3">3.3 業務流程序列圖</h2>
+<div class="diagram-box">
+<h4>圖 3.3-1 訂單雙向對接序列圖</h4>
+<div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px; font-size:8pt;">
+  <span style="background:#ffe6cc; padding:2px 6px; border-radius:3px;">電商使用者</span>
+  <span style="background:#ffe6cc; padding:2px 6px; border-radius:3px;">電商系統</span>
+  <span style="background:#d9ead3; padding:2px 6px; border-radius:3px;">OpenRPA</span>
+  <span style="background:#d9ead3; padding:2px 6px; border-radius:3px;">PowerShell</span>
+  <span style="background:#dae8fc; padding:2px 6px; border-radius:3px;">FlapsErp</span>
+  <span style="background:#f4cccc; padding:2px 6px; border-radius:3px;">本地對帧/日誌</span>
+</div>
+<div class="seq-msg"><span class="from">電商使用者</span> &#8594; <span class="to">電商系統</span>: <span class="msg">下單 (產生訂單編號)</span></div>
+<div class="seq-msg"><span class="from">電商系統</span> &#8594; <span class="to">OpenRPA</span>: <span class="msg">API 回傳新訂單 / R 輪詢擷取</span></div>
+<div class="seq-msg"><span class="from">OpenRPA</span> &#8594; <span class="to">PowerShell</span>: <span class="msg">傳輸訂單資料 (JSON)</span></div>
+<div class="seq-msg"><span class="from">PowerShell</span> &#8594; <span class="to">PowerShell</span>: <span class="msg">編碼轉換 UTF-8 &lt;-&gt; CP950</span></div>
+<div class="seq-msg"><span class="from">PowerShell</span> &#8594; <span class="to">FlapsErp</span>: <span class="msg">寫入訂單模組 (winax/COM)</span></div>
+<div class="seq-msg"><span class="from">FlapsErp</span> &#8594; <span class="to">PowerShell</span>: <span class="msg">回傳 FlapsErp 訂單編號</span></div>
+<div class="seq-msg"><span class="from">PowerShell</span> &#8594; <span class="to">OpenRPA</span>: <span class="msg">確認寫入成功</span></div>
+<div class="seq-msg"><span class="from">OpenRPA</span> &#8594; <span class="to">電商系統</span>: <span class="msg">回寫對接狀態 (已同步)</span></div>
+<div class="seq-msg"><span class="from">電商系統</span> &#8594; <span class="to">電商使用者</span>: <span class="msg">顯示訂單已處理</span></div>
+<div style="margin-top:8px; font-weight:bold; color:#0b3d66; font-size:9pt;">--- 出庫作業 ---</div>
+<div class="seq-msg"><span class="from">FlapsErp</span> &#8594; <span class="to">PowerShell</span>: <span class="msg">匯出出庫單 (CSV/JSON)</span></div>
+<div class="seq-msg"><span class="from">PowerShell</span> &#8594; <span class="to">OpenRPA</span>: <span class="msg">傳輸出庫單</span></div>
+<div class="seq-msg"><span class="from">OpenRPA</span> &#8594; <span class="to">電商系統</span>: <span class="msg">寫入出貨狀態與物流單號</span></div>
+<div class="seq-msg"><span class="from">電商系統</span> &#8594; <span class="to">OpenRPA</span>: <span class="msg">回傳電商出庫單編號</span></div>
+<div class="seq-msg"><span class="from">OpenRPA</span> &#8594; <span class="to">PowerShell</span>: <span class="msg">回傳結果</span></div>
+<div class="seq-msg"><span class="from">PowerShell</span> &#8594; <span class="to">FlapsErp</span>: <span class="msg">更新出庫狀態</span></div>
+<div class="seq-msg"><span class="from">PowerShell</span> &#8594; <span class="to">本地對帧/日誌</span>: <span class="msg">寫入稽核日誌 (AES-256 加密)</span></div>
+<div style="margin-top:8px; font-weight:bold; color:#0b3d66; font-size:9pt;">--- 每日對帧 (02:00~06:00) ---</div>
+<div class="seq-msg"><span class="from">OpenRPA</span> &#8594; <span class="to">電商系統</span>: <span class="msg">拉取訂單清單</span></div>
+<div class="seq-msg"><span class="from">FlapsErp</span> &#8594; <span class="to">本地對帧/日誌</span>: <span class="msg">拉取本地訂單清單</span></div>
+<div class="seq-msg"><span class="from">本地對帧/日誌</span> &#8594; <span class="to">本地對帧/日誌</span>: <span class="msg">比對 (單號/金額/日期/狀態)</span></div>
+<div class="seq-msg"><span class="from">本地對帧/日誌</span> &#8594; <span class="to">OpenRPA</span>: <span class="msg">差異進入人工複核佇列</span></div>
+<div class="seq-msg"><span class="from">OpenRPA</span> &#8594; <span class="to">PowerShell</span>: <span class="msg">發送異常告警 (Email/Teams)</span></div>
+</div>
+
+<h2 id="sec3-4">3.4 介面設計規格矩陣</h2>
+<table>
+  <tr><th>介面 ID</th><th>來源系統</th><th>目標系統</th><th>介面類型</th><th>協議/格式</th><th>頻率</th><th>延遲要求</th><th>負責模組</th></tr>
+  <tr><td>INT-01</td><td>FlapsErp</td><td>OpenRPA</td><td>檔案/COM</td><td>CSV/JSON, winax/COM</td><td>事件驅動/排程</td><td>≤ 5 秒</td><td>MOD-01, MOD-02</td></tr>
+  <tr><td>INT-02</td><td>OpenRPA</td><td>電商系統</td><td>API 或 UI 自動化</td><td>REST/SOAP/GraphQL/TCP 或 圖像辨識</td><td>事件驅動</td><td>≤ 30 秒</td><td>MOD-02</td></tr>
+  <tr><td>INT-03</td><td>電商系統</td><td>FlapsErp</td><td>檔案/API</td><td>CSV/JSON, CP950/Big5</td><td>每日</td><td>≤ 5 分鐘</td><td>MOD-02, MOD-01</td></tr>
+  <tr><td>INT-04</td><td>OpenRPA/PowerShell</td><td>Windmill</td><td>排序觸發</td><td>Windmill API</td><td>每日 02:00–06:00</td><td>≤ 1 分鐘</td><td>MOD-03, MOD-04</td></tr>
+  <tr><td>INT-05</td><td>所有模組</td><td>稽核日誌</td><td>寫入日誌</td><td>本機檔案/資料庫</td><td>即時</td><td>≤ 1 秒</td><td>MOD-06</td></tr>
+  <tr><td>INT-06</td><td>告警模組</td><td>通知通道</td><td>告警發送</td><td>Email/Teams Webhook/簡訊</td><td>異常時</td><td>≤ 5 分鐘</td><td>MOD-07</td></tr>
+</table>
+
+<h2 id="sec3-5">3.5 技術選型與選型理由</h2>
+<table>
+  <tr><th>類別</th><th>選定技術</th><th>版本/授權</th><th>選型理由</th><th>替代方案 (已排除)</th></tr>
+  <tr><td>RPA 工具</td><td>OpenRPA</td><td>MPL-2.0, 最新穩定版</td><td>Windows 原生、支援 winax/COM 與 FlapsErp 依賴體系一致、可內嵌 PowerShell/C#、免費開源、有 OpenCore 協調。</td><td>UiPath CE (商業授權門檻)、Automation Anywhere (雲端依賴)、Taskt (無協調與維護)</td></tr>
+  <tr><td>排序與協調</td><td>Windmill</td><td>原生二進位 (Windows sc.exe)</td><td>專案既有架構「Windmill + PowerShell + wellfit.exe」，不需 Docker，符合免費/本機優先原則。</td><td>n8n (已被專案替換為 Windmill)、Kubernetes (過度複雜)</td></tr>
+  <tr><td>膠合腳本</td><td>PowerShell</td><td>5.1 (Windows 內建)</td><td>Windows 原生、可呼叫 regsvr32 與 registerDLL.ps1、與 Windmill 原生支援。</td><td>Python (需額外安裝、非專案標準)</td></tr>
+  <tr><td>FlapsErp 對接</td><td>winax / ffi-napi / 檔案匯出</td><td>FlapsErp 內建依賴</td><td>FlapsErp 已內建 winax (COM)、ffi-napi (原生 DLL)、jspdf、iconv-lite，無須額外開發即可對接。</td><td>逆向 FlapsErp 二進位 (風險高、維護成本高)</td></tr>
+  <tr><td>編碼處理</td><td>iconv-lite</td><td>FlapsErp 內建</td><td>支援 CP950/Big5 與 UTF-8 雙向轉換，適合台廠電商系統。</td><td>Node.js Buffer (需額外映射表)</td></tr>
+  <tr><td>本機儲存/對帧</td><td>SQLite 或 CSV</td><td>本機檔案</td><td>輕量、無伺服器、適合單機桌面環境。</td><td>MSSQL/Oracle (需額外授權與維護)</td></tr>
+  <tr><td>日誌與稽核</td><td>本機加密檔案</td><td>本機</td><td>符合本機優先與稽核保留 ≥ 1 年要求。</td><td>雲端日誌服務 (資料外洩風險)</td></tr>
+  <tr><td>異常偵測 (可選)</td><td>Isolation Forest (Python/scikit-learn)</td><td>開源</td><td>輕量非監督學習，適合異常模式標記。</td><td>深度學習 (過度複雜、資料不足)</td></tr>
+</table>
+
+<h2 id="sec3-6">3.6 FlapsErp 本機物件規格（逆向分析結果）</h2>
+<p>經本地掃描 C:\SYSTEM_PROGRAM_DIRECTORY\FlapsErp，FlapsErp 為 Electron 框架開發的 Windows 桌面 ERP，具備以下本機物件與系統特性，作為 RPA 對接電商系統的基礎規格：</p>
+<table>
+  <tr><th>物件/檔案</th><th>路徑</th><th>規格說明</th><th>對 RPA 對接的意義</th></tr>
+  <tr><td>FlapsErp.exe</td><td>C:\SYSTEM_PROGRAM_DIRECTORY\FlapsErp\</td><td>Electron 主程式 (134 MB)</td><td>桌面 ERP 進入點，RPA 可透過視窗標題與控制元素操作。</td></tr>
+  <tr><td>app.asar</td><td>resources\app.asar (11.8 MB)</td><td>前端與主流程打包檔</td><td>包含 Vue2.6.12 + Bootstrap 5.0.1 前端，RPA 可選 DOM 層或圖像層自動化。</td></tr>
+  <tr><td>winax</td><td>node_modules\winax</td><td>Windows ActiveX/COM 自動化模組</td><td>核心：可操作電商系統桌面程式的 COM 介面，或被電商系統呼叫。</td></tr>
+  <tr><td>ffi-napi / ref-napi / ref-struct-di</td><td>node_modules\ffi-napi 等</td><td>呼叫原生 C DLL / 函式</td><td>可直接呼叫電商系統提供的 DLL 或 Win32 API。</td></tr>
+  <tr><td>serialport</td><td>node_modules\serialport</td><td>串列通訊埠模組</td><td>連接條碼機、讀卡器、重量秤等電商出貨硬體。</td></tr>
+  <tr><td>jspdf</td><td>node_modules\jspdf</td><td>客戶端 PDF 產生</td><td>對接輸出出庫單、發票、報表。</td></tr>
+  <tr><td>iconv-lite</td><td>node_modules\iconv-lite (cp950, big5)</td><td>繁體中文編碼轉換</td><td>與舊式台廠電商系統 (Big5) 交換資料時必須。</td></tr>
+  <tr><td>registerDLL.ps1</td><td>script\registerDLL.ps1</td><td>以 regsvr32 /s 批次註冊 DLL</td><td>證明 FlapsErp 依賴原生 COM/ActiveX 元件，RPA 部署前需執行註冊。</td></tr>
+  <tr><td>zh-TW 語言包</td><td>locales\zh-TW.pak, langs\zh_TW.json</td><td>繁體中文介面</td><td>確認支援繁體中文，適合台灣電商作業。</td></tr>
+  <tr><td>asarUpdater.vbs / updater.vbs</td><td>resources\</td><td>自動更新腳本</td><td>建議關閉自動 asar 更新，改為受控版本發布，防止 RPA 元素斷掉。</td></tr>
+</table>
+<p class="small">上述本機物件規格係依 C:\SYSTEM_PROGRAM_DIRECTORY\FlapsErp 目錄結構與 app.asar 依賴節點清單所得，未進行 FlapsErp 二進位逆向工程，僅供架構設計參考。</p>
+</div>
+<div class="break">
+<h1 id="sec4">4. 技術方案與開發環境</h1>
+
+<h2 id="sec4-1">4.1 開發 / 測試 / 生產環境規格</h2>
+<table>
+  <tr><th>環境</th><th>用途</th><th>硬體/軟體規格</th><th>FlapsErp 安裝路徑</th><th>RPA 工具</th><th>資料庫</th><th>負責角色</th></tr>
+  <tr><td>開發環境 (DEV)</td><td>需求開發、單元測試</td><td>Windows 10/11, 8 GB RAM, 2 核 CPU</td><td>C:\SYSTEM_PROGRAM_DIRECTORY\FlapsErp (測試版)</td><td>OpenRPA 設計師</td><td>SQLite (本機)</td><td>DEV</td></tr>
+  <tr><td>測試環境 (UAT)</td><td>整合測試、驗收測試</td><td>Windows 10/11, 8 GB RAM, 2 核 CPU, 與生產同規格</td><td>C:\SYSTEM_PROGRAM_DIRECTORY\FlapsErp (穩定版)</td><td>OpenRPA 設計師 + 執行端</td><td>SQLite (本機)</td><td>QA</td></tr>
+  <tr><td>生產環境 (PROD)</td><td>實際電商對接</td><td>Windows 10/11 或 Windows Server, 16 GB RAM, 4 核 CPU, 固定 IP</td><td>C:\SYSTEM_PROGRAM_DIRECTORY\FlapsErp (發行版)</td><td>OpenRPA 無人值班執行端</td><td>SQLite/CSV (本機)</td><td>OPS</td></tr>
+</table>
+<p class="small">三環境嚴格隔離，生產環境資料不得回填至開發環境，除非經過敏感資料 (信用卡、身分證、客戶手機) 遮蔽。</p>
+
+<h2 id="sec4-2">4.2 工具鏈與安全標準</h2>
+<table>
+  <tr><th>類別</th><th>工具</th><th>版本</th><th>用途</th><th>存放位置</th></tr>
+  <tr><td>版本控制</td><td>Git</td><td>2.x+</td><td>程式碼與 RPA 工作流版本管理</td><td>本機 Git 儲存庫 (或內部 Git 伺服器)</td></tr>
+  <tr><td>程式碼編輯</td><td>VS Code / Notepad++</td><td>最新穩定版</td><td>PowerShell 腳本與設定檔編輯</td><td>開發者本機</td></tr>
+  <tr><td>RPA 開發</td><td>OpenRPA 設計師</td><td>最新穩定版</td><td>桌面自動化工作流設計與除錯</td><td>開發機本機</td></tr>
+  <tr><td>排序平台</td><td>Windmill</td><td>原生二進位 (Windows sc.exe)</td><td>定時排序、斷路器、重試</td><td>生產主機</td></tr>
+  <tr><td>建構/部署</td><td>PowerShell 部署腳本</td><td>5.1</td><td>環境建置、應用程式部署、回滾</td><td>Git 儲存庫 scripts/</td></tr>
+  <tr><td>缺陷追蹤</td><td>待定 (建議 Git Issues 或內部票證系統)</td><td>—</td><td>缺陷記錄與追蹤</td><td>待確認</td></tr>
+  <tr><td>文件管理</td><td>Microsoft Word / HTML 來源</td><td>—</td><td>專案文件與報告</td><td>共享文件夾</td></tr>
+</table>
+<ul>
+  <li>所有 API 金鑰與認證憑證不得寫死於程式碼，儲存於 Windows 認證管理員或環境變數。</li>
+  <li>傳輸層強制 TLS 1.2+；本機儲存檔案採用加密 (AES-256)。</li>
+  <li>日誌中信用卡號、身分證字號、客戶手機等敏感欄位必須遮蔽，遮蔽率 100%。</li>
+  <li>PowerShell 腳本執行原則設定為 AllSigned（僅允許已簽章腳本；腳本簽章流程納入部署手冊 DEL-O01 管理）。FlapsErp DLL 註冊僅透過 registerDLL.ps1 以系統管理員權限執行。</li>
+  <li>程式碼註解覆蓋率 ≥ 80%，RPA 工作流模組化，單一模組 ≤ 500 行。</li>
+  <li>所有變更必須經過 Code Review 與 QA 簽核後方可合併至主分支。</li>
+</ul>
+</div>
+
+<div class="break">
+<h1 id="sec5">5. 開發計畫與 WBS</h1>
+
+<h2 id="sec5-1">5.1 工作分解結構 (WBS) 表</h2>
+<table>
+  <tr><th>WBS 代號</th><th>工作項目</th><th>父代號</th><th>預估工時 (人日)</th><th>開始 (T0+)</th><th>結束 (T0+)</th><th>負責角色</th><th>交付物</th></tr>
+  <tr><td>1.0</td><td>專案啟動與管理</td><td>—</td><td>33</td><td>第 1 週</td><td>第 13 週</td><td>PMT</td><td>專案憲章、週報、會議紀錄</td></tr>
+  <tr><td>1.1</td><td>需求斂集與確認 (含 OQ 釐清)</td><td>1.0</td><td>3</td><td>第 1 週</td><td>第 2 週</td><td>BA, BIZ-ERP, BIZ-ECOM</td><td>需求規格書 (FRS)</td></tr>
+  <tr><td>1.2</td><td>專案評審與啟動會議</td><td>1.0</td><td>1</td><td>第 1 週</td><td>第 1 週</td><td>PMT</td><td>專案啟動紀錄</td></tr>
+  <tr><td>1.3</td><td>全期專案管理（週報、風險與變更管理、跨部門協調）</td><td>1.0</td><td>29</td><td>第 1 週</td><td>第 13 週</td><td>PMT</td><td>週報、風險登記冊、會議紀錄</td></tr>
+  <tr><td>2.0</td><td>系統分析與設計</td><td>—</td><td>8</td><td>第 2 週</td><td>第 3 週</td><td>ARCH</td><td>架構設計文件、介面設計矩陣</td></tr>
+  <tr><td>2.1</td><td>FlapsErp 與電商系統介面勘探</td><td>2.0</td><td>3</td><td>第 2 週</td><td>第 2 週</td><td>ARCH, DEV</td><td>介面勘探報告</td></tr>
+  <tr><td>2.2</td><td>架構與模組設計</td><td>2.0</td><td>3</td><td>第 2 週</td><td>第 3 週</td><td>ARCH</td><td>架構圖、模組劃分表</td></tr>
+  <tr><td>2.3</td><td>設計評審 (ARCH/SEC 簽核)</td><td>2.0</td><td>2</td><td>第 3 週</td><td>第 3 週</td><td>ARCH, SEC</td><td>設計評審紀錄</td></tr>
+  <tr><td>3.0</td><td>開發實作</td><td>—</td><td>39</td><td>第 4 週</td><td>第 9 週</td><td>DEV</td><td>原始程式碼、RPA 工作流</td></tr>
+  <tr><td>3.1</td><td>MOD-01 FlapsErp 適配層開發</td><td>3.0</td><td>8</td><td>第 4 週</td><td>第 5 週</td><td>DEV</td><td>FlapsErp 適配模組</td></tr>
+  <tr><td>3.2</td><td>MOD-02 OpenRPA 工作流開發</td><td>3.0</td><td>12</td><td>第 5 週</td><td>第 7 週</td><td>DEV</td><td>OpenRPA 工作流檔案</td></tr>
+  <tr><td>3.3</td><td>MOD-03 PowerShell 膠合腳本開發</td><td>3.0</td><td>4</td><td>第 6 週</td><td>第 6 週</td><td>DEV</td><td>PowerShell 腳本</td></tr>
+  <tr><td>3.4</td><td>MOD-05 對帧與幂等模組開發</td><td>3.0</td><td>6</td><td>第 7 週</td><td>第 8 週</td><td>DEV</td><td>對帧模組</td></tr>
+  <tr><td>3.5</td><td>MOD-06 稽核日誌模組開發</td><td>3.0</td><td>4</td><td>第 8 週</td><td>第 9 週</td><td>DEV</td><td>日誌模組</td></tr>
+  <tr><td>3.6</td><td>MOD-04 Windmill 排序與斷路器模組開發</td><td>3.0</td><td>3</td><td>第 6 週</td><td>第 7 週</td><td>DEV</td><td>Windmill 排序設定</td></tr>
+  <tr><td>3.7</td><td>MOD-07 告警模組開發</td><td>3.0</td><td>2</td><td>第 7 週</td><td>第 7 週</td><td>DEV</td><td>告警模組</td></tr>
+  <tr><td>4.0</td><td>測試與品質保證</td><td>—</td><td>12</td><td>第 7 週</td><td>第 11 週</td><td>QA</td><td>測試報告、缺陷紀錄</td></tr>
+  <tr><td>4.1</td><td>單元測試 (DEV 自測)</td><td>4.0</td><td>3</td><td>第 7 週</td><td>第 8 週</td><td>DEV</td><td>單元測試報告</td></tr>
+  <tr><td>4.2</td><td>整合測試 (UAT 環境)</td><td>4.0</td><td>5</td><td>第 8 週</td><td>第 9 週</td><td>QA</td><td>整合測試報告</td></tr>
+  <tr><td>4.3</td><td>效能與安全測試</td><td>4.0</td><td>2</td><td>第 9 週</td><td>第 10 週</td><td>QA/SEC</td><td>效能/安全測試報告</td></tr>
+  <tr><td>4.4</td><td>驗收測試 (UAT)</td><td>4.0</td><td>2</td><td>第 10 週</td><td>第 11 週</td><td>QA, BIZ-ERP, BIZ-ECOM</td><td>驗收測試報告、簽核單</td></tr>
+  <tr><td>5.0</td><td>部署與維運準備</td><td>—</td><td>6</td><td>第 10 週</td><td>第 13 週</td><td>OPS</td><td>部署手冊、維運手冊</td></tr>
+  <tr><td>5.1</td><td>生產環境建置</td><td>5.0</td><td>2</td><td>第 10 週</td><td>第 10 週</td><td>OPS</td><td>環境建置紀錄</td></tr>
+  <tr><td>5.2</td><td>部署與回滾演練</td><td>5.0</td><td>2</td><td>第 11 週</td><td>第 11 週</td><td>OPS</td><td>演練紀錄</td></tr>
+  <tr><td>5.3</td><td>上線與穩定期監控</td><td>5.0</td><td>2</td><td>第 12 週</td><td>第 13 週</td><td>OPS</td><td>上線報告、監控設定</td></tr>
+  <tr><td>6.0</td><td>專案收尾與移交</td><td>—</td><td>3</td><td>第 13 週</td><td>第 13 週</td><td>PMT</td><td>專案總結報告、移交文件</td></tr>
+  <tr><td><strong>總計</strong></td><td></td><td></td><td><strong>101 人日</strong></td><td></td><td></td><td></td><td></td></tr>
+</table>
+
+<p class="small">註：1.3 全期專案管理 29 人日涵蓋週報／風險／協調；3.0 開發實作 39 人日以 DEV 1~2 人於第 4–9 週投入；總計 101 人日（角色投入比例為高峰期上限，見 §7.1）。</p>
+
+<h2 id="sec5-2">5.2 WBS 圖</h2>
+<div class="diagram-box">
+<h4>圖 5.2-1 WBS 階層分解圖</h4>
+<div class="wbs-tree">
+  <div class="wbs-node wbs-root">FLAPS-RPA-ECOM-2026 輔翼 ERP 對接 RPA 與電商系統專案</div>
+  <div class="wbs-node wbs-phase">1.0 專案啟動與管理</div>
+  <div class="wbs-node wbs-task">1.1 需求斂集與 OQ 釐清</div>
+  <div class="wbs-node wbs-task">1.2 專案啟動會議</div>
+  <div class="wbs-node wbs-task">1.3 全期專案管理（週報、風險、協調）</div>
+  <div class="wbs-node wbs-phase">2.0 系統分析與設計</div>
+  <div class="wbs-node wbs-task">2.1 介面勘探</div>
+  <div class="wbs-node wbs-task">2.2 架構與模組設計</div>
+  <div class="wbs-node wbs-task">2.3 設計評審 (ARCH/SEC)</div>
+  <div class="wbs-node wbs-phase">3.0 開發實作</div>
+  <div class="wbs-node wbs-task">3.1 MOD-01 FlapsErp 適配層</div>
+  <div class="wbs-node wbs-task">3.2 MOD-02 OpenRPA 工作流</div>
+  <div class="wbs-node wbs-task">3.3 MOD-03 PowerShell 腳本</div>
+  <div class="wbs-node wbs-task">3.4 MOD-05 對帧與幂等</div>
+  <div class="wbs-node wbs-task">3.5 MOD-06 稽核日誌</div>
+  <div class="wbs-node wbs-task">3.6 MOD-04 Windmill 排序與斷路器</div>
+  <div class="wbs-node wbs-task">3.7 MOD-07 告警模組</div>
+  <div class="wbs-node wbs-phase">4.0 測試與品質保證</div>
+  <div class="wbs-node wbs-task">4.1 單元測試</div>
+  <div class="wbs-node wbs-task">4.2 整合測試</div>
+  <div class="wbs-node wbs-task">4.3 效能與安全測試</div>
+  <div class="wbs-node wbs-task">4.4 UAT 驗收</div>
+  <div class="wbs-node wbs-phase">5.0 部署與維運準備</div>
+  <div class="wbs-node wbs-task">5.1 生產環境建置</div>
+  <div class="wbs-node wbs-task">5.2 部署與回滾演練</div>
+  <div class="wbs-node wbs-task">5.3 上線與穩定期監控</div>
+  <div class="wbs-node wbs-phase">6.0 專案收尾與移交</div>
+  <div class="wbs-node wbs-task">6.1 專案總結與移交</div>
+</div>
+</div>
+</div>
+<div class="break">
+<h1 id="sec6">6. 時程規劃與里程碑</h1>
+
+<h2 id="sec6-1">6.1 時程表 (以專案啟動日 T0 = 2026-11-02 為基準)</h2>
+<table>
+  <tr><th>階段</th><th>週期</th><th>預估日曆日期 (約)</th><th>主要工作</th><th>里程碑/交付物</th></tr>
+  <tr><td>Phase 1 啟動與需求</td><td>T0+0~2 週</td><td>2026-11-02 ~ 2026-11-16</td><td>專案啟動、需求斂集、OQ 釐清、電商介面勘探</td><td>M1: 專案啟動紀錄、FRS 需求規格書</td></tr>
+  <tr><td>Phase 2 設計</td><td>T0+2~4 週</td><td>2026-11-16 ~ 2026-11-30</td><td>架構設計、模組劃分、設計評審</td><td>M2: 設計評審簽核、架構設計文件</td></tr>
+  <tr><td>Phase 3 開發</td><td>T0+4~9 週</td><td>2026-11-30 ~ 2027-01-11</td><td>MOD-01~07 開發、單元測試</td><td>M3: 程式碼完整、單元測試報告</td></tr>
+  <tr><td>Phase 4 測試</td><td>T0+7~11 週</td><td>2026-12-21 ~ 2027-01-18</td><td>整合測試、效能/安全測試、UAT 驗收</td><td>M4: UAT 驗收簽核單</td></tr>
+  <tr><td>Phase 5 部署與上線</td><td>T0+10~13 週</td><td>2027-01-11 ~ 2027-02-01</td><td>生產環境建置、部署演練、上線監控</td><td>M5: 生產上線、穩定期報告</td></tr>
+  <tr><td>Phase 6 收尾</td><td>T0+13 週</td><td>2027-02-01 ~ 2027-02-08</td><td>專案總結、移交文件</td><td>M6: 專案總結報告、移交完成</td></tr>
+</table>
+<p class="small">實際日曆日期隨專案憲章簽核與電商系統廠商配合度調整，以上以週數為準；全期至 2027-02-08（13 週工作期＋結案週）。</p>
+
+<h2 id="sec6-2">6.2 甘特圖</h2>
+<div class="diagram-box">
+<h4>圖 6.2-1 專案甘特圖（13 週工作期＋結案週）</h4>
+<div class="gantt-container">
+  <div style="font-size:8pt; color:#666; margin-bottom:4px;">時間軸：2026-11-02 (T0) 至 2027-02-08（結案，比例尺 98 天）</div>
+  <div class="gantt-row"><span class="gantt-label">Phase 1 啟動與需求</span><div class="gantt-track"><div class="gantt-fill" style="left:0%; width:14.29%; background:#0b3d66;"></div></div></div>
+  <div class="gantt-row"><span class="gantt-label">Phase 2 設計</span><div class="gantt-track"><div class="gantt-fill" style="left:14.29%; width:14.29%; background:#14537d;"></div></div></div>
+  <div class="gantt-row"><span class="gantt-label">Phase 3 開發</span><div class="gantt-track"><div class="gantt-fill" style="left:28.57%; width:42.86%; background:#2e6e8e;"></div></div></div>
+  <div class="gantt-row"><span class="gantt-label">Phase 4 測試</span><div class="gantt-track"><div class="gantt-fill" style="left:50%; width:28.57%; background:#5a9e6f;"></div></div></div>
+  <div class="gantt-row"><span class="gantt-label">Phase 5 部署與上線</span><div class="gantt-track"><div class="gantt-fill" style="left:71.43%; width:21.43%; background:#8ec07c;"></div></div></div>
+  <div class="gantt-row"><span class="gantt-label">Phase 6 收尾</span><div class="gantt-track"><div class="gantt-fill" style="left:92.86%; width:7.14%; background:#b6d7a8;"></div></div></div>
+</div>
+<table style="margin-top:8px; font-size:8.5pt;">
+  <tr><th>工作包</th><th>開始 (T0+)</th><th>結束 (T0+)</th><th>工期</th><th>負責角色</th></tr>
+  <tr><td>1.0 專案啟動與管理</td><td>第 1 週</td><td>第 13 週</td><td>33 人日</td><td>PMT</td></tr>
+  <tr><td>1.1 需求斂集與 OQ 釐清</td><td>第 1 週</td><td>第 2 週</td><td>3 人日</td><td>BA, BIZ-ERP, BIZ-ECOM</td></tr>
+  <tr><td>1.2 專案評審與啟動會議</td><td>第 1 週</td><td>第 1 週</td><td>1 人日</td><td>PMT</td></tr>
+  <tr><td>1.3 全期專案管理（週報、風險、協調）</td><td>第 1 週</td><td>第 13 週</td><td>29 人日</td><td>PMT</td></tr>
+  <tr><td>2.0 系統分析與設計</td><td>第 2 週</td><td>第 3 週</td><td>8 人日</td><td>ARCH</td></tr>
+  <tr><td>2.1 介面勘探</td><td>第 2 週</td><td>第 2 週</td><td>3 人日</td><td>ARCH, DEV</td></tr>
+  <tr><td>2.2 架構與模組設計</td><td>第 2 週</td><td>第 3 週</td><td>3 人日</td><td>ARCH</td></tr>
+  <tr><td>2.3 設計評審</td><td>第 3 週</td><td>第 3 週</td><td>2 人日</td><td>ARCH, SEC</td></tr>
+  <tr><td>3.0 開發實作</td><td>第 4 週</td><td>第 9 週</td><td>39 人日</td><td>DEV</td></tr>
+  <tr><td>3.1 MOD-01 FlapsErp 適配層</td><td>第 4 週</td><td>第 5 週</td><td>8 人日</td><td>DEV</td></tr>
+  <tr><td>3.2 MOD-02 OpenRPA 工作流</td><td>第 5 週</td><td>第 7 週</td><td>12 人日</td><td>DEV</td></tr>
+  <tr><td>3.3 MOD-03 PowerShell 腳本</td><td>第 6 週</td><td>第 6 週</td><td>4 人日</td><td>DEV</td></tr>
+  <tr><td>3.4 MOD-05 對帧與幂等</td><td>第 7 週</td><td>第 8 週</td><td>6 人日</td><td>DEV</td></tr>
+  <tr><td>3.5 MOD-06 稽核日誌</td><td>第 8 週</td><td>第 9 週</td><td>4 人日</td><td>DEV</td></tr>
+  <tr><td>3.6 MOD-04 Windmill 排序與斷路器</td><td>第 6 週</td><td>第 7 週</td><td>3 人日</td><td>DEV</td></tr>
+  <tr><td>3.7 MOD-07 告警模組</td><td>第 7 週</td><td>第 7 週</td><td>2 人日</td><td>DEV</td></tr>
+  <tr><td>4.0 測試與品質保證</td><td>第 7 週</td><td>第 11 週</td><td>12 人日</td><td>QA</td></tr>
+  <tr><td>4.1 單元測試</td><td>第 7 週</td><td>第 8 週</td><td>3 人日</td><td>DEV</td></tr>
+  <tr><td>4.2 整合測試</td><td>第 8 週</td><td>第 9 週</td><td>5 人日</td><td>QA</td></tr>
+  <tr><td>4.3 效能與安全測試</td><td>第 9 週</td><td>第 10 週</td><td>2 人日</td><td>QA/SEC</td></tr>
+  <tr><td>4.4 UAT 驗收</td><td>第 10 週</td><td>第 11 週</td><td>2 人日</td><td>QA, BIZ-ERP, BIZ-ECOM</td></tr>
+  <tr><td>5.0 部署與維運準備</td><td>第 10 週</td><td>第 13 週</td><td>6 人日</td><td>OPS</td></tr>
+  <tr><td>5.1 生產環境建置</td><td>第 10 週</td><td>第 10 週</td><td>2 人日</td><td>OPS</td></tr>
+  <tr><td>5.2 部署與回滾演練</td><td>第 11 週</td><td>第 11 週</td><td>2 人日</td><td>OPS</td></tr>
+  <tr><td>5.3 上線與穩定期監控</td><td>第 12 週</td><td>第 13 週</td><td>2 人日</td><td>OPS</td></tr>
+  <tr><td>6.0 專案收尾與移交</td><td>第 13 週</td><td>第 13 週</td><td>3 人日</td><td>PMT</td></tr>
+  <tr><td><strong>總計</strong></td><td></td><td></td><td><strong>101 人日</strong></td><td></td></tr>
+</table>
+</div>
+
+<h2 id="sec6-3">6.3 里程碑與驗收門檻</h2>
+<table>
+  <tr><th>里程碑代號</th><th>里程碑名稱</th><th>預計達成 (T0+)</th><th>驗收門檻 (可量測)</th><th>驗收負責人</th></tr>
+  <tr><td>M1</td><td>專案啟動與需求確認完成</td><td>第 2 週末</td><td>FRS 需求規格書簽核；OQ-01~08 至少 80% 獲得正式回覆；利害關係人簽署範圍確認單。</td><td>PMT, BIZ-ERP, BIZ-ECOM</td></tr>
+  <tr><td>M2</td><td>設計評審通過</td><td>第 4 週末</td><td>架構設計文件、介面設計矩陣完成；ARCH 與 SEC 簽核；無高風險設計缺陷未處理。</td><td>ARCH, SEC</td></tr>
+  <tr><td>M3</td><td>開發完成與單元測試通過</td><td>第 9 週末</td><td>MOD-01~07 程式碼入庫；單元測試覆蓋率 ≥ 80%；無嚴重 (Severity 1) 缺陷未修復。</td><td>QA, DEV</td></tr>
+  <tr><td>M4</td><td>UAT 驗收通過</td><td>第 11 週末</td><td>整合測試報告完成；效能 (單筆 ≤ 5 秒 API / ≤ 30 秒 UI)、可用性 ≥ 99%、安全 (敏感欄位遮蔽 100%) 達標；業務負責人簽署 UAT 驗收單。</td><td>QA, BIZ-ERP, BIZ-ECOM</td></tr>
+  <tr><td>M5</td><td>生產環境上線</td><td>第 13 週中</td><td>生產環境建置完成；部署與回滾演練通過；監控與告警啟動；首週對接資料一致性 ≥ 99.5%。</td><td>OPS, PMT</td></tr>
+  <tr><td>M6</td><td>專案移交與結案</td><td>第 13 週末</td><td>移交文件完整；維運手冊、操作手冊交付；OPS 簽收維護責任。</td><td>PMT, OPS</td></tr>
+</table>
+</div>
+<div class="break">
+<h1 id="sec7">7. 資源配置與 RACI 責任矩陣</h1>
+
+<h2 id="sec7-1">7.1 角色定義</h2>
+<table>
+  <tr><th>角色代號</th><th>角色名稱</th><th>主要職責 (簡述)</th><th>預估投入比例</th></tr>
+  <tr><td>PMT</td><td>專案經理</td><td>整體規劃、進度、風險、跨部門協調、會議主持</td><td>50%</td></tr>
+  <tr><td>BA</td><td>業務分析師</td><td>需求斂集、電商訂單/庫存欄位對映、業務規則、驗收標準</td><td>40%</td></tr>
+  <tr><td>ARCH</td><td>系統架構師</td><td>架構設計、技術選型、介面設計、資料模型、安全規範</td><td>30%</td></tr>
+  <tr><td>DEV</td><td>開發工程師 (×1~2)</td><td>RPA 工作流、PowerShell 腳本、電商 API 對接、單元測試</td><td>100%</td></tr>
+  <tr><td>QA</td><td>品質保證工程師</td><td>測試計畫、測試案例、缺陷追蹤、驗收支援</td><td>50%</td></tr>
+  <tr><td>OPS</td><td>維運工程師</td><td>環境建置、部署、監控、備份、回滾、日常維護</td><td>40%</td></tr>
+  <tr><td>BIZ-ERP</td><td>輔翼 ERP 業務負責人</td><td>確認 FlapsErp 訂單/庫存流程與欄位、異常處理權限</td><td>20%</td></tr>
+  <tr><td>BIZ-ECOM</td><td>電商系統業務負責人</td><td>確認電商系統介面、訂單狀態機、欄位對映、對帧標準</td><td>20%</td></tr>
+  <tr><td>SEC</td><td>資安與合規負責人</td><td>身分驗證、加密、稽核日誌、敏感資料遮蔽審核</td><td>15%</td></tr>
+</table>
+
+<p class="small">註：投入比例為各階段高峰之上限比例；總工作量以 WBS 為準（合計 101 人日）。PMT 投入（1.2、1.3、6.0 合計 33 人日）與「50% × 13 週 ≈ 32.5 人日」相符；DEV 39 人日以 1~2 人於第 4–9 週投入。</p>
+
+<h2 id="sec7-2">7.2 RACI 責任矩陣</h2>
+<table class="raci">
+  <tr><th>工作包 / 交付物</th><th>PMT</th><th>BA</th><th>ARCH</th><th>DEV</th><th>QA</th><th>OPS</th><th>BIZ-ERP</th><th>BIZ-ECOM</th><th>SEC</th></tr>
+  <tr><td>1.1 需求斂集與 FRS</td><td class="A">A</td><td class="R">R</td><td class="C">C</td><td class="C">C</td><td class="C">C</td><td class="I">I</td><td class="C">C</td><td class="C">C</td><td class="I">I</td></tr>
+  <tr><td>2.0 架構設計文件</td><td class="A">A</td><td class="C">C</td><td class="R">R</td><td class="C">C</td><td class="C">C</td><td class="C">C</td><td class="I">I</td><td class="I">I</td><td class="C">C</td></tr>
+  <tr><td>3.0 開發實作 (MOD-01~07)</td><td class="A">A</td><td class="C">C</td><td class="C">C</td><td class="R">R</td><td class="C">C</td><td class="C">C</td><td class="I">I</td><td class="I">I</td><td class="C">C</td></tr>
+  <tr><td>4.0 測試與品質保證</td><td class="A">A</td><td class="C">C</td><td class="I">I</td><td class="R">R</td><td class="R">R</td><td class="C">C</td><td class="C">C</td><td class="C">C</td><td class="C">C</td></tr>
+  <tr><td>4.4 UAT 驗收</td><td class="A">A</td><td class="R">R</td><td class="I">I</td><td class="C">C</td><td class="R">R</td><td class="C">C</td><td class="C">C</td><td class="C">C</td><td class="C">C</td></tr>
+  <tr><td>5.0 部署與生產上線</td><td class="A">A</td><td class="I">I</td><td class="C">C</td><td class="C">C</td><td class="I">I</td><td class="R">R</td><td class="I">I</td><td class="I">I</td><td class="C">C</td></tr>
+  <tr><td>5.3 監控與維運移交</td><td class="A">A</td><td class="I">I</td><td class="I">I</td><td class="I">I</td><td class="I">I</td><td class="R">R</td><td class="I">I</td><td class="I">I</td><td class="C">C</td></tr>
+  <tr><td>6.0 專案總結與移交</td><td class="R">R</td><td class="C">C</td><td class="C">C</td><td class="C">C</td><td class="C">C</td><td class="C">C</td><td class="I">I</td><td class="I">I</td><td class="C">C</td></tr>
+</table>
+<p class="small">R = 負責執行 (Responsible), A = 最終問責 (Accountable), C = 諮詢 (Consulted), I = 知會 (Informed)。每一工作包僅有一位 A。</p>
+
+<h2 id="sec7-3">7.3 溝通機制</h2>
+<table>
+  <tr><th>機制類型</th><th>名稱</th><th>頻率/節奏</th><th>參與者</th><th>內容/產出</th><th>負責人</th></tr>
+  <tr><td>會議</td><td>專案啟動會議</td><td>第 1 週 1 次 (2 小時)</td><td>全體利害關係人</td><td>專案憲章、範圍、里程碑確認</td><td>PMT</td></tr>
+  <tr><td>會議</td><td>週同步會 (Weekly Sync)</td><td>每週 1 次 (週一 1 小時)</td><td>PMT, BA, ARCH, DEV, QA, OPS</td><td>進度回顧、風險更新、本週計畫、阻礙排除</td><td>PMT</td></tr>
+  <tr><td>會議</td><td>設計評審會議</td><td>第 3~4 週 (視需要)</td><td>ARCH, SEC, DEV, QA</td><td>架構與介面設計簽核</td><td>ARCH</td></tr>
+  <tr><td>會議</td><td>UAT 驗收會議</td><td>第 10~11 週</td><td>QA, BIZ-ERP, BIZ-ECOM, DEV</td><td>驗收測試結果、簽核</td><td>QA</td></tr>
+  <tr><td>報告</td><td>週度專案狀態報告</td><td>每週五提交</td><td>PMT → 專案贊助人/高階主管</td><td>進度 (%), 已完成工作、下週計畫、風險、決策需求</td><td>PMT</td></tr>
+  <tr><td>報告</td><td>月度進度報告</td><td>每月 1 次</td><td>PMT → 高階管理層</td><td>里程碑達成、預算消耗、重大風險</td><td>PMT</td></tr>
+  <tr><td>升級路徑</td><td>問題升級</td><td>發現後 24 小時內</td><td>發現者 → PMT → 專案贊助人 → 高階主管</td><td>風險/問題升級單、決議紀錄</td><td>PMT</td></tr>
+  <tr><td>文件</td><td>缺陷與變更記錄</td><td>即時更新</td><td>QA, DEV, PMT</td><td>缺陷狀態、變更申請與核准</td><td>QA</td></tr>
+</table>
+</div>
+<div class="break">
+<h1 id="sec8">8. 風險評估與因應措施</h1>
+
+<h2 id="sec8-1">8.1 風險登記冊</h2>
+<p>風險評分 = 發生機率 (1~5) × 影響程度 (1~5)，風險等級：≥15 極高, 10~14 高, 5~9 中, ≤4 低。</p>
+<table>
+  <tr><th>風險 ID</th><th>風險描述</th><th>機率</th><th>影響</th><th>分數</th><th>等級</th><th>因應措施 (Mitigation)</th><th>觸發條件</th><th>負責人</th></tr>
+  <tr><td>RSK-01</td><td>電商系統 UI 佈局更新導致 OpenRPA 元素辨識失敗</td><td>4</td><td>4</td><td>16</td><td>極高</td><td>優先採用模式 A (API) 對接；UI 元素以多屬性辨識 (名稱+ID+類別)，不只依賴座標；建立元素物件庫，集中維護。</td><td>RPA 工作流連續失敗 ≥ 3 次且錯誤訊息包含「元素未找到」</td><td>DEV</td></tr>
+  <tr><td>RSK-02</td><td>繁體中文編碼亂碼 (UTF-8 與 CP950/Big5 不匹配)</td><td>3</td><td>4</td><td>12</td><td>高</td><td>全端統一內部 UTF-8，匯出入時透過 iconv-lite 轉換；建立編碼測試用例，涵蓋 Big5 常用字。</td><td>對帧報告顯示亂碼欄位，或電商系統回傳解析錯誤</td><td>DEV</td></tr>
+  <tr><td>RSK-03</td><td>電商系統未開放 API，僅有桌面 UI</td><td>3</td><td>4</td><td>12</td><td>高</td><td>採用模式 B (OpenRPA 桌面自動化)；錄製關鍵動作並驗證可行性；設定圖像辨識閾值 0.90~0.95。</td><td>OQ-01 回覆為「無 API」或 API 規格不完整</td><td>BA, ARCH</td></tr>
+  <tr><td>RSK-04</td><td>RPA 主機中斷或離線導致對接停止</td><td>3</td><td>3</td><td>9</td><td>中</td><td>RPA 主機以專用實體機/虛擬機執行，關閉睡眠與螢幕關閉；設定監控與告警；每週重新啟動一次釋放記憶體。</td><td>監控偵測 RPA 主機離線 > 10 分鐘</td><td>OPS</td></tr>
+  <tr><td>RSK-05</td><td>資料不一致 (雙端訂單、金額、日期、狀態不符)</td><td>3</td><td>4</td><td>12</td><td>高</td><td>雙端對帧 (單號+金額+日期+狀態)、幂等鍵、差異進入待人工複核佇列，不直接寫入生產。</td><td>每日對帧差異率 > 0.5%</td><td>DEV, QA</td></tr>
+  <tr><td>RSK-06</td><td>機密資料 (信用卡、身分證、客戶手機) 外洩</td><td>2</td><td>5</td><td>10</td><td>高</td><td>傳輸 TLS 1.2+；日誌敏感欄位遮蔽 100%；本機備份加密；權限最小化。</td><td>滲透測試發現敏感資料明文，或日誌掃描發現未遮蔽欄位</td><td>SEC</td></tr>
+  <tr><td>RSK-07</td><td>電商系統廠商配合度不足，介面規格延遲提供</td><td>3</td><td>3</td><td>9</td><td>中</td><td>OQ-01~08 列為專案阻礙，每週追蹤；若延遲超過 2 週，啟動備援方案 (以 Fiddler/Process Monitor 擷取執行期行為)。</td><td>OQ-01~03 在 T0+2 週後仍未回覆</td><td>PMT, BA</td></tr>
+  <tr><td>RSK-08</td><td>FlapsErp 版本更新導致 winax/COM 介面斷掉</td><td>2</td><td>3</td><td>6</td><td>中</td><td>關閉 FlapsErp 自動 asar 更新，改為受控版本發布；版本更新前先在測試環境回歸測試。</td><td>FlapsErp 版本號變更，或 COM 註冊失敗</td><td>OPS</td></tr>
+  <tr><td>RSK-09</td><td>排程重疊導致資料重複寫入</td><td>2</td><td>3</td><td>6</td><td>中</td><td>穩定業務鍵幂等（訂單／出庫單／退貨單編號）防重複；Windmill 排序設定互斥鎖，避免並行執行。</td><td>對帧發現重複單據編號</td><td>DEV</td></tr>
+  <tr><td>RSK-10</td><td>人力資源不足 (開發工程師離職或休假)</td><td>2</td><td>3</td><td>6</td><td>中</td><td>程式碼與文件同步更新，至少兩人熟悉各模組；建立離職移交清單。</td><td>關鍵角色缺位超過 1 週</td><td>PMT</td></tr>
+</table>
+</div>
+
+<div class="break">
+<h1 id="sec9">9. 測試與品質保證策略</h1>
+
+<h2 id="sec9-1">9.1 測試層級與類型</h2>
+<table>
+  <tr><th>測試層級</th><th>測試類型</th><th>測試範圍</th><th>負責角色</th><th>進入條件</th><th>退出條件</th></tr>
+  <tr><td>單元測試</td><td>功能單元測試</td><td>MOD-01~07 各模組函式與邏輯</td><td>DEV</td><td>模組程式碼完成，程式碼審查通過</td><td>單元測試覆蓋率 ≥ 80%，無 Severity 1/2 缺陷未修復</td></tr>
+  <tr><td>整合測試</td><td>介面整合測試</td><td>INT-01~06 介面，FlapsErp↔OpenRPA↔電商系統</td><td>QA</td><td>單元測試通過，測試環境 (UAT) 就緒</td><td>所有介面測試案例通過，幂等與對帧邏輯正確</td></tr>
+  <tr><td>系統測試</td><td>端對端業務流程測試</td><td>完整單據對接流程 (電商下單→FlapsErp→出庫→電商出貨)</td><td>QA</td><td>整合測試通過</td><td>業務流程測試案例 100% 通過</td></tr>
+  <tr><td>效能測試</td><td>負載與壓力測試</td><td>單筆延遲、日處理量 ≥ 200 筆、並行執行穩定性</td><td>QA</td><td>系統測試通過</td><td>API 模式單筆 ≤ 5 秒，UI 模式 ≤ 30 秒，日處理量 ≥ 200 筆無錯誤</td></tr>
+  <tr><td>安全測試</td><td>滲透測試與驗證</td><td>TLS 加密、認證、敏感欄位遮蔽、日誌完整性</td><td>QA/SEC</td><td>系統測試通過</td><td>敏感欄位遮蔽率 100%，無高危險漏洞未修復</td></tr>
+  <tr><td>驗收測試 (UAT)</td><td>業務驗收</td><td>實際電商業務場景，由業務負責人執行</td><td>BIZ-ERP, BIZ-ECOM, QA</td><td>系統測試與效能測試通過</td><td>業務負責人簽署 UAT 驗收單</td></tr>
+</table>
+
+<h2 id="sec9-2">9.2 覆蓋率目標</h2>
+<table>
+  <tr><th>覆蓋項目</th><th>目標值</th><th>測量方式</th></tr>
+  <tr><td>程式碼行覆蓋率 (單元測試)</td><td>≥ 80%</td><td>單元測試覆蓋率工具報告</td></tr>
+  <tr><td>介面測試案例覆蓋率</td><td>100% (INT-01~06 全部)</td><td>測試管理系統</td></tr>
+  <tr><td>業務流程測試案例覆蓋率</td><td>100% (主要業務路徑)</td><td>測試管理系統</td></tr>
+  <tr><td>異常情境測試案例</td><td>≥ 10 個 (網路中斷、電商系統忙碌、資料格式錯誤、重複提交、庫存不足等)</td><td>測試案例清單</td></tr>
+  <tr><td>敏感欄位遮蔽檢查</td><td>100%</td><td>日誌掃描與人工抽查</td></tr>
+</table>
+
+<h2 id="sec9-3">9.3 驗收測試與驗收標準</h2>
+<table>
+  <tr><th>驗收項目</th><th>可量測驗收條件</th><th>驗證方法</th><th>驗收負責人</th></tr>
+  <tr><td>功能完整性</td><td>FR-01~09 (Must) 100% 通過；FR-10~12 (Should) ≥ 80% 通過</td><td>執行驗收測試案例，記錄 Pass/Fail</td><td>QA, BIZ-ERP, BIZ-ECOM</td></tr>
+  <tr><td>單筆對接效能</td><td>API 模式 ≤ 5 秒；UI RPA 模式 ≤ 30 秒 (樣本 ≥ 50 筆，平均值)</td><td>效能測試報告，計時</td><td>QA</td></tr>
+  <tr><td>日處理量</td><td>≥ 200 筆/日，錯誤率 ≤ 0.5%</td><td>連續 5 個營業日執行紀錄</td><td>QA, OPS</td></tr>
+  <tr><td>資料一致性</td><td>雙端對帧差異率 ≤ 0.5%，差異全部進入待人工複核佇列</td><td>每日對帧報告</td><td>QA, BIZ-ECOM</td></tr>
+  <tr><td>可用性</td><td>系統可用性 ≥ 99%（24/7 口徑）</td><td>監控系統報告 (測試期 ≥ 1 週)</td><td>OPS</td></tr>
+  <tr><td>失敗恢復</td><td>失敗自動恢復 ≤ 5 分鐘；連續失敗 5 次觸發斷路器；告警延遲 ≤ 5 分鐘</td><td>故障注入測試，檢查告警紀錄</td><td>QA, OPS</td></tr>
+  <tr><td>安全性</td><td>傳輸 TLS 1.2+；敏感欄位遮蔽率 100%；API 金鑰不寫死於程式碼</td><td>滲透測試報告，日誌掃描</td><td>SEC</td></tr>
+  <tr><td>編碼正確性</td><td>繁體中文欄位零亂碼 (Big5/CP950 與 UTF-8 轉換)</td><td>編碼測試用例，人工檢查顯示</td><td>QA, BIZ-ERP</td></tr>
+</table>
+</div>
+
+<div class="break">
+<h1 id="sec10">10. 部署與維運計畫</h1>
+
+<h2 id="sec10-1">10.1 環境與發布流程</h2>
+<ul>
+  <li>開發環境 (DEV)：開發者本機，Windows 10/11，FlapsErp 測試版安裝於 C:\SYSTEM_PROGRAM_DIRECTORY\FlapsErp。</li>
+  <li>測試環境 (UAT)：與生產同規格，Windows 10/11，FlapsErp 穩定版，OpenRPA 設計師 + 執行端。</li>
+  <li>生產環境 (PROD)：Windows 10/11 或 Windows Server，16 GB RAM，4 核 CPU，固定 IP，FlapsErp 發行版，OpenRPA 無人值班執行端。</li>
+  <li>三環境嚴格隔離，生產資料不得回填至開發環境，除非經過敏感資料遮蔽。</li>
+</ul>
+<ol>
+  <li>開發完成後於 DEV 環境進行單元測試與程式碼審查。</li>
+  <li>部署至 UAT 環境，執行整合測試、效能測試、安全測試。</li>
+  <li>UAT 驗收通過後，建立發行版本 (版本號格式 vMajor.Minor.Patch，例如 v1.0.0)。</li>
+  <li>在 PROD 環境備份現行版本與資料。</li>
+  <li>於離峰時段 (每日 02:00~06:00) 部署至 PROD，Windmill 排序啟動對接作業。</li>
+  <li>部署後執行冒煙測試，確認核心功能正常。</li>
+  <li>若發現 Severity 1 缺陷，立即觸發回滾程序。</li>
+</ol>
+
+<h2 id="sec10-2">10.2 監控、備份與回滾</h2>
+<table>
+  <tr><th>監控項目</th><th>監控指標</th><th>告警閾值</th><th>告警通道</th><th>負責角色</th></tr>
+  <tr><td>RPA 主機可用性</td><td>主機在線狀態</td><td>離線 > 10 分鐘</td><td>Email/Teams</td><td>OPS</td></tr>
+  <tr><td>對接作業執行狀態</td><td>每日對接筆數、失敗筆數</td><td>失敗率 > 1% 或連續失敗 5 次</td><td>Email/Teams/簡訊</td><td>OPS</td></tr>
+  <tr><td>單筆對接延遲</td><td>API/UI 對接平均耗時</td><td>API > 5 秒 或 UI > 30 秒</td><td>Email/Teams</td><td>OPS</td></tr>
+  <tr><td>資料一致性</td><td>每日對帧差異率</td><td>差異率 > 0.5%</td><td>Email</td><td>OPS, QA</td></tr>
+  <tr><td>系統資源</td><td>CPU、記憶體使用率</td><td>持續 > 80% 超過 30 分鐘</td><td>Email</td><td>OPS</td></tr>
+</table>
+
+<table>
+  <tr><th>項目</th><th>頻率</th><th>保留期</th><th>儲存位置</th><th>加密</th><th>回滾 RTO</th><th>回滾 RPO</th></tr>
+  <tr><td>對接資料與設定</td><td>每日</td><td>≥ 1 年</td><td>本機加密檔案</td><td>AES-256</td><td>≤ 4 小時</td><td>≤ 24 小時</td></tr>
+  <tr><td>程式碼與 RPA 工作流</td><td>每次變更</td><td>永久 (Git)</td><td>Git 儲存庫</td><td>—</td><td>≤ 1 小時</td><td>≤ 1 小時</td></tr>
+  <tr><td>稽核日誌</td><td>即時</td><td>≥ 1 年</td><td>本機加密檔案</td><td>AES-256</td><td>—</td><td>—</td></tr>
+</table>
+<p class="small">RTO = 恢復時間目標 (Recovery Time Objective)，RPO = 復原點目標 (Recovery Point Objective)。回滾程序：停止 Windmill 排序 → 還原最近備份 → 重新部署前一版程式碼 → 驗證資料一致性 → 重新啟動排序。</p>
+</div>
+<div class="break">
+<h1 id="sec11">11. 系統流程最佳化建議</h1>
+<ul>
+  <li><strong>對接模式優先級：</strong>優先採用模式 A (API/服務層)，因為穩定、快速且易監控；僅在電商系統無 API 時才啟用模式 B (OpenRPA 桌面自動化)；模式 C (資料庫直讀) 僅作每日對帧補強，避免直接寫入電商系統資料庫。</li>
+  <li><strong>編碼統一：</strong>FlapsErp 內部採用 UTF-8，與電商系統交換時透過 iconv-lite 轉換 CP950/Big5，建立標準編碼轉換函式庫，避免各模組重複實作。</li>
+  <li><strong>幂等與對帧：</strong>所有對接交易以「穩定業務鍵」（訂單／出庫單／退貨單編號等）為幂等鍵（時間戳僅作稽核欄位），每日 02:00~06:00 自動雙端對帧，差異進入待人工複核佇列，降低資料不一致風險。</li>
+  <li><strong>RPA 主機穩定：</strong>關閉睡眠與螢幕關閉，固定視窗解析度 (1920×1080, 100% 縮放) 以提升 OpenRPA 元素辨識穩定性；每週重新啟動主機一次釋放記憶體。</li>
+  <li><strong>智能化漸進：</strong>Phase 1 優先實作基礎對接與對帧；Phase 2 可考慮加入 Isolation Forest 輕量異常偵測，標記高風險筆錄，避免初期即引入複雜 AI 架構。</li>
+  <li><strong>文件即程式碼：</strong>架構圖、介面矩陣、RPA 工作流與 PowerShell 腳本均納入版本控制，與程式碼同步版本，避免文件與實作脫節。</li>
+  <li><strong>電商訂單狀態機對映：</strong>建立電商系統訂單狀態 (待付款/已付款/已出貨/已完成/退貨中/已取消) 與 FlapsErp 訂單狀態的標準對映表，避免狀態語意不一致導致對帧錯誤。</li>
+</ul>
+</div>
+
+<h1 id="sec12">12. 附錄：詞彙表與參考文件</h1>
+<h2>12.1 詞彙表</h2>
+<table>
+  <tr><th>術語</th><th>定義</th></tr>
+  <tr><td>FlapsErp</td><td>輔翼 ERP 桌面版，Electron 框架開發，安裝於 C:\SYSTEM_PROGRAM_DIRECTORY\FlapsErp。</td></tr>
+  <tr><td>RPA</td><td>機器人流程自動化 (Robotic Process Automation)，本專案採用 OpenRPA。</td></tr>
+  <tr><td>電商系統 (E-commerce System)</td><td>待對接之第三方電商平台或自建電商系統 (名稱與規格待電商系統單位確認，OQ-01~08)。</td></tr>
+  <tr><td>OpenRPA</td><td>免費開源 RPA 工具 (MPL-2.0)，支援 Windows 桌面自動化、COM/ActiveX、內嵌 PowerShell/C#。</td></tr>
+  <tr><td>Windmill</td><td>免費自動化排序平台，原生二進位部署 (Windows sc.exe / systemd)，不需 Docker。</td></tr>
+  <tr><td>幂等 (Idempotency)</td><td>相同請求多次執行結果相同，不產生重複資料；本專案以穩定業務鍵（訂單／出庫單／退貨單編號等）作為幂等鍵；時間戳僅作稽核欄位。</td></tr>
+  <tr><td>RTO / RPO</td><td>復原時間目標 (Recovery Time Objective) / 復原點目標 (Recovery Point Objective)，災難復原指標。</td></tr>
+  <tr><td>T0</td><td>專案啟動日，預計 2026-11-02。</td></tr>
+  <tr><td>OQ</td><td>Open Question，待確認問題，須由電商系統廠商或業務單位正式回覆。</td></tr>
+</table>
+
+<h2>12.2 參考文件與依據</h2>
+<ul>
+  <li>本地掃描結果：C:\SYSTEM_PROGRAM_DIRECTORY\FlapsErp (FlapsErp.exe, resources/app.asar, script/registerDLL.ps1, locales/zh-TW.pak, langs/zh_TW.json, 依賴 winax/ffi-napi/serialport/iconv-lite/jspdf 等)；v2.1 複核（2026-11-03）抽查：FlapsErp.exe、app.asar、registerDLL.ps1 均存在。</li>
+  <li>OpenRPA 開源 RPA 平台（MPL-2.0）；官方儲存庫 github.com/open-rpa/openrpa（檢索日期 2026-11-03）。</li>
+  <li>Windmill 自動化平台（原生二進位部署，支援 Windows sc.exe）；官方儲存庫 github.com/windmill-labs/windmill（檢索日期 2026-11-03）。</li>
+  <li>專案既有架構決策：Windmill + PowerShell + wellfit.exe 三層整合方案；不使用 Docker 容器。</li>
+  <li>公開 RPA 工具評比資料（2026）：OpenRPA、UI.Vision、TagUI、RPA Framework、UiPath CE 等（檢索日期 2026-11-03；各工具官方網站）。</li>
+</ul>
+
+<h2>12.3 版本修訂紀錄（v2.0 → v2.1，2026-11-03）</h2>
+<table>
+  <tr><th>編號</th><th>對應 Gate 1 缺陷</th><th>修正內容</th><th>位置</th></tr>
+  <tr><td>1</td><td>B-02 幂等鍵設計</td><td>「交易編號 + 時間戳」全面改為「穩定業務鍵」（訂單／出庫單／退貨單編號）；時間戳僅作稽核欄位，不參與去重判定</td><td>§1.2、§2.2 FR-05、§3.2、§8 RSK-09、§11、§12.1</td></tr>
+  <tr><td>2</td><td>B-03 WBS 覆蓋缺口</td><td>新增 WBS 3.6（MOD-04 Windmill 排序與斷路器）、3.7（MOD-07 告警）；MOD 範圍一律更新為 MOD-01~07；3.0 開發實作 24→39 人日</td><td>§1.4、§5.1、§5.2、§6.1、§6.2、§6.3、§7.2、§9.1</td></tr>
+  <tr><td>3</td><td>B-04 工時對帳</td><td>新增 1.3 全期專案管理（29 人日）；1.0→33 人日、3.0→39 人日、總計 58→101 人日；補充角色投入比例口徑註記</td><td>§5.1、§5.2、§6.2、§7.1</td></tr>
+  <tr><td>4</td><td>M-01 圖示宣稱</td><td>移除「Mermaid 即時渲染」不實宣稱與殘留 CSS；統一為「HTML/CSS 內嵌繪製、離線可讀」</td><td>封面、目錄註、§12 頁尾</td></tr>
+  <tr><td>5</td><td>M-02 重複表格</td><td>刪除 §3.2 重複之交易規格表（保留乙份）</td><td>§3.2</td></tr>
+  <tr><td>6</td><td>M-03 腳本原則矛盾</td><td>PowerShell 執行原則 RemoteSigned→AllSigned（與「僅允許簽名腳本」一致）</td><td>§4.2</td></tr>
+  <tr><td>7</td><td>M-04 甘特圖一致性</td><td>時間軸改為至 2027-02-08（結案）；相位條寬度依 98 天實距重算；標題與工期敘述統一</td><td>封面、§6.1、§6.2</td></tr>
+  <tr><td>8</td><td>M-05 可用性數學</td><td>統一為「系統可用性 ≥ 99%（24/7 口徑）」並驗算停機預算（5.32 ≤ 7.2 小時/月）</td><td>§1.1 G3、§2.3 NFR-02、§9.3</td></tr>
+  <tr><td>9</td><td>M-06 頻率延遲矛盾</td><td>TXN-01 頻率／延遲改為：事件驅動（即時，≤30 秒）；輪詢僅作備援（≤15 分鐘）</td><td>§3.2</td></tr>
+  <tr><td>10</td><td>M-07 來源可追溯</td><td>OpenRPA／Windmill 參考補官方儲存庫與檢索日期；本地掃描補 v2.1 複核註記</td><td>§12.2</td></tr>
+</table>
+<h2>12.4 決策文件（ADR，草案）</h2>
+<ul>
+  <li>ADR-001 既有資產關係與複用決策（對應 Gate 1 缺陷 B-01；需 M1 前會簽）— 檔案：FlapsErp_RPA_電商系統對接_ADR-001_既有資產關係與複用決策_草案.md</li>
+  <li>ADR-002 對接工具選型決策（對應 Gate 1 缺陷 B-05；需 M2 前會簽）— 檔案：FlapsErp_RPA_電商系統對接_ADR-002_對接工具選型決策_草案.md</li>
+  <li>Gate 1 修正複審報告 — 檔案：FlapsErp_RPA_電商系統對接_Gate1複審報告_v1.md</li>
+</ul>
+
+<div class="footer">
+  <p>文件版本：v2.1 &nbsp;|&nbsp; 撰寫日期：2026-10-27 &nbsp;|&nbsp; 專案代碼：FLAPS-RPA-ECOM-2026</p>
+  <p>本文件為 HTML 結構化來源檔，內建專業圖示（系統架構圖、資料流程圖、序列圖、WBS 圖、甘特圖），以 HTML/CSS 內嵌繪製、離線可讀。請以 Microsoft Word 開啟並另存為 .docx，或以瀏覽器 (Chrome/Edge) 開啟後列印為 .pdf，即可取得可呈現給主管的結構化專案文件。</p>
+  <p>所有「待確認問題 (OQ-01~08)」須在專案啟動後兩週內由電商系統廠商或業務單位正式回覆，否則視為專案阻礙並啟動升級路徑。</p>
+</div>
+
+</div> <!-- .page -->
+</body>
+</html>

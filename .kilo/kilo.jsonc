@@ -1,0 +1,64 @@
+{
+  "$schema": "https://app.kilo.ai/config.json",
+  "mcp": {
+    "sequentialthinking": {
+      "type": "local",
+      "command": [
+        "C:\\Users\\stephanie.huang\\.bun\\bin\\bunx.exe",
+        "@modelcontextprotocol/server-sequential-thinking"
+      ],
+      "enabled": true
+    },
+    "playwright": {
+      "type": "local",
+      "command": [
+        "C:\\Users\\stephanie.huang\\.bun\\bin\\bunx.exe",
+        "@playwright/mcp"
+      ],
+      "enabled": true
+    },
+    "crates-io": {
+      "type": "local",
+      "command": [
+        "C:\\Users\\stephanie.huang\\.cargo\\bin\\cratesio-mcp.exe"
+      ],
+      "enabled": true
+    },
+    "rust-analyzer": {
+      "type": "local",
+      "command": [
+        "C:\\Users\\stephanie.huang\\.cargo\\bin\\rust-analyzer-mcp.exe"
+      ],
+      "enabled": true
+    },
+    "narsil": {
+      "type": "local",
+      "command": [
+        "C:\\Users\\stephanie.huang\\.bun\\bin\\narsil-mcp.exe",
+        "--repos",
+        "."
+      ],
+      "enabled": true
+    },
+    "firecrawl": {
+      "type": "remote",
+      "url": "https://mcp.firecrawl.dev/v2/mcp",
+      "enabled": true
+    },
+    "context7": {
+      "type": "remote",
+      "url": "https://mcp.context7.com/mcp",
+      "enabled": true
+    },
+    "grep-app": {
+      "type": "remote",
+      "url": "https://mcp.grep.app",
+      "enabled": true
+    },
+    "jina": {
+      "type": "remote",
+      "url": "https://mcp.jina.ai/v1",
+      "enabled": true
+    }
+  }
+}

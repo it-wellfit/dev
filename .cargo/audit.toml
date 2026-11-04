@@ -1,0 +1,15 @@
+# cargo audit configuration for the Dev root workspace
+# Evidence rule (GOVERNANCE_STANDARD P2/P7): every ignored advisory must carry a
+# written disposition. Re-review quarterly or when the dependency graph changes.
+
+[advisories]
+ignore = [
+    # rsa 0.9.10 — RUSTSEC-2023-0071 (Marvin Attack, severity 5.9 medium)
+    # Introduced transitively by sqlx-mysql. This workspace enables ONLY the
+    # `sqlite` feature of sqlx (root Cargo.toml / platform Cargo.toml), so
+    # sqlx-mysql and rsa are NOT compiled into any artifact. No fixed upgrade
+    # exists upstream. Disposition: accepted risk with zero exposure.
+    # Revisit if: (a) MySQL/PostgreSQL support is added, or (b) a fixed rsa
+    # release becomes available.
+    "RUSTSEC-2023-0071",
+]

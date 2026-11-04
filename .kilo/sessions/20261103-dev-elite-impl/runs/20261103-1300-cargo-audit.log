@@ -1,0 +1,37 @@
+﻿cargo :     Fetching advisory database from `https://github.com/RustSec/advisory-db.git`
+位於 線路:4 字元:1
++ cargo audit 2>&1 | Out-File -FilePath ".kilo\sessions\20261103-dev-el ...
++ ~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (    Fetching ad...dvisory-db.git`:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+      Loaded 1403 security advisories (from C:\Users\stephanie.huang\.cargo\advisory-db)
+    Updating crates.io index
+    Scanning Cargo.lock for vulnerabilities (260 crate dependencies)
+Crate:     h2
+Version:   0.3.27
+Title:     h2 unbounded empty DATA frames
+Date:      2026-08-17
+ID:        RUSTSEC-2026-0258
+URL:       https://rustsec.org/advisories/RUSTSEC-2026-0258
+Solution:  Upgrade to >=0.4.16
+
+Crate:     rsa
+Version:   0.9.10
+Title:     Marvin Attack: potential key recovery through timing sidechannels
+Date:      2023-11-22
+ID:        RUSTSEC-2023-0071
+URL:       https://rustsec.org/advisories/RUSTSEC-2023-0071
+Severity:  5.9 (medium)
+Solution:  No fixed upgrade is available!
+
+Crate:     rustls-pemfile
+Version:   1.0.4
+Warning:   unmaintained
+Title:     rustls-pemfile is unmaintained
+Date:      2025-11-28
+ID:        RUSTSEC-2025-0134
+URL:       https://rustsec.org/advisories/RUSTSEC-2025-0134
+
+error: 2 vulnerabilities found!
+warning: 1 allowed warning found

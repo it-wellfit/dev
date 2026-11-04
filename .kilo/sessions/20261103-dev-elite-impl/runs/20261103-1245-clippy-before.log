@@ -1,0 +1,222 @@
+﻿cargo :     Checking flaps_core v0.0.1 (C:\Users\stephanie.huang\Desktop\新人訓練\Projects\2026\Dev\core)
+位於 線路:4 字元:1
++ cargo clippy --all-targets -- -D warnings 2>&1 | Out-File -FilePath " ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (    Checking fl...\2026\Dev\core):String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+error: redundant pattern matching
+  --> core\src\config.rs:51:24
+   |
+51 |                 if let Err(_) = self.config_value.parse::<f64>() {
+   |                        ^^^^^^
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.99.0/index.html#redundant_patte
+rn_matching
+   = note: `-D clippy::redundant-pattern-matching` implied by `-D warnings`
+   = help: to override `-D warnings` add `#[allow(clippy::redundant_pattern_matching)]`
+help: consider using `is_err()`
+   |
+51 -                 if let Err(_) = self.config_value.parse::<f64>() {
+51 +                 if self.config_value.parse::<f64>().is_err() {
+   |
+
+error: redundant pattern matching
+  --> core\src\config.rs:62:24
+   |
+62 |                 if let Err(_) = serde_json::from_str::<serde_json::Value>(&self.config_value) {
+   |                        ^^^^^^
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.99.0/index.html#redundant_patte
+rn_matching
+help: consider using `is_err()`
+   |
+62 -                 if let Err(_) = serde_json::from_str::<serde_json::Value>(&self.config_value) {
+62 +                 if serde_json::from_str::<serde_json::Value>(&self.config_value).is_err() {
+   |
+
+error: redundant pattern matching
+   --> core\src\config.rs:187:16
+    |
+187 |         if let Some(_) = existing {
+    |                ^^^^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.99.0/index.html#redundant_patt
+ern_matching
+help: consider using `is_some()`
+    |
+187 -         if let Some(_) = existing {
+187 +         if existing.is_some() {
+    |
+
+error: the borrowed expression implements the required traits
+   --> core\src\config.rs:195:19
+    |
+195 |             .bind(&config.is_sensitive)
+    |                   ^^^^^^^^^^^^^^^^^^^^ help: change this to: `config.is_sensitive`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.99.0/index.html#needless_borro
+ws_for_generic_args
+    = note: `-D clippy::needless-borrows-for-generic-args` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::needless_borrows_for_generic_args)]`
+
+error: the borrowed expression implements the required traits
+   --> core\src\config.rs:211:19
+    |
+211 |             .bind(&config.is_sensitive)
+    |                   ^^^^^^^^^^^^^^^^^^^^ help: change this to: `config.is_sensitive`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.99.0/index.html#needless_borro
+ws_for_generic_args
+
+error: the borrowed expression implements the required traits
+   --> core\src\ledger\engine.rs:131:15
+    |
+131 |         .bind(&transaction.transaction_date)
+    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: change this to: `transaction.transaction_date`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.99.0/index.html#needless_borro
+ws_for_generic_args
+
+error: the borrowed expression implements the required traits
+   --> core\src\ledger\engine.rs:149:19
+    |
+149 |             .bind(&item.amount)
+    |                   ^^^^^^^^^^^^ help: change this to: `item.amount`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.99.0/index.html#needless_borro
+ws_for_generic_args
+
+error: the borrowed expression implements the required traits
+   --> core\src\ledger\engine.rs:151:19
+    |
+151 |             .bind(&item.exchange_rate)
+    |                   ^^^^^^^^^^^^^^^^^^^ help: change this to: `item.exchange_rate`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.99.0/index.html#needless_borro
+ws_for_generic_args
+
+error: the borrowed expression implements the required traits
+   --> core\src\ledger\engine.rs:245:19
+    |
+245 |             .bind(&default_account.is_active)
+    |                   ^^^^^^^^^^^^^^^^^^^^^^^^^^ help: change this to: `default_account.is_active`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.99.0/index.html#needless_borro
+ws_for_generic_args
+
+error: this function has too many arguments (8/7)
+  --> core\src\ledger\transaction.rs:21:5
+   |
+21 | /     pub fn new(
+22 | |         transaction_id: String,
+23 | |         transaction_code: String,
+24 | |         transaction_date: chrono::NaiveDate,
+...  |
+29 | |         created_by: String,
+30 | |     ) -> Self {
+   | |_____________^
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.99.0/index.html#too_many_argume
+nts
+   = note: `-D clippy::too-many-arguments` implied by `-D warnings`
+   = help: to override `-D warnings` add `#[allow(clippy::too_many_arguments)]`
+
+error: this function has too many arguments (9/7)
+  --> core\src\ledger\transaction.rs:69:5
+   |
+69 | /     pub fn new(
+70 | |         item_id: String,
+71 | |         transaction_id: String,
+72 | |         account_id: String,
+...  |
+78 | |         description: Option<String>,
+79 | |     ) -> Self {
+   | |_____________^
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.99.0/index.html#too_many_argume
+nts
+
+error: you should consider adding a `Default` implementation for `PermissionChecker`
+   --> core\src\permission.rs:132:5
+    |
+132 | /     pub fn new() -> Self {
+133 | |         Self {
+134 | |             role_permissions: HashMap::new(),
+135 | |             user_roles: HashMap::new(),
+136 | |         }
+137 | |     }
+    | |_____^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.99.0/index.html#new_without_de
+fault
+    = note: `-D clippy::new-without-default` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::new_without_default)]`
+help: try adding this
+    |
+196 ~ }
+197 + 
+198 + impl Default for PermissionChecker {
+199 +     fn default() -> Self {
+200 +         Self::new()
+201 +     }
+202 + }
+    |
+
+error: the borrowed expression implements the required traits
+   --> core\src\permission.rs:256:19
+    |
+256 |             .bind(&role.is_system)
+    |                   ^^^^^^^^^^^^^^^ help: change this to: `role.is_system`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.99.0/index.html#needless_borro
+ws_for_generic_args
+
+error: the borrowed expression implements the required traits
+   --> core\src\permission.rs:257:19
+    |
+257 |             .bind(&role.created_at)
+    |                   ^^^^^^^^^^^^^^^^ help: change this to: `role.created_at`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.99.0/index.html#needless_borro
+ws_for_generic_args
+
+error: the borrowed expression implements the required traits
+   --> core\src\permission.rs:258:19
+    |
+258 |             .bind(&role.updated_at)
+    |                   ^^^^^^^^^^^^^^^^ help: change this to: `role.updated_at`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.99.0/index.html#needless_borro
+ws_for_generic_args
+
+error: the borrowed expression implements the required traits
+   --> core\src\permission.rs:323:19
+    |
+323 |             .bind(&permission.is_active)
+    |                   ^^^^^^^^^^^^^^^^^^^^^ help: change this to: `permission.is_active`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.99.0/index.html#needless_borro
+ws_for_generic_args
+
+error: the borrowed expression implements the required traits
+   --> core\src\permission.rs:392:19
+    |
+392 |             .bind(&role_perm.granted_at)
+    |                   ^^^^^^^^^^^^^^^^^^^^^ help: change this to: `role_perm.granted_at`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.99.0/index.html#needless_borro
+ws_for_generic_args
+
+error: the borrowed expression implements the required traits
+   --> core\src\permission.rs:431:19
+    |
+431 |             .bind(&user_role.assigned_at)
+    |                   ^^^^^^^^^^^^^^^^^^^^^^ help: change this to: `user_role.assigned_at`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.99.0/index.html#needless_borro
+ws_for_generic_args
+
+error: could not compile `flaps_core` (lib) due to 18 previous errors
+warning: build failed, waiting for other jobs to finish...
+error: could not compile `flaps_core` (lib test) due to 18 previous errors

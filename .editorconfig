@@ -1,0 +1,148 @@
+# =============================================================================
+# Workspace Root EditorConfig — Encoding & Line Ending Standard
+# All files: UTF-8 (supports Traditional Chinese + Simplified Chinese + all Unicode)
+# Handles special encodings, base-N formats, binary/positional files
+# =============================================================================
+
+root = true
+
+[*] charset = utf-8 end_of_line = lf insert_final_newline = true trim_trailing_whitespace = true max_line_length = 120
+
+# Source code
+[*.rs] charset = utf-8 end_of_line = lf insert_final_newline = true trim_trailing_whitespace = true
+[*.toml] charset = utf-8 end_of_line = lf insert_final_newline = true trim_trailing_whitespace = true
+[*.json] charset = utf-8 end_of_line = lf insert_final_newline = true trim_trailing_whitespace = true
+[*.yml] charset = utf-8 end_of_line = lf insert_final_newline = true trim_trailing_whitespace = true
+[*.yaml] charset = utf-8 end_of_line = lf insert_final_newline = true trim_trailing_whitespace = true
+[*.ps1] charset = utf-8 end_of_line = lf insert_final_newline = true trim_trailing_whitespace = true
+[*.sh] charset = utf-8 end_of_line = lf insert_final_newline = true trim_trailing_whitespace = true
+[*.html] charset = utf-8 end_of_line = lf insert_final_newline = true trim_trailing_whitespace = true
+[*.css] charset = utf-8 end_of_line = lf insert_final_newline = true trim_trailing_whitespace = true
+[*.ts] charset = utf-8 end_of_line = lf insert_final_newline = true trim_trailing_whitespace = true
+[*.tsx] charset = utf-8 end_of_line = lf insert_final_newline = true trim_trailing_whitespace = true
+[*.js] charset = utf-8 end_of_line = lf insert_final_newline = true trim_trailing_whitespace = true
+[*.jsx] charset = utf-8 end_of_line = lf insert_final_newline = true trim_trailing_whitespace = true
+[*.py] charset = utf-8 end_of_line = lf insert_final_newline = true trim_trailing_whitespace = true
+[*.go] charset = utf-8 end_of_line = lf insert_final_newline = true trim_trailing_whitespace = true
+[*.java] charset = utf-8 end_of_line = lf insert_final_newline = true trim_trailing_whitespace = true
+[*.c] charset = utf-8 end_of_line = lf insert_final_newline = true trim_trailing_whitespace = true
+[*.cpp] charset = utf-8 end_of_line = lf insert_final_newline = true trim_trailing_whitespace = true
+[*.h] charset = utf-8 end_of_line = lf insert_final_newline = true trim_trailing_whitespace = true
+[*.cs] charset = utf-8 end_of_line = lf insert_final_newline = true trim_trailing_whitespace = true
+[*.rb] charset = utf-8 end_of_line = lf insert_final_newline = true trim_trailing_whitespace = true
+[*.php] charset = utf-8 end_of_line = lf insert_final_newline = true trim_trailing_whitespace = true
+[*.sql] charset = utf-8 end_of_line = lf insert_final_newline = true trim_trailing_whitespace = true
+[*.xml] charset = utf-8 end_of_line = lf insert_final_newline = true trim_trailing_whitespace = true
+[*.svg] charset = utf-8 end_of_line = lf insert_final_newline = true trim_trailing_whitespace = true
+[*.txt] charset = utf-8 end_of_line = lf insert_final_newline = true trim_trailing_whitespace = true
+[*.ini] charset = utf-8 end_of_line = lf insert_final_newline = true trim_trailing_whitespace = true
+[*.cfg] charset = utf-8 end_of_line = lf insert_final_newline = true trim_trailing_whitespace = true
+[*.conf] charset = utf-8 end_of_line = lf insert_final_newline = true trim_trailing_whitespace = true
+[*.env] charset = utf-8 end_of_line = lf insert_final_newline = true trim_trailing_whitespace = true
+[*.env.example] charset = utf-8 end_of_line = lf insert_final_newline = true trim_trailing_whitespace = true
+[*.md] charset = utf-8 end_of_line = lf insert_final_newline = true trim_trailing_whitespace = true
+
+# Internationalization / localization (supports all languages incl. CJK)
+[*.po] charset = utf-8 end_of_line = lf insert_final_newline = true trim_trailing_whitespace = true
+[*.pot] charset = utf-8 end_of_line = lf insert_final_newline = true trim_trailing_whitespace = true
+[*.properties] charset = utf-8 end_of_line = lf insert_final_newline = true trim_trailing_whitespace = true
+[*.resx] charset = utf-8 end_of_line = lf insert_final_newline = true trim_trailing_whitespace = true
+[*.strings] charset = utf-8 end_of_line = lf insert_final_newline = true trim_trailing_whitespace = true
+[*.stringsdict] charset = utf-8 end_of_line = lf insert_final_newline = true trim_trailing_whitespace = true
+
+# Data / serialization formats
+[*.parquet] binary
+[*.avro] binary
+[*.proto] charset = utf-8 end_of_line = lf insert_final_newline = true trim_trailing_whitespace = true
+[*.thrift] charset = utf-8 end_of_line = lf insert_final_newline = true trim_trailing_whitespace = true
+[*.cbor] binary
+[*.msgpack] binary
+[*.bson] binary
+[*.hdf5] binary
+[*.nc] binary
+[*.grib] binary
+
+# Base-N / positional numeral encoded files (no encoding normalization)
+[*.base64] binary
+[*.b64] binary
+[*.base32] binary
+[*.base32hex] binary
+[*.base58] binary
+[*.base85] binary
+[*.ascii85] binary
+[*.base91] binary
+[*.z85] binary
+[*.base122] binary
+[*.hex] binary
+[*.bin] binary
+[*.dat] binary
+[*.oct] binary
+[*.bcd] binary
+
+# Secure encapsulated kit / encrypted envelopes (binary)
+[*.sek] binary
+[*.tave] binary
+
+# Large data / analytics / AI formats (binary)
+[*.parquet] binary
+[*.arrow] binary
+[*.avro] binary
+[*.cbor] binary
+[*.msgpack] binary
+[*.bson] binary
+[*.hdf5] binary
+[*.nc] binary
+[*.grib] binary
+[*.zarr] binary
+[*.lance] binary
+[*.safetensors] binary
+[*.gguf] binary
+[*.onnx] binary
+
+# Rich text / document formats
+[*.rtf] binary
+[*.epub] binary
+[*.mobi] binary
+[*.azw3] binary
+
+# Audio / video / image / font (binary)
+[*.png] binary
+[*.jpg] binary
+[*.jpeg] binary
+[*.gif] binary
+[*.bmp] binary
+[*.ico] binary
+[*.tiff] binary
+[*.webp] binary
+[*.heic] binary
+[*.avif] binary
+[*.pdf] binary
+[*.zip] binary
+[*.tar] binary
+[*.gz] binary
+[*.7z] binary
+[*.rar] binary
+[*.exe] binary
+[*.dll] binary
+[*.so] binary
+[*.dylib] binary
+[*.pdb] binary
+[*.wasm] binary
+[*.ttf] binary
+[*.otf] binary
+[*.woff] binary
+[*.woff2] binary
+[*.eot] binary
+[*.icns] binary
+[*.mp3] binary
+[*.wav] binary
+[*.flac] binary
+[*.mp4] binary
+[*.mkv] binary
+[*.mov] binary
+[*.avi] binary
+[*.webm] binary
+
+# Lock files — binary, do not normalize
+[*.lock] binary
+[Cargo.toml] charset = utf-8 end_of_line = lf insert_final_newline = true trim_trailing_whitespace = true

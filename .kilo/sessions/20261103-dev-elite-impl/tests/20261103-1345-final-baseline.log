@@ -1,0 +1,68 @@
+﻿cargo :    Compiling flaps_bridge v0.1.0 (C:\Users\stephanie.huang\Desktop\新人訓練\Projects\2026\Dev\crates\flaps_bridge)
+位於 線路:4 字元:143
++ ...  | Out-Null; "CLIPPY=$LASTEXITCODE"; cargo test --locked 2>&1 | Out-F ...
++                                          ~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (   Compiling fl...s\flaps_bridge):String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.28s
+     Running unittests src\lib.rs (target\debug\deps\flaps_bridge-f2b120b80865bba6.exe)
+
+running 7 tests
+test real_com_tests::real_com_not_active_by_default ... ok
+test tests::mock_envelope_matches_measured_floor ... ok
+test tests::empty_batch_is_rejected ... ok
+test tests::failure_restores_pending_calls_atomically ... ok
+test tests::batch_flush_returns_all_results_in_order ... ok
+test tests::max_batch_splits_large_queues ... ok
+test tests::batching_beats_per_call_under_measured_envelope ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.09s
+
+     Running unittests src\lib.rs (target\debug\deps\flaps_core-1f4369f1d3e7d065.exe)
+
+running 2 tests
+test permission::tests::get_user_permissions_returns_codes_deduped ... ok
+test permission::tests::has_permission_matches_code_not_id ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\lib.rs (target\debug\deps\platform-83eae75f23d8261a.exe)
+
+running 3 tests
+test db::tests::migration_is_safe_on_legacy_dynamic_schema ... ok
+test db::tests::migrations_are_idempotent_on_replay ... ok
+test db::tests::migrations_create_all_baseline_tables ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running unittests src\lib.rs (target\debug\deps\web-bed68872c5b83567.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests flaps_bridge
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests flaps_core
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests platform
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests web
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

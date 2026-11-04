@@ -1,0 +1,36 @@
+# Build artifacts (charter C-06: keep target out of the repository)
+/target/
+**/target/
+
+# Local databases and runtime data (server default path: data/flaps.db)
+/data/
+*.db
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+*.env
+*.env.*
+
+# Independent subprojects — each has its own repository and governance
+# (WORKSPACE_CHARTER §1; ADR-0001 D-01). The root repo tracks ONLY the ARES
+# root workspace (core/, platform/, web/, crates/) plus shared governance
+# (docs/, scripts/, .github/, .kilo/, .cargo/, root manifests).
+/ekpi-platform/
+/Wellfit/
+/SyncMesh/
+/agentre-bench/
+/kilo-settings-skills-archive/
+/rea-rust-upstream/
+/re-toolchain/
+/oekap/
+/archive/
+
+# Historical tool-state snapshots (not project artifacts)
+/skills.backup-%TIMESTAMP%/
+/skills.backup-20261028/
+/.playwright-mcp/
+/.roo/
+
+# OS noise
+Thumbs.db
+.DS_Store

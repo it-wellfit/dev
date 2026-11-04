@@ -1,0 +1,24 @@
+﻿[package]
+name = "web"
+version = "0.0.1"
+edition = "2021"
+
+[lib]
+name = "web"
+crate-type = ["lib"]
+
+[dependencies]
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# UUID generation
+uuid = { version = "1.0", features = ["v4"] }
+
+[dev-dependencies]
+
+[build-dependencies]
+
+# Rust Analyzer configuration
+[package.metadata.rust-analyzer]
+all_features = true

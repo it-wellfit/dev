@@ -1,0 +1,54 @@
+﻿[package]
+name = "platform"
+version = "0.0.1"
+edition = "2021"
+
+[lib]
+name = "platform"
+crate-type = ["lib"]
+
+[dependencies]
+# Core dependencies
+tokio = { version = "1.0", features = ["full"] }
+tracing = "0.1"
+uuid = { version = "1.0", features = ["serde", "v4"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+chrono = { version = "0.4", features = ["serde"] }
+
+# HTTP client for AI
+reqwest = { version = "0.12", features = ["json", "native-tls"] }
+
+# Zero-JS web tier (ADR-0002): axum HTTP server + server-rendered templates
+axum = { version = "0.7", features = ["http1", "form", "tokio"] }
+askama = "0.16"
+# Authentication (G-1): Argon2id password hashing (OWASP recommended params)
+argon2 = { version = "0.5", features = ["std"] }
+
+# Core crate dependency
+flaps_core = { path = "../core" }
+
+# Database
+sqlx = { version = "0.8", features = ["runtime-tokio", "macros", "sqlite", "chrono"] }
+
+
+
+# Windows COM support
+windows = { package = "windows", version = "0.58", features = ["Win32_Foundation", "Win32_System_Com"] }
+
+# thiserror for error handling
+thiserror = "1.0"
+
+[dev-dependencies]
+# Testing
+tokio-test = "0.4"
+# Router oneshot testing for the API layer
+tower = { version = "0.5", features = ["util"] }
+
+[build-dependencies]
+
+# Rust Analyzer configuration
+[package.metadata.rust-analyzer]
+all_features = true
+
+

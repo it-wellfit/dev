@@ -1,0 +1,124 @@
+# Kubernetes Deployment for Flaps ERP - Production Configuration
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flaps-erp
+  labels:
+    app: flaps-erp
+    version: v1.0.0
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: flaps-erp
+  template:
+    metadata:
+      labels:
+        app: flaps-erp
+        version: v1.0.0
+    spec:
+      containers:
+      - name: flaps-erp
+        image: flaps-erp:latest
+        ports:
+        - containerPort: 8080
+        env:
+        - name: RUST_LOG
+          value: "info"
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: flaps-erp-secrets
+              key: database-url
+        - name: REDIS_URL
+          valueFrom:
+            secretKeyRef:
+              name: flaps-erp-secrets
+              key: redis-url
+        - name: JEV_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: flaps-erp-secrets
+              key: jev-api-key
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 15
+          periodSeconds: 30
+        volumeMounts:
+        - name: data
+          mountPath: /data
+        - name: config
+          mountPath: /config
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: flaps-erp-data
+      - name: config
+        configMap:
+          name: flaps-erp-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: flaps-erp-service
+  labels:
+    app: flaps-erp
+spec:
+  selector:
+    app: flaps-erp
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 8080
+  type: LoadBalancer
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: flaps-erp-data
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: standard
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: flaps-erp-config
+data:
+  app.toml: |
+    [server]
+    host = "0.0.0.0"
+    port = 8080
+    
+    [database]
+    url = "${DATABASE_URL}"
+    
+    [redis]
+    url = "${REDIS_URL}"
+    
+    [ai]
+    jev_api_key = "${JEV_API_KEY}"
+    deepseek_api_key = "${DEEPSEEK_API_KEY}"
+    
+    [logging]
+    level = "info"
+    format = "json"

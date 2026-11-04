@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Flaps ERP 工作台：帳務、交易與 AI 決策支援（零 JavaScript，伺服器端渲染）">
+    <title>Flaps ERP 工作台</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%23005fcc'/%3E%3Ctext x='8' y='12' font-size='10' font-family='sans-serif' fill='white' text-anchor='middle' font-weight='bold'%3EF%3C/text%3E%3C/svg%3E">
+    <link rel="stylesheet" href="assets/design-system.css">
+</head>
+<body>
+    <a class="skip-link" href="#main">跳至主要內容</a>
+
+    <header class="app-header">
+        <div class="container">
+            <div>
+                <h1>Flaps ERP 工作台</h1>
+                <p class="app-subtitle">帳務登帳、查詢與 AI 決策支援</p>
+            </div>
+            <p class="app-subtitle">
+                服務狀態：{% if db_connected -%}
+                <span class="badge badge-success">已連線</span>
+                {%- else -%}
+                <span class="badge badge-warning">未連線</span>
+                {%- endif %}
+                <span class="sr-only">伺服器端渲染頁面；所有寫入操作皆經 POST 與權限檢查。</span>
+            </p>
+        </div>
+    </header>
+
+    <nav class="site-nav" aria-label="主導覽">
+        <div class="container">
+            <a href="#dashboard">總覽</a>
+            <a href="#transactions">交易</a>
+            <a href="#accounts">會計科目</a>
+            <a href="#ai-decisions">AI 決策</a>
+            <a href="#new-transaction">新增交易</a>
+            <a href="#states">介面狀態</a>
+        </div>
+    </nav>
+
+    <main id="main" class="container">
+
+        <!-- ==================== 總覽 ==================== -->
+        <section id="dashboard" class="panel" aria-labelledby="dashboard-title">
+            <h2 id="dashboard-title">總覽</h2>
+            {% if db_connected -%}
+            <p class="preview-note">
+                資料來源：本機 SQLite（唯讀查詢，GET 不修改狀態）。金額以整數分（i64）儲存，顯示時還原為兩位小數。
+            </p>
+            {%- else -%}
+            <p class="preview-note">
+                介面基線預覽：後端尚未連線，數值以「—」表示未知，不以範例數字冒充真實資料。
+            </p>
+            {%- endif %}
+
+            <dl class="kpi-grid">
+                <div class="kpi">
+                    <dt>交易總筆數</dt>
+                    <dd>{% if db_connected %}{{ transaction_count }}{% else %}—{% endif %}</dd>
+                </div>
+                <div class="kpi">
+                    <dt>交易總金額</dt>
+                    <dd>{% if db_connected %}{{ total_amount_display }}{% else %}—{% endif %}</dd>
+                </div>
+                <div class="kpi">
+                    <dt>啟用科目數</dt>
+                    <dd>{% if db_connected %}{{ account_count }}{% else %}—{% endif %}</dd>
+                </div>
+                <div class="kpi">
+                    <dt>待覆核交易</dt>
+                    <dd>— <span class="pending-note">需人工覆核</span></dd>
+                </div>
+            </dl>
+
+            <div class="table-wrap">
+                <table>
+                    <caption>最近交易</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col">交易編號</th>
+                            <th scope="col">摘要</th>
+                            <th scope="col">日期</th>
+                            <th scope="col">金額</th>
+                            <th scope="col">狀態</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if transactions.is_empty() -%}
+                        <tr>
+                            <td colspan="5">
+                                <p class="empty-state">
+                                    <strong>尚無交易紀錄</strong>
+                                    建立第一筆交易後，清單會顯示在這裡。
+                                    <a href="#new-transaction">前往新增交易</a>
+                                </p>
+                            </td>
+                        </tr>
+                        {%- else -%}
+                        {% for row in transactions %}
+                        <tr>
+                            <td>{{ row.transaction_code }}</td>
+                            <td>{{ row.description }}</td>
+                            <td>{{ row.transaction_date }}</td>
+                            <td>{{ row.amount_display }} {{ row.currency }}</td>
+                            <td><span class="badge badge-info">{{ row.status }}</span></td>
+                        </tr>
+                        {% endfor %}
+                        {%- endif %}
+                    </tbody>
+                </table>
+            </div>
+            <p class="section-note">清單支援分頁與排序，將由後端 API 提供（見 docs/testing/TEST_STRATEGY.md 的契約測試計畫）。</p>
+        </section>
+
+        <!-- ==================== 交易 ==================== -->
+        <section id="transactions" class="panel" aria-labelledby="transactions-title">
+            <h2 id="transactions-title">交易管理</h2>
+            <div class="table-wrap">
+                <table>
+                    <caption>全部交易</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col">交易編號</th>
+                            <th scope="col">摘要</th>
+                            <th scope="col">日期</th>
+                            <th scope="col">狀態</th>
+                            <th scope="col">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if transactions.is_empty() -%}
+                        <tr>
+                            <td colspan="5">
+                                <p class="empty-state">
+                                    <strong>尚無交易紀錄</strong>
+                                    交易建立後可在此查詢、篩選與排序。
+                                </p>
+                            </td>
+                        </tr>
+                        {%- else -%}
+                        {% for row in transactions %}
+                        <tr>
+                            <td>{{ row.transaction_code }}</td>
+                            <td>{{ row.description }}</td>
+                            <td>{{ row.transaction_date }}</td>
+                            <td><span class="badge badge-info">{{ row.status }}</span></td>
+                            <td><a href="#transactions">檢視</a></td>
+                        </tr>
+                        {% endfor %}
+                        {%- endif %}
+                    </tbody>
+                </table>
+            </div>
+            <p class="section-note">
+                讀取使用 GET；建立、修改、刪除使用 POST；成功提交後以 303 導回（Post/Redirect/Get）。
+            </p>
+        </section>
+
+        <!-- ==================== 會計科目 ==================== -->
+        <section id="accounts" class="panel" aria-labelledby="accounts-title">
+            <h2 id="accounts-title">會計科目</h2>
+            <div class="table-wrap">
+                <table>
+                    <caption>科目清單</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col">科目代碼</th>
+                            <th scope="col">科目名稱</th>
+                            <th scope="col">類型</th>
+                            <th scope="col">幣別</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if accounts.is_empty() -%}
+                        <tr>
+                            <td colspan="4">
+                                <p class="empty-state">
+                                    <strong>尚無會計科目</strong>
+                                    首筆交易會自動建立對應科目；匯入功能由設定系統提供。
+                                </p>
+                            </td>
+                        </tr>
+                        {%- else -%}
+                        {% for a in accounts %}
+                        <tr>
+                            <td>{{ a }}</td>
+                            <td>Account {{ a }}</td>
+                            <td>ASSETS</td>
+                            <td>TWD</td>
+                        </tr>
+                        {% endfor %}
+                        {%- endif %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- ==================== AI 決策 ==================== -->
+        <section id="ai-decisions" class="panel" aria-labelledby="ai-title">
+            <h2 id="ai-title">AI 決策支援</h2>
+            <div class="degraded-state" role="status">
+                <strong>部分功能不可用</strong>
+                <p>AI 決策引擎尚未介接。金額修改、權限變更、交易作廢、會計科目變更與結帳操作一律由規則引擎處理，AI 不自動決策。</p>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <caption>近期 AI 決策建議</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col">時間</th>
+                            <th scope="col">類型</th>
+                            <th scope="col">建議</th>
+                            <th scope="col">信心</th>
+                            <th scope="col">需人工覆核</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td colspan="5">
+                                <p class="empty-state">
+                                    <strong>尚無決策紀錄</strong>
+                                    每項建議都會附帶來源證據與信心分數，高風險建議一律需人工覆核。
+                                </p>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- ==================== 新增交易（PRG 表單） ==================== -->
+        <section id="new-transaction" class="panel form-panel" aria-labelledby="new-transaction-title">
+            <h2 id="new-transaction-title">新增交易</h2>
+
+            {% match error %}
+            {% when Some with (e) %}
+            <div class="error-state" role="alert">
+                <strong>交易未建立</strong>
+                <p>{{ e }}</p>
+                <p class="hint">請修正後重新送出；已填寫的欄位值已保留。</p>
+            </div>
+            {% when None %}
+            {% endmatch %}
+
+            <form method="post" action="/transactions">
+                <fieldset>
+                    <legend>交易內容</legend>
+
+                    <div class="form-row">
+                        <label for="account-id">會計科目 <span aria-hidden="true">*</span></label>
+                        <input class="input" type="text" id="account-id" name="account_id" list="account-options"
+                               value="{{ form.account_id }}" required>
+                        <datalist id="account-options">
+                            {% for a in accounts %}
+                            <option value="{{ a }}"></option>
+                            {% endfor %}
+                        </datalist>
+                        <p class="hint">可自既有科目選擇或輸入新代碼；首次使用的代碼會自動建立科目。</p>
+                    </div>
+
+                    <div class="form-row">
+                        <label for="amount">金額 <span aria-hidden="true">*</span></label>
+                        <input class="input" type="number" id="amount" name="amount"
+                               step="0.01" min="0" inputmode="decimal" value="{{ form.amount }}" required>
+                        <p class="hint">以整數分（i64）儲存；最多兩位小數，不得為負。此欄位限制禁止負數。</p>
+                    </div>
+
+                    <div class="form-row">
+                        <label for="item-type">借貸別 <span aria-hidden="true">*</span></label>
+                        <select class="input" id="item-type" name="item_type" required>
+                            {% if form.item_type.is_empty() -%}
+                            <option value="" selected>請選擇</option>
+                            {%- else -%}
+                            <option value="">請選擇</option>
+                            {%- endif %}
+                            {% if form.item_type == "DEBIT" -%}
+                            <option value="DEBIT" selected>借方（DEBIT）</option>
+                            {%- else -%}
+                            <option value="DEBIT">借方（DEBIT）</option>
+                            {%- endif %}
+                            {% if form.item_type == "CREDIT" -%}
+                            <option value="CREDIT" selected>貸方（CREDIT）</option>
+                            {%- else -%}
+                            <option value="CREDIT">貸方（CREDIT）</option>
+                            {%- endif %}
+                        </select>
+                    </div>
+
+                    <div class="form-row">
+                        <label for="currency">幣別 <span aria-hidden="true">*</span></label>
+                        <select class="input" id="currency" name="currency" required>
+                            {% if form.currency == "TWD" or form.currency.is_empty() -%}
+                            <option value="TWD" selected>TWD — 新台幣</option>
+                            {%- else -%}
+                            <option value="TWD">TWD — 新台幣</option>
+                            {%- endif %}
+                            {% if form.currency == "USD" -%}
+                            <option value="USD" selected>USD — 美元</option>
+                            {%- else -%}
+                            <option value="USD">USD — 美元</option>
+                            {%- endif %}
+                            {% if form.currency == "EUR" -%}
+                            <option value="EUR" selected>EUR — 歐元</option>
+                            {%- else -%}
+                            <option value="EUR">EUR — 歐元</option>
+                            {%- endif %}
+                            {% if form.currency == "JPY" -%}
+                            <option value="JPY" selected>JPY — 日圓</option>
+                            {%- else -%}
+                            <option value="JPY">JPY — 日圓</option>
+                            {%- endif %}
+                        </select>
+                    </div>
+
+                    <div class="form-row">
+                        <label for="description">摘要 <span aria-hidden="true">*</span></label>
+                        <textarea class="input" id="description" name="description" rows="3" required>{{ form.description }}</textarea>
+                    </div>
+
+                    <div class="form-row">
+                        <label for="transaction-date">交易日期 <span aria-hidden="true">*</span></label>
+                        <input class="input" type="date" id="transaction-date" name="transaction_date" value="{{ form.transaction_date }}" required>
+                        <p class="hint">不得為未來日期（由伺服器驗證）。</p>
+                    </div>
+
+                    <div class="form-row">
+                        <label for="ai-model">分析模式</label>
+                        <select class="input" id="ai-model" name="ai_model">
+                            <option value="rules" selected>規則引擎（不使用 AI）</option>
+                            <option value="ollama">Ollama（本機）</option>
+                        </select>
+                        <p class="hint">預設規則引擎；AI 僅輔助建議，不取代人工覆核。</p>
+                    </div>
+                </fieldset>
+
+                <div class="form-actions">
+                    <button class="btn btn-primary" type="submit">建立交易</button>
+                    <a class="btn btn-secondary" href="#transactions">取消</a>
+                </div>
+                <p class="section-note">
+                    提交後由伺服器驗證並以 303 導回交易清單（Post/Redirect/Get），重新整理不會重複送出。
+                </p>
+            </form>
+        </section>
+
+        <!-- ==================== 介面狀態樣式預覽 ==================== -->
+        <section id="states" class="panel" aria-labelledby="states-title">
+            <h2 id="states-title">介面狀態樣式</h2>
+            <p class="preview-note">
+                以下為元件狀態的樣式預覽（Loading／失敗／部分不可用），供設計審查與驗收對照，非即時資料。
+            </p>
+
+            <h3>載入中</h3>
+            <p class="loading-state"><span class="spinner" aria-hidden="true"></span>資料載入中…</p>
+
+            <h3>載入失敗</h3>
+            <div class="error-state" role="alert">
+                <strong>無法載入交易清單</strong>
+                <p>可能原因：後端服務未啟動或網路中斷。請確認服務狀態後重試；若持續失敗，請聯絡系統管理員。</p>
+                <a class="btn btn-secondary" href="#dashboard">重試</a>
+            </div>
+
+            <h3>部分不可用</h3>
+            <div class="degraded-state" role="status">
+                <strong>AI 決策服務暫停</strong>
+                <p>規則引擎功能不受影響，可繼續登帳與查詢。</p>
+            </div>
+
+            <h3>表單驗證錯誤</h3>
+            <div class="form-row">
+                <label for="amount-invalid">金額（範例：空值送出時的錯誤樣式）</label>
+                <input class="input" type="number" id="amount-invalid" aria-describedby="amount-invalid-hint" required>
+                <p class="hint" id="amount-invalid-hint">金額為必填欄位，請輸入大於 0 的數字。</p>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="site-footer">
+        <div class="container">
+            <p>Flaps ERP 工作台 · 伺服器端渲染 v0.2（零 JavaScript，WCAG 2.2 AA 方向）</p>
+            <p>
+                <a href="#states">介面狀態</a> ·
+                設計系統：<code>web/assets/design-system.css</code> ·
+                決策記錄：<code>docs/adr/ADR-0002-api-layer.md</code>
+            </p>
+        </div>
+    </footer>
+</body>
+</html>
