@@ -32,7 +32,7 @@
         </div>
         {% endif %}
 
-        <section aria-labelledby="create-title" style="margin-bottom: 32px;">
+        <section aria-labelledby="create-title" class="section-gap">
             <h2 id="create-title">建立使用者</h2>
             <form method="post" action="/admin/users">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
@@ -90,7 +90,7 @@
                             <td><span class="badge {% if u.is_active %}badge-success{% else %}badge-error{% endif %}">{{ u.status_display }}</span></td>
                             <td>
                                 {% if u.user_id != acting_user %}
-                                <form method="post" action="/admin/users/toggle" style="display:inline">
+                                <form method="post" action="/admin/users/toggle" class="form-inline">
                                     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                                     <input type="hidden" name="user_id" value="{{ u.user_id }}">
                                     <button class="btn btn-secondary" type="submit">{% if u.is_active %}停用{% else %}啟用{% endif %}</button>

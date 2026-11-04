@@ -243,7 +243,13 @@ pub fn router(state: AppState) -> Router {
             auth::require_session,
         ));
 
-    public.merge(protected).with_state(state)
+    // OWASP secure headers on EVERY response (Slice 11): CSP with no script
+    // sources at all (zero-JS UI), nosniff, frame denial, no-referrer and
+    // no-store (session data must not be cached).
+    public
+        .merge(protected)
+        .layer(axum::middleware::map_response(auth::security_headers))
+        .with_state(state)
 }
 
 async fn index(State(state): State<AppState>, session: Extension<Session>) -> Response {
@@ -3730,5 +3736,142 @@ mod tests {
         )
         .is_err());
         assert!(flaps_core::parse_ai_suggestion("not json at all").is_err());
+    }
+
+    // ---------------------------------------------------------------------------
+    // Slice 11: security headers (OWASP secure headers checklist)
+    // ---------------------------------------------------------------------------
+
+    #[tokio::test]
+    async fn security_headers_present_on_public_and_protected_responses() {
+        let (app, _pool, cookie, _csrf) = seeded_app_with_admin().await;
+
+        for uri in ["/login", "/api/health", "/assets/design-system.css"] {
+            let request = Request::builder().uri(uri).body(Body::empty()).unwrap();
+            let response = app.clone().oneshot(request).await.expect("response");
+            let h = response.headers();
+            assert!(
+                h.get(header::CONTENT_SECURITY_POLICY)
+                    .map(|v| v.to_str().unwrap().contains("default-src 'none'"))
+                    .unwrap_or(false),
+                "CSP missing on {uri}"
+            );
+            assert!(
+                h.get(header::X_CONTENT_TYPE_OPTIONS)
+                    .map(|v| v.to_str().unwrap() == "nosniff")
+                    .unwrap_or(false),
+                "nosniff missing on {uri}"
+            );
+            assert!(
+                h.get(header::X_FRAME_OPTIONS)
+                    .map(|v| v.to_str().unwrap() == "DENY")
+                    .unwrap_or(false),
+                "frame denial missing on {uri}"
+            );
+            assert!(
+                h.get(header::REFERRER_POLICY)
+                    .map(|v| v.to_str().unwrap() == "no-referrer")
+                    .unwrap_or(false),
+                "referrer policy missing on {uri}"
+            );
+            assert!(
+                h.get(header::CACHE_CONTROL)
+                    .map(|v| v.to_str().unwrap().contains("no-store"))
+                    .unwrap_or(false),
+                "no-store missing on {uri}"
+            );
+        }
+
+        // Protected page too (session data must not be cached).
+        let request = Request::builder()
+            .uri("/")
+            .header(header::COOKIE, cookie)
+            .body(Body::empty())
+            .unwrap();
+        let response = app.clone().oneshot(request).await.expect("response");
+        assert!(
+            response
+                .headers()
+                .get(header::CACHE_CONTROL)
+                .map(|v| v.to_str().unwrap().contains("no-store"))
+                .unwrap_or(false),
+            "authenticated page must be no-store"
+        );
+    }
+
+    // ---------------------------------------------------------------------------
+    // Slice 11: config-driven Secure cookie flag (R-07 preparation)
+    // ---------------------------------------------------------------------------
+
+    #[tokio::test]
+    async fn login_sets_secure_cookie_when_configured() {
+        let (app, pool, _cookie, _csrf) = seeded_app_with_admin().await;
+        sqlx::query(
+            "INSERT OR REPLACE INTO erp_config (config_id, config_category, config_key, config_value, config_type, is_sensitive) \
+             VALUES ('cfg-secure', 'security', 'cookie_secure', '1', 'BOOLEAN', 0)",
+        )
+        .execute(&pool)
+        .await
+        .expect("enable secure flag");
+
+        let request = Request::builder()
+            .method("POST")
+            .uri("/login")
+            .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+            .body(Body::from(format!(
+                "username=admin&password={TEST_ADMIN_PASSWORD}"
+            )))
+            .unwrap();
+        let response = app.oneshot(request).await.expect("login");
+        let cookie_hdr = response
+            .headers()
+            .get_all(header::SET_COOKIE)
+            .iter()
+            .find_map(|v| v.to_str().ok())
+            .expect("set-cookie")
+            .to_string();
+        assert!(
+            cookie_hdr.contains("Secure"),
+            "Secure attribute required when cookie_secure=1: {cookie_hdr}"
+        );
+    }
+
+    #[tokio::test]
+    async fn expired_sessions_are_purged_at_login() {
+        let (app, pool, _cookie, _csrf) = seeded_app_with_admin().await;
+
+        // Plant an expired session row (yesterday).
+        sqlx::query(
+            "INSERT INTO sessions (session_id, user_id, csrf_token, expires_at) \
+             VALUES ('expired-1', 'user-admin', 'csrf-exp', datetime('now', '-1 day'))",
+        )
+        .execute(&pool)
+        .await
+        .expect("plant expired session");
+        let (before,): (i64,) =
+            sqlx::query_as("SELECT COUNT(*) FROM sessions WHERE expires_at <= datetime('now')")
+                .fetch_one(&pool)
+                .await
+                .expect("count");
+        assert_eq!(before, 1, "expired row must exist before login");
+
+        // A login purges expired sessions (housekeeping at auth boundary).
+        let request = Request::builder()
+            .method("POST")
+            .uri("/login")
+            .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+            .body(Body::from(format!(
+                "username=admin&password={TEST_ADMIN_PASSWORD}"
+            )))
+            .unwrap();
+        let response = app.clone().oneshot(request).await.expect("login response");
+        assert_eq!(response.status(), StatusCode::SEE_OTHER);
+
+        let (after,): (i64,) =
+            sqlx::query_as("SELECT COUNT(*) FROM sessions WHERE expires_at <= datetime('now')")
+                .fetch_one(&pool)
+                .await
+                .expect("count");
+        assert_eq!(after, 0, "expired sessions must be purged at login");
     }
 }

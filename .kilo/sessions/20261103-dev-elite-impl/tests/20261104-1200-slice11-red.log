@@ -1,0 +1,83 @@
+﻿cargo :    Compiling platform v0.0.1 (C:\Users\stephanie.huang\Desktop\新人訓練\Projects\2026\Dev\platform)
+位於 線路:4 字元:1
++ cargo test --locked -p platform 2>&1 | Out-File -FilePath ".kilo\sess ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (   Compiling pl...6\Dev\platform):String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 8.14s
+     Running unittests src\lib.rs (target\debug\deps\platform-f7abe79d02fd1d99.exe)
+
+running 42 tests
+test api::tests::ai_suggestion_schema_validation_rejects_malformed_output ... ok
+test api::tests::design_system_css_is_served ... ok
+test api::tests::health_reports_database_status ... ok
+test api::tests::ai_suggest_disabled_by_default_returns_503 ... ok
+test api::tests::dashboard_renders_chart_svg_zero_js ... ok
+test api::tests::drafts_parse_creates_draft_and_wizard_prefills ... ok
+test api::tests::import_confirm_posts_only_valid_rows ... ok
+test api::tests::admin_cannot_deactivate_self ... ok
+test api::tests::import_confirm_is_replay_guarded ... ok
+test api::tests::login_failure_shows_generic_error ... ok
+test api::tests::login_sets_secure_cookie_when_configured ... FAILED
+test api::tests::import_preview_reports_and_persists_no_ledger_effects ... ok
+test api::tests::deactivated_user_cannot_login ... ok
+test api::tests::ai_suggestion_adopt_never_posts_to_ledger ... ok
+test api::tests::expired_sessions_are_purged_at_login ... FAILED
+test api::tests::get_index_renders_zero_js_page ... ok
+test api::tests::admin_users_forbidden_without_role_manage ... ok
+test api::tests::unauthenticated_get_redirects_to_login ... ok
+test api::tests::logout_revokes_the_session ... ok
+test auth::tests::rate_limiter_is_per_username_and_case_insensitive ... ok
+test auth::tests::rate_limiter_locks_after_threshold ... ok
+test auth::tests::rate_limiter_resets_on_success ... ok
+test auth::tests::rate_limiter_unlocks_after_lockout_window ... ok
+test db::tests::integer_money_schema_roundtrip ... ok
+test db::tests::migration_is_safe_on_legacy_dynamic_schema ... ok
+test db::tests::migrations_are_idempotent_on_replay ... ok
+test db::tests::migrations_create_all_baseline_tables ... ok
+test api::tests::admin_creates_user_who_can_then_login ... ok
+test api::tests::pivot_matrix_matches_hand_computed_values ... ok
+test api::tests::parallel_projection_renders_one_line_per_account_zero_js ... ok
+test api::tests::pivot_rejects_unknown_dimensions_with_rule_name ... ok
+test api::tests::monthly_report_page_and_csv_render_posted_data ... ok
+test api::tests::security_headers_present_on_public_and_protected_responses ... FAILED
+test api::tests::post_rejects_future_date ... ok
+test api::tests::post_rejects_negative_amount ... ok
+test api::tests::post_rejects_wrong_csrf_token ... ok
+test api::tests::post_rejects_more_than_two_decimal_places ... ok
+test api::tests::post_rejects_same_debit_and_credit_account ... ok
+test api::tests::post_then_get_shows_posted_transaction_end_to_end ... ok
+test api::tests::post_requires_ledger_write_permission ... ok
+test api::tests::wizard_step2_rejects_same_account_and_preserves_values ... ok
+test auth::tests::login_lockout_survives_correct_password ... ok
+
+failures:
+
+---- api::tests::login_sets_secure_cookie_when_configured stdout ----
+
+thread 'api::tests::login_sets_secure_cookie_when_configured' (36708) panicked at platform\src\api.rs:3827:9:
+Secure attribute required when cookie_secure=1: flaps_session=14b4abdb-9865-4b58-8d60-23bcc0d9d285; HttpOnly; SameSite=Lax; Path=/; Max-Age=86400
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- api::tests::expired_sessions_are_purged_at_login stdout ----
+
+thread 'api::tests::expired_sessions_are_purged_at_login' (34384) panicked at platform\src\api.rs:3869:9:
+assertion `left == right` failed: expired sessions must be purged at login
+  left: 1
+ right: 0
+
+---- api::tests::security_headers_present_on_public_and_protected_responses stdout ----
+
+thread 'api::tests::security_headers_present_on_public_and_protected_responses' (10604) panicked at platform\src\api.rs:3747:13:
+CSP missing on /login
+
+
+failures:
+    api::tests::expired_sessions_are_purged_at_login
+    api::tests::login_sets_secure_cookie_when_configured
+    api::tests::security_headers_present_on_public_and_protected_responses
+
+test result: FAILED. 39 passed; 3 failed; 0 ignored; 0 measured; 0 filtered out; finished in 9.73s
+
+error: test failed, to rerun pass `-p platform --lib`

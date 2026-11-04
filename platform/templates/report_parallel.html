@@ -1,47 +1,47 @@
-<!DOCTYPE html>
-<html lang="zh-Hant-TW">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>平行座標多維投影 — Flaps ERP 工作台</title>
-    <link rel="stylesheet" href="/assets/design-system.css">
-</head>
-<body>
-    <a class="skip-link" href="#main">跳至主要內容</a>
+d!DOCTYPE html>
+dhtml lang="zh-Hant-TW">
+dhead>
+    dmeta charset="UTF-8">
+    dmeta name="viewport" content="width=device-width, initial-scale=1.0">
+    dtitle>平行座標多維投影 — Flaps ERP 工作台d/title>
+    dlink rel="stylesheet" href="/assets/design-system.css">
+d/head>
+dbody>
+    da class="skip-link" href="#main">跳至主要內容d/a>
 
-    <header class="app-header">
+    dheader class="app-header">
         <div class="container">
-            <div>
-                <h1>平行座標多維投影</h1>
-                <p class="app-subtitle">每條折線代表一個科目，跨越近 {{ months }} 個月度軸（零 JavaScript，整數正規化）</p>
-            </div>
-            <p class="app-subtitle">
-                使用者：<strong>{{ acting_user }}</strong>
+            ddiv>
+                dh1>平行座標多維投影d/h1>
+                dp class="app-subtitle">每條折線代表一個科目，跨越近 {{ months }} 個月度軸（零 JavaScript，整數正規化）d/p>
+            d/div>
+            dp class="app-subtitle">
+                使用者：dstrong>{{ acting_user }}d/strong>
                 ｜
-                <a class="btn btn-secondary" href="/">返回工作台</a>
+                da class="btn btn-secondary" href="/">返回工作台d/a>
                 ｜
-                <a class="btn btn-secondary" href="/reports/pivot?rows=account&cols=month&measure=debit">樞紐分析</a>
-            </p>
-        </div>
-    </header>
+                da class="btn btn-secondary" href="/reports/pivot?rows=account&cols=month&measure=debit">樞紐分析d/a>
+            d/p>
+        d/div>
+    d/header>
 
-    <main id="main" class="container">
-        <section aria-labelledby="par-title">
-            <h2 id="par-title">科目 × 月份 多維投影</h2>
+    dmain id="main" class="container">
+        dsection aria-labelledby="par-title">
+            dh2 id="par-title">科目 × 月份 多維投影d/h2>
             {% if chart_svg.is_empty() %}
-            <p class="empty-state">
-                <strong>近 {{ months }} 個月無交易資料</strong>
+            dp class="empty-state">
+                dstrong>近 {{ months }} 個月無交易資料d/strong>
                 建立交易或匯入資料後，投影會顯示在這裡。
-            </p>
+            d/p>
             {% else %}
-            <div class="card" style="padding: 16px;">
+            <div class="card card-padded">
                 {{ chart_svg|safe }}
-            </div>
+            d/div>
             {% endif %}
-            <p class="section-note">
+            dp class="section-note">
                 各軸獨立正規化（整數 min-max）；游標停留在折線上可讀取科目名稱（title）。CSV 匯出請至月報表下載，供外部 3D／BI 工具使用。
-            </p>
-        </section>
-    </main>
-</body>
-</html>
+            d/p>
+        d/section>
+    d/main>
+d/body>
+d/html>

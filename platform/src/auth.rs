@@ -207,17 +207,82 @@ pub async fn current_session(state: &AppState, headers: &HeaderMap) -> Option<Se
     get_valid_session(&state.pool, &session_id).await
 }
 
-/// Build the Set-Cookie header value for a session id.
-pub fn session_cookie_value(session_id: &str) -> String {
+/// Read a security toggle from erp_config (whitelisted keys only).
+pub async fn security_flag(state: &AppState, key: &str) -> bool {
+    let row: Option<(String,)> = sqlx::query_as(
+        "SELECT config_value FROM erp_config WHERE config_category = 'security' AND config_key = ?",
+    )
+    .bind(key)
+    .fetch_optional(&state.pool)
+    .await
+    .unwrap_or(None);
+    row.map(|(v,)| v == "1").unwrap_or(false)
+}
+
+/// Build the Set-Cookie header value for a session id. The `Secure`
+/// attribute is config-driven (R-07): enable `security/cookie_secure` once
+/// TLS terminates in front of this server; default OFF for local HTTP.
+pub fn session_cookie_value(session_id: &str, secure: bool) -> String {
+    let secure_attr = if secure { "; Secure" } else { "" };
     format!(
-        "{SESSION_COOKIE}={session_id}; HttpOnly; SameSite=Lax; Path=/; Max-Age={}",
-        SESSION_TTL_HOURS * 3600
+        "{SESSION_COOKIE}={session_id}; HttpOnly; SameSite=Lax; Path=/; Max-Age={}{}",
+        SESSION_TTL_HOURS * 3600,
+        secure_attr
     )
 }
 
 /// Build the cookie-clearing header value.
 pub fn clear_cookie_value() -> String {
     format!("{SESSION_COOKIE}=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0")
+}
+
+/// Housekeeping at the auth boundary: purge expired session rows so the
+/// table does not grow without bound (expired rows are already
+/// non-authentic; this only reclaims storage).
+pub async fn purge_expired_sessions(pool: &SqlitePool) -> Result<(), sqlx::Error> {
+    sqlx::query("DELETE FROM sessions WHERE expires_at <= datetime('now')")
+        .execute(pool)
+        .await?;
+    Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// Security headers middleware (OWASP secure headers checklist, Slice 11)
+// ---------------------------------------------------------------------------
+
+/// Apply the secure-header set to every response. The CSP allows only
+/// self-hosted styles/images plus `data:` favicons - the UI is zero-JS, so
+/// no script sources are needed at all.
+pub async fn security_headers(mut response: axum::response::Response) -> axum::response::Response {
+    use axum::http::header::{
+        CACHE_CONTROL, CONTENT_SECURITY_POLICY, REFERRER_POLICY, X_CONTENT_TYPE_OPTIONS,
+        X_FRAME_OPTIONS,
+    };
+    let headers = response.headers_mut();
+    headers.insert(
+        CONTENT_SECURITY_POLICY,
+        axum::http::HeaderValue::from_static(
+            "default-src 'none'; style-src 'self'; img-src 'self' data:; font-src 'self'; \
+             form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
+        ),
+    );
+    headers.insert(
+        X_CONTENT_TYPE_OPTIONS,
+        axum::http::HeaderValue::from_static("nosniff"),
+    );
+    headers.insert(
+        X_FRAME_OPTIONS,
+        axum::http::HeaderValue::from_static("DENY"),
+    );
+    headers.insert(
+        REFERRER_POLICY,
+        axum::http::HeaderValue::from_static("no-referrer"),
+    );
+    headers.insert(
+        CACHE_CONTROL,
+        axum::http::HeaderValue::from_static("no-store"),
+    );
+    response
 }
 
 // ---------------------------------------------------------------------------
@@ -338,11 +403,15 @@ pub async fn post_login(State(state): State<AppState>, Form(form): Form<LoginFor
     match authenticate(&state.pool, &form.username, &form.password).await {
         Some(user_id) => {
             state.rate_limiter.record_success(&form.username);
+            // Slice 11: housekeeping at the auth boundary - expired session
+            // rows are purged whenever a new session is created.
+            let _ = purge_expired_sessions(&state.pool).await;
+            let secure = security_flag(&state, "cookie_secure").await;
             match create_session(&state.pool, &user_id).await {
                 Ok((session_id, _)) => {
                     let mut response = Redirect::to("/").into_response();
                     if let Ok(value) =
-                        header::HeaderValue::from_str(&session_cookie_value(&session_id))
+                        header::HeaderValue::from_str(&session_cookie_value(&session_id, secure))
                     {
                         response.headers_mut().append(header::SET_COOKIE, value);
                     }

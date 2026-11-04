@@ -19,7 +19,7 @@
             <p class="app-subtitle">
                 使用者：<strong>{{ acting_user }}</strong>
                 ｜
-                <form method="post" action="/logout" style="display:inline">
+                <form method="post" action="/logout" class="form-inline">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                     <button class="btn btn-secondary" type="submit">登出</button>
                 </form>
@@ -125,7 +125,7 @@
             </div>
 
             {% if !chart_svg.is_empty() %}
-            <h4 style="margin-top: 24px;">近六個月借貸合計（零 JavaScript，伺服器端 SVG）</h4>
+            <h4 class="section-gap">近六個月借貸合計（零 JavaScript，伺服器端 SVG）</h4>
             {# 安全審核：chart_svg 由伺服器端以整數聚合與固定字面值生成，
                不含任何使用者輸入（月份與數值經格式化）；因此此處允許 safe。
                來源：build_index -> monthly_chart_svg()。 #}
