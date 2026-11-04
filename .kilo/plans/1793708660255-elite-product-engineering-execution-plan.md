@@ -1,6 +1,6 @@
 # ELITE PRODUCT ENGINEERING MASTER EXECUTION PLAN
 
-> 依據《ELITE PRODUCT ENGINEERING MASTER DIRECTIVE》v1.0 制定。狀態：Draft for user review（2026-11-03）。本計畫為實作就緒總藍圖；執行由具實作權限的代理人依 §9 任務清單推進。證據規則：一切狀態宣稱須綁定具名 git 修訂版＋精確指令＋工作目錄＋退出碼；`UNKNOWN ≠ PASS ≠ FAIL`（GOVERNANCE_STANDARD P2/P7）。
+> 依據《ELITE PRODUCT ENGINEERING MASTER DIRECTIVE》v1.0 制定。狀態：**v2（2026-11-04）**——Slices 1–7 已實作完成（詳 §11 實作紀錄），本版新增 §12「Slice 8：資料獲取與洞察層」。執行由具實作權限的代理人依 §13 任務清單推進。證據規則：一切狀態宣稱須綁定具名 git 修訂版＋精確指令＋工作目錄＋退出碼；`UNKNOWN ≠ PASS ≠ FAIL`（GOVERNANCE_STANDARD P2/P7）。驗證工具以 **curl.exe／Rust 測試**為主；Python 至多作一次性小工具，不得成為產品或驗證依賴。
 
 ## 1. 執行上下文（Environment Reconnaissance 已完成）
 
@@ -126,3 +126,82 @@ project.md 記憶宣稱 Rust 2024／Resolver 3／Axum 0.8／Askama 0.16／SQLx 0
 | D-03 | 前端路線 | 純 HTML/CSS 零 JS＋PRG（Tauri 殼保留） | Node.js 缺失＋政策一致 |
 | D-04 | `web/index.html` 範圍 | 先重構單頁，不新增路由 | 最小可逆 |
 | D-05 | SyncMesh 宣稱 | 文件改「TCP-only」，TLS 列技術債 | 反模擬原則 |
+
+## 11. 實作紀錄（Slices 1–7 已完成，2026-11-03～04）
+
+| 提交 | 主題 | 測試證據 |
+|---|---|---|
+| `cd66388` | P0-2 版控初始化＋治理基線（此前已修復編譯、19 個 clippy、零 JS 靜態頁、reqwest 升級） | 34 tests / 基線四項 EXIT=0 |
+| `8a79adf` | P0-1 整數貨幣、P1-1 零 JS API（Axum 0.7＋Askama＋PRG）、P1-5 借貸平衡強制、G-1 認證（Argon2id＋sessions＋CSRF） | 50 tests / 基線四項 EXIT=0 |
+| `4e94d7b` | 文件證據閉環（BACKLOG/CHANGELOG/PLAN_REGISTER #3/#4） | git status clean |
+
+Backlog 已解：P0-1、P0-2、P1-1～P1-8、P2-2。Open：P1-7 多實例遷移 note、P1-8 密碼重設流程、R-07 Secure cookie、P3 系列。
+
+## 12. Slice 8：資料獲取與洞察層（本版新增，多層展開）
+
+使用者需求：快速匯入、多維度表格的主動詢問結構化輸入、非結構化資訊取得、儀表板/報表升級、多維資訊呈現（含 3D 提案）。以下四層皆受既有不變量約束：零 JavaScript（憲章 §2.3）、複式記帳（INV-02）、整數分（INV-01）、RBAC＋CSRF＋audit（FR-006/ADR-0003）、AI 禁區（金額修改等不由 AI 決策）。
+
+### 12.1 Layer A — 快速匯入管線（兩段式、可回復、可追溯）
+
+- **A1 預檢（dry-run）**：`POST /import/preview`（multipart CSV/TSV ≤2MB，欄位：日期、借方科目、貸方科目、金額、幣別、摘要）→ 伺服器逐列以 `flaps_core::money` 與規則驗證 → 渲染**預檢報告**（合格/錯誤逐列明細＋原因）→ 批次暫存 `import_batches`（status=draft）＋原始檔 SHA-256，**不落地交易**。
+- **A2 確認**：`POST /import/confirm`（csrf＋batch_id）→ 僅合格列逐筆登帳（冪等 UUID）→ audit 事件 `IMPORT_CONFIRMED`（含 batch_id、row 數）→ 303 報告頁；錯誤列保留報告可下載。
+- **不變量**：預檢無副作用；確認可重放防護（batch status 機械擋重複 confirm）；全部動作 audit。
+- **遷移 0003**：`import_batches`（batch_id PK、file_sha256、row_total、row_ok、status、created_by、created_at）＋`import_rows`（batch_id、row_no、raw_line、status、error_msg、draft_json）。
+
+### 12.2 Layer B — 引導式結構化輸入（主動詢問精靈）
+
+- **B1 多步精靈**：`GET /new?step=1|2|3`（伺服器端逐步驗證，狀態經 hidden 欄位攜帶）：步驟 1 選**交易模板**（現金支出/收入/轉帳/開帳——模板預設借貸方向與提示）→ 步驟 2 填借貸科目＋金額＋日期（欄位級規則提示：科目存在性候選、借貸須不同、日期不可未來）→ 步驟 3 確認（平衡預檢＋摘要卡）→ 提交至既有 `POST /transactions`。
+- **B2 智慧預填**：精靈接受 `?from_draft=<draft_id>`（Layer C 產出）或 `?from_batch=<batch_id>`（匯入錯誤列修正入口）——每個預填值在頁面標註**規則來源**（可解釋）。
+- 指標：可解釋（每個限制標註來源規則）、貼心（錯誤前置到輸入當步）、精準（沿用 money 模組）。
+
+### 12.3 Layer C — 非結構化 → 結構化草稿（規則解析，100% 可推導）
+
+- **C1 解析**：`POST /drafts/parse`（textarea ≤10KB）→ core 新模組 `flaps_core::parser`（規則表驅動：日期格式集、金額模式、科目關鍵字對映存 `erp_config`，管理員可增修）→ 產出**草稿分錄**＋**依據卡**（哪條規則命中哪段文字、confidence=rule）
+- **C2 人工確認必經**：草稿頁（借貸/金額/日期可改）→ 確認才登帳；規則未命中時 AI（Ollama，decision_gating）可**建議**草稿——信心 <0.7 一律人工覆核，AI 永不直接落地（H3 信任模型＋禁區不變）。
+- 指標：可解釋（依據卡）、可推導（同輸入同輸出）、安全（建議與落地分離）。
+
+### 12.4 Layer D — 洞察層：零 JS 圖表與報表（含 3D 憲政裁定）
+
+- **D0 憲政裁定（重要）**：互動式 3D 拖拉需要 JS/WebGL，與 Strict Zero-JS（憲章 §2.3——HTMX/WASM 亦禁）**直接衝突，不得靜默違反**。零 JS 內的多維洞察替代方案（按價值排序）：
+  1. 伺服器渲染 **SVG 圖表**（長條/折線/堆疊；維度=期間×科目×借貸，經查詢參數切換；含 `<title>/<desc>` 無障礙）。
+  2. **:target 維度切換**＋排序參數（零 JS 互動）。
+  3. **CSV 匯出**（`GET /reports/balance.csv` 等，`Content-Disposition: attachment`，RBAC=LEDGER_READ）——資料出場給 Excel/BI/3D 工具，而非 JS 進場。
+  4. 列印友好月報（`@media print`）。
+  - 若未來確需互動 3D：另立「分析工作台」獨立模組＋**憲政豁免 ADR**（本計畫 Open Question OQ-8-1，需擁有者裁定）。
+- **D1 儀表板升級**：KPI 下方加 SVG 月度收支圖＋近 30 天趨勢（伺服器端聚合 SQL，走既有索引）。
+- **D2 月報**：`GET /reports/monthly?ym=YYYY-MM`——科目餘額表（借/貸兩欄＋淨額）、列印 CSS；`GET /reports/monthly.csv` 匯出。
+- 指標：效率（10k 交易報表 P95 < 500ms）、易讀（語義表格＋Token）、高吞吐（聚合走 idx_transactions_date）。
+
+### 12.5 驗收條件（Given/When/Then，節錄）
+
+| ID | 驗收條件 |
+|---|---|
+| IMP-001 | Given 合法 CSV 100 列 When preview Then 報告 100 OK 且 transactions 表零新增 |
+| IMP-002 | Given 90 好 10 壞列 When confirm Then 僅 90 筆登帳＋audit IMPORT_CONFIRMED，錯誤報告列 10 筆原因 |
+| IMP-003 | Given 同 batch_id 重複 confirm Then 第二次被拒（status 機械擋） |
+| WIZ-001 | Given 步驟 2 缺貸方科目 When 下一步 Then 停留本步並欄位級標示錯誤 |
+| DRAFT-001 | Given 文字「2026-11-04 支付租金 12,000 元 現金→租金費用」When parse Then 草稿含日期/金額 1,200,000 minor/借租金費用貸現金＋依據卡標示命中規則 |
+| RPT-001 | Given 10k 交易 When 月報 Then P95 < 500ms 且 CSV 欄位完整 |
+| ZJS-001 | Given 全部新頁面 When 檢視原始碼 Then `<script>` 計數 = 0 |
+
+### 12.6 關鍵指標對映
+
+精準=money 模組；效率=報表 P95/預檢吞吐；穩定=兩段式冪等；安全=RBAC+CSRF+AI 禁區；高吞吐=聚合 SQL+索引；高擴展=規則表(erp_config)驅動；可靠/韌性=預檢無副作用＋可回復草稿；可追溯=batch_id+SHA-256+audit；可查證=測試證據；可解釋=依據卡；可推導=規則表驅動解析。
+
+## 13. Slice 8 執行任務清單（交給實作代理，依序）
+
+1. **S8-1 遷移 0003**：import_batches/import_rows＋重放測試。
+2. **S8-2 匯入管線**：/import/preview＋/import/confirm＋預檢報告頁＋測試（IMP-001~003）。
+3. **S8-3 精靈**：/new 三步＋模板規則＋預填（from_draft/from_batch）＋測試（WIZ-001）。
+4. **S8-4 解析器**：`flaps_core::parser`（規則表＋依據卡）＋/drafts/parse＋草稿確認頁＋測試（DRAFT-001）。
+5. **S8-5 SVG 圖表**：dashboard 月度收支 SVG＋維度參數切換＋測試（ZJS-001）。
+6. **S8-6 報表與 CSV**：/reports/monthly(+.csv)＋print CSS＋測試（RPT-001）。
+7. **S8-7 收尾**：文檔同步（PRD/CHANGELOG/PLAN_REGISTER #5）＋基線四項＋煙霧（curl.exe）。
+
+## 14. Slice 8 開立問題
+
+| # | 問題 | 建議 |
+|---|---|---|
+| OQ-8-1 | 互動式 3D 是否憲政豁免？ | 先以零 JS SVG＋CSV 出場交付；豁免另立 ADR |
+| OQ-8-2 | Ollama 建議何時介接？ | 規則解析器上線且 C1 覆蓋率量測後（先規則後 AI） |
+| OQ-8-3 | 匯入單檔上限？ | 2MB/5,000 列起，量測後調整 |

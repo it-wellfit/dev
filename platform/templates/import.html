@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>快速匯入 — Flaps ERP 工作台</title>
+    <link rel="stylesheet" href="/assets/design-system.css">
+</head>
+<body>
+    <a class="skip-link" href="#main">跳至主要內容</a>
+
+    <header class="app-header">
+        <div class="container">
+            <div>
+                <h1>快速匯入</h1>
+                <p class="app-subtitle">兩段式：先預檢（無副作用），確認後才登帳；全程可追溯。</p>
+            </div>
+            <p class="app-subtitle">
+                使用者：<strong>{{ acting_user }}</strong>
+                ｜
+                <a class="btn btn-secondary" href="/">返回工作台</a>
+            </p>
+        </div>
+    </header>
+
+    <main id="main" class="container">
+
+        <section aria-labelledby="upload-title">
+            <h2 id="upload-title">上傳 CSV／TSV</h2>
+            <form method="post" action="/import/preview" enctype="multipart/form-data">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <fieldset>
+                    <legend>檔案規格</legend>
+                    <div class="form-row">
+                        <label for="file">檔案 <span aria-hidden="true">*</span></label>
+                        <input class="input" type="file" id="file" name="file" accept=".csv,.tsv,text/csv,text/tab-separated-values" required>
+                        <p class="hint">
+                            上限 2MB／5,000 列。首行為欄位標題：date, debit_account, credit_account, amount, currency, description。
+                            金額最多兩位小數；借貸科目須不同；日期不可為未來。
+                        </p>
+                    </div>
+                </fieldset>
+                <div class="form-actions">
+                    <button class="btn btn-primary" type="submit">執行預檢（不登帳）</button>
+                </div>
+            </form>
+        </section>
+
+        {% if let Some(b) = batch %}
+        <section aria-labelledby="report-title">
+            <h2 id="report-title">批次報告</h2>
+            {% if let Some(n) = notice %}
+            <div class="degraded-state" role="status">
+                <strong>匯入結果</strong>
+                <p>{{ n }}</p>
+            </div>
+            {% endif %}
+
+            <p class="preview-note">
+                批次 <strong>{{ b.batch_id }}</strong> ｜ 指紋 sha256:{{ b.sha256_short }} ｜
+                狀態：<span class="badge {% if b.status == "draft" %}badge-warning{% else %}badge-success{% endif %}">{{ b.status_display }}</span>
+                ｜ 合格 {{ b.row_ok }}／{{ b.row_total }} 列
+            </p>
+
+            <div class="table-wrap">
+                <table>
+                    <caption>逐列結果</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col">列號</th>
+                            <th scope="col">結果</th>
+                            <th scope="col">說明</th>
+                            <th scope="col">原始內容</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for r in b.rows %}
+                        <tr>
+                            <td>{{ r.row_no }}</td>
+                            <td><span class="badge {% if r.status == "ok" %}badge-success{% else %}badge-error{% endif %}">{{ r.status_display }}</span></td>
+                            <td>{{ r.error_msg }}</td>
+                            <td>{{ r.raw_line }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            {% if b.is_draft %}
+            <form method="post" action="/import/confirm">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <input type="hidden" name="batch_id" value="{{ b.batch_id }}">
+                <div class="form-actions" style="margin-top: 16px;">
+                    <button class="btn btn-primary" type="submit">確認匯入 {{ b.row_ok }} 列（僅合格列）</button>
+                    <a class="btn btn-secondary" href="/import">放棄此批次</a>
+                </div>
+                <p class="section-note">確認後僅合格列登帳（每筆獨立冪等），並寫入稽核軌跡；本操作不可復原，但錯誤列不會被匯入。</p>
+            </form>
+            {% endif %}
+        </section>
+        {% endif %}
+    </main>
+</body>
+</html>

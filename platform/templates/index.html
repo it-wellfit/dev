@@ -42,6 +42,9 @@
             <a href="#ai-decisions">AI 決策</a>
             <a href="#new-transaction">新增交易</a>
             <a href="#states">介面狀態</a>
+            <a href="/import">快速匯入</a>
+            <a href="/drafts">草稿解析</a>
+            <a href="/reports/monthly?ym={{ current_ym }}">月報表</a>
             {% if can_manage_users %}
             <a href="/admin/users">使用者管理</a>
             {% endif %}
@@ -118,6 +121,15 @@
                     </tbody>
                 </table>
             </div>
+
+            {% if !chart_svg.is_empty() %}
+            <h4 style="margin-top: 24px;">近六個月借貸合計（零 JavaScript，伺服器端 SVG）</h4>
+            {# 安全審核：chart_svg 由伺服器端以整數聚合與固定字面值生成，
+               不含任何使用者輸入（月份與數值經格式化）；因此此處允許 safe。
+               來源：build_index -> monthly_chart_svg()。 #}
+            {{ chart_svg|safe }}
+            {% endif %}
+
             <p class="section-note">清單支援分頁與排序，將由後端 API 提供（見 docs/testing/TEST_STRATEGY.md 的契約測試計畫）。</p>
         </section>
 

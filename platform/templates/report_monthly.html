@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>月報表 {{ ym }} — Flaps ERP 工作台</title>
+    <link rel="stylesheet" href="/assets/design-system.css">
+</head>
+<body>
+    <a class="skip-link" href="#main">跳至主要內容</a>
+
+    <header class="app-header">
+        <div class="container">
+            <div>
+                <h1>月報表 — {{ ym }}</h1>
+                <p class="app-subtitle">科目借貸彙計（金額單位：{{ currency }} 元，整數分還原）</p>
+            </div>
+            <p class="app-subtitle">
+                使用者：<strong>{{ acting_user }}</strong>
+                ｜
+                <a class="btn btn-secondary" href="/">返回工作台</a>
+                ｜
+                <a class="btn btn-secondary" href="/reports/monthly.csv?ym={{ ym }}">下載 CSV</a>
+            </p>
+        </div>
+    </header>
+
+    <main id="main" class="container">
+        {% if rows.is_empty() %}
+        <p class="empty-state">
+            <strong>{{ ym }} 無交易資料</strong>
+            請選擇其他月份或先建立交易。
+        </p>
+        {% else %}
+        <div class="table-wrap">
+            <table>
+                <caption>科目彙計（{{ ym }}）</caption>
+                <thead>
+                    <tr>
+                        <th scope="col">科目</th>
+                        <th scope="col">借方合計</th>
+                        <th scope="col">貸方合計</th>
+                        <th scope="col">餘額（借−貸）</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in rows %}
+                    <tr>
+                        <td>{{ r.account_id }}</td>
+                        <td>{{ r.debit_display }}</td>
+                        <td>{{ r.credit_display }}</td>
+                        <td>{{ r.net_display }}</td>
+                    </tr>
+                    {% endfor %}
+                    <tr>
+                        <th scope="row">合計</th>
+                        <td>{{ total_debit_display }}</td>
+                        <td>{{ total_credit_display }}</td>
+                        <td>{{ total_net_display }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <p class="section-note">
+            列印：使用瀏覽器列印功能（本頁已含列印樣式）。複式記帳下全體科目借貸合計應相等（平衡不變量 INV-02）。
+        </p>
+        {% endif %}
+    </main>
+</body>
+</html>

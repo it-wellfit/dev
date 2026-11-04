@@ -117,6 +117,11 @@ pub struct IndexTemplate {
     pub acting_user: String,
     pub csrf_token: String,
     pub can_manage_users: bool,
+    pub current_ym: String,
+    /// Server-generated SVG (monthly debit/credit bars). Generated purely from
+    /// integer aggregates and fixed literals — no user-controlled content —
+    /// hence the `safe` filter in the template (audited, Slice 8 D1).
+    pub chart_svg: String,
     pub db_connected: bool,
     pub transaction_count: String,
     pub total_amount_display: String,
@@ -125,6 +130,61 @@ pub struct IndexTemplate {
     pub accounts: Vec<String>,
     pub error: Option<String>,
     pub form: FormValues,
+}
+
+/// Build the zero-JS monthly bar chart SVG from integer aggregates.
+/// Deterministic layout: 6 months, two bars each (debit/credit), value labels
+/// derived with `format_minor`. No external assets, no JavaScript.
+fn monthly_chart_svg(totals: &[flaps_core::ledger::engine::MonthlyTotal]) -> String {
+    if totals.is_empty() {
+        return String::new();
+    }
+    let max = totals
+        .iter()
+        .map(|t| t.debit_minor.max(t.credit_minor))
+        .max()
+        .unwrap_or(0)
+        .max(1);
+    let width = 60usize * totals.len().max(1) + 40;
+    let height = 190;
+    let mut svg = format!(
+        "<svg viewBox=\"0 0 {width} {height}\" width=\"100%\" height=\"{height}\" role=\"img\" \
+         aria-label=\"近六個月借貸合計長條圖\" xmlns=\"http://www.w3.org/2000/svg\">\
+         <title>近六個月借貸合計</title>\
+         <desc>每月借方與貸方合計，單位為整數分還原之貨幣金額。</desc>"
+    );
+    for (idx, t) in totals.iter().enumerate() {
+        let base_x = 30 + idx * 60;
+        let scale = |v: i64| -> usize { ((v as f64 / max as f64) * 120.0).round() as usize };
+        let d_h = scale(t.debit_minor);
+        let c_h = scale(t.credit_minor);
+        svg.push_str(&format!(
+            "<rect x=\"{}\" y=\"{}\" width=\"14\" height=\"{}\" fill=\"#005fcc\"></rect>",
+            base_x,
+            160 - d_h,
+            d_h
+        ));
+        svg.push_str(&format!(
+            "<rect x=\"{}\" y=\"{}\" width=\"14\" height=\"{}\" fill=\"#f57c00\"></rect>",
+            base_x + 18,
+            160 - c_h,
+            c_h
+        ));
+        svg.push_str(&format!(
+            "<text x=\"{}\" y=\"{}\" font-size=\"9\" text-anchor=\"middle\" fill=\"#666666\">{}</text>",
+            base_x + 16,
+            175,
+            t.ym
+        ));
+        svg.push_str(&format!(
+            "<text x=\"{}\" y=\"{}\" font-size=\"8\" text-anchor=\"middle\" fill=\"#1a1a1a\">{}</text>",
+            base_x + 16,
+            152 - d_h.max(c_h),
+            format_minor(t.debit_minor, 2)
+        ));
+    }
+    svg.push_str("</svg>");
+    svg
 }
 
 /// Posted form for creating a balanced journal entry: one debit leg and one
@@ -162,6 +222,16 @@ pub fn router(state: AppState) -> Router {
         .route("/transactions", post(create_transaction))
         .route("/admin/users", get(admin_users).post(admin_create_user))
         .route("/admin/users/toggle", post(admin_toggle_user))
+        .route("/import", get(import_upload_page))
+        .route("/import/preview", post(import_preview))
+        .route("/import/confirm", post(import_confirm))
+        .route("/drafts", get(drafts_page))
+        .route("/drafts/parse", post(drafts_parse))
+        .route("/new", get(wizard_page))
+        .route("/new/step2", post(wizard_step2))
+        .route("/reports/monthly", get(report_monthly_page))
+        .route("/reports/monthly.csv", get(report_monthly_csv))
+        .route_layer(axum::extract::DefaultBodyLimit::max(IMPORT_MAX_BYTES))
         .route_layer(axum::middleware::from_fn_with_state(
             state.clone(),
             auth::require_session,
@@ -702,6 +772,1060 @@ async fn build_admin_page(
     .render()
 }
 
+// ---------------------------------------------------------------------------
+// Slice 8 Layer A: CSV import pipeline (two-phase, traceable, IMP-001~003)
+// ---------------------------------------------------------------------------
+
+const IMPORT_MAX_BYTES: usize = 2 * 1024 * 1024;
+const IMPORT_MAX_ROWS: usize = 5_000;
+
+/// One validated, confirmable import row (persisted as JSON in import_rows).
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct ImportRowDraft {
+    pub date: String,
+    pub debit_account: String,
+    pub credit_account: String,
+    pub amount_minor: i64,
+    pub currency: String,
+    pub description: String,
+}
+
+/// View model for the import page's batch report.
+#[derive(Debug, Clone)]
+pub struct ImportBatchRowView {
+    pub row_no: i64,
+    pub status: String,
+    pub status_display: String,
+    pub error_msg: String,
+    pub raw_line: String,
+}
+
+/// View model for the import page's batch header.
+#[derive(Debug, Clone)]
+pub struct ImportBatchView {
+    pub batch_id: String,
+    pub sha256_short: String,
+    pub row_total: i64,
+    pub row_ok: i64,
+    pub status: String,
+    pub status_display: String,
+    pub is_draft: bool,
+    pub rows: Vec<ImportBatchRowView>,
+}
+
+/// Server-rendered import page (upload + optional batch report).
+#[derive(Template)]
+#[template(path = "import.html")]
+pub struct ImportTemplate {
+    pub acting_user: String,
+    pub csrf_token: String,
+    pub notice: Option<String>,
+    pub batch: Option<ImportBatchView>,
+}
+
+async fn import_upload_page(
+    State(state): State<AppState>,
+    session: Extension<Session>,
+    axum::extract::Query(query): axum::extract::Query<std::collections::HashMap<String, String>>,
+) -> Response {
+    let batch = match query.get("batch") {
+        Some(id) => load_batch_view(&state, id).await,
+        None => None,
+    };
+    let notice = query.get("notice").map(|n| {
+        let bytes = n.as_bytes();
+        let mut out = Vec::with_capacity(bytes.len());
+        let mut i = 0;
+        while i < bytes.len() {
+            if bytes[i] == b'%' && i + 2 < bytes.len() {
+                if let Ok(v) = u8::from_str_radix(&n[i + 1..i + 3], 16) {
+                    out.push(v);
+                    i += 3;
+                    continue;
+                }
+            }
+            out.push(bytes[i]);
+            i += 1;
+        }
+        String::from_utf8_lossy(&out).to_string()
+    });
+    let template = ImportTemplate {
+        acting_user: session.user_id.clone(),
+        csrf_token: session.csrf_token.clone(),
+        notice,
+        batch,
+    };
+    match template.render() {
+        Ok(body) => Html(body).into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("頁面渲染失敗：{e}"),
+        )
+            .into_response(),
+    }
+}
+
+/// Load a batch (header + rows) for rendering.
+async fn load_batch_view(state: &AppState, batch_id: &str) -> Option<ImportBatchView> {
+    let (file_sha256, row_total, row_ok, status): (String, i64, i64, String) = sqlx::query_as(
+        "SELECT file_sha256, row_total, row_ok, status FROM import_batches WHERE batch_id = ?",
+    )
+    .bind(batch_id)
+    .fetch_optional(&state.pool)
+    .await
+    .ok()
+    .flatten()?;
+
+    let rows: Vec<(i64, String, Option<String>, String)> = sqlx::query_as(
+        "SELECT row_no, status, error_msg, raw_line FROM import_rows WHERE batch_id = ? ORDER BY row_no",
+    )
+    .bind(batch_id)
+    .fetch_all(&state.pool)
+    .await
+    .unwrap_or_default();
+
+    Some(ImportBatchView {
+        batch_id: batch_id.to_string(),
+        sha256_short: file_sha256.chars().take(12).collect(),
+        row_total,
+        row_ok,
+        status: status.clone(),
+        status_display: if status == "draft" {
+            "待確認（未登帳）".to_string()
+        } else {
+            "已確認登帳".to_string()
+        },
+        is_draft: status == "draft",
+        rows: rows
+            .into_iter()
+            .map(|(row_no, st, err, raw)| ImportBatchRowView {
+                row_no,
+                status: st.clone(),
+                status_display: if st == "ok" {
+                    "合格".to_string()
+                } else {
+                    "錯誤".to_string()
+                },
+                error_msg: err.unwrap_or_default(),
+                raw_line: raw.chars().take(80).collect(),
+            })
+            .collect(),
+    })
+}
+
+/// Validate one CSV record into an import draft (rules = same as the form).
+fn validate_import_row(record: &csv::StringRecord) -> Result<ImportRowDraft, String> {
+    if record.len() < 6 {
+        return Err(format!(
+            "欄位不足（需 6 欄：date, debit_account, credit_account, amount, currency, description），實得 {} 欄",
+            record.len()
+        ));
+    }
+    let date = chrono::NaiveDate::parse_from_str(record.get(0).unwrap().trim(), "%Y-%m-%d")
+        .map_err(|_| format!("日期格式不正確：{}", record.get(0).unwrap()))?
+        .to_string();
+    if chrono::NaiveDate::parse_from_str(&date, "%Y-%m-%d").unwrap()
+        > chrono::Utc::now().date_naive()
+    {
+        return Err("日期不得為未來".to_string());
+    }
+    let debit_account = record.get(1).unwrap().trim().to_string();
+    if debit_account.is_empty() || debit_account.len() > MAX_ACCOUNT_ID_LEN {
+        return Err("借方科目空白或過長".to_string());
+    }
+    let credit_account = record.get(2).unwrap().trim().to_string();
+    if credit_account.is_empty() || credit_account.len() > MAX_ACCOUNT_ID_LEN {
+        return Err("貸方科目空白或過長".to_string());
+    }
+    if debit_account.eq_ignore_ascii_case(&credit_account) {
+        return Err("借貸科目相同".to_string());
+    }
+    let amount_minor = flaps_core::parse_decimal_to_minor(record.get(3).unwrap().trim(), 2)
+        .map_err(|e| format!("金額錯誤：{e}"))?;
+    if amount_minor <= 0 {
+        return Err("金額必須大於 0".to_string());
+    }
+    let currency = record.get(4).unwrap().trim().to_uppercase();
+    if !SUPPORTED_CURRENCIES.contains(&currency.as_str()) {
+        return Err(format!("幣別不支援：{currency}"));
+    }
+    let description = record.get(5).unwrap().trim().to_string();
+    if description.is_empty() || description.len() > MAX_DESCRIPTION_LEN {
+        return Err("摘要空白或過長".to_string());
+    }
+    Ok(ImportRowDraft {
+        date,
+        debit_account,
+        credit_account,
+        amount_minor,
+        currency,
+        description,
+    })
+}
+
+/// POST /import/preview — parse + validate + persist a draft batch (no ledger
+/// side effects). IMP-001.
+async fn import_preview(
+    State(state): State<AppState>,
+    session: Extension<Session>,
+    mut multipart: axum::extract::Multipart,
+) -> Response {
+    if !state
+        .permissions
+        .has_permission_db(&session.user_id, "LEDGER_WRITE")
+        .await
+    {
+        return (
+            StatusCode::FORBIDDEN,
+            "需要 LEDGER_WRITE 權限才能匯入。".to_string(),
+        )
+            .into_response();
+    }
+
+    let mut bytes: Option<Vec<u8>> = None;
+    while let Some(field) = match multipart.next_field().await {
+        Ok(f) => f,
+        Err(e) => {
+            return (StatusCode::BAD_REQUEST, format!("上傳格式錯誤：{e}")).into_response();
+        }
+    } {
+        if field.name() == Some("file") {
+            match field.bytes().await {
+                Ok(b) => bytes = Some(b.to_vec()),
+                Err(e) => {
+                    return (StatusCode::BAD_REQUEST, format!("讀取檔案失敗：{e}")).into_response()
+                }
+            }
+        }
+    }
+    let Some(data) = bytes else {
+        return (StatusCode::BAD_REQUEST, "缺少檔案欄位 file。".to_string()).into_response();
+    };
+    if data.len() > IMPORT_MAX_BYTES {
+        return (
+            StatusCode::BAD_REQUEST,
+            format!("檔案超過 2MB 上限（{} bytes）。", data.len()),
+        )
+            .into_response();
+    }
+
+    use sha2::Digest;
+    let sha = sha2::Sha256::digest(&data);
+    let sha_hex = format!("{sha:x}");
+
+    let mut reader = csv::ReaderBuilder::new()
+        .has_headers(true)
+        .flexible(true)
+        .from_reader(data.as_slice());
+
+    let batch_id = uuid::Uuid::new_v4().to_string();
+    let mut drafts: Vec<(usize, ImportRowDraft)> = Vec::new();
+    let mut errors: Vec<(usize, String, String)> = Vec::new();
+
+    for (idx, record) in reader.records().enumerate() {
+        if drafts.len() + errors.len() >= IMPORT_MAX_ROWS {
+            errors.push((
+                idx + 2,
+                String::new(),
+                format!("超過 {IMPORT_MAX_ROWS} 列上限，其餘列未處理"),
+            ));
+            break;
+        }
+        let line_no = idx + 2; // 1-based, after the header row
+        match record {
+            Ok(rec) => {
+                let raw = rec.iter().collect::<Vec<_>>().join(",");
+                match validate_import_row(&rec) {
+                    Ok(draft) => drafts.push((line_no, draft)),
+                    Err(msg) => errors.push((line_no, raw, msg)),
+                }
+            }
+            Err(e) => errors.push((line_no, String::new(), format!("CSV 解析失敗：{e}"))),
+        }
+    }
+
+    let row_total = (drafts.len() + errors.len()) as i64;
+    let row_ok = drafts.len() as i64;
+
+    if let Err(e) = persist_batch(
+        &state,
+        &batch_id,
+        &sha_hex,
+        row_total,
+        row_ok,
+        &session.user_id,
+        &drafts,
+        &errors,
+    )
+    .await
+    {
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("批次暫存失敗：{e}"),
+        )
+            .into_response();
+    }
+
+    Redirect::to(&format!("/import?batch={batch_id}")).into_response()
+}
+
+#[allow(clippy::too_many_arguments)]
+async fn persist_batch(
+    state: &AppState,
+    batch_id: &str,
+    sha_hex: &str,
+    row_total: i64,
+    row_ok: i64,
+    created_by: &str,
+    drafts: &[(usize, ImportRowDraft)],
+    errors: &[(usize, String, String)],
+) -> Result<(), sqlx::Error> {
+    sqlx::query(
+        "INSERT INTO import_batches (batch_id, file_sha256, row_total, row_ok, status, created_by) \
+         VALUES (?, ?, ?, ?, 'draft', ?)",
+    )
+    .bind(batch_id)
+    .bind(sha_hex)
+    .bind(row_total)
+    .bind(row_ok)
+    .bind(created_by)
+    .execute(&state.pool)
+    .await?;
+    for (line_no, draft) in drafts {
+        sqlx::query(
+            "INSERT INTO import_rows (batch_id, row_no, raw_line, status, draft_json) \
+             VALUES (?, ?, '', 'ok', ?)",
+        )
+        .bind(batch_id)
+        .bind(*line_no as i64)
+        .bind(serde_json::to_string(draft).unwrap_or_default())
+        .execute(&state.pool)
+        .await?;
+    }
+    for (line_no, raw, msg) in errors {
+        sqlx::query(
+            "INSERT INTO import_rows (batch_id, row_no, raw_line, status, error_msg, draft_json) \
+             VALUES (?, ?, ?, 'error', ?, '{}')",
+        )
+        .bind(batch_id)
+        .bind(*line_no as i64)
+        .bind(raw)
+        .bind(msg)
+        .execute(&state.pool)
+        .await?;
+    }
+    Ok(())
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ConfirmImportForm {
+    pub csrf_token: String,
+    pub batch_id: String,
+}
+
+/// POST /import/confirm — post all valid rows of a draft batch. IMP-002/003.
+async fn import_confirm(
+    State(state): State<AppState>,
+    session: Extension<Session>,
+    Form(form): Form<ConfirmImportForm>,
+) -> Response {
+    if !state
+        .permissions
+        .has_permission_db(&session.user_id, "LEDGER_WRITE")
+        .await
+    {
+        return (
+            StatusCode::FORBIDDEN,
+            "需要 LEDGER_WRITE 權限。".to_string(),
+        )
+            .into_response();
+    }
+    if form.csrf_token != session.csrf_token {
+        return (
+            StatusCode::FORBIDDEN,
+            "CSRF 驗證失敗；請重新整理頁面後再操作。".to_string(),
+        )
+            .into_response();
+    }
+
+    // IMP-003: mechanical guard against double-confirmation.
+    let claimed = sqlx::query(
+        "UPDATE import_batches SET status = 'confirmed' WHERE batch_id = ? AND status = 'draft'",
+    )
+    .bind(&form.batch_id)
+    .execute(&state.pool)
+    .await
+    .map(|r| r.rows_affected())
+    .unwrap_or(0);
+    if claimed == 0 {
+        return (
+            StatusCode::CONFLICT,
+            "此批次已確認或不存在；不可重複匯入。".to_string(),
+        )
+            .into_response();
+    }
+
+    let rows: Vec<(i64, String)> = sqlx::query_as(
+        "SELECT row_no, draft_json FROM import_rows WHERE batch_id = ? AND status = 'ok' ORDER BY row_no",
+    )
+    .bind(&form.batch_id)
+    .fetch_all(&state.pool)
+    .await
+    .unwrap_or_default();
+
+    let mut posted = 0i64;
+    let mut failed: Vec<String> = Vec::new();
+
+    for (row_no, draft_json) in rows {
+        let draft: Result<ImportRowDraft, _> = serde_json::from_str(&draft_json);
+        let Ok(draft) = draft else {
+            failed.push(format!("列 {row_no}：草稿資料毀損"));
+            continue;
+        };
+        let date = chrono::NaiveDate::parse_from_str(&draft.date, "%Y-%m-%d")
+            .unwrap_or_else(|_| chrono::Utc::now().date_naive());
+        let transaction_id = uuid::Uuid::new_v4().to_string();
+        let transaction = Transaction::new(
+            transaction_id.clone(),
+            format!("TX-{}", &transaction_id[..8]),
+            date,
+            draft.description.clone(),
+            Some(format!("import:{}", form.batch_id)),
+            "POSTED".to_string(),
+            Some("import".to_string()),
+            session.user_id.clone(),
+        );
+        let items = vec![
+            TransactionItem::new(
+                uuid::Uuid::new_v4().to_string(),
+                transaction_id.clone(),
+                draft.debit_account.clone(),
+                "DEBIT".to_string(),
+                draft.amount_minor,
+                draft.currency.clone(),
+                10_000,
+                None,
+                None,
+            ),
+            TransactionItem::new(
+                uuid::Uuid::new_v4().to_string(),
+                transaction_id,
+                draft.credit_account.clone(),
+                "CREDIT".to_string(),
+                draft.amount_minor,
+                draft.currency.clone(),
+                10_000,
+                None,
+                None,
+            ),
+        ];
+        match state.engine.post_journal_entry(transaction, items).await {
+            Ok(()) => posted += 1,
+            Err(e) => failed.push(format!("列 {row_no}：{e}")),
+        }
+    }
+
+    // Batch-level audit trail (transaction_id NULL is allowed by the schema).
+    let _ = sqlx::query(
+        "INSERT INTO audit_log (log_id, transaction_id, event_type, event_data, performed_by) \
+         VALUES (?, NULL, 'IMPORT_CONFIRMED', ?, ?)",
+    )
+    .bind(uuid::Uuid::new_v4().to_string())
+    .bind(format!(
+        "{{\"batch_id\":\"{}\",\"posted\":{posted},\"failed\":{}}}",
+        form.batch_id,
+        failed.len()
+    ))
+    .bind(&session.user_id)
+    .execute(&state.pool)
+    .await;
+
+    let summary = if failed.is_empty() {
+        format!("匯入完成：{posted} 筆登帳。")
+    } else {
+        format!(
+            "匯入部分完成：{posted} 筆登帳、{} 筆失敗（{}）。失敗列未登帳，可修正後重新匯入。",
+            failed.len(),
+            failed.join("；")
+        )
+    };
+    Redirect::to(&format!(
+        "/import?batch={}&notice={}",
+        form.batch_id,
+        urlencoding_lite(&summary)
+    ))
+    .into_response()
+}
+
+/// Minimal percent-encoding for query-string values (digits and safe ASCII
+/// pass through; everything else becomes %XX). Zero-dependency by design.
+fn urlencoding_lite(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    for b in s.bytes() {
+        match b {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
+                out.push(b as char)
+            }
+            _ => out.push_str(&format!("%{b:02X}")),
+        }
+    }
+    out
+}
+
+// ---------------------------------------------------------------------------
+// Slice 8 Layer B: guided wizard (server knows the rules; WIZ-001)
+// ---------------------------------------------------------------------------
+
+/// Account keyword→account mapping for the parser: built-in defaults first,
+/// then erp_config rows (category='parser') as administrator overrides.
+async fn parser_keywords(state: &AppState) -> Vec<(String, String)> {
+    let mut map: Vec<(String, String)> = vec![
+        ("現金".to_string(), "CASH".to_string()),
+        ("銀行".to_string(), "BANK".to_string()),
+        ("租金".to_string(), "RENT-EXP".to_string()),
+        ("薪資".to_string(), "PAYROLL-EXP".to_string()),
+    ];
+    let rows: Vec<(String, String)> = sqlx::query_as(
+        "SELECT config_key, config_value FROM erp_config WHERE config_category = 'parser'",
+    )
+    .fetch_all(&state.pool)
+    .await
+    .unwrap_or_default();
+    map.extend(rows);
+    map
+}
+
+/// A recent draft row for the drafts page.
+#[derive(Debug, Clone)]
+pub struct DraftListView {
+    pub draft_id: String,
+    pub created_display: String,
+    pub source: String,
+    pub completeness: String,
+}
+
+#[derive(Template)]
+#[template(path = "drafts.html")]
+pub struct DraftsTemplate {
+    pub acting_user: String,
+    pub csrf_token: String,
+    pub drafts: Vec<DraftListView>,
+    pub error: Option<String>,
+}
+
+/// Three-step guided posting page (Layer B; step 1|2|3).
+#[derive(Template)]
+#[template(path = "wizard.html")]
+pub struct WizardTemplate {
+    pub acting_user: String,
+    pub csrf_token: String,
+    pub step: i32,
+    /// Selected transaction template code (cash-payment / cash-receipt /
+    /// transfer / opening).
+    pub template: String,
+    pub accounts: Vec<String>,
+    pub error: Option<String>,
+    /// Prefill provenance note (B2: 每個預填標示來源).
+    pub from_note: Option<String>,
+    pub amount_display: String,
+    pub form: FormValues,
+}
+
+/// GET /drafts — paste unstructured text; see recent drafts.
+async fn drafts_page(State(state): State<AppState>, session: Extension<Session>) -> Response {
+    let rows: Vec<(String, String, String)> = sqlx::query_as(
+        "SELECT draft_id, source, draft_json FROM drafts WHERE created_by = ? ORDER BY created_at DESC LIMIT 10",
+    )
+    .bind(&session.user_id)
+    .fetch_all(&state.pool)
+    .await
+    .unwrap_or_default();
+
+    let drafts: Vec<DraftListView> = rows
+        .into_iter()
+        .map(|(draft_id, source, json)| {
+            let parsed: Result<flaps_core::DraftEntry, _> = serde_json::from_str(&json);
+            let completeness = match parsed {
+                Ok(d) if d.is_complete() => "完整（可登帳）".to_string(),
+                Ok(_) => "不完整（需人工補齊）".to_string(),
+                Err(_) => "資料毀損".to_string(),
+            };
+            let created_display = source_display_time(&draft_id);
+            DraftListView {
+                draft_id,
+                created_display,
+                source,
+                completeness,
+            }
+        })
+        .collect();
+
+    let template = DraftsTemplate {
+        acting_user: session.user_id.clone(),
+        csrf_token: session.csrf_token.clone(),
+        drafts,
+        error: None,
+    };
+    match template.render() {
+        Ok(body) => Html(body).into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("頁面渲染失敗：{e}"),
+        )
+            .into_response(),
+    }
+}
+
+/// Deterministic display time derived from the draft id (v4 uuid is random,
+/// so we show the source and let the table ordering speak for recency).
+fn source_display_time(_draft_id: &str) -> String {
+    "本工作階段".to_string()
+}
+
+#[derive(Debug, Deserialize)]
+pub struct DraftParseForm {
+    pub csrf_token: String,
+    pub text: String,
+}
+
+/// POST /drafts/parse — rule-based parse → store draft → 303 to wizard step 2.
+async fn drafts_parse(
+    State(state): State<AppState>,
+    session: Extension<Session>,
+    Form(form): Form<DraftParseForm>,
+) -> Response {
+    if form.csrf_token != session.csrf_token {
+        return (
+            StatusCode::FORBIDDEN,
+            "CSRF 驗證失敗；請重新整理頁面後再操作。".to_string(),
+        )
+            .into_response();
+    }
+    let text = form.text.trim().to_string();
+    if text.is_empty() || text.len() > 10_000 {
+        return (
+            StatusCode::BAD_REQUEST,
+            "內容空白或超過 10,000 字元。".to_string(),
+        )
+            .into_response();
+    }
+
+    let keywords = parser_keywords(&state).await;
+    let draft = flaps_core::parse_unstructured(&text, &keywords);
+    let draft_id = uuid::Uuid::new_v4().to_string();
+
+    let insert = sqlx::query(
+        "INSERT INTO drafts (draft_id, source, draft_json, created_by) VALUES (?, 'text', ?, ?)",
+    )
+    .bind(&draft_id)
+    .bind(serde_json::to_string(&draft).unwrap_or_default())
+    .bind(&session.user_id)
+    .execute(&state.pool)
+    .await;
+
+    match insert {
+        Ok(_) => Redirect::to(&format!("/new?step=2&from_draft={draft_id}")).into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("草稿儲存失敗：{e}"),
+        )
+            .into_response(),
+    }
+}
+
+/// Query params for the wizard.
+#[derive(Debug, Default, Deserialize)]
+pub struct WizardQuery {
+    pub step: Option<String>,
+    pub template: Option<String>,
+    pub from_draft: Option<String>,
+    pub from_batch: Option<String>,
+    pub row_no: Option<i64>,
+}
+
+/// GET /new — three-step guided posting (B1/B2).
+async fn wizard_page(
+    State(state): State<AppState>,
+    session: Extension<Session>,
+    axum::extract::Query(query): axum::extract::Query<WizardQuery>,
+) -> Response {
+    let step = query.step.as_deref().unwrap_or("1");
+    match step {
+        "2" => {
+            // Prefill from a draft or an import error row when requested (B2).
+            let (prefilled, from_note) = if let Some(draft_id) = query.from_draft.as_deref() {
+                let row: Option<(String,)> = sqlx::query_as(
+                    "SELECT draft_json FROM drafts WHERE draft_id = ? AND created_by = ?",
+                )
+                .bind(draft_id)
+                .bind(&session.user_id)
+                .fetch_optional(&state.pool)
+                .await
+                .unwrap_or(None);
+                match row
+                    .and_then(|(json,)| serde_json::from_str::<flaps_core::DraftEntry>(&json).ok())
+                {
+                    Some(d) => (
+                        FormValues {
+                            debit_account: d.debit_account.clone().unwrap_or_default(),
+                            credit_account: d.credit_account.clone().unwrap_or_default(),
+                            amount: d
+                                .amount_minor
+                                .map(|m| format_minor(m, 2))
+                                .unwrap_or_default(),
+                            currency: "TWD".to_string(),
+                            description: "（自草稿預填，請依據卡核對）".to_string(),
+                            transaction_date: d.date.map(|d| d.to_string()).unwrap_or_default(),
+                        },
+                        Some("非結構化解析草稿（依據卡見草稿頁）".to_string()),
+                    ),
+                    None => (FormValues::default(), None),
+                }
+            } else if let (Some(batch_id), Some(row_no)) = (&query.from_batch, query.row_no) {
+                let row: Option<(String,)> = sqlx::query_as(
+                    "SELECT draft_json FROM import_rows WHERE batch_id = ? AND row_no = ? AND status = 'error'",
+                )
+                .bind(batch_id)
+                .bind(row_no)
+                .fetch_optional(&state.pool)
+                .await
+                .unwrap_or(None);
+                match row.and_then(|(json,)| serde_json::from_str::<ImportRowDraft>(&json).ok()) {
+                    Some(d) => (
+                        FormValues {
+                            debit_account: d.debit_account.clone(),
+                            credit_account: d.credit_account.clone(),
+                            amount: flaps_core::format_minor(d.amount_minor, 2),
+                            currency: d.currency.clone(),
+                            description: d.description.clone(),
+                            transaction_date: d.date.clone(),
+                        },
+                        Some(format!(
+                            "匯入批次 {batch_id} 第 {row_no} 列（原錯誤列，請修正後送出）"
+                        )),
+                    ),
+                    None => (FormValues::default(), None),
+                }
+            } else {
+                (FormValues::default(), None)
+            };
+
+            let template = query
+                .template
+                .clone()
+                .unwrap_or_else(|| "cash-payment".to_string());
+            let accounts: Vec<String> =
+                sqlx::query_scalar("SELECT account_id FROM accounts ORDER BY account_id LIMIT 100")
+                    .fetch_all(&state.pool)
+                    .await
+                    .unwrap_or_default();
+
+            let rendered = WizardTemplate {
+                acting_user: session.user_id.clone(),
+                csrf_token: session.csrf_token.clone(),
+                step: 2,
+                template,
+                accounts,
+                error: None,
+                from_note,
+                amount_display: String::new(),
+                form: prefilled,
+            };
+            render_or_500(rendered)
+        }
+        "3" => {
+            // Step 3 requires the values from step 2 in the query string; the
+            // step-2 form carries them as hidden inputs via POST — to keep the
+            // flow zero-JS and stateless we accept a POST at /new/step2 that
+            // renders step 3 directly (see wizard_step2).
+            redirect_to_wizard_step1()
+        }
+        _ => {
+            let rendered = WizardTemplate {
+                acting_user: session.user_id.clone(),
+                csrf_token: session.csrf_token.clone(),
+                step: 1,
+                template: String::new(),
+                accounts: Vec::new(),
+                error: None,
+                from_note: None,
+                amount_display: String::new(),
+                form: FormValues::default(),
+            };
+            render_or_500(rendered)
+        }
+    }
+}
+
+fn redirect_to_wizard_step1() -> Response {
+    Redirect::to("/new?step=1").into_response()
+}
+
+fn render_or_500(template: impl askama::Template) -> Response {
+    match template.render() {
+        Ok(body) => Html(body).into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("頁面渲染失敗：{e}"),
+        )
+            .into_response(),
+    }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct WizardStep2Form {
+    pub csrf_token: String,
+    pub template: String,
+    pub debit_account: String,
+    pub credit_account: String,
+    pub amount: String,
+    pub currency: String,
+    pub description: String,
+    pub transaction_date: String,
+}
+
+/// POST /new/step2 — validate step 2, render the step-3 confirmation.
+async fn wizard_step2(
+    State(state): State<AppState>,
+    session: Extension<Session>,
+    Form(form): Form<WizardStep2Form>,
+) -> Response {
+    if form.csrf_token != session.csrf_token {
+        return (
+            StatusCode::FORBIDDEN,
+            "CSRF 驗證失敗；請重新整理頁面後再操作。".to_string(),
+        )
+            .into_response();
+    }
+
+    let mut form_error: Option<String> = None;
+    let mut amount_minor: Option<i64> = None;
+
+    let debit = form.debit_account.trim().to_string();
+    let credit = form.credit_account.trim().to_string();
+    if debit.is_empty() || credit.is_empty() {
+        form_error = Some("借貸科目皆為必填（規則 R-BALANCE）。".to_string());
+    } else if debit.eq_ignore_ascii_case(&credit) {
+        form_error = Some("借貸兩方不得為同一科目（規則 R-BALANCE）。".to_string());
+    } else if debit.len() > MAX_ACCOUNT_ID_LEN || credit.len() > MAX_ACCOUNT_ID_LEN {
+        form_error = Some("科目代碼過長（規則 R-ACCT-LEN）。".to_string());
+    }
+
+    if form_error.is_none() {
+        match flaps_core::parse_decimal_to_minor(form.amount.trim(), 2) {
+            Ok(m) if m > 0 => amount_minor = Some(m),
+            Ok(_) => form_error = Some("金額必須大於 0（規則 R-MONEY）。".to_string()),
+            Err(e) => form_error = Some(format!("金額錯誤（規則 R-MONEY）：{e}")),
+        }
+    }
+
+    if form_error.is_none() && !SUPPORTED_CURRENCIES.contains(&form.currency.as_str()) {
+        form_error = Some("幣別不支援（規則 R-CURRENCY）。".to_string());
+    }
+
+    if form_error.is_none() {
+        match chrono::NaiveDate::parse_from_str(form.transaction_date.trim(), "%Y-%m-%d") {
+            Ok(d) if d > chrono::Utc::now().date_naive() => {
+                form_error = Some("日期不得為未來（規則 R-DATE-FUTURE）。".to_string());
+            }
+            Err(_) => {
+                form_error = Some("日期格式不正確（規則 R-DATE-FORMAT）。".to_string());
+            }
+            _ => {}
+        }
+    }
+
+    if let Some(err) = form_error {
+        let accounts: Vec<String> =
+            sqlx::query_scalar("SELECT account_id FROM accounts ORDER BY account_id LIMIT 100")
+                .fetch_all(&state.pool)
+                .await
+                .unwrap_or_default();
+        let rendered = WizardTemplate {
+            acting_user: session.user_id.clone(),
+            csrf_token: session.csrf_token.clone(),
+            step: 2,
+            template: form.template.clone(),
+            accounts,
+            error: Some(err),
+            from_note: None,
+            amount_display: String::new(),
+            form: FormValues {
+                debit_account: debit,
+                credit_account: credit,
+                amount: form.amount.clone(),
+                currency: form.currency.clone(),
+                description: form.description.clone(),
+                transaction_date: form.transaction_date.clone(),
+            },
+        };
+        return render_or_500(rendered);
+    }
+
+    let amount_minor = amount_minor.unwrap_or(0);
+    let rendered = WizardTemplate {
+        acting_user: session.user_id.clone(),
+        csrf_token: session.csrf_token.clone(),
+        step: 3,
+        template: form.template.clone(),
+        accounts: Vec::new(),
+        error: None,
+        from_note: None,
+        amount_display: format_minor(amount_minor, 2),
+        form: FormValues {
+            debit_account: debit,
+            credit_account: credit,
+            amount: form.amount.trim().to_string(),
+            currency: form.currency.clone(),
+            description: form.description.trim().to_string(),
+            transaction_date: form.transaction_date.trim().to_string(),
+        },
+    };
+    render_or_500(rendered)
+}
+
+// ---------------------------------------------------------------------------
+// Slice 8 Layer D: monthly report + CSV export (RPT-001)
+// ---------------------------------------------------------------------------
+
+/// Validated `YYYY-MM` from a query param (reject anything else — 可推導).
+fn parse_year_month(raw: &str) -> Option<String> {
+    let raw = raw.trim();
+    if raw.len() != 7 || !raw.as_bytes()[4] == b'-' {
+        return None;
+    }
+    let mut parts = raw.split('-');
+    let y = parts.next()?;
+    let m = parts.next()?;
+    if y.len() != 4 || m.len() != 2 {
+        return None;
+    }
+    let y: u32 = y.parse().ok()?;
+    let m: u32 = m.parse().ok()?;
+    if !(1..=12).contains(&m) {
+        return None;
+    }
+    Some(format!("{y:04}-{m:02}"))
+}
+
+#[derive(Template)]
+#[template(path = "report_monthly.html")]
+pub struct MonthlyReportTemplate {
+    pub acting_user: String,
+    pub ym: String,
+    pub currency: String,
+    pub rows: Vec<ReportRow>,
+    pub total_debit_display: String,
+    pub total_credit_display: String,
+    pub total_net_display: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct ReportRow {
+    pub account_id: String,
+    pub debit_display: String,
+    pub credit_display: String,
+    pub net_display: String,
+}
+
+/// GET /reports/monthly — per-account monthly totals (LEDGER_READ).
+async fn report_monthly_page(
+    State(state): State<AppState>,
+    session: Extension<Session>,
+    axum::extract::Query(query): axum::extract::Query<std::collections::HashMap<String, String>>,
+) -> Response {
+    if !state
+        .permissions
+        .has_permission_db(&session.user_id, "LEDGER_READ")
+        .await
+    {
+        return (StatusCode::FORBIDDEN, "需要 LEDGER_READ 權限。".to_string()).into_response();
+    }
+    let Some(ym) = query.get("ym").and_then(|y| parse_year_month(y)) else {
+        return (
+            StatusCode::BAD_REQUEST,
+            "月份參數格式不正確；請使用 ym=YYYY-MM。".to_string(),
+        )
+            .into_response();
+    };
+
+    let rows = state
+        .engine
+        .monthly_by_account(&ym)
+        .await
+        .unwrap_or_default();
+    let report_rows: Vec<ReportRow> = rows
+        .iter()
+        .map(|r| ReportRow {
+            account_id: r.account_id.clone(),
+            debit_display: format_minor(r.debit_minor, 2),
+            credit_display: format_minor(r.credit_minor, 2),
+            net_display: format_minor(r.debit_minor - r.credit_minor, 2),
+        })
+        .collect();
+    let total_debit: i64 = rows.iter().map(|r| r.debit_minor).sum();
+    let total_credit: i64 = rows.iter().map(|r| r.credit_minor).sum();
+
+    let template = MonthlyReportTemplate {
+        acting_user: session.user_id.clone(),
+        ym,
+        currency: "TWD".to_string(),
+        rows: report_rows,
+        total_debit_display: format_minor(total_debit, 2),
+        total_credit_display: format_minor(total_credit, 2),
+        total_net_display: format_minor(total_debit - total_credit, 2),
+    };
+    render_or_500(template)
+}
+
+/// GET /reports/monthly.csv — machine-readable export (same RBAC).
+async fn report_monthly_csv(
+    State(state): State<AppState>,
+    session: Extension<Session>,
+    axum::extract::Query(query): axum::extract::Query<std::collections::HashMap<String, String>>,
+) -> Response {
+    if !state
+        .permissions
+        .has_permission_db(&session.user_id, "LEDGER_READ")
+        .await
+    {
+        return (StatusCode::FORBIDDEN, "需要 LEDGER_READ 權限。".to_string()).into_response();
+    }
+    let Some(ym) = query.get("ym").and_then(|y| parse_year_month(y)) else {
+        return (
+            StatusCode::BAD_REQUEST,
+            "月份參數格式不正確；請使用 ym=YYYY-MM。".to_string(),
+        )
+            .into_response();
+    };
+
+    let rows = state
+        .engine
+        .monthly_by_account(&ym)
+        .await
+        .unwrap_or_default();
+    let mut csv_text = String::from("account_id,debit_minor,credit_minor,net_minor\n");
+    for r in &rows {
+        csv_text.push_str(&format!(
+            "{},{},{},{}\n",
+            r.account_id,
+            r.debit_minor,
+            r.credit_minor,
+            r.debit_minor - r.credit_minor
+        ));
+    }
+
+    (
+        [(header::CONTENT_TYPE, "text/csv; charset=utf-8")],
+        [(
+            header::CONTENT_DISPOSITION,
+            format!("attachment; filename=\"monthly-{ym}.csv\""),
+        )],
+        csv_text,
+    )
+        .into_response()
+}
+
 /// Query the data needed by the page and render the template. Any database
 /// failure degrades to the disconnected layout (db_connected = false, FR-004)
 /// instead of hiding the whole UI.
@@ -712,6 +1836,14 @@ async fn build_index(
     form: FormValues,
 ) -> Result<String, askama::Error> {
     let db_connected = sqlx::query("SELECT 1").fetch_one(&state.pool).await.is_ok();
+
+    let chart_svg = if db_connected {
+        let totals = state.engine.monthly_totals(6).await.unwrap_or_default();
+        monthly_chart_svg(&totals)
+    } else {
+        String::new()
+    };
+    let current_ym = chrono::Utc::now().date_naive().format("%Y-%m").to_string();
 
     let (transactions, accounts, transaction_count, account_count, total_amount_display) =
         if db_connected {
@@ -777,6 +1909,8 @@ async fn build_index(
         acting_user: session.user_id.clone(),
         csrf_token: session.csrf_token.clone(),
         can_manage_users: can_manage_users(state, &session.user_id).await,
+        current_ym,
+        chart_svg,
         db_connected,
         transaction_count,
         total_amount_display,
@@ -1327,5 +2461,328 @@ mod tests {
             "self-deactivation rejected"
         );
         assert!(body.contains("不得停用自己的帳號"));
+    }
+
+    // Slice 8 acceptance: import pipeline (IMP-001..003)
+    // ------------------------------------------------------------------
+
+    fn csv_multipart(csv_text: &str) -> (header::HeaderValue, Body) {
+        let boundary = "X-BOUNDARY-TEST";
+        let body = format!(
+            "--{boundary}\r\nContent-Disposition: form-data; name=\"file\"; filename=\"rows.csv\"\r\n\
+             Content-Type: text/csv\r\n\r\n{csv_text}\r\n--{boundary}--\r\n"
+        );
+        (
+            header::HeaderValue::from_str(&format!("multipart/form-data; boundary={boundary}"))
+                .unwrap(),
+            Body::from(body),
+        )
+    }
+
+    fn sample_csv(good_rows: usize, bad_rows: usize) -> String {
+        let today = chrono::Utc::now().date_naive();
+        let mut s = String::from("date,debit_account,credit_account,amount,currency,description\n");
+        for _ in 0..good_rows {
+            s.push_str(&format!("{today},ACC-D,ACC-C,100.00,TWD,import ok row\n"));
+        }
+        for i in 0..bad_rows {
+            s.push_str(&format!(
+                "{today},ACC-D,ACC-C,0.00{i},TWD,bad precision {i}\n"
+            ));
+        }
+        s
+    }
+
+    #[allow(dead_code)]
+    async fn run_import_preview(app: &Router, csv_text: &str) -> (StatusCode, Option<String>) {
+        let (ctype, body) = csv_multipart(csv_text);
+        let request = Request::builder()
+            .method("POST")
+            .uri("/import/preview")
+            .header(header::CONTENT_TYPE, ctype)
+            .body(body)
+            .unwrap();
+        let (status, _, location) = send(app.clone(), request).await;
+        (status, location)
+    }
+
+    #[tokio::test]
+    async fn import_preview_reports_and_persists_no_ledger_effects() {
+        let (app, pool) = test_app().await;
+        seed_credentials(&pool).await;
+        let (cookie, _csrf) = login(&app, &pool, "admin", TEST_ADMIN_PASSWORD).await;
+
+        let (ctype, body) = csv_multipart(&sample_csv(3, 0));
+        let request = Request::builder()
+            .method("POST")
+            .uri("/import/preview")
+            .header(header::CONTENT_TYPE, ctype)
+            .header(header::COOKIE, cookie)
+            .body(body)
+            .unwrap();
+        let (status, _, location) = send(app, request).await;
+        assert_eq!(status, StatusCode::SEE_OTHER, "preview must PRG to report");
+        let location = location.expect("location");
+
+        // IMP-001: report exists, but the ledger was NOT touched.
+        let batch_id = location.split("batch=").nth(1).unwrap_or("").to_string();
+        assert!(!batch_id.is_empty());
+        let (tx_count,): (i64,) = sqlx::query_as("SELECT COUNT(*) FROM transactions")
+            .fetch_one(&pool)
+            .await
+            .expect("count");
+        assert_eq!(tx_count, 0, "preview must have zero ledger side effects");
+        let (rows,): (i64,) =
+            sqlx::query_as("SELECT COUNT(*) FROM import_rows WHERE status = 'ok'")
+                .fetch_one(&pool)
+                .await
+                .expect("rows");
+        assert_eq!(rows, 3, "all 3 valid rows must be staged");
+    }
+
+    #[tokio::test]
+    async fn import_confirm_posts_only_valid_rows() {
+        let (app, pool) = test_app().await;
+        seed_credentials(&pool).await;
+        let (cookie, csrf) = login(&app, &pool, "admin", TEST_ADMIN_PASSWORD).await;
+
+        // IMP-002: 2 good rows + 1 bad row (3-decimal amount).
+        let (ctype, body) = csv_multipart(&sample_csv(2, 1));
+        let request = Request::builder()
+            .method("POST")
+            .uri("/import/preview")
+            .header(header::CONTENT_TYPE, ctype)
+            .header(header::COOKIE, cookie.clone())
+            .body(body)
+            .unwrap();
+        let (_, _, location) = send(app.clone(), request).await;
+        let batch_id = location
+            .expect("location")
+            .split("batch=")
+            .nth(1)
+            .unwrap_or("")
+            .to_string();
+
+        let request = Request::builder()
+            .method("POST")
+            .uri("/import/confirm")
+            .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+            .header(header::COOKIE, cookie)
+            .body(Body::from(format!("csrf_token={csrf}&batch_id={batch_id}")))
+            .unwrap();
+        let (status, _, _) = send(app.clone(), request).await;
+        assert_eq!(status, StatusCode::SEE_OTHER, "confirm must PRG");
+
+        // Only the 2 valid rows became balanced transactions.
+        let (tx_count,): (i64,) = sqlx::query_as("SELECT COUNT(*) FROM transactions")
+            .fetch_one(&pool)
+            .await
+            .expect("count");
+        assert_eq!(tx_count, 2, "only valid rows posted");
+        let (audit_count,): (i64,) =
+            sqlx::query_as("SELECT COUNT(*) FROM audit_log WHERE event_type = 'IMPORT_CONFIRMED'")
+                .fetch_one(&pool)
+                .await
+                .expect("audit");
+        assert_eq!(audit_count, 1, "batch confirm must be audited");
+    }
+
+    #[tokio::test]
+    async fn import_confirm_is_replay_guarded() {
+        let (app, pool) = test_app().await;
+        seed_credentials(&pool).await;
+        let (cookie, csrf) = login(&app, &pool, "admin", TEST_ADMIN_PASSWORD).await;
+
+        let (ctype, body) = csv_multipart(&sample_csv(1, 0));
+        let request = Request::builder()
+            .method("POST")
+            .uri("/import/preview")
+            .header(header::CONTENT_TYPE, ctype)
+            .header(header::COOKIE, cookie.clone())
+            .body(body)
+            .unwrap();
+        let (_, _, location) = send(app.clone(), request).await;
+        let batch_id = location
+            .expect("location")
+            .split("batch=")
+            .nth(1)
+            .unwrap_or("")
+            .to_string();
+
+        let confirm = |cookie: &str| {
+            Request::builder()
+                .method("POST")
+                .uri("/import/confirm")
+                .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+                .header(header::COOKIE, cookie.to_string())
+                .body(Body::from(format!("csrf_token={csrf}&batch_id={batch_id}")))
+                .unwrap()
+        };
+        let (first, _, _) = send(app.clone(), confirm(&cookie)).await;
+        assert_eq!(first, StatusCode::SEE_OTHER);
+        // IMP-003: replay must be mechanically rejected.
+        let (second, _, _) = send(app, confirm(&cookie)).await;
+        assert_eq!(second, StatusCode::CONFLICT, "double-confirm must 409");
+    }
+
+    // ------------------------------------------------------------------
+    // Slice 8 acceptance: wizard (WIZ-001) and drafts (DRAFT-001)
+    // ------------------------------------------------------------------
+
+    #[tokio::test]
+    async fn wizard_step2_rejects_same_account_and_preserves_values() {
+        let (app, pool) = test_app().await;
+        seed_credentials(&pool).await;
+        let (cookie, csrf) = login(&app, &pool, "admin", TEST_ADMIN_PASSWORD).await;
+
+        let today = chrono::Utc::now().date_naive().to_string();
+        let body = format!(
+            "csrf_token={csrf}&template=cash-payment&debit_account=SAME&credit_account=SAME&amount=100&currency=TWD&description=wiz&transaction_date={today}"
+        );
+        let request = Request::builder()
+            .method("POST")
+            .uri("/new/step2")
+            .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+            .header(header::COOKIE, cookie)
+            .body(Body::from(body))
+            .unwrap();
+        let (status, page, _) = send(app, request).await;
+        assert_eq!(status, StatusCode::OK, "wizard stays on step 2 with error");
+        assert!(page.contains("步驟 2／3"), "must remain on step 2");
+        assert!(
+            page.contains("不得為同一科目"),
+            "rule name must be shown (可解釋)"
+        );
+        assert!(page.contains("value=\"SAME\""), "values preserved");
+    }
+
+    #[tokio::test]
+    async fn drafts_parse_creates_draft_and_wizard_prefills() {
+        let (app, pool) = test_app().await;
+        seed_credentials(&pool).await;
+        let (cookie, csrf) = login(&app, &pool, "admin", TEST_ADMIN_PASSWORD).await;
+
+        // DRAFT-001: parse the worked example.
+        let request = Request::builder()
+            .method("POST")
+            .uri("/drafts/parse")
+            .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+            .header(header::COOKIE, cookie.clone())
+            .body(Body::from(format!(
+                "csrf_token={csrf}&text={}",
+                urlencoding_lite("2026-11-04 支付租金 12,000 元 現金→租金費用")
+            )))
+            .unwrap();
+        let (status, _, location) = send(app.clone(), request).await;
+        assert_eq!(status, StatusCode::SEE_OTHER, "parse must PRG to wizard");
+        let location = location.expect("location");
+        assert!(
+            location.contains("/new?step=2&from_draft="),
+            "parse must lead to wizard step 2: {location}"
+        );
+
+        // Wizard step 2 must be pre-filled from the draft (依據卡在草稿頁).
+        let request = Request::builder()
+            .uri(&location)
+            .header(header::COOKIE, cookie)
+            .body(Body::empty())
+            .unwrap();
+        let (status, page, _) = send(app, request).await;
+        assert_eq!(status, StatusCode::OK);
+        assert!(page.contains("value=\"RENT-EXP\""), "debit prefilled");
+        assert!(page.contains("value=\"CASH\""), "credit prefilled");
+        assert!(page.contains("value=\"12,000.00\""), "amount prefilled");
+        assert!(page.contains("依據卡"), "provenance note rendered");
+    }
+
+    // ------------------------------------------------------------------
+    // Slice 8 acceptance: monthly report + CSV (RPT-001) and chart (ZJS-001)
+    // ------------------------------------------------------------------
+
+    #[tokio::test]
+    async fn monthly_report_page_and_csv_render_posted_data() {
+        let (app, pool) = test_app().await;
+        seed_credentials(&pool).await;
+        let (cookie, csrf) = login(&app, &pool, "admin", TEST_ADMIN_PASSWORD).await;
+
+        // Post one balanced transaction this month via the verified path.
+        let today = chrono::Utc::now().date_naive().to_string();
+        let request = Request::builder()
+            .method("POST")
+            .uri("/transactions")
+            .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+            .header(header::COOKIE, cookie.clone())
+            .body(Body::from(form_body(&csrf, "1234.50", &today)))
+            .unwrap();
+        let (status, _, _) = send(app.clone(), request).await;
+        assert_eq!(status, StatusCode::SEE_OTHER);
+
+        let ym = today[..7].to_string();
+        let request = Request::builder()
+            .uri(format!("/reports/monthly?ym={ym}"))
+            .header(header::COOKIE, cookie.clone())
+            .body(Body::empty())
+            .unwrap();
+        let (status, page, _) = send(app.clone(), request).await;
+        assert_eq!(status, StatusCode::OK);
+        assert!(page.contains("1,234.50"), "report must show posted amount");
+        assert!(page.contains("ACC-DEBIT"), "report must list accounts");
+
+        let request = Request::builder()
+            .uri(format!("/reports/monthly.csv?ym={ym}"))
+            .header(header::COOKIE, cookie)
+            .body(Body::empty())
+            .unwrap();
+        let response = app.oneshot(request).await.expect("csv response");
+        assert_eq!(response.status(), StatusCode::OK);
+        assert!(
+            response
+                .headers()
+                .get(header::CONTENT_TYPE)
+                .map(|v| v.to_str().unwrap().starts_with("text/csv"))
+                .unwrap_or(false),
+            "CSV content type"
+        );
+        let body = axum::body::to_bytes(response.into_body(), 1_048_576)
+            .await
+            .expect("csv body");
+        let text = String::from_utf8_lossy(&body).to_string();
+        assert!(
+            text.starts_with("account_id,debit_minor,credit_minor,net_minor"),
+            "CSV header uses integer minor units"
+        );
+        assert!(
+            text.contains("ACC-DEBIT,123450,"),
+            "integer minor units in CSV"
+        );
+    }
+
+    #[tokio::test]
+    async fn dashboard_renders_chart_svg_zero_js() {
+        let (app, pool) = test_app().await;
+        seed_credentials(&pool).await;
+        let (cookie, csrf) = login(&app, &pool, "admin", TEST_ADMIN_PASSWORD).await;
+
+        // Post one entry so the chart has data.
+        let today = chrono::Utc::now().date_naive().to_string();
+        let request = Request::builder()
+            .method("POST")
+            .uri("/transactions")
+            .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+            .header(header::COOKIE, cookie.clone())
+            .body(Body::from(form_body(&csrf, "500", &today)))
+            .unwrap();
+        let _ = send(app.clone(), request).await;
+
+        let request = Request::builder()
+            .uri("/")
+            .header(header::COOKIE, cookie)
+            .body(Body::empty())
+            .unwrap();
+        let (_, body, _) = send(app, request).await;
+        // ZJS-001: chart is server-side SVG; the page has zero scripts.
+        assert!(body.contains("<svg"), "server-side SVG chart must render");
+        assert!(body.contains("近六個月借貸合計"), "chart a11y title");
+        assert!(!body.contains("<script"), "zero-JS invariant");
     }
 }

@@ -592,3 +592,31 @@ legend {
   color: var(--color-text-secondary);
   margin-bottom: var(--space-lg);
 }
+
+/* --- Print styles (Slice 8 D2: 列印友好報表) --- */
+@media print {
+  .site-nav,
+  .app-header .app-subtitle,
+  .form-actions,
+  .preview-note,
+  .section-note,
+  .skip-link {
+    display: none !important;
+  }
+
+  body {
+    background: #ffffff;
+    color: #000000;
+  }
+
+  .card,
+  .table-wrap {
+    border-color: #000000;
+    box-shadow: none;
+  }
+
+  main.container {
+    padding: 0;
+    max-width: 100%;
+  }
+}

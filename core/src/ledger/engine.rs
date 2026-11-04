@@ -412,6 +412,62 @@ impl LedgerEngine {
     }
 }
 
+/// One month's debit/credit totals (dashboard chart, Slice 8 Layer D).
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct MonthlyTotal {
+    /// Year-month, e.g. `2026-11`.
+    pub ym: String,
+    pub debit_minor: i64,
+    pub credit_minor: i64,
+}
+
+/// Per-account totals for one month (monthly report, Slice 8 Layer D).
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct AccountMonthTotal {
+    pub account_id: String,
+    pub debit_minor: i64,
+    pub credit_minor: i64,
+}
+
+impl LedgerEngine {
+    /// Last `months` months of debit/credit totals, oldest first.
+    pub async fn monthly_totals(
+        &self,
+        months: i64,
+    ) -> Result<Vec<MonthlyTotal>, Box<dyn std::error::Error>> {
+        let rows = sqlx::query_as::<_, MonthlyTotal>(
+            "SELECT strftime('%Y-%m', t.transaction_date) AS ym, \
+             COALESCE(SUM(CASE WHEN i.item_type = 'DEBIT' THEN i.amount_minor ELSE 0 END), 0) AS debit_minor, \
+             COALESCE(SUM(CASE WHEN i.item_type = 'CREDIT' THEN i.amount_minor ELSE 0 END), 0) AS credit_minor \
+             FROM transactions t JOIN transaction_items i ON i.transaction_id = t.transaction_id \
+             GROUP BY ym ORDER BY ym DESC LIMIT ?",
+        )
+        .bind(months)
+        .fetch_all(&self.pool)
+        .await?;
+        Ok(rows.into_iter().rev().collect())
+    }
+
+    /// Per-account debit/credit totals for one `YYYY-MM` month.
+    pub async fn monthly_by_account(
+        &self,
+        ym: &str,
+    ) -> Result<Vec<AccountMonthTotal>, Box<dyn std::error::Error>> {
+        let rows = sqlx::query_as::<_, AccountMonthTotal>(
+            "SELECT i.account_id, \
+             COALESCE(SUM(CASE WHEN i.item_type = 'DEBIT' THEN i.amount_minor ELSE 0 END), 0) AS debit_minor, \
+             COALESCE(SUM(CASE WHEN i.item_type = 'CREDIT' THEN i.amount_minor ELSE 0 END), 0) AS credit_minor \
+             FROM transaction_items i JOIN transactions t ON i.transaction_id = t.transaction_id \
+             WHERE strftime('%Y-%m', t.transaction_date) = ? \
+             GROUP BY i.account_id ORDER BY i.account_id",
+        )
+        .bind(ym)
+        .fetch_all(&self.pool)
+        .await?;
+        Ok(rows)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

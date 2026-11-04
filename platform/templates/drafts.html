@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>草稿解析 — Flaps ERP 工作台</title>
+    <link rel="stylesheet" href="/assets/design-system.css">
+</head>
+<body>
+    <a class="skip-link" href="#main">跳至主要內容</a>
+
+    <header class="app-header">
+        <div class="container">
+            <div>
+                <h1>草稿解析</h1>
+                <p class="app-subtitle">貼上非結構化文字，規則引擎產生分錄草稿與依據卡；確認前不會登帳。</p>
+            </div>
+            <p class="app-subtitle">
+                使用者：<strong>{{ acting_user }}</strong>
+                ｜
+                <a class="btn btn-secondary" href="/">返回工作台</a>
+            </p>
+        </div>
+    </header>
+
+    <main id="main" class="container">
+        <section aria-labelledby="parse-title">
+            <h2 id="parse-title">貼上文字</h2>
+            {% if let Some(e) = error %}
+            <div class="error-state" role="alert">
+                <strong>解析未完成</strong>
+                <p>{{ e }}</p>
+            </div>
+            {% endif %}
+            <form method="post" action="/drafts/parse">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <fieldset>
+                    <legend>原始文字（≤10,000 字元）</legend>
+                    <div class="form-row">
+                        <label for="text">內容 <span aria-hidden="true">*</span></label>
+                        <textarea class="input" id="text" name="text" rows="6" required
+                                  placeholder="例：2026-11-04 支付租金 12,000 元 現金→租金費用"></textarea>
+                        <p class="hint">
+                            支援格式：日期（YYYY-MM-DD、YYYY/MM/DD、YYYY年MM月DD日）、金額（12,000 元）、
+                            借貸箭號（現金→租金費用，左貸右借）。科目關鍵字可由管理員於設定維護。
+                        </p>
+                    </div>
+                </fieldset>
+                <div class="form-actions">
+                    <button class="btn btn-primary" type="submit">解析為草稿</button>
+                    <a class="btn btn-secondary" href="/new">改用引導式精靈</a>
+                </div>
+            </form>
+        </section>
+
+        <section aria-labelledby="recent-title">
+            <h2 id="recent-title">最近草稿</h2>
+            {% if drafts.is_empty() %}
+            <p class="empty-state"><strong>尚無草稿</strong>解析結果會列在這裡，點擊進入確認流程。</p>
+            {% else %}
+            <div class="table-wrap">
+                <table>
+                    <caption>草稿清單</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col">時間</th>
+                            <th scope="col">來源</th>
+                            <th scope="col">完整度</th>
+                            <th scope="col">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for d in drafts %}
+                        <tr>
+                            <td>{{ d.created_display }}</td>
+                            <td>{{ d.source }}</td>
+                            <td>{{ d.completeness }}</td>
+                            <td><a href="/new?step=2&from_draft={{ d.draft_id }}">前往確認</a></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endif %}
+        </section>
+    </main>
+</body>
+</html>

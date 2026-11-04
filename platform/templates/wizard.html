@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>引導式登帳 — Flaps ERP 工作台</title>
+    <link rel="stylesheet" href="/assets/design-system.css">
+</head>
+<body>
+    <a class="skip-link" href="#main">跳至主要內容</a>
+
+    <header class="app-header">
+        <div class="container">
+            <div>
+                <h1>引導式登帳</h1>
+                <p class="app-subtitle">系統依記帳規範逐步引導；每個限制都標示來源規則。</p>
+            </div>
+            <p class="app-subtitle">
+                使用者：<strong>{{ acting_user }}</strong>
+                ｜
+                <a class="btn btn-secondary" href="/">返回工作台</a>
+            </p>
+        </div>
+    </header>
+
+    <main id="main" class="container">
+        <ol class="section-note" aria-label="步驟">
+            <li>選擇交易模板</li>
+            <li>填寫借貸與金額</li>
+            <li>確認摘要並送出</li>
+        </ol>
+
+        {% if step == 1 %}
+        <section aria-labelledby="step1-title">
+            <h2 id="step1-title">步驟 1／3：選擇交易模板</h2>
+            <form method="post" action="/new/step2">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <input type="hidden" name="template_stage" value="choose">
+                <fieldset>
+                    <legend>模板（決定借貸方向的預設提示）</legend>
+                    <div class="form-row">
+                        <label for="template">交易模板 <span aria-hidden="true">*</span></label>
+                        <select class="input" id="template" name="template" required>
+                            <option value="cash-payment">現金支出（貸：現金；借：費用科目）</option>
+                            <option value="cash-receipt">現金收入（借：現金；貸：來源科目）</option>
+                            <option value="transfer">轉帳（銀行 ↔ 現金）</option>
+                            <option value="opening">開帳（借：資產科目；貸：權益 OPENING）</option>
+                        </select>
+                        <p class="hint">模板僅預填提示與預設科目，送出前皆可修改（伺服器最終驗證）。</p>
+                    </div>
+                </fieldset>
+                <div class="form-actions">
+                    <button class="btn btn-primary" type="submit">下一步</button>
+                </div>
+            </form>
+        </section>
+        {% endif %}
+
+        {% if step == 2 %}
+        <section aria-labelledby="step2-title">
+            <h2 id="step2-title">步驟 2／3：填寫借貸與金額（模板：{{ template }}）</h2>
+            {% if let Some(e) = error %}
+            <div class="error-state" role="alert">
+                <strong>無法進入下一步</strong>
+                <p>{{ e }}</p>
+                <p class="hint">請修正後再試；已填寫的值已保留。</p>
+            </div>
+            {% endif %}
+            {% if let Some(n) = from_note %}
+            <p class="preview-note">已自來源預填：{{ n }}（每個預填值可在下方修改）。</p>
+            {% endif %}
+            <form method="post" action="/new/step2">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <input type="hidden" name="template" value="{{ template }}">
+                <fieldset>
+                    <legend>分錄內容</legend>
+
+                    <div class="form-row">
+                        <label for="debit-account">借方科目（收／增） <span aria-hidden="true">*</span></label>
+                        <input class="input" type="text" id="debit-account" name="debit_account" list="account-options" value="{{ form.debit_account }}" required>
+                        <datalist id="account-options">
+                            {% for a in accounts %}
+                            <option value="{{ a }}"></option>
+                            {% endfor %}
+                        </datalist>
+                    </div>
+
+                    <div class="form-row">
+                        <label for="credit-account">貸方科目（付／減） <span aria-hidden="true">*</span></label>
+                        <input class="input" type="text" id="credit-account" name="credit_account" list="account-options" value="{{ form.credit_account }}" required>
+                        <p class="hint">借貸兩方必須為不同科目（複式記帳規則 R-BALANCE）。</p>
+                    </div>
+
+                    <div class="form-row">
+                        <label for="amount">金額 <span aria-hidden="true">*</span></label>
+                        <input class="input" type="number" id="amount" name="amount" step="0.01" min="0" value="{{ form.amount }}" required>
+                        <p class="hint">整數分（i64）儲存；最多兩位小數（規則 R-MONEY）。</p>
+                    </div>
+
+                    <div class="form-row">
+                        <label for="currency">幣別 <span aria-hidden="true">*</span></label>
+                        <select class="input" id="currency" name="currency" required>
+                            {% if form.currency == "TWD" %}
+                            <option value="TWD" selected>TWD — 新台幣</option>
+                            {% else %}
+                            <option value="TWD">TWD — 新台幣</option>
+                            {% endif %}
+                            {% if form.currency == "USD" %}
+                            <option value="USD" selected>USD — 美元</option>
+                            {% else %}
+                            <option value="USD">USD — 美元</option>
+                            {% endif %}
+                            {% if form.currency == "EUR" %}
+                            <option value="EUR" selected>EUR — 歐元</option>
+                            {% else %}
+                            <option value="EUR">EUR — 歐元</option>
+                            {% endif %}
+                            {% if form.currency == "JPY" %}
+                            <option value="JPY" selected>JPY — 日圓</option>
+                            {% else %}
+                            <option value="JPY">JPY — 日圓</option>
+                            {% endif %}
+                        </select>
+                    </div>
+
+                    <div class="form-row">
+                        <label for="description">摘要 <span aria-hidden="true">*</span></label>
+                        <textarea class="input" id="description" name="description" rows="3" required>{{ form.description }}</textarea>
+                    </div>
+
+                    <div class="form-row">
+                        <label for="transaction-date">交易日期 <span aria-hidden="true">*</span></label>
+                        <input class="input" type="date" id="transaction-date" name="transaction_date" value="{{ form.transaction_date }}" required>
+                        <p class="hint">不得為未來日期（規則 R-DATE-FUTURE）。</p>
+                    </div>
+                </fieldset>
+
+                <div class="form-actions">
+                    <button class="btn btn-primary" type="submit">檢查並前往確認</button>
+                    <a class="btn btn-secondary" href="/new">重新選擇模板</a>
+                </div>
+            </form>
+        </section>
+        {% endif %}
+
+        {% if step == 3 %}
+        <section aria-labelledby="step3-title">
+            <h2 id="step3-title">步驟 3／3：確認摘要</h2>
+            <div class="table-wrap">
+                <table>
+                    <caption>送出前檢查（借貸已預檢平衡）</caption>
+                    <tbody>
+                        <tr><th scope="row">借方科目</th><td>{{ form.debit_account }}</td></tr>
+                        <tr><th scope="row">貸方科目</th><td>{{ form.credit_account }}</td></tr>
+                        <tr><th scope="row">金額</th><td>{{ amount_display }} {{ form.currency }}</td></tr>
+                        <tr><th scope="row">日期</th><td>{{ form.transaction_date }}</td></tr>
+                        <tr><th scope="row">摘要</th><td>{{ form.description }}</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <form method="post" action="/transactions">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <input type="hidden" name="debit_account" value="{{ form.debit_account }}">
+                <input type="hidden" name="credit_account" value="{{ form.credit_account }}">
+                <input type="hidden" name="amount" value="{{ form.amount }}">
+                <input type="hidden" name="currency" value="{{ form.currency }}">
+                <input type="hidden" name="description" value="{{ form.description }}">
+                <input type="hidden" name="transaction_date" value="{{ form.transaction_date }}">
+                <div class="form-actions" style="margin-top:16px;">
+                    <button class="btn btn-primary" type="submit">確認登帳</button>
+                    <a class="btn btn-secondary" href="/new?step=2">返回修改</a>
+                </div>
+                <p class="section-note">送出後由引擎再次驗證並以 303 導回交易清單。</p>
+            </form>
+        </section>
+        {% endif %}
+    </main>
+</body>
+</html>

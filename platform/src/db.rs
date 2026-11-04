@@ -56,6 +56,11 @@ mod tests {
             "permissions",
             "role_permissions",
             "user_roles",
+            "users",
+            "sessions",
+            "import_batches",
+            "import_rows",
+            "drafts",
         ];
         for table in expected {
             let count: (i64,) = sqlx::query_as(
