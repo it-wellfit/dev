@@ -57,6 +57,18 @@ This addendum records execution facts only; it does not approve product scope, c
 
 
 
+
+## 2026-11-04 addendum #8 (Slice 11: deployment hardening)
+
+| Item | Disposition | Evidence |
+|---|---|---|
+| Security headers | CSP/nosniff/DENY/no-referrer/no-store middleware on every response (OWASP checklist) | security_headers_present_on_public_and_protected_responses |
+| Session hygiene | Expired sessions purged at login (table bounded) | expired_sessions_are_purged_at_login |
+| R-07 preparation | Config-driven Secure cookie flag (default OFF, tested) | login_sets_secure_cookie_when_configured |
+| CSP-safe templates | 9 inline style attributes replaced with utility classes in both stylesheets | template grep = 0; :root sync test green |
+| Baseline @ 26bff52 | fmt/clippy/test/audit all EXIT=0; 79 tests passed, 0 failed | session tests/20261104-1800-slice11-final.log |
+
+This addendum records execution facts only; it does not approve product scope, certification, or release.
 ## 2026-11-04 addendum #7 (Slice 10: multidimensional insight + methodology hardening)
 
 | Item | Disposition | Evidence |
