@@ -32,7 +32,9 @@ impl Evidence {
 
 /// Draft journal entry produced by the parser (never posted directly).
 #[derive(Debug, Clone, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(default)]
 pub struct DraftEntry {
+    pub currency: Option<String>,
     pub date: Option<NaiveDate>,
     pub amount_minor: Option<i64>,
     pub debit_account: Option<String>,
@@ -211,6 +213,67 @@ pub fn parse_unstructured(text: &str, keyword_accounts: &[(String, String)]) -> 
     }
 
     draft
+}
+
+// ---------------------------------------------------------------------------
+// Slice 10 Layer G: AI suggestion schema gate (AIS-003)
+// ---------------------------------------------------------------------------
+
+/// AI-proposed draft as returned by the model (string amount — the model
+/// cannot be trusted to emit exact minor units).
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct AiSuggestion {
+    pub date: String,
+    pub debit_account: String,
+    pub credit_account: String,
+    pub amount: String,
+    pub currency: String,
+}
+
+/// Validated AI suggestion (schema gate output) — ready for the human
+/// confirmation path; never posted directly.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ParsedSuggestion {
+    pub date: String,
+    pub debit_account: String,
+    pub credit_account: String,
+    pub amount_minor: i64,
+    /// Two-decimal display form rendered with the exact integer formatter.
+    pub amount_display: String,
+    pub currency: String,
+}
+
+/// Schema gate for model output (AIS-003): strictly validate the JSON shape
+/// and every field, then convert the amount with the exact money parser.
+/// Malformed output is rejected — never surfaced to the ledger.
+pub fn parse_ai_suggestion(text: &str) -> Result<ParsedSuggestion, String> {
+    let value: serde_json::Value =
+        serde_json::from_str(text).map_err(|e| format!("schema 驗證失敗（非合法 JSON）：{e}"))?;
+    let suggestion: AiSuggestion = serde_json::from_value(value)
+        .map_err(|e| format!("schema 驗證失敗（欄位缺失或型別錯誤）：{e}"))?;
+
+    let date = chrono::NaiveDate::parse_from_str(suggestion.date.trim(), "%Y-%m-%d")
+        .map_err(|_| "schema 驗證失敗（日期非 YYYY-MM-DD）".to_string())?
+        .to_string();
+    let amount_minor = crate::money::parse_decimal_to_minor(&suggestion.amount, 2)
+        .map_err(|e| format!("schema 驗證失敗（金額）：{e}"))?;
+    if amount_minor <= 0 {
+        return Err("schema 驗證失敗（金額必須大於 0）".to_string());
+    }
+    let debit = suggestion.debit_account.trim().to_string();
+    let credit = suggestion.credit_account.trim().to_string();
+    if debit.is_empty() || credit.is_empty() || debit.eq_ignore_ascii_case(&credit) {
+        return Err("schema 驗證失敗（借貸科目空白或相同）".to_string());
+    }
+
+    Ok(ParsedSuggestion {
+        date,
+        debit_account: debit,
+        credit_account: credit,
+        amount_minor,
+        amount_display: crate::money::format_minor(amount_minor, 2),
+        currency: suggestion.currency,
+    })
 }
 
 #[cfg(test)]

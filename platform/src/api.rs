@@ -232,6 +232,11 @@ pub fn router(state: AppState) -> Router {
         .route("/new/step2", post(wizard_step2))
         .route("/reports/monthly", get(report_monthly_page))
         .route("/reports/monthly.csv", get(report_monthly_csv))
+        .route("/reports/pivot", get(report_pivot_page))
+        .route("/reports/parallel", get(report_parallel_page))
+        .route("/drafts/ai_suggest", post(ai_suggest))
+        .route("/drafts/adopt", post(drafts_adopt))
+        .route("/admin/parse_coverage", get(parse_coverage_page))
         .route_layer(axum::extract::DefaultBodyLimit::max(IMPORT_MAX_BYTES))
         .route_layer(axum::middleware::from_fn_with_state(
             state.clone(),
@@ -423,45 +428,59 @@ async fn validate_and_post(
     }
 
     // 8) Post through the domain engine (idempotent UUID, audited, atomic).
+    let transaction_id = uuid::Uuid::new_v4().to_string();
+    let transaction_code = format!("TX-{}", &transaction_id[..8]);
     //    Two legs are constructed here (P1-5): DEBIT on the debit account and
     //    CREDIT on the credit account, same amount and currency — balance is
     //    guaranteed by construction and re-verified by the engine.
-    let transaction_id = uuid::Uuid::new_v4().to_string();
-    let transaction_code = format!("TX-{}", &transaction_id[..8]);
-    let transaction = Transaction::new(
-        transaction_id.clone(),
-        transaction_code,
-        transaction_date,
-        description.to_string(),
-        None,
-        "POSTED".to_string(),
-        Some("web".to_string()),
-        acting_user.to_string(),
-    );
-    let items = vec![
-        TransactionItem::new(
-            uuid::Uuid::new_v4().to_string(),
-            transaction_id.clone(),
-            debit_account,
-            "DEBIT".to_string(),
-            amount_minor,
-            form.currency.clone(),
-            10_000, // 1.0000 scaled by 10^4
-            None,
-            None,
-        ),
-        TransactionItem::new(
-            uuid::Uuid::new_v4().to_string(),
-            transaction_id,
-            credit_account,
-            "CREDIT".to_string(),
-            amount_minor,
-            form.currency.clone(),
-            10_000,
-            None,
-            None,
-        ),
-    ];
+    let transaction = match Transaction::builder()
+        .transaction_id(transaction_id.clone())
+        .transaction_code(transaction_code)
+        .transaction_date(transaction_date)
+        .description(description.to_string())
+        .reference_number(None)
+        .status("POSTED")
+        .source_type(Some("web".to_string()))
+        .created_by(acting_user.to_string())
+        .build()
+    {
+        Ok(t) => t,
+        Err(e) => {
+            return Err((
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("交易建構失敗：{e}"),
+            ));
+        }
+    };
+    let (debit_item, credit_item) = match (
+        TransactionItem::builder()
+            .item_id(uuid::Uuid::new_v4().to_string())
+            .transaction_id(transaction_id.clone())
+            .account_id(debit_account)
+            .item_type("DEBIT")
+            .amount_minor(amount_minor)
+            .currency(form.currency.clone())
+            .exchange_rate_scaled(10_000) // 1.0000 scaled by 10^4
+            .build(),
+        TransactionItem::builder()
+            .item_id(uuid::Uuid::new_v4().to_string())
+            .transaction_id(transaction_id)
+            .account_id(credit_account)
+            .item_type("CREDIT")
+            .amount_minor(amount_minor)
+            .currency(form.currency.clone())
+            .exchange_rate_scaled(10_000)
+            .build(),
+    ) {
+        (Ok(d), Ok(c)) => (d, c),
+        (Err(e), _) | (_, Err(e)) => {
+            return Err((
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("分錄建構失敗：{e}"),
+            ));
+        }
+    };
+    let items = vec![debit_item, credit_item];
     state
         .engine
         .post_journal_entry(transaction, items)
@@ -805,6 +824,365 @@ async fn admin_reset_password(
 
     Redirect::to("/admin/users").into_response()
 }
+// ---------------------------------------------------------------------------
+// Slice 10 Layer F: parallel-coordinates projection (PAR-001/002)
+// ---------------------------------------------------------------------------
+
+#[derive(Template)]
+#[template(path = "report_parallel.html")]
+pub struct ParallelTemplate {
+    pub acting_user: String,
+    pub months: i64,
+    pub chart_svg: String,
+}
+
+/// GET /reports/parallel — per-account polylines across monthly axes
+/// (LEDGER_READ; zero-JS alternative to interactive 3D).
+async fn report_parallel_page(
+    State(state): State<AppState>,
+    session: Extension<Session>,
+    axum::extract::Query(query): axum::extract::Query<std::collections::HashMap<String, String>>,
+) -> Response {
+    if !state
+        .permissions
+        .has_permission_db(&session.user_id, "LEDGER_READ")
+        .await
+    {
+        return (StatusCode::FORBIDDEN, "需要 LEDGER_READ 權限。".to_string()).into_response();
+    }
+    let months: i64 = query
+        .get("months")
+        .and_then(|m| m.parse().ok())
+        .unwrap_or(6);
+    let months = months.clamp(2, 12);
+    let top: usize = query
+        .get("top")
+        .and_then(|t| t.parse().ok())
+        .unwrap_or(10)
+        .clamp(1, 20);
+
+    // Per-account monthly debit totals over the last `months` months.
+    let raw: Vec<(String, String, i64)> = sqlx::query_as(
+        "SELECT i.account_id, strftime('%Y-%m', t.transaction_date) AS ym, \
+         COALESCE(SUM(CASE WHEN i.item_type = 'DEBIT' THEN i.amount_minor ELSE 0 END), 0) AS d \
+         FROM transaction_items i JOIN transactions t ON i.transaction_id = t.transaction_id \
+         WHERE strftime('%Y-%m', t.transaction_date) >= date('now', printf('-%d months', ?), 'start of month') \
+         GROUP BY i.account_id, ym ORDER BY i.account_id, ym",
+    )
+    .bind(months)
+    .fetch_all(&state.pool)
+    .await
+    .unwrap_or_default();
+
+    // Axes (sorted month labels present in the data).
+    let mut axes: Vec<String> = raw.iter().map(|(_, ym, _)| ym.clone()).collect();
+    axes.sort();
+    axes.dedup();
+
+    // Aggregate per account into ordered series keyed by the axis list.
+    use std::collections::BTreeMap;
+    let mut per_account: BTreeMap<String, BTreeMap<String, i64>> = BTreeMap::new();
+    for (account, ym, debit) in raw {
+        *per_account
+            .entry(account)
+            .or_default()
+            .entry(ym)
+            .or_insert(0) += debit;
+    }
+    let mut series: Vec<flaps_core::parallel::ParallelSeries> = per_account
+        .into_iter()
+        .map(|(account, by_month)| {
+            let values = axes
+                .iter()
+                .map(|ym| (ym.clone(), by_month.get(ym).copied().unwrap_or(0)))
+                .collect();
+            flaps_core::parallel::ParallelSeries {
+                label: account,
+                values,
+            }
+        })
+        .collect();
+    // Top-N by grand total (descending) — deterministic ordering.
+    series.sort_by(|a, b| {
+        let ta: i64 = a.values.iter().map(|(_, v)| v).sum();
+        let tb: i64 = b.values.iter().map(|(_, v)| v).sum();
+        tb.cmp(&ta).then_with(|| a.label.cmp(&b.label))
+    });
+    series.truncate(top);
+
+    let chart_svg = flaps_core::parallel::render_parallel_coordinates(&series, 720, 260);
+    let template = ParallelTemplate {
+        acting_user: session.user_id.clone(),
+        months,
+        chart_svg,
+    };
+    render_or_500(template)
+}
+
+// ---------------------------------------------------------------------------
+// Slice 10 Layer G: AI suggestion (AIS-001..003) - gated, human-confirmed
+// ---------------------------------------------------------------------------
+
+/// Read the AI feature flag from erp_config (default OFF).
+async fn ai_suggest_enabled(state: &AppState) -> bool {
+    let row: Option<(String,)> = sqlx::query_as(
+        "SELECT config_value FROM erp_config WHERE config_category = 'ai' AND config_key = 'suggest_enabled'",
+    )
+    .fetch_optional(&state.pool)
+    .await
+    .unwrap_or(None);
+    row.map(|(v,)| v == "1").unwrap_or(false)
+}
+
+#[derive(Template)]
+#[template(path = "ai_suggestion.html")]
+pub struct AiSuggestionTemplate {
+    pub acting_user: String,
+    pub csrf_token: String,
+    pub suggestion: Option<flaps_core::ParsedSuggestion>,
+    pub degrade_message: Option<String>,
+}
+
+fn render_with_status(template: impl askama::Template, status: StatusCode) -> Response {
+    match template.render() {
+        Ok(body) => (status, Html(body)).into_response(),
+        Err(e) => (status, format!("頁面渲染失敗：{e}")).into_response(),
+    }
+}
+
+/// POST /drafts/ai_suggest - AIS-001..003.
+async fn ai_suggest(
+    State(state): State<AppState>,
+    session: Extension<Session>,
+    Form(form): Form<DraftParseForm>,
+) -> Response {
+    // AIS-001: flag gate (default OFF) - 503 with enablement guidance.
+    if !ai_suggest_enabled(&state).await {
+        let template = AiSuggestionTemplate {
+            acting_user: session.user_id.clone(),
+            csrf_token: session.csrf_token.clone(),
+            suggestion: None,
+            degrade_message: Some(
+                "AI 建議未啟用（問題：特性旗標 ai/suggest_enabled 未開啟；處理方式：請管理員於設定（erp_config）啟用，或改用規則解析／引導式精靈）。".to_string(),
+            ),
+        };
+        return render_with_status(template, StatusCode::SERVICE_UNAVAILABLE);
+    }
+
+    let text = form.text.trim().to_string();
+    if text.is_empty() || text.len() > 10_000 {
+        return (
+            StatusCode::BAD_REQUEST,
+            "內容空白或超過 10,000 字元。".to_string(),
+        )
+            .into_response();
+    }
+
+    // Build the Ollama client from configuration (existing ai module reuse).
+    let model = erp_config_value(&state, "model")
+        .await
+        .unwrap_or_else(|| "llama3".to_string());
+    let base_url = erp_config_value(&state, "base_url")
+        .await
+        .unwrap_or_else(|| "http://127.0.0.1:11434".to_string());
+    let client =
+        crate::ai::ollama_client::OllamaClient::new(crate::ai::ollama_client::OllamaConfig {
+            base_url,
+            model,
+            timeout_ms: 5_000,
+            temperature: 0.2,
+            top_p: 0.9,
+            max_tokens: Some(512),
+        });
+
+    let prompt = format!(
+        "你是會計分錄解析助理。僅輸出一個 JSON 物件，欄位：date（YYYY-MM-DD）、debit_account、credit_account、amount（兩位小數字串）、currency。不要輸出其他文字。原文：{text}"
+    );
+
+    let response_text = match client.generate(&prompt).await {
+        Ok(t) => t,
+        Err(e) => {
+            // 韌性：Ollama 離線/逾時 -> graceful degradation.
+            let template = AiSuggestionTemplate {
+                acting_user: session.user_id.clone(),
+                csrf_token: session.csrf_token.clone(),
+                suggestion: None,
+                degrade_message: Some(format!(
+                    "AI 服務暫時不可用（可能原因：Ollama 未啟動或逾時；處理方式：請改用規則解析或引導式精靈）。詳情：{e}"
+                )),
+            };
+            return render_with_status(template, StatusCode::SERVICE_UNAVAILABLE);
+        }
+    };
+
+    // AIS-003: schema gate - malformed output is rejected before any use.
+    let parsed = match flaps_core::parse_ai_suggestion(&response_text) {
+        Ok(p) => p,
+        Err(msg) => {
+            let template = AiSuggestionTemplate {
+                acting_user: session.user_id.clone(),
+                csrf_token: session.csrf_token.clone(),
+                suggestion: None,
+                degrade_message: Some(format!(
+                    "AI 輸出未通過 schema 驗證（{msg}）；請改用規則解析。"
+                )),
+            };
+            return render_with_status(template, StatusCode::BAD_REQUEST);
+        }
+    };
+
+    // AIS-002: rendered as a SUGGESTION ONLY - nothing is stored or posted.
+    let template = AiSuggestionTemplate {
+        acting_user: session.user_id.clone(),
+        csrf_token: session.csrf_token.clone(),
+        suggestion: Some(parsed),
+        degrade_message: None,
+    };
+    render_with_status(template, StatusCode::OK)
+}
+
+#[derive(Debug, Deserialize)]
+pub struct DraftAdoptForm {
+    pub csrf_token: String,
+    pub date: String,
+    pub debit_account: String,
+    pub credit_account: String,
+    pub amount: String,
+    pub currency: String,
+    pub description: String,
+}
+
+/// POST /drafts/adopt - human adopts a suggestion into a normal draft
+/// (source='ai-adopted'); from here it follows the standard rule path.
+/// AIS-002: this is the ONLY way an AI suggestion enters the system, and it
+/// never touches the ledger directly.
+async fn drafts_adopt(
+    State(state): State<AppState>,
+    session: Extension<Session>,
+    Form(form): Form<DraftAdoptForm>,
+) -> Response {
+    if form.csrf_token != session.csrf_token {
+        return (
+            StatusCode::FORBIDDEN,
+            "CSRF 驗證失敗；請重新整理頁面後再操作。".to_string(),
+        )
+            .into_response();
+    }
+    let amount_minor = match flaps_core::parse_decimal_to_minor(&form.amount, 2) {
+        Ok(v) => v,
+        Err(e) => return (StatusCode::BAD_REQUEST, format!("金額錯誤：{e}")).into_response(),
+    };
+    let date = match chrono::NaiveDate::parse_from_str(&form.date, "%Y-%m-%d") {
+        Ok(d) => d,
+        Err(_) => return (StatusCode::BAD_REQUEST, "日期格式不正確。".to_string()).into_response(),
+    };
+    let entry = flaps_core::DraftEntry {
+        date: Some(date),
+        amount_minor: Some(amount_minor),
+        debit_account: Some(form.debit_account.trim().to_string()),
+        credit_account: Some(form.credit_account.trim().to_string()),
+        currency: Some(form.currency.trim().to_uppercase()),
+        evidence: Vec::new(),
+    };
+    let draft_id = uuid::Uuid::new_v4().to_string();
+    let insert = sqlx::query(
+        "INSERT INTO drafts (draft_id, source, draft_json, created_by) VALUES (?, 'ai-adopted', ?, ?)",
+    )
+    .bind(&draft_id)
+    .bind(serde_json::to_string(&entry).unwrap_or_default())
+    .bind(&session.user_id)
+    .execute(&state.pool)
+    .await;
+    match insert {
+        Ok(_) => Redirect::to(&format!("/new?step=2&from_draft={draft_id}")).into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("草稿儲存失敗：{e}"),
+        )
+            .into_response(),
+    }
+}
+
+async fn erp_config_value(state: &AppState, key: &str) -> Option<String> {
+    let row: Option<(String,)> = sqlx::query_as(
+        "SELECT config_value FROM erp_config WHERE config_category = 'ai' AND config_key = ?",
+    )
+    .bind(key)
+    .fetch_optional(&state.pool)
+    .await
+    .unwrap_or(None);
+    row.map(|(v,)| v)
+}
+
+// ---------------------------------------------------------------------------
+// Slice 10 Layer H: parse coverage measurement (COV-001, OQ-8-2 data)
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone)]
+pub struct CoverageRow {
+    pub draft_id: String,
+    pub completeness: String,
+}
+
+#[derive(Template)]
+#[template(path = "parse_coverage.html")]
+pub struct ParseCoverageTemplate {
+    pub acting_user: String,
+    pub total: usize,
+    pub complete: usize,
+    pub ratio_display: String,
+    pub rows: Vec<CoverageRow>,
+}
+
+/// GET /admin/parse_coverage - rule-hit ratio over stored drafts (COV-001).
+async fn parse_coverage_page(
+    State(state): State<AppState>,
+    session: Extension<Session>,
+) -> Response {
+    if !can_manage_users(&state, &session.user_id).await {
+        return render_admin_forbidden(&state, &session).await;
+    }
+    let rows: Vec<(String, String)> = sqlx::query_as(
+        "SELECT draft_id, draft_json FROM drafts ORDER BY created_at DESC LIMIT 100",
+    )
+    .fetch_all(&state.pool)
+    .await
+    .unwrap_or_default();
+
+    let mut complete = 0usize;
+    let coverage_rows: Vec<CoverageRow> = rows
+        .iter()
+        .map(|(id, json)| {
+            let is_complete = serde_json::from_str::<flaps_core::DraftEntry>(json)
+                .map(|d| d.is_complete())
+                .unwrap_or(false);
+            if is_complete {
+                complete += 1;
+            }
+            CoverageRow {
+                draft_id: id.clone(),
+                completeness: if is_complete {
+                    "完整".to_string()
+                } else {
+                    "不完整".to_string()
+                },
+            }
+        })
+        .collect();
+
+    let total = coverage_rows.len();
+    let ratio = (complete * 100).checked_div(total).unwrap_or(0);
+
+    let template = ParseCoverageTemplate {
+        acting_user: session.user_id.clone(),
+        total,
+        complete,
+        ratio_display: format!("{ratio}%"),
+        rows: coverage_rows,
+    };
+    render_or_500(template)
+}
+
 async fn build_admin_page(
     state: &AppState,
     session: &Session,
@@ -1279,40 +1657,50 @@ async fn import_confirm(
         let date = chrono::NaiveDate::parse_from_str(&draft.date, "%Y-%m-%d")
             .unwrap_or_else(|_| chrono::Utc::now().date_naive());
         let transaction_id = uuid::Uuid::new_v4().to_string();
-        let transaction = Transaction::new(
-            transaction_id.clone(),
-            format!("TX-{}", &transaction_id[..8]),
-            date,
-            draft.description.clone(),
-            Some(format!("import:{}", form.batch_id)),
-            "POSTED".to_string(),
-            Some("import".to_string()),
-            session.user_id.clone(),
-        );
-        let items = vec![
-            TransactionItem::new(
-                uuid::Uuid::new_v4().to_string(),
-                transaction_id.clone(),
-                draft.debit_account.clone(),
-                "DEBIT".to_string(),
-                draft.amount_minor,
-                draft.currency.clone(),
-                10_000,
-                None,
-                None,
-            ),
-            TransactionItem::new(
-                uuid::Uuid::new_v4().to_string(),
-                transaction_id,
-                draft.credit_account.clone(),
-                "CREDIT".to_string(),
-                draft.amount_minor,
-                draft.currency.clone(),
-                10_000,
-                None,
-                None,
-            ),
-        ];
+        let transaction = match Transaction::builder()
+            .transaction_id(transaction_id.clone())
+            .transaction_code(format!("TX-{}", &transaction_id[..8]))
+            .transaction_date(date)
+            .description(draft.description.clone())
+            .reference_number(Some(format!("import:{}", form.batch_id)))
+            .status("POSTED")
+            .source_type(Some("import".to_string()))
+            .created_by(session.user_id.clone())
+            .build()
+        {
+            Ok(t) => t,
+            Err(e) => {
+                failed.push(format!("列 {row_no}：交易建構失敗：{e}"));
+                continue;
+            }
+        };
+        let (debit_item, credit_item) = match (
+            TransactionItem::builder()
+                .item_id(uuid::Uuid::new_v4().to_string())
+                .transaction_id(transaction_id.clone())
+                .account_id(draft.debit_account.clone())
+                .item_type("DEBIT")
+                .amount_minor(draft.amount_minor)
+                .currency(draft.currency.clone())
+                .exchange_rate_scaled(10_000)
+                .build(),
+            TransactionItem::builder()
+                .item_id(uuid::Uuid::new_v4().to_string())
+                .transaction_id(transaction_id.clone())
+                .account_id(draft.credit_account.clone())
+                .item_type("CREDIT")
+                .amount_minor(draft.amount_minor)
+                .currency(draft.currency.clone())
+                .exchange_rate_scaled(10_000)
+                .build(),
+        ) {
+            (Ok(d), Ok(c)) => (d, c),
+            (Err(e), _) | (_, Err(e)) => {
+                failed.push(format!("列 {row_no}：分錄建構失敗：{e}"));
+                continue;
+            }
+        };
+        let items = vec![debit_item, credit_item];
         match state.engine.post_journal_entry(transaction, items).await {
             Ok(()) => posted += 1,
             Err(e) => failed.push(format!("列 {row_no}：{e}")),
@@ -1920,6 +2308,192 @@ async fn report_monthly_csv(
         .into_response()
 }
 
+// ---------------------------------------------------------------------------
+// Slice 10 Layer E: multidimensional pivot (PIV-001/002, whitelisted SQL)
+// ---------------------------------------------------------------------------
+
+/// Whitelisted dimension expressions. Any value outside this table is
+/// rejected with R-PIV-WHITELIST (SHARED_STANDARDS: dynamic columns must be
+/// whitelisted — never interpolated from user input).
+fn dim_expr(dim: &str) -> Option<&'static str> {
+    match dim {
+        "account" => Some("i.account_id"),
+        "month" => Some("strftime('%Y-%m', t.transaction_date)"),
+        "direction" => Some("i.item_type"),
+        _ => None,
+    }
+}
+
+/// Whitelisted measure expressions.
+fn measure_expr(measure: &str) -> Option<&'static str> {
+    match measure {
+        "debit" => Some(
+            "COALESCE(SUM(CASE WHEN i.item_type = 'DEBIT' THEN i.amount_minor ELSE 0 END), 0)",
+        ),
+        "credit" => Some(
+            "COALESCE(SUM(CASE WHEN i.item_type = 'CREDIT' THEN i.amount_minor ELSE 0 END), 0)",
+        ),
+        "net" => Some(
+            "COALESCE(SUM(CASE WHEN i.item_type = 'DEBIT' THEN i.amount_minor ELSE -i.amount_minor END), 0)",
+        ),
+        _ => None,
+    }
+}
+
+/// One pivot matrix cell.
+#[derive(Debug, Clone)]
+pub struct PivotCell {
+    pub display: String,
+}
+
+/// Rendered pivot matrix.
+#[derive(Debug, Clone, Default)]
+pub struct PivotMatrix {
+    pub col_headers: Vec<String>,
+    pub row_headers: Vec<String>,
+    /// cells[row_index][col_index]
+    pub cells: Vec<Vec<String>>,
+    pub row_totals: Vec<String>,
+    pub col_totals: Vec<String>,
+    pub grand_total: String,
+}
+
+#[derive(Template)]
+#[template(path = "report_pivot.html")]
+pub struct PivotTemplate {
+    pub acting_user: String,
+    pub rows_dim: String,
+    pub cols_dim: String,
+    pub measure: String,
+    pub ym: String,
+    pub matrix: PivotMatrix,
+}
+
+/// GET /reports/pivot — whitelisted multidimensional matrix (LEDGER_READ).
+async fn report_pivot_page(
+    State(state): State<AppState>,
+    session: Extension<Session>,
+    axum::extract::Query(query): axum::extract::Query<std::collections::HashMap<String, String>>,
+) -> Response {
+    if !state
+        .permissions
+        .has_permission_db(&session.user_id, "LEDGER_READ")
+        .await
+    {
+        return (StatusCode::FORBIDDEN, "需要 LEDGER_READ 權限。".to_string()).into_response();
+    }
+
+    let rows_dim = query.get("rows").map(|s| s.as_str()).unwrap_or("account");
+    let cols_dim = query.get("cols").map(|s| s.as_str()).unwrap_or("month");
+    let measure = query.get("measure").map(|s| s.as_str()).unwrap_or("debit");
+    let ym = query.get("ym").and_then(|y| parse_year_month(y));
+
+    // PIV-002: whitelist gate (fail-closed, rule named).
+    let (Some(rows_expr), Some(cols_expr), Some(measure_expr)) = (
+        dim_expr(rows_dim),
+        dim_expr(cols_dim),
+        measure_expr(measure),
+    ) else {
+        return (
+            StatusCode::BAD_REQUEST,
+            "樞紐維度不在白名單（規則 R-PIV-WHITELIST：rows/cols 僅限 account、month、direction；measure 僅限 debit、credit、net）。".to_string(),
+        )
+            .into_response();
+    };
+    if rows_dim == cols_dim {
+        return (
+            StatusCode::BAD_REQUEST,
+            "樞紐維度重複（規則 R-PIV-WHITELIST：rows 與 cols 必須不同）。".to_string(),
+        )
+            .into_response();
+    }
+
+    use sqlx::QueryBuilder;
+    let mut qb: QueryBuilder<sqlx::Sqlite> = QueryBuilder::new("SELECT ");
+    qb.push(rows_expr);
+    qb.push(" AS r, ");
+    qb.push(cols_expr);
+    qb.push(" AS c, ");
+    qb.push(measure_expr);
+    qb.push(
+        " AS v FROM transaction_items i JOIN transactions t ON i.transaction_id = t.transaction_id",
+    );
+    if let Some(ref month) = ym {
+        qb.push(" WHERE strftime('%Y-%m', t.transaction_date) = ");
+        qb.push_bind(month.clone());
+    }
+    qb.push(" GROUP BY r, c");
+
+    let raw_cells: Vec<(String, String, i64)> = qb
+        .build_query_as()
+        .fetch_all(&state.pool)
+        .await
+        .unwrap_or_default();
+
+    let matrix = assemble_pivot(&raw_cells, measure);
+    let template = PivotTemplate {
+        acting_user: session.user_id.clone(),
+        rows_dim: rows_dim.to_string(),
+        cols_dim: cols_dim.to_string(),
+        measure: measure.to_string(),
+        ym: ym.unwrap_or_else(|| "全部期間".to_string()),
+        matrix,
+    };
+    render_or_500(template)
+}
+
+/// Assemble raw (row, col, value) triples into a full matrix with totals.
+/// Pure function over sorted data — derivable and unit-testable.
+fn assemble_pivot(raw: &[(String, String, i64)], measure: &str) -> PivotMatrix {
+    use std::collections::BTreeMap;
+    let mut row_keys: Vec<String> = Vec::new();
+    let mut col_keys: Vec<String> = Vec::new();
+    let mut cells: BTreeMap<(String, String), i64> = BTreeMap::new();
+    for (r, c, v) in raw {
+        if !row_keys.contains(r) {
+            row_keys.push(r.clone());
+        }
+        if !col_keys.contains(c) {
+            col_keys.push(c.clone());
+        }
+        *cells.entry((r.clone(), c.clone())).or_insert(0) += v;
+    }
+    row_keys.sort();
+    col_keys.sort();
+
+    let fmt = |v: i64| -> String { format_minor(v, 2) };
+    let mut row_totals: Vec<String> = Vec::new();
+    let mut col_totals: Vec<String> = vec![0.to_string(); col_keys.len()];
+    let mut grand: i64 = 0;
+    let mut rendered_rows: Vec<Vec<String>> = Vec::new();
+
+    for r in &row_keys {
+        let mut row_cells: Vec<String> = Vec::new();
+        let mut row_sum: i64 = 0;
+        for (ci, c) in col_keys.iter().enumerate() {
+            let v = cells.get(&(r.clone(), c.clone())).copied().unwrap_or(0);
+            row_sum += v;
+            col_totals[ci] = (col_totals[ci].parse::<i64>().unwrap_or(0) + v).to_string();
+            row_cells.push(fmt(v));
+        }
+        row_totals.push(fmt(row_sum));
+        grand += row_sum;
+        rendered_rows.push(row_cells);
+    }
+    let _ = measure;
+
+    PivotMatrix {
+        col_headers: col_keys,
+        row_headers: row_keys,
+        cells: rendered_rows,
+        row_totals,
+        col_totals: col_totals
+            .iter()
+            .map(|c| fmt(c.parse::<i64>().unwrap_or(0)))
+            .collect(),
+        grand_total: fmt(grand),
+    }
+}
 /// Query the data needed by the page and render the template. Any database
 /// failure degrades to the disconnected layout (db_connected = false, FR-004)
 /// instead of hiding the whole UI.
@@ -2877,5 +3451,258 @@ mod tests {
         assert!(body.contains("<svg"), "server-side SVG chart must render");
         assert!(body.contains("近六個月借貸合計"), "chart a11y title");
         assert!(!body.contains("<script"), "zero-JS invariant");
+    }
+
+    // ------------------------------------------------------------------
+    // Slice 10 helpers
+    // ------------------------------------------------------------------
+
+    /// Non-asserting login: returns (cookie, csrf) or None on failure.
+    async fn try_login(
+        app: &Router,
+        pool: &SqlitePool,
+        username: &str,
+        password: &str,
+    ) -> Option<(String, String)> {
+        let request = Request::builder()
+            .method("POST")
+            .uri("/login")
+            .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+            .body(Body::from(format!(
+                "username={username}&password={password}"
+            )))
+            .unwrap();
+        let response = app.clone().oneshot(request).await.expect("login attempt");
+        if response.status() != StatusCode::SEE_OTHER {
+            return None;
+        }
+        let cookie = response
+            .headers()
+            .get_all(header::SET_COOKIE)
+            .iter()
+            .find_map(|v| v.to_str().ok())
+            .map(|v| v.split(';').next().unwrap_or("").to_string())
+            .expect("session cookie");
+        let session_id = cookie.strip_prefix("flaps_session=").expect("cookie shape");
+        let (csrf,): (String,) =
+            sqlx::query_as("SELECT csrf_token FROM sessions WHERE session_id = ?")
+                .bind(session_id)
+                .fetch_one(pool)
+                .await
+                .expect("session row");
+        Some((cookie, csrf))
+    }
+
+    async fn seeded_app_with_admin() -> (Router, SqlitePool, String, String) {
+        let pool = in_memory_pool().await;
+        let state = AppState::new(pool.clone()).await.expect("state");
+        let app = router(state);
+        let hash = auth::hash_password(TEST_ADMIN_PASSWORD).expect("hash");
+        sqlx::query(
+            "INSERT OR IGNORE INTO users (user_id, username, password_hash, is_active) \
+             VALUES ('user-admin', 'admin', ?, 1)",
+        )
+        .bind(&hash)
+        .execute(&pool)
+        .await
+        .expect("seed admin");
+        let (cookie, csrf) = try_login(&app, &pool, "admin", TEST_ADMIN_PASSWORD)
+            .await
+            .expect("admin login");
+        (app, pool, cookie, csrf)
+    }
+
+    async fn get_with_location(
+        app: &Router,
+        uri: &str,
+        cookie: &str,
+    ) -> (StatusCode, String, Option<String>) {
+        let request = Request::builder()
+            .uri(uri)
+            .header(header::COOKIE, cookie.to_string())
+            .body(Body::empty())
+            .unwrap();
+        let response = app.clone().oneshot(request).await.expect("response");
+        let status = response.status();
+        let location = response
+            .headers()
+            .get(header::LOCATION)
+            .and_then(|v| v.to_str().ok())
+            .map(|s| s.to_string());
+        let body = axum::body::to_bytes(response.into_body(), 1_048_576)
+            .await
+            .expect("body");
+        let body = String::from_utf8_lossy(&body).to_string();
+        (status, body, location)
+    }
+    // ------------------------------------------------------------------
+    // Slice 10 acceptance: pivot (PIV-001/002)
+    // ------------------------------------------------------------------
+
+    #[tokio::test]
+    async fn pivot_matrix_matches_hand_computed_values() {
+        let (app, pool, cookie, _csrf) = seeded_app_with_admin().await;
+
+        sqlx::query(
+            "INSERT INTO transactions (transaction_id, transaction_code, transaction_date, description, status, created_by) \
+             VALUES ('pv-t1', 'TX-PV1', '2026-10-05', 'p', 'POSTED', 'tester'), \
+                    ('pv-t2', 'TX-PV2', '2026-11-05', 'p', 'POSTED', 'tester')",
+        )
+        .execute(&pool)
+        .await
+        .expect("seed headers");
+        sqlx::query("INSERT INTO accounts (account_id, account_code, account_name, account_type, currency, is_active) VALUES ('ACC-A', 'A1', 'Account A', 'ASSETS', 'TWD', 1), ('ACC-B', 'B1', 'Account B', 'LIABILITIES', 'TWD', 1)")
+        .execute(&pool)
+        .await
+        .expect("seed accounts");
+        sqlx::query(
+            "INSERT INTO transaction_items (item_id, transaction_id, account_id, item_type, amount_minor, currency, exchange_rate) \
+             VALUES ('pv-i1', 'pv-t1', 'ACC-A', 'DEBIT', 1000, 'TWD', 10000), \
+                    ('pv-i2', 'pv-t1', 'ACC-B', 'CREDIT', 1000, 'TWD', 10000), \
+                    ('pv-i3', 'pv-t2', 'ACC-A', 'DEBIT', 2000, 'TWD', 10000), \
+                    ('pv-i4', 'pv-t2', 'ACC-B', 'CREDIT', 2000, 'TWD', 10000)",
+        )
+        .execute(&pool)
+        .await
+        .expect("seed items");
+
+        let (status, page, _) = get_with_location(
+            &app,
+            "/reports/pivot?rows=account&cols=month&measure=debit",
+            &cookie,
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK);
+        // PIV-001: hand-computed — ACC-A debits: 2026-10=10.00, 2026-11=20.00.
+        assert!(page.contains(">10.00<"), "October ACC-A cell must be 10.00");
+        assert!(
+            page.contains(">20.00<"),
+            "November ACC-A cell must be 20.00"
+        );
+        assert!(page.contains(">30.00<"), "ACC-A row total must be 30.00");
+    }
+
+    #[tokio::test]
+    async fn pivot_rejects_unknown_dimensions_with_rule_name() {
+        let (app, _pool, cookie, _csrf) = seeded_app_with_admin().await;
+        let (status, body, _) = get_with_location(
+            &app,
+            "/reports/pivot?rows=account&cols=hacked&measure=debit",
+            &cookie,
+        )
+        .await;
+        assert_eq!(status, StatusCode::BAD_REQUEST);
+        assert!(
+            body.contains("R-PIV-WHITELIST"),
+            "rejection must name the whitelist rule (PIV-002)"
+        );
+    }
+
+    // ------------------------------------------------------------------
+    // Slice 10 acceptance: parallel coordinates (PAR-001/002)
+    // ------------------------------------------------------------------
+
+    #[tokio::test]
+    async fn parallel_projection_renders_one_line_per_account_zero_js() {
+        let (app, pool, cookie, _csrf) = seeded_app_with_admin().await;
+        sqlx::query(
+            "INSERT INTO transactions (transaction_id, transaction_code, transaction_date, description, status, created_by) \
+             VALUES ('pp-t1', 'TX-PP1', '2026-11-05', 'p', 'POSTED', 'tester')",
+        )
+        .execute(&pool)
+        .await
+        .expect("seed header");
+        sqlx::query("INSERT INTO accounts (account_id, account_code, account_name, account_type, currency, is_active) VALUES ('ACC-A', 'A1', 'Account A', 'ASSETS', 'TWD', 1)")
+        .execute(&pool)
+        .await
+        .expect("seed accounts");
+        sqlx::query(
+            "INSERT INTO transaction_items (item_id, transaction_id, account_id, item_type, amount_minor, currency, exchange_rate) \
+             VALUES ('pp-i1', 'pp-t1', 'ACC-A', 'DEBIT', 5000, 'TWD', 10000)",
+        )
+        .execute(&pool)
+        .await
+        .expect("seed item");
+
+        let (status, page, _) =
+            get_with_location(&app, "/reports/parallel?months=2", &cookie).await;
+        assert_eq!(status, StatusCode::OK);
+        assert!(
+            page.contains("<polyline"),
+            "one polyline per account (PAR-001)"
+        );
+        assert!(
+            page.contains("<title>ACC-A</title>"),
+            "accessible line title"
+        );
+        assert!(!page.contains("<script"), "zero-JS invariant (PAR-002)");
+    }
+
+    // ------------------------------------------------------------------
+    // Slice 10 acceptance: AI suggestion (AIS-001..003)
+    // ------------------------------------------------------------------
+
+    #[tokio::test]
+    async fn ai_suggest_disabled_by_default_returns_503() {
+        let (app, _pool, cookie, _csrf) = seeded_app_with_admin().await;
+        let request = Request::builder()
+            .method("POST")
+            .uri("/drafts/ai_suggest")
+            .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+            .header(header::COOKIE, cookie)
+            .body(Body::from("csrf_token=x&text=支付租金 12000 元"))
+            .unwrap();
+        let (status, body, _) = send(app, request).await;
+        // AIS-001: feature flag defaults to OFF -> explicit 503 with guidance.
+        assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
+        assert!(body.contains("AI 建議"), "guidance must name the feature");
+    }
+
+    #[tokio::test]
+    async fn ai_suggestion_adopt_never_posts_to_ledger() {
+        let (app, pool, _admin_cookie, _admin_csrf) = seeded_app_with_admin().await;
+        let (cookie, csrf) = try_login(&app, &pool, "admin", TEST_ADMIN_PASSWORD)
+            .await
+            .expect("admin login");
+
+        // Adopt an AI suggestion through the human-confirmed path.
+        let request = Request::builder()
+            .method("POST")
+            .uri("/drafts/adopt")
+            .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+            .header(header::COOKIE, cookie)
+            .body(Body::from(format!(
+                "csrf_token={csrf}&date=2026-11-04&debit_account=RENT-EXP&credit_account=CASH&amount=12000.00&currency=TWD&description=ai adopted"
+            )))
+            .unwrap();
+        let (status, diag_body, _location) = send(app.clone(), request).await;
+        assert_eq!(
+            status,
+            StatusCode::SEE_OTHER,
+            "adopt must PRG to wizard; body: {diag_body}"
+        );
+
+        // AIS-002: drafts grew by one; the ledger was NOT touched.
+        let (drafts,): (i64,) = sqlx::query_as("SELECT COUNT(*) FROM drafts")
+            .fetch_one(&pool)
+            .await
+            .expect("drafts count");
+        assert_eq!(drafts, 1, "adopt creates exactly one draft");
+        let (tx_count,): (i64,) = sqlx::query_as("SELECT COUNT(*) FROM transactions")
+            .fetch_one(&pool)
+            .await
+            .expect("tx count");
+        assert_eq!(tx_count, 0, "AI suggestion must never auto-post");
+    }
+
+    #[test]
+    fn ai_suggestion_schema_validation_rejects_malformed_output() {
+        // AIS-003: malformed model output must be rejected by the schema gate.
+        assert!(flaps_core::parse_ai_suggestion("{ \"date\": \"not-a-date\" }").is_err());
+        assert!(flaps_core::parse_ai_suggestion(
+            "{ \"date\": \"2026-11-04\", \"debit_account\": \"A\", \"credit_account\": \"B\", \"amount\": \"abc\", \"currency\": \"TWD\" }"
+        )
+        .is_err());
+        assert!(flaps_core::parse_ai_suggestion("not json at all").is_err());
     }
 }

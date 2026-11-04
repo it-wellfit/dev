@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 建議 — Flaps ERP 工作台</title>
+    <link rel="stylesheet" href="/assets/design-system.css">
+</head>
+<body>
+    <a class="skip-link" href="#main">跳至主要內容</a>
+
+    <header class="app-header">
+        <div class="container">
+            <div>
+                <h1>AI 建議草稿</h1>
+                <p class="app-subtitle">AI 提案僅供參考，必須人工確認；確認前不會寫入任何帳務資料。</p>
+            </div>
+            <p class="app-subtitle">
+                使用者：<strong>{{ acting_user }}</strong>
+                ｜
+                <a class="btn btn-secondary" href="/drafts">返回草稿</a>
+            </p>
+        </div>
+    </header>
+
+    <main id="main" class="container">
+        {% if let Some(e) = degrade_message %}
+        <div class="degraded-state" role="status">
+            <strong>AI 建議不可用</strong>
+            <p>{{ e }}</p>
+            <a class="btn btn-secondary" href="/drafts">改用規則解析</a>
+        </div>
+        {% endif %}
+
+        {% if let Some(s) = suggestion %}
+        <section aria-labelledby="sug-title">
+            <h2 id="sug-title">AI 建議分錄（需人工覆核）</h2>
+            <div class="card" style="margin-bottom: 16px;">
+                <table>
+                    <caption>建議內容（來源：AI，信心未評——需人工覆核）</caption>
+                    <tbody>
+                        <tr><th scope="row">日期</th><td>{{ s.date }}</td></tr>
+                        <tr><th scope="row">借方科目</th><td>{{ s.debit_account }}</td></tr>
+                        <tr><th scope="row">貸方科目</th><td>{{ s.credit_account }}</td></tr>
+                        <tr><th scope="row">金額</th><td>{{ s.amount_display }} {{ s.currency }}</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <form method="post" action="/drafts/adopt">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <input type="hidden" name="text" value="AI 建議：{{ s.date }} 借 {{ s.debit_account }} 貸 {{ s.credit_account }} {{ s.amount_display }} {{ s.currency }}">
+                <div class="form-actions">
+                    <button class="btn btn-primary" type="submit">採用為草稿（進入人工確認流程）</button>
+                    <a class="btn btn-secondary" href="/drafts">放棄</a>
+                </div>
+                <p class="section-note">採用後進入引導式精靈（步驟 2），可修正每個欄位；送出仍需通過引擎完整驗證。</p>
+            </form>
+        </section>
+        {% endif %}
+    </main>
+</body>
+</html>

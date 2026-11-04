@@ -4,6 +4,7 @@
 pub mod config;
 pub mod ledger;
 pub mod money;
+pub mod parallel;
 pub mod parser;
 pub mod permission;
 
@@ -14,4 +15,6 @@ pub use ledger::LedgerEngine;
 pub use ledger::Transaction;
 pub use ledger::TransactionItem;
 pub use money::{format_minor, parse_decimal_to_minor, MoneyError};
-pub use parser::{parse_unstructured, DraftEntry, Evidence};
+pub use parser::{
+    parse_ai_suggestion, parse_unstructured, AiSuggestion, DraftEntry, Evidence, ParsedSuggestion,
+};

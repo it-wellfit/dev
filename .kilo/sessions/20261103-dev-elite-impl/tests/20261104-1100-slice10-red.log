@@ -1,0 +1,83 @@
+﻿cargo :    Compiling platform v0.0.1 (C:\Users\stephanie.huang\Desktop\新人訓練\Projects\2026\Dev\platform)
+位於 線路:4 字元:1
++ cargo test --locked -p platform 2>&1 | Out-File -FilePath ".kilo\sess ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (   Compiling pl...6\Dev\platform):String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+error[E0425]: cannot find function `parse_ai_suggestion` in crate `flaps_core`
+    --> platform\src\api.rs:3018:29
+     |
+3018 |         assert!(flaps_core::parse_ai_suggestion("{ \"date\": \"not-a-date\" }").is_err());
+     |                             ^^^^^^^^^^^^^^^^^^^ not found in `flaps_core`
+
+error[E0425]: cannot find function `parse_ai_suggestion` in crate `flaps_core`
+    --> platform\src\api.rs:3019:29
+     |
+3019 |         assert!(flaps_core::parse_ai_suggestion(
+     |                             ^^^^^^^^^^^^^^^^^^^ not found in `flaps_core`
+
+error[E0425]: cannot find function `parse_ai_suggestion` in crate `flaps_core`
+    --> platform\src\api.rs:3023:29
+     |
+3023 |         assert!(flaps_core::parse_ai_suggestion("not json at all").is_err());
+     |                             ^^^^^^^^^^^^^^^^^^^ not found in `flaps_core`
+
+error[E0425]: cannot find function `seeded_app_with_admin` in this scope
+    --> platform\src\api.rs:2888:42
+     |
+2888 |         let (app, pool, cookie, _csrf) = seeded_app_with_admin().await;
+     |                                          ^^^^^^^^^^^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find function `get_with_location` in this scope
+    --> platform\src\api.rs:2909:33
+     |
+2909 |         let (status, page, _) = get_with_location(&app, "/reports/pivot?rows=account&cols=month&measure=debit", 
+&cookie).await;
+     |                                 ^^^^^^^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find function `seeded_app_with_admin` in this scope
+    --> platform\src\api.rs:2919:43
+     |
+2919 |         let (app, _pool, cookie, _csrf) = seeded_app_with_admin().await;
+     |                                           ^^^^^^^^^^^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find function `get_with_location` in this scope
+    --> platform\src\api.rs:2920:33
+     |
+2920 |         let (status, body, _) = get_with_location(
+     |                                 ^^^^^^^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find function `seeded_app_with_admin` in this scope
+    --> platform\src\api.rs:2939:42
+     |
+2939 |         let (app, pool, cookie, _csrf) = seeded_app_with_admin().await;
+     |                                          ^^^^^^^^^^^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find function `get_with_location` in this scope
+    --> platform\src\api.rs:2955:33
+     |
+2955 |         let (status, page, _) = get_with_location(&app, "/reports/parallel?months=2", &cookie).await;
+     |                                 ^^^^^^^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find function `seeded_app_with_admin` in this scope
+    --> platform\src\api.rs:2968:43
+     |
+2968 |         let (app, _pool, cookie, _csrf) = seeded_app_with_admin().await;
+     |                                           ^^^^^^^^^^^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find function `seeded_app_with_admin` in this scope
+    --> platform\src\api.rs:2984:55
+     |
+2984 |         let (app, pool, _admin_cookie, _admin_csrf) = seeded_app_with_admin().await;
+     |                                                       ^^^^^^^^^^^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find function `try_login` in this scope
+    --> platform\src\api.rs:2985:30
+     |
+2985 |         let (cookie, csrf) = try_login(&app, &pool, "admin", TEST_ADMIN_PASSWORD)
+     |                              ^^^^^^^^^ not found in this scope
+
+For more information about this error, try `rustc --explain E0425`.
+error: could not compile `platform` (lib test) due to 12 previous errors
+warning: build failed, waiting for other jobs to finish...

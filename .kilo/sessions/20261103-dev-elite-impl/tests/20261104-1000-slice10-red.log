@@ -1,0 +1,327 @@
+﻿cargo :    Compiling flaps_core v0.0.1 (C:\Users\stephanie.huang\Desktop\新人訓練\Projects\2026\Dev\core)
+位於 線路:4 字元:1
++ cargo test --locked -p platform 2>&1 | Out-File -FilePath ".kilo\sess ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (   Compiling fl...\2026\Dev\core):String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+   Compiling platform v0.0.1 (C:\Users\stephanie.huang\Desktop\新人訓練\Projects\2026\Dev\platform)
+error[E0432]: unresolved import `crate::api::AppState`
+  --> platform\src\auth.rs:32:5
+   |
+32 | use crate::api::AppState;
+   |     ^^^^^^^^^^^^--------
+   |                 |
+   |                 no `AppState` in `api`
+
+error[E0425]: cannot find type `AppState` in module `crate::api`
+   --> platform\src\auth.rs:412:45
+    |
+412 | pub fn login_router() -> Router<crate::api::AppState> {
+    |                                             ^^^^^^^^ not found in `crate::api`
+
+Some errors have detailed explanations: E0425, E0432.
+For more information about an error, try `rustc --explain E0425`.
+error: could not compile `platform` (lib) due to 2 previous errors
+warning: build failed, waiting for other jobs to finish...
+error[E0425]: cannot find value `TEST_ADMIN_PASSWORD` in this scope
+   --> platform\src\api.rs:117:58
+    |
+117 |         let (cookie, csrf) = login(&app, &pool, "admin", TEST_ADMIN_PASSWORD).await;
+    |                                                          ^^^^^^^^^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find function `admin_app_for_slice10` in this scope
+ --> platform\src\api.rs:8:42
+  |
+8 |         let (app, pool, cookie, _csrf) = admin_app_for_slice10().await;
+  |                                          ^^^^^^^^^^^^^^^^^^^^^ not found in this scope
+
+error[E0433]: cannot find type `Request` in this scope
+  --> platform\src\api.rs:30:23
+   |
+30 |         let request = Request::builder()
+   |                       ^^^^^^^ use of undeclared type `Request`
+
+error[E0433]: cannot find module or crate `header` in this scope
+  --> platform\src\api.rs:32:21
+   |
+32 |             .header(header::COOKIE, cookie)
+   |                     ^^^^^^ use of unresolved module or unlinked crate `header`
+   |
+   = help: if you wanted to use a crate named `header`, use `cargo add header` to add it to your `Cargo.toml`
+
+error[E0433]: cannot find type `Body` in this scope
+  --> platform\src\api.rs:33:19
+   |
+33 |             .body(Body::empty())
+   |                   ^^^^ use of undeclared type `Body`
+
+error[E0425]: cannot find function `send` in this scope
+  --> platform\src\api.rs:35:33
+   |
+35 |         let (status, page, _) = send(app, request).await;
+   |                                 ^^^^ not found in this scope
+
+error[E0433]: cannot find type `StatusCode` in this scope
+  --> platform\src\api.rs:36:28
+   |
+36 |         assert_eq!(status, StatusCode::OK);
+   |                            ^^^^^^^^^^ use of undeclared type `StatusCode`
+
+error[E0425]: cannot find function `admin_app_for_slice10` in this scope
+  --> platform\src\api.rs:45:43
+   |
+45 |         let (app, _pool, cookie, _csrf) = admin_app_for_slice10().await;
+   |                                           ^^^^^^^^^^^^^^^^^^^^^ not found in this scope
+
+error[E0433]: cannot find type `Request` in this scope
+  --> platform\src\api.rs:46:23
+   |
+46 |         let request = Request::builder()
+   |                       ^^^^^^^ use of undeclared type `Request`
+
+error[E0433]: cannot find module or crate `header` in this scope
+  --> platform\src\api.rs:48:21
+   |
+48 |             .header(header::COOKIE, cookie)
+   |                     ^^^^^^ use of unresolved module or unlinked crate `header`
+   |
+   = help: if you wanted to use a crate named `header`, use `cargo add header` to add it to your `Cargo.toml`
+
+error[E0433]: cannot find type `Body` in this scope
+  --> platform\src\api.rs:49:19
+   |
+49 |             .body(Body::empty())
+   |                   ^^^^ use of undeclared type `Body`
+
+error[E0425]: cannot find function `send` in this scope
+  --> platform\src\api.rs:51:33
+   |
+51 |         let (status, body, _) = send(app, request).await;
+   |                                 ^^^^ not found in this scope
+
+error[E0433]: cannot find type `StatusCode` in this scope
+  --> platform\src\api.rs:52:28
+   |
+52 |         assert_eq!(status, StatusCode::BAD_REQUEST);
+   |                            ^^^^^^^^^^ use of undeclared type `StatusCode`
+
+error[E0425]: cannot find function `admin_app_for_slice10` in this scope
+  --> platform\src\api.rs:65:42
+   |
+65 |         let (app, pool, cookie, _csrf) = admin_app_for_slice10().await;
+   |                                          ^^^^^^^^^^^^^^^^^^^^^ not found in this scope
+
+error[E0433]: cannot find type `Request` in this scope
+  --> platform\src\api.rs:81:23
+   |
+81 |         let request = Request::builder()
+   |                       ^^^^^^^ use of undeclared type `Request`
+
+error[E0433]: cannot find module or crate `header` in this scope
+  --> platform\src\api.rs:83:21
+   |
+83 |             .header(header::COOKIE, cookie)
+   |                     ^^^^^^ use of unresolved module or unlinked crate `header`
+   |
+   = help: if you wanted to use a crate named `header`, use `cargo add header` to add it to your `Cargo.toml`
+
+error[E0433]: cannot find type `Body` in this scope
+  --> platform\src\api.rs:84:19
+   |
+84 |             .body(Body::empty())
+   |                   ^^^^ use of undeclared type `Body`
+
+error[E0425]: cannot find function `send` in this scope
+  --> platform\src\api.rs:86:33
+   |
+86 |         let (status, page, _) = send(app, request).await;
+   |                                 ^^^^ not found in this scope
+
+error[E0433]: cannot find type `StatusCode` in this scope
+  --> platform\src\api.rs:87:28
+   |
+87 |         assert_eq!(status, StatusCode::OK);
+   |                            ^^^^^^^^^^ use of undeclared type `StatusCode`
+
+error[E0425]: cannot find function `admin_app_for_slice10` in this scope
+  --> platform\src\api.rs:99:43
+   |
+99 |         let (app, _pool, cookie, _csrf) = admin_app_for_slice10().await;
+   |                                           ^^^^^^^^^^^^^^^^^^^^^ not found in this scope
+
+error[E0433]: cannot find type `Request` in this scope
+   --> platform\src\api.rs:100:23
+    |
+100 |         let request = Request::builder()
+    |                       ^^^^^^^ use of undeclared type `Request`
+
+error[E0433]: cannot find module or crate `header` in this scope
+   --> platform\src\api.rs:103:21
+    |
+103 |             .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+    |                     ^^^^^^ use of unresolved module or unlinked crate `header`
+    |
+    = help: if you wanted to use a crate named `header`, use `cargo add header` to add it to your `Cargo.toml`
+
+error[E0433]: cannot find module or crate `header` in this scope
+   --> platform\src\api.rs:104:21
+    |
+104 |             .header(header::COOKIE, cookie)
+    |                     ^^^^^^ use of unresolved module or unlinked crate `header`
+    |
+    = help: if you wanted to use a crate named `header`, use `cargo add header` to add it to your `Cargo.toml`
+
+error[E0433]: cannot find type `Body` in this scope
+   --> platform\src\api.rs:105:19
+    |
+105 |             .body(Body::from("csrf_token=x&text=支付租金 12000 元"))
+    |                   ^^^^ use of undeclared type `Body`
+
+error[E0425]: cannot find function `send` in this scope
+   --> platform\src\api.rs:107:33
+    |
+107 |         let (status, body, _) = send(app, request).await;
+    |                                 ^^^^ not found in this scope
+
+error[E0433]: cannot find type `StatusCode` in this scope
+   --> platform\src\api.rs:109:28
+    |
+109 |         assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
+    |                            ^^^^^^^^^^ use of undeclared type `StatusCode`
+
+error[E0425]: cannot find function `admin_app_for_slice10` in this scope
+   --> platform\src\api.rs:115:42
+    |
+115 |         let (app, pool, cookie, _csrf) = admin_app_for_slice10().await;
+    |                                          ^^^^^^^^^^^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find function `seed_credentials` in this scope
+   --> platform\src\api.rs:116:9
+    |
+116 |         seed_credentials(&pool).await;
+    |         ^^^^^^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find function `login` in this scope
+   --> platform\src\api.rs:117:30
+    |
+117 |         let (cookie, csrf) = login(&app, &pool, "admin", TEST_ADMIN_PASSWORD).await;
+    |                              ^^^^^ not found in this scope
+
+error[E0433]: cannot find type `Request` in this scope
+   --> platform\src\api.rs:120:23
+    |
+120 |         let request = Request::builder()
+    |                       ^^^^^^^ use of undeclared type `Request`
+
+error[E0433]: cannot find module or crate `header` in this scope
+   --> platform\src\api.rs:123:21
+    |
+123 |             .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+    |                     ^^^^^^ use of unresolved module or unlinked crate `header`
+    |
+    = help: if you wanted to use a crate named `header`, use `cargo add header` to add it to your `Cargo.toml`
+
+error[E0433]: cannot find module or crate `header` in this scope
+   --> platform\src\api.rs:124:21
+    |
+124 |             .header(header::COOKIE, cookie)
+    |                     ^^^^^^ use of unresolved module or unlinked crate `header`
+    |
+    = help: if you wanted to use a crate named `header`, use `cargo add header` to add it to your `Cargo.toml`
+
+error[E0433]: cannot find type `Body` in this scope
+   --> platform\src\api.rs:125:19
+    |
+125 |             .body(Body::from(format!(
+    |                   ^^^^ use of undeclared type `Body`
+
+error[E0425]: cannot find function `send` in this scope
+   --> platform\src\api.rs:129:37
+    |
+129 |         let (status, _, location) = send(app.clone(), request).await;
+    |                                     ^^^^ not found in this scope
+
+error[E0433]: cannot find type `StatusCode` in this scope
+   --> platform\src\api.rs:130:28
+    |
+130 |         assert_eq!(status, StatusCode::SEE_OTHER, "adopt must PRG to wizard");
+    |                            ^^^^^^^^^^ use of undeclared type `StatusCode`
+
+error[E0425]: cannot find function `platform_parse_ai_suggestion` in this scope
+   --> platform\src\api.rs:148:17
+    |
+148 |         assert!(platform_parse_ai_suggestion(r#"{{"date":"not-a-date"}}"#).is_err());
+    |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find function `platform_parse_ai_suggestion` in this scope
+   --> platform\src\api.rs:150:13
+    |
+150 | ...   platform_parse_ai_suggestion(r#"{{"date":"2026-11-04","debit_account":"A","credit_account":"B","amount":"ab
+c","currency":"TWD...
+    |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find function `platform_parse_ai_suggestion` in this scope
+   --> platform\src\api.rs:154:17
+    |
+154 |         assert!(platform_parse_ai_suggestion("not json at all").is_err());
+    |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find function `admin_app_for_slice10` in this scope
+   --> platform\src\api.rs:163:42
+    |
+163 |         let (app, pool, cookie, _csrf) = admin_app_for_slice10().await;
+    |                                          ^^^^^^^^^^^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find function `seed_credentials` in this scope
+   --> platform\src\api.rs:164:9
+    |
+164 |         seed_credentials(&pool).await;
+    |         ^^^^^^^^^^^^^^^^ not found in this scope
+
+error[E0433]: cannot find type `Request` in this scope
+   --> platform\src\api.rs:183:23
+    |
+183 |         let request = Request::builder()
+    |                       ^^^^^^^ use of undeclared type `Request`
+
+error[E0433]: cannot find module or crate `header` in this scope
+   --> platform\src\api.rs:185:21
+    |
+185 |             .header(header::COOKIE, cookie)
+    |                     ^^^^^^ use of unresolved module or unlinked crate `header`
+    |
+    = help: if you wanted to use a crate named `header`, use `cargo add header` to add it to your `Cargo.toml`
+
+error[E0433]: cannot find type `Body` in this scope
+   --> platform\src\api.rs:186:19
+    |
+186 |             .body(Body::empty())
+    |                   ^^^^ use of undeclared type `Body`
+
+error[E0425]: cannot find function `send` in this scope
+   --> platform\src\api.rs:188:33
+    |
+188 |         let (status, body, _) = send(app, request).await;
+    |                                 ^^^^ not found in this scope
+
+error[E0433]: cannot find type `StatusCode` in this scope
+   --> platform\src\api.rs:189:28
+    |
+189 |         assert_eq!(status, StatusCode::OK);
+    |                            ^^^^^^^^^^ use of undeclared type `StatusCode`
+
+error[E0425]: cannot find function `crate_transaction_builder_example` in this scope
+   --> platform\src\api.rs:201:18
+    |
+201 |         let tx = crate_transaction_builder_example();
+    |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find function `crate_item_builder_example` in this scope
+   --> platform\src\api.rs:203:20
+    |
+203 |         let item = crate_item_builder_example();
+    |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^ not found in this scope
+
+Some errors have detailed explanations: E0425, E0432, E0433.
+error: could not compile `platform` (lib test) due to 49 previous errors

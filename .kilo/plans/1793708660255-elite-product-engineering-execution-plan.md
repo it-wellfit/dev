@@ -1,6 +1,6 @@
 # ELITE PRODUCT ENGINEERING MASTER EXECUTION PLAN
 
-> 依據《ELITE PRODUCT ENGINEERING MASTER DIRECTIVE》v1.0 制定。狀態：**v2（2026-11-04）**——Slices 1–7 已實作完成（詳 §11 實作紀錄），本版新增 §12「Slice 8：資料獲取與洞察層」。執行由具實作權限的代理人依 §13 任務清單推進。證據規則：一切狀態宣稱須綁定具名 git 修訂版＋精確指令＋工作目錄＋退出碼；`UNKNOWN ≠ PASS ≠ FAIL`（GOVERNANCE_STANDARD P2/P7）。驗證工具以 **curl.exe／Rust 測試**為主；Python 至多作一次性小工具，不得成為產品或驗證依賴。
+> 依據《ELITE PRODUCT ENGINEERING MASTER DIRECTIVE》v1.0 制定。狀態：**v3（2026-11-04）**——Slices 1–9 已完成（66 tests 全綠，git cd66388→40f46f9），本版新增 §15「Slice 10：多維洞察進階與方法論硬化」（市場與技術研究佐證＋TDD/BDD/SDD/DDD 貫穿）。驗證以 curl.exe／Rust 測試為主；Python 至多一次性小工具。
 
 ## 1. 執行上下文（Environment Reconnaissance 已完成）
 
@@ -205,3 +205,45 @@ Backlog 已解：P0-1、P0-2、P1-1～P1-8、P2-2。Open：P1-7 多實例遷移 
 | OQ-8-1 | 互動式 3D 是否憲政豁免？ | 先以零 JS SVG＋CSV 出場交付；豁免另立 ADR |
 | OQ-8-2 | Ollama 建議何時介接？ | 規則解析器上線且 C1 覆蓋率量測後（先規則後 AI） |
 | OQ-8-3 | 匯入單檔上限？ | 2MB/5,000 列起，量測後調整 |
+
+## 15. Slice 10：多維洞察進階與方法論硬化（v3 新增）
+
+研究佐證（2026-11-04）：市場面——2026 會計軟體核心需求為匯入、AI 分類（46% 會計師日用 AI）、月結報表、稽核軌跡、多幣別（Float/Booke AI/Articsledge 市場調查）；技術面——平行座標為 Apache ECharts/Inselberg 認可的多維標準視覺化（Fortune 500 財務分析實用），**伺服器渲染 SVG 可在零 JS 內達成同等多維分析**，優於互動 3D（OQ-8-1 維持擱置）；生態面——ollama-rs 0.3.6 為主流 Rust 用戶端，但 platform 已有自建 `src/ai/`（reqwest＋decision_gating），**復用優於新增依賴**。
+
+方法論貫穿（本切片起强制）：**TDD**——每個驗收條件先寫失敗測試（red→green→refactor，提交含測試先行證據）；**BDD**——`docs/quality/bdd_acceptance.md` 以 Feature/Scenario 對映整合測試名（不引入 cucumber 依賴）；**SDD**——規格 ID（S10-FR-x）→測試→模組追溯矩陣；**DDD**——core 新增值物件 `Money(i64 minor, Currency)` 與 `AccountId` newtype（建構即驗證），統一語言詞彙表入 `docs/quality/ubiquitous_language.md`。
+
+### 15.1 規格表（S10-FR，含驗收）
+
+| ID | 規格 | 驗收（Given/When/Then） |
+|---|---|---|
+| S10-FR-1（Layer E 樞紐） | `GET /reports/pivot?rows=account|month&cols=month|account|direction&measure=debit|credit|net&ym=YYYY-MM`——維度**白名單映射**（SHARED_STANDARDS 動態欄位規則），伺服器渲染矩陣表＋合計行列 | PIV-001：Given 已知種子 When 3×3 樞紐 Then 與手算一致；PIV-002：Given 非法維度 When 請求 Then 400＋規則名稱 |
+| S10-FR-2（Layer F 平行座標） | `GET /reports/parallel?months=6&top=10`——每科目一條 polyline，軸＝近 N 月正規化（**整數 min-max**，零浮點），SVG 含 title/desc/逐線 title | PAR-001：每帳戶一線＋a11y 標籤；PAR-002：頁面 `<script>`=0 |
+| S10-FR-3（Layer G AI 建議） | `POST /drafts/ai_suggest`（textarea）——特性旗標 erp_config(category='ai', key='suggest_enabled', 預設 '0')；呼叫**既有** `src/ai/` 模組（Ollama，5s timeout）；輸出 JSON schema 驗證（date/debit/credit/amount/currency）；**一律渲染為建議卡（source=AI 需人工覆核）**，使用者採用才經規則路徑建草稿——**永不自動落地**；Ollama 離線/逾時 → 降級訊息（韌性） | AIS-001：旗標關閉 → 503＋說明；AIS-002：建議永不自動落地（測試斷言 drafts 無 AI 直接寫入）；AIS-003：schema 驗證拒絕畸形輸出 |
+| S10-FR-4（Layer H builder） | `Transaction::new`/`TransactionItem::new` 重構為 Builder（P2-1），移除兩處 `#[allow(too_many_arguments)]` | H-001：clippy `-D warnings` 全綠且 allow 歸零；既有 66 測試不改語義全過 |
+| S10-FR-5（Layer H 量測） | `GET /admin/parse_coverage`（ROLE_MANAGE）——近 N 草稿的規則命中率（is_complete 比例），作為 OQ-8-2 決策數據 | COV-001：N 筆草稿 → 命中率正確計算 |
+
+### 15.2 標準對映
+
+ISO/IEC 25010：效能效率（PIV/PAR/報表預算測試）、易用性（精靈＋依據卡）、可靠性（重放防護）；WCAG 2.2：SVG title/desc、鍵盤、對比；OWASP：白名單 SQL、CSRF、速率限制、會話；DORA：測試覆蓋與提交粒度持續追蹤。
+
+### 15.3 TDD 執行順序（每任務）
+
+1. 依驗收條件寫失敗整合測試（red，`cargo test` 錯誤輸出存 session log）→ 2. 最小實作（green）→ 3. 重構＋clippy/fmt（refactor）→ 4. 提交（單一提交含測試與實作，訊息 `test:`/`feat:` 對應）。
+
+### 15.4 任務清單（交給實作代理，依序）
+
+1. **S10-1**：PIV-001/002 失敗測試 → 樞紐 handler＋白名單映射 → 綠。
+2. **S10-2**：PAR-001/002 失敗測試 → 平行座標 SVG 產生器（core 純函式＋整數正規化）→ 綠。
+3. **S10-3**：AIS-001~003 失敗測試 → 旗標＋Ollama 呼叫（既有 ai 模組）＋schema 驗證＋建議卡 → 綠。
+4. **S10-4**：H-001 失敗（clippy 對新 builder 仍報 too_many_arguments 的反向驗證）→ Builder 重構 → allow 歸零 → 綠。
+5. **S10-5**：COV-001 失敗測試 → parse_coverage 端點 → 綠。
+6. **S10-6**：BDD 場景文件＋追溯矩陣＋統一語言詞彙表。
+7. **S10-7**：基線四項＋煙霧（curl.exe）＋CHANGELOG/PLAN_REGISTER #7 提交。
+
+### 15.5 Slice 10 開立問題
+
+| # | 問題 | 建議 |
+|---|---|---|
+| OQ-10-1 | AI 建議的模型與提示詞治理（版本追蹤、離線行為） | 模型名入 erp_config；提示詞入版控常數；回應留存 audit |
+| OQ-10-2 | 樞紐資料上限（帳戶×月份矩陣爆炸） | 預設 top-20 帳戶＋單月，量測後調整 |
+| OQ-10-3 | 多實例速率限制遷移（P1-7 notes） | 維持 in-process 至多實例部署需求出現 |

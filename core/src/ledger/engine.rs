@@ -490,30 +490,30 @@ mod tests {
     }
 
     fn header(id: &str, date: chrono::NaiveDate) -> crate::ledger::transaction::Transaction {
-        crate::ledger::transaction::Transaction::new(
-            id.to_string(),
-            format!("TX-{}", &id[..8.min(id.len())]),
-            date,
-            "engine test entry".to_string(),
-            None,
-            "POSTED".to_string(),
-            Some("test".to_string()),
-            "tester".to_string(),
-        )
+        crate::ledger::transaction::Transaction::builder()
+            .transaction_id(id.to_string())
+            .transaction_code(format!("TX-{}", &id[..8.min(id.len())]))
+            .transaction_date(date)
+            .description("engine test entry")
+            .reference_number(None)
+            .status("POSTED")
+            .source_type(Some("test".to_string()))
+            .created_by("tester")
+            .build()
+            .expect("valid test header")
     }
 
     fn item(id: &str, tx: &str, account: &str, kind: &str, amount: i64) -> TransactionItem {
-        TransactionItem::new(
-            id.to_string(),
-            tx.to_string(),
-            account.to_string(),
-            kind.to_string(),
-            amount,
-            "TWD".to_string(),
-            10_000,
-            None,
-            None,
-        )
+        TransactionItem::builder()
+            .item_id(id.to_string())
+            .transaction_id(tx.to_string())
+            .account_id(account.to_string())
+            .item_type(kind.to_string())
+            .amount_minor(amount)
+            .currency("TWD")
+            .exchange_rate_scaled(10_000)
+            .build()
+            .expect("valid test item")
     }
 
     fn balanced_pair(tx: &str, amount: i64) -> Vec<TransactionItem> {

@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>樞紐分析 — Flaps ERP 工作台</title>
+    <link rel="stylesheet" href="/assets/design-system.css">
+</head>
+<body>
+    <a class="skip-link" href="#main">跳至主要內容</a>
+
+    <header class="app-header">
+        <div class="container">
+            <div>
+                <h1>樞紐分析</h1>
+                <p class="app-subtitle">多維度資料表格（rows × cols × measure，白名單維度）</p>
+            </div>
+            <p class="app-subtitle">
+                使用者：<strong>{{ acting_user }}</strong>
+                ｜
+                <a class="btn btn-secondary" href="/">返回工作台</a>
+                ｜
+                <a class="btn btn-secondary" href="/reports/parallel?months=6">平行座標投影</a>
+            </p>
+        </div>
+    </header>
+
+    <main id="main" class="container">
+        <section aria-labelledby="pivot-title">
+            <h2 id="pivot-title">樞紐矩陣（rows：{{ rows_dim }}｜cols：{{ cols_dim }}｜measure：{{ measure }}｜期間：{{ ym }}）</h2>
+
+            <div class="table-wrap">
+                <table>
+                    <caption>{{ measure }} 樞紐（列：{{ rows_dim }}，欄：{{ cols_dim }}）</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col">{{ rows_dim }}</th>
+                            {% for ch in matrix.col_headers %}
+                            <th scope="col">{{ ch }}</th>
+                            {% endfor %}
+                            <th scope="col">列合計</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for (idx, rh) in matrix.row_headers.iter().enumerate() %}
+                        <tr>
+                            <th scope="row">{{ rh }}</th>
+                            {% for cell in matrix.cells[idx] %}
+                            <td>{{ cell }}</td>
+                            {% endfor %}
+                            <td>{{ matrix.row_totals[idx] }}</td>
+                        </tr>
+                        {% endfor %}
+                        <tr>
+                            <th scope="row">欄合計</th>
+                            {% for ct in matrix.col_totals %}
+                            <td>{{ ct }}</td>
+                            {% endfor %}
+                            <td>{{ matrix.grand_total }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <p class="section-note">
+                維度白名單（規則 R-PIV-WHITELIST）：rows/cols 僅限 account、month、direction；measure 僅限 debit、credit、net。金額以整數分還原為兩位小數。
+            </p>
+        </section>
+    </main>
+</body>
+</html>
