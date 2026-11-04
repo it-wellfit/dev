@@ -55,6 +55,18 @@ Executed under the ELITE plan §9, session `.kilo/sessions/20261103-dev-elite-im
 
 This addendum records execution facts only; it does not approve product scope, certification, or release.
 
+
+## 2026-11-04 addendum #6 (Slice 9: hardening close-out)
+
+| Item | Disposition | Evidence |
+|---|---|---|
+| P1-9 session revocation | Deactivation now deletes all live sessions of the target account | deactivating_a_user_revokes_their_live_session |
+| P1-8 password reset | POST /admin/users/reset_password (ROLE_MANAGE, CSRF) rotates hash, revokes sessions, audited PASSWORD_RESET | admin_password_reset_revokes_sessions_and_rotates_credentials |
+| P3-1 report budget | 2,000-transaction ledger seeded via recursive CTEs; /reports/monthly asserted under 500 ms | monthly_report_stays_under_500ms_with_2000_transactions |
+| P3-2 token sync | Regression test keeps :root token blocks of deployment and docs CSS identical | css_design_tokens_are_in_sync_between_docs_and_deployment |
+| Baseline @ bc68b7e | fmt/clippy -D warnings/test --locked/audit all EXIT=0; **66 tests passed, 0 failed** | session tests/20261104-0700-slice9-final.log |
+
+This addendum records execution facts only; it does not approve product scope, certification, or release.
 ## 2026-11-04 addendum #5 (Slice 8: data acquisition and insight layer)
 
 | Item | Disposition | Evidence |
