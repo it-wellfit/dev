@@ -42,6 +42,9 @@
             <a href="#ai-decisions">AI 決策</a>
             <a href="#new-transaction">新增交易</a>
             <a href="#states">介面狀態</a>
+            {% if can_manage_users %}
+            <a href="/admin/users">使用者管理</a>
+            {% endif %}
         </div>
     </nav>
 

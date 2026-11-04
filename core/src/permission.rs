@@ -479,6 +479,23 @@ impl PermissionManager {
         self.checker.has_permission(user_id, permission_code)
     }
 
+    /// Check a permission against the **live database** (not the startup
+    /// snapshot). Use this on request paths so role assignments made after
+    /// startup take effect immediately (e.g. the user administration UI).
+    pub async fn has_permission_db(&self, user_id: &str, permission_code: &str) -> bool {
+        let count: Result<(i64,), sqlx::Error> = sqlx::query_as(
+            "SELECT COUNT(*) FROM user_roles ur \
+             JOIN role_permissions rp ON ur.role_id = rp.role_id \
+             JOIN permissions p ON rp.permission_id = p.permission_id \
+             WHERE ur.user_id = ? AND p.permission_code = ? AND p.is_active = 1",
+        )
+        .bind(user_id)
+        .bind(permission_code)
+        .fetch_one(&self.pool)
+        .await;
+        matches!(count, Ok((n,)) if n > 0)
+    }
+
     /// Get all permissions for a user
     pub fn get_user_permissions(&self, user_id: &str) -> Vec<String> {
         self.checker.get_user_permissions(user_id)

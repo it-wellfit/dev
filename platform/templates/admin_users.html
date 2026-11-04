@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>使用者管理 — Flaps ERP 工作台</title>
+    <link rel="stylesheet" href="/assets/design-system.css">
+</head>
+<body>
+    <a class="skip-link" href="#main">跳至主要內容</a>
+
+    <header class="app-header">
+        <div class="container">
+            <div>
+                <h1>使用者管理</h1>
+                <p class="app-subtitle">帳號建立、角色指派與啟停（需 ROLE_MANAGE 權限）</p>
+            </div>
+            <p class="app-subtitle">
+                使用者：<strong>{{ acting_user }}</strong>
+                ｜
+                <a class="btn btn-secondary" href="/">返回工作台</a>
+            </p>
+        </div>
+    </header>
+
+    <main id="main" class="container">
+
+        {% if let Some(e) = error %}
+        <div class="error-state" role="alert">
+            <strong>操作未完成</strong>
+            <p>{{ e }}</p>
+        </div>
+        {% endif %}
+
+        <section aria-labelledby="create-title" style="margin-bottom: 32px;">
+            <h2 id="create-title">建立使用者</h2>
+            <form method="post" action="/admin/users">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <fieldset>
+                    <legend>新帳號</legend>
+
+                    <div class="form-row">
+                        <label for="username">帳號名稱 <span aria-hidden="true">*</span></label>
+                        <input class="input" type="text" id="username" name="username" autocomplete="off" required>
+                        <p class="hint">3–32 字元，僅限小寫英文、數字、底線（_）、連字號（-）。</p>
+                    </div>
+
+                    <div class="form-row">
+                        <label for="password">初始密碼 <span aria-hidden="true">*</span></label>
+                        <input class="input" type="password" id="password" name="password" autocomplete="new-password" minlength="8" required>
+                        <p class="hint">至少 8 字元；以 Argon2id 雜湊儲存，建立後無法復原明文。</p>
+                    </div>
+
+                    <div class="form-row">
+                        <label for="role-code">角色 <span aria-hidden="true">*</span></label>
+                        <select class="input" id="role-code" name="role_code" required>
+                            {% for (code, name) in roles %}
+                            <option value="{{ code }}">{{ code }} — {{ name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </fieldset>
+
+                <div class="form-actions">
+                    <button class="btn btn-primary" type="submit">建立使用者</button>
+                </div>
+            </form>
+        </section>
+
+        <section aria-labelledby="list-title">
+            <h2 id="list-title">帳號清單</h2>
+            <div class="table-wrap">
+                <table>
+                    <caption>全部帳號（含停用）</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col">帳號</th>
+                            <th scope="col">user_id</th>
+                            <th scope="col">角色</th>
+                            <th scope="col">狀態</th>
+                            <th scope="col">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for u in users %}
+                        <tr>
+                            <td>{{ u.username }}</td>
+                            <td>{{ u.user_id }}</td>
+                            <td>{{ u.roles_display }}</td>
+                            <td><span class="badge {% if u.is_active %}badge-success{% else %}badge-error{% endif %}">{{ u.status_display }}</span></td>
+                            <td>
+                                {% if u.user_id != acting_user %}
+                                <form method="post" action="/admin/users/toggle" style="display:inline">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                                    <input type="hidden" name="user_id" value="{{ u.user_id }}">
+                                    <button class="btn btn-secondary" type="submit">{% if u.is_active %}停用{% else %}啟用{% endif %}</button>
+                                </form>
+                                {% else %}
+                                <span class="hint">目前登入者</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <p class="section-note">停用為可逆操作；密碼重設請由管理員以本頁重新建立帳號（舊帳號先停用）。</p>
+        </section>
+    </main>
+</body>
+</html>

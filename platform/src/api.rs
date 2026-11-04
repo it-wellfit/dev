@@ -39,6 +39,9 @@ pub struct AppState {
     pub(crate) pool: SqlitePool,
     engine: LedgerEngine,
     permissions: PermissionManager,
+    /// Login lockout tracker (P1-7). Cloned per handle; the inner Mutex makes
+    /// every clone share one counter map.
+    pub(crate) rate_limiter: std::sync::Arc<auth::LoginRateLimiter>,
 }
 
 impl AppState {
@@ -52,6 +55,7 @@ impl AppState {
             pool,
             engine,
             permissions,
+            rate_limiter: std::sync::Arc::new(auth::LoginRateLimiter::new()),
         })
     }
 }
@@ -112,6 +116,7 @@ impl FormValues {
 pub struct IndexTemplate {
     pub acting_user: String,
     pub csrf_token: String,
+    pub can_manage_users: bool,
     pub db_connected: bool,
     pub transaction_count: String,
     pub total_amount_display: String,
@@ -155,6 +160,8 @@ pub fn router(state: AppState) -> Router {
     let protected = Router::new()
         .route("/", get(index))
         .route("/transactions", post(create_transaction))
+        .route("/admin/users", get(admin_users).post(admin_create_user))
+        .route("/admin/users/toggle", post(admin_toggle_user))
         .route_layer(axum::middleware::from_fn_with_state(
             state.clone(),
             auth::require_session,
@@ -204,14 +211,20 @@ async fn create_transaction(
 ) -> Response {
     // CSRF (T-08): the form token must match the acting session's token.
     if form.csrf_token != session.csrf_token {
-        return (
-            StatusCode::FORBIDDEN,
-            Html(
-                render_csrf_failure(&session)
-                    .unwrap_or_else(|_| "CSRF 驗證失敗，請返回重新操作。".to_string()),
+        let html = build_index(
+            &state,
+            &session,
+            Some(
+                "CSRF 驗證失敗（問題：表單權杖與工作階段不符；可能原因：頁面停留過久或重複開啟；處理方式：重新整理頁面後再送出一次）。"
+                    .to_string(),
             ),
+            FormValues::default(),
         )
-            .into_response();
+        .await;
+        return match html {
+            Ok(body) => (StatusCode::FORBIDDEN, Html(body)).into_response(),
+            Err(e) => (StatusCode::FORBIDDEN, format!("頁面渲染失敗：{e}")).into_response(),
+        };
     }
 
     let saved_form = FormValues::from_form(&form);
@@ -229,31 +242,6 @@ async fn create_transaction(
     }
 }
 
-/// Render the error page on a CSRF failure (session context preserved so the
-/// operator can retry from the form without losing the page).
-fn render_csrf_failure(session: &Session) -> Result<String, askama::Error> {
-    build_index_for_csrf(session)
-}
-
-fn build_index_for_csrf(session: &Session) -> Result<String, askama::Error> {
-    IndexTemplate {
-        acting_user: session.user_id.clone(),
-        csrf_token: session.csrf_token.clone(),
-        db_connected: true,
-        transaction_count: String::new(),
-        total_amount_display: String::new(),
-        account_count: String::new(),
-        transactions: Vec::new(),
-        accounts: Vec::new(),
-        error: Some(
-            "CSRF 驗證失敗（問題：表單權杖與工作階段不符；可能原因：頁面停留過久或重複開啟；處理方式：重新整理頁面後再送出一次）。"
-                .to_string(),
-        ),
-        form: FormValues::default(),
-    }
-    .render()
-}
-
 /// Validate the form and post the journal entry. Returns the HTTP status and
 /// user-facing message on failure (problem + reason + next step, FR-004).
 async fn validate_and_post(
@@ -262,10 +250,11 @@ async fn validate_and_post(
     session: &Session,
 ) -> Result<(), (StatusCode, String)> {
     let acting_user = &session.user_id;
-    // 1) RBAC (FR-006): permission by code, server-side, always.
+    // 1) RBAC (FR-006): permission by code, live DB query, server-side, always.
     if !state
         .permissions
-        .has_permission(acting_user, "LEDGER_WRITE")
+        .has_permission_db(acting_user, "LEDGER_WRITE")
+        .await
     {
         return Err((
             StatusCode::FORBIDDEN,
@@ -416,6 +405,303 @@ async fn validate_and_post(
         })
 }
 
+// ---------------------------------------------------------------------------
+// User administration (P1-8): ROLE_MANAGE permission required on every route
+// ---------------------------------------------------------------------------
+
+/// One account row for the administration page.
+#[derive(Debug, Clone)]
+pub struct AdminUserRow {
+    pub user_id: String,
+    pub username: String,
+    pub status_display: String,
+    pub roles_display: String,
+    pub is_active: bool,
+}
+
+/// Server-rendered user administration page (template:
+/// `platform/templates/admin_users.html`).
+#[derive(Template)]
+#[template(path = "admin_users.html")]
+pub struct AdminUsersTemplate {
+    pub acting_user: String,
+    pub csrf_token: String,
+    pub users: Vec<AdminUserRow>,
+    pub roles: Vec<(String, String)>,
+    pub error: Option<String>,
+    pub notice: Option<String>,
+}
+
+/// Helper: does `user_id` hold the `ROLE_MANAGE` permission? (Live DB query
+/// so role assignments made after startup take effect immediately.)
+async fn can_manage_users(state: &AppState, user_id: &str) -> bool {
+    state
+        .permissions
+        .has_permission_db(user_id, "ROLE_MANAGE")
+        .await
+}
+
+async fn render_admin_forbidden(state: &AppState, session: &Session) -> Response {
+    let rendered = build_admin_page(
+        state,
+        session,
+        Some("您沒有使用者管理權限（缺少 ROLE_MANAGE）；請聯絡系統管理員。".to_string()),
+        None,
+    )
+    .await;
+    match rendered {
+        Ok(body) => (StatusCode::FORBIDDEN, Html(body)).into_response(),
+        Err(e) => (StatusCode::FORBIDDEN, format!("頁面渲染失敗：{e}")).into_response(),
+    }
+}
+
+/// GET /admin/users — list accounts with roles and status.
+async fn admin_users(State(state): State<AppState>, session: Extension<Session>) -> Response {
+    if !can_manage_users(&state, &session.user_id).await {
+        return render_admin_forbidden(&state, &session).await;
+    }
+    let rendered = build_admin_page(&state, &session, None, None).await;
+    match rendered {
+        Ok(body) => Html(body).into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("頁面渲染失敗：{e}"),
+        )
+            .into_response(),
+    }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct AdminCreateUserForm {
+    pub csrf_token: String,
+    pub username: String,
+    pub password: String,
+    pub role_code: String,
+}
+
+/// POST /admin/users — create an account and assign one seeded role.
+async fn admin_create_user(
+    State(state): State<AppState>,
+    session: Extension<Session>,
+    Form(form): Form<AdminCreateUserForm>,
+) -> Response {
+    if !can_manage_users(&state, &session.user_id).await {
+        return render_admin_forbidden(&state, &session).await;
+    }
+    if form.csrf_token != session.csrf_token {
+        return (
+            StatusCode::FORBIDDEN,
+            "CSRF 驗證失敗；請重新整理頁面後再操作。".to_string(),
+        )
+            .into_response();
+    }
+
+    match admin_create_user_validated(&state, &form, &session).await {
+        Ok(()) => Redirect::to("/admin/users").into_response(),
+        Err((status, message)) => {
+            let rendered = build_admin_page(&state, &session, Some(message), None).await;
+            match rendered {
+                Ok(body) => (status, Html(body)).into_response(),
+                Err(e) => (status, format!("頁面渲染失敗：{e}")).into_response(),
+            }
+        }
+    }
+}
+
+async fn admin_create_user_validated(
+    state: &AppState,
+    form: &AdminCreateUserForm,
+    session: &Session,
+) -> Result<(), (StatusCode, String)> {
+    // Username policy: lowercase ascii, digits, underscore, hyphen (safe to
+    // embed in user_id), 3..=32 chars.
+    let username = form.username.trim().to_lowercase();
+    let valid_chars = username
+        .bytes()
+        .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'_' || b == b'-');
+    if username.len() < 3 || username.len() > 32 || !valid_chars {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            "帳號名稱格式不正確（3–32 字元，僅限小寫英文、數字、底線、連字號）；請修正後重新送出。"
+                .to_string(),
+        ));
+    }
+
+    if form.password.len() < 8 {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            "密碼長度不足（至少 8 字元）；請設定更長的密碼。".to_string(),
+        ));
+    }
+
+    // Role must exist in the seeded roles table (whitelist by construction).
+    let role_id: Option<(String,)> =
+        sqlx::query_as("SELECT role_id FROM roles WHERE role_code = ?")
+            .bind(form.role_code.trim())
+            .fetch_optional(&state.pool)
+            .await
+            .map_err(|e| {
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    format!("資料庫查詢失敗：{e}"),
+                )
+            })?;
+    let Some((role_id,)) = role_id else {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            "角色不存在；請從清單選擇。".to_string(),
+        ));
+    };
+
+    let hash = auth::hash_password(&form.password).map_err(|e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("密碼雜湊失敗：{e}"),
+        )
+    })?;
+    let user_id = format!("user-{username}");
+
+    sqlx::query(
+        "INSERT INTO users (user_id, username, password_hash, is_active) VALUES (?, ?, ?, 1)",
+    )
+    .bind(&user_id)
+    .bind(&username)
+    .bind(&hash)
+    .execute(&state.pool)
+    .await
+    .map_err(|e| {
+        if e.to_string().contains("UNIQUE") {
+            (
+                StatusCode::BAD_REQUEST,
+                format!("帳號 {username} 已存在；請改用其他名稱。"),
+            )
+        } else {
+            (StatusCode::INTERNAL_SERVER_ERROR, format!("建立失敗：{e}"))
+        }
+    })?;
+
+    sqlx::query(
+        "INSERT OR IGNORE INTO user_roles (user_id, role_id, assigned_at, assigned_by) \
+         VALUES (?, ?, CURRENT_TIMESTAMP, ?)",
+    )
+    .bind(&user_id)
+    .bind(&role_id)
+    .bind(&session.user_id)
+    .execute(&state.pool)
+    .await
+    .map_err(|e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("角色指派失敗：{e}"),
+        )
+    })?;
+
+    Ok(())
+}
+
+#[derive(Debug, Deserialize)]
+pub struct AdminToggleForm {
+    pub csrf_token: String,
+    pub user_id: String,
+}
+
+/// POST /admin/users/toggle — activate/deactivate an account (reversible).
+/// Self-deactivation is rejected so an administrator cannot lock themselves
+/// out of the user management page.
+async fn admin_toggle_user(
+    State(state): State<AppState>,
+    session: Extension<Session>,
+    Form(form): Form<AdminToggleForm>,
+) -> Response {
+    if !can_manage_users(&state, &session.user_id).await {
+        return render_admin_forbidden(&state, &session).await;
+    }
+    if form.csrf_token != session.csrf_token {
+        return (
+            StatusCode::FORBIDDEN,
+            "CSRF 驗證失敗；請重新整理頁面後再操作。".to_string(),
+        )
+            .into_response();
+    }
+    if form.user_id == session.user_id {
+        return (
+            StatusCode::BAD_REQUEST,
+            "不得停用自己的帳號；請由其他管理員執行。".to_string(),
+        )
+            .into_response();
+    }
+
+    sqlx::query("UPDATE users SET is_active = 1 - is_active WHERE user_id = ?")
+        .bind(&form.user_id)
+        .execute(&state.pool)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("更新失敗：{e}")))
+        .ok();
+
+    Redirect::to("/admin/users").into_response()
+}
+
+async fn build_admin_page(
+    state: &AppState,
+    session: &Session,
+    error: Option<String>,
+    notice: Option<String>,
+) -> Result<String, askama::Error> {
+    let rows: Vec<(String, String, i64)> = sqlx::query_as(
+        "SELECT u.user_id, u.username, u.is_active FROM users u ORDER BY u.username",
+    )
+    .fetch_all(&state.pool)
+    .await
+    .unwrap_or_default();
+
+    let role_rows: Vec<(String, String, String)> = sqlx::query_as(
+        "SELECT ur.user_id, r.role_code, r.role_name FROM user_roles ur \
+         JOIN roles r ON ur.role_id = r.role_id ORDER BY ur.user_id",
+    )
+    .fetch_all(&state.pool)
+    .await
+    .unwrap_or_default();
+
+    let users: Vec<AdminUserRow> = rows
+        .into_iter()
+        .map(|(user_id, username, is_active)| {
+            let roles_display = role_rows
+                .iter()
+                .filter(|(uid, _, _)| uid == &user_id)
+                .map(|(_, code, _)| code.as_str())
+                .collect::<Vec<_>>()
+                .join(", ");
+            AdminUserRow {
+                user_id: user_id.clone(),
+                username,
+                status_display: if is_active == 1 {
+                    "啟用".to_string()
+                } else {
+                    "停用".to_string()
+                },
+                roles_display,
+                is_active: is_active == 1,
+            }
+        })
+        .collect();
+
+    let roles: Vec<(String, String)> =
+        sqlx::query_as("SELECT role_code, role_name FROM roles ORDER BY role_code")
+            .fetch_all(&state.pool)
+            .await
+            .unwrap_or_default();
+
+    AdminUsersTemplate {
+        acting_user: session.user_id.clone(),
+        csrf_token: session.csrf_token.clone(),
+        users,
+        roles,
+        error,
+        notice,
+    }
+    .render()
+}
+
 /// Query the data needed by the page and render the template. Any database
 /// failure degrades to the disconnected layout (db_connected = false, FR-004)
 /// instead of hiding the whole UI.
@@ -490,6 +776,7 @@ async fn build_index(
     IndexTemplate {
         acting_user: session.user_id.clone(),
         csrf_token: session.csrf_token.clone(),
+        can_manage_users: can_manage_users(state, &session.user_id).await,
         db_connected,
         transaction_count,
         total_amount_display,
@@ -912,5 +1199,133 @@ mod tests {
             body.contains("--color-primary"),
             "design tokens must be served"
         );
+    }
+
+    #[tokio::test]
+    async fn admin_creates_user_who_can_then_login() {
+        let (app, pool) = test_app().await;
+        seed_credentials(&pool).await;
+        let (cookie, csrf) = login(&app, &pool, "admin", TEST_ADMIN_PASSWORD).await;
+
+        // GET /admin/users as admin (ROLE_MANAGE): page renders.
+        let request = Request::builder()
+            .uri("/admin/users")
+            .header(header::COOKIE, cookie.clone())
+            .body(Body::empty())
+            .unwrap();
+        let (status, body, _) = send(app.clone(), request).await;
+        assert_eq!(status, StatusCode::OK);
+        assert!(body.contains("帳號清單"), "admin page must render");
+        assert!(body.contains("admin"), "seeded account must be listed");
+
+        // POST /admin/users: create finance2 with the FINANCE role.
+        let create =
+            format!("csrf_token={csrf}&username=finance2&password=finance2-pass&role_code=FINANCE");
+        let request = Request::builder()
+            .method("POST")
+            .uri("/admin/users")
+            .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+            .header(header::COOKIE, cookie.clone())
+            .body(Body::from(create))
+            .unwrap();
+        let (status, _, location) = send(app.clone(), request).await;
+        assert_eq!(status, StatusCode::SEE_OTHER, "create must PRG");
+        assert_eq!(location.as_deref(), Some("/admin/users"));
+
+        // The new user can log in and post (FINANCE role has LEDGER_WRITE).
+        let (cookie2, csrf2) = login(&app, &pool, "finance2", "finance2-pass").await;
+        let today = chrono::Utc::now().date_naive().to_string();
+        let request = Request::builder()
+            .method("POST")
+            .uri("/transactions")
+            .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+            .header(header::COOKIE, cookie2)
+            .body(Body::from(form_body(&csrf2, "77", &today)))
+            .unwrap();
+        let (status, _, _) = send(app, request).await;
+        assert_eq!(
+            status,
+            StatusCode::SEE_OTHER,
+            "new user must be able to post"
+        );
+    }
+
+    #[tokio::test]
+    async fn admin_users_forbidden_without_role_manage() {
+        let (app, pool) = test_app().await;
+        seed_credentials(&pool).await;
+        let (cookie, _csrf) = login(&app, &pool, "store1", TEST_STORE_PASSWORD).await;
+
+        let request = Request::builder()
+            .uri("/admin/users")
+            .header(header::COOKIE, cookie)
+            .body(Body::empty())
+            .unwrap();
+        let (status, body, _) = send(app, request).await;
+        assert_eq!(
+            status,
+            StatusCode::FORBIDDEN,
+            "ROLE_MANAGE required (FR-006)"
+        );
+        assert!(
+            body.contains("ROLE_MANAGE"),
+            "rejection must name the permission"
+        );
+    }
+
+    #[tokio::test]
+    async fn deactivated_user_cannot_login() {
+        let (app, pool) = test_app().await;
+        seed_credentials(&pool).await;
+        let (cookie, csrf) = login(&app, &pool, "admin", TEST_ADMIN_PASSWORD).await;
+
+        // Deactivate user-store1.
+        let request = Request::builder()
+            .method("POST")
+            .uri("/admin/users/toggle")
+            .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+            .header(header::COOKIE, cookie)
+            .body(Body::from(format!("csrf_token={csrf}&user_id=user-store1")))
+            .unwrap();
+        let (status, _, _) = send(app.clone(), request).await;
+        assert_eq!(status, StatusCode::SEE_OTHER);
+
+        // store1 can no longer authenticate.
+        let request = Request::builder()
+            .method("POST")
+            .uri("/login")
+            .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+            .body(Body::from(format!(
+                "username=store1&password={TEST_STORE_PASSWORD}"
+            )))
+            .unwrap();
+        let (status, body, _) = send(app, request).await;
+        assert_eq!(status, StatusCode::OK, "deactivated login re-renders form");
+        assert!(
+            body.contains("登入失敗"),
+            "deactivated account must not log in"
+        );
+    }
+
+    #[tokio::test]
+    async fn admin_cannot_deactivate_self() {
+        let (app, pool) = test_app().await;
+        seed_credentials(&pool).await;
+        let (cookie, csrf) = login(&app, &pool, "admin", TEST_ADMIN_PASSWORD).await;
+
+        let request = Request::builder()
+            .method("POST")
+            .uri("/admin/users/toggle")
+            .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+            .header(header::COOKIE, cookie)
+            .body(Body::from(format!("csrf_token={csrf}&user_id=user-admin")))
+            .unwrap();
+        let (status, body, _) = send(app, request).await;
+        assert_eq!(
+            status,
+            StatusCode::BAD_REQUEST,
+            "self-deactivation rejected"
+        );
+        assert!(body.contains("不得停用自己的帳號"));
     }
 }

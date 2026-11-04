@@ -25,6 +25,9 @@ use axum::routing::{get, post};
 use axum::Router;
 use serde::Deserialize;
 use sqlx::SqlitePool;
+use std::collections::HashMap;
+use std::sync::Mutex;
+use std::time::{Duration, Instant};
 
 use crate::api::AppState;
 
@@ -36,6 +39,73 @@ pub const SESSION_COOKIE: &str = "flaps_session";
 /// whether the username or the password was wrong).
 pub const LOGIN_FAILURE_MSG: &str =
     "登入失敗（可能原因：帳號或密碼不正確、帳號已停用）；請重新輸入，或聯絡系統管理員。";
+
+// ---------------------------------------------------------------------------
+// Login rate limiting (P1-7): consecutive-failure lockout per username
+// ---------------------------------------------------------------------------
+
+/// Default policy: 5 consecutive failures lock the username for 15 minutes.
+pub const MAX_LOGIN_ATTEMPTS: u32 = 5;
+pub const LOGIN_LOCKOUT_SECS: u64 = 900;
+
+/// In-process failure tracker keyed by username (trimmed, lowercased).
+///
+/// Local-first single-instance deployment: the state lives in the server
+/// process. A multi-instance deployment would move this to the database —
+/// recorded in IMPROVEMENT_BACKLOG (P1-7 notes).
+#[derive(Default)]
+pub struct LoginRateLimiter {
+    attempts: Mutex<HashMap<String, (u32, Option<Instant>)>>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum RateDecision {
+    Allowed,
+    Locked { remaining_secs: u64 },
+}
+
+impl LoginRateLimiter {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Check whether `username` is currently locked out.
+    pub fn check(&self, username: &str) -> RateDecision {
+        let key = username.trim().to_lowercase();
+        let mut map = self.attempts.lock().expect("rate limiter lock");
+        let lock_state = map.get(&key).and_then(|(_, locked_until)| *locked_until);
+        match lock_state {
+            Some(until) if until > Instant::now() => RateDecision::Locked {
+                remaining_secs: (until - Instant::now()).as_secs() + 1,
+            },
+            Some(_) => {
+                // Lockout elapsed: give the account a fresh counter.
+                map.remove(&key);
+                RateDecision::Allowed
+            }
+            None => RateDecision::Allowed,
+        }
+    }
+
+    /// Record a failed attempt; locks the username when the threshold is hit.
+    pub fn record_failure(&self, username: &str, max_attempts: u32, lockout: Duration) {
+        let key = username.trim().to_lowercase();
+        let mut map = self.attempts.lock().expect("rate limiter lock");
+        let entry = map.entry(key).or_insert((0, None));
+        entry.0 += 1;
+        if entry.0 >= max_attempts {
+            *entry = (entry.0, Some(Instant::now() + lockout));
+        }
+    }
+
+    /// Clear the failure counter after a successful login.
+    pub fn record_success(&self, username: &str) {
+        self.attempts
+            .lock()
+            .expect("rate limiter lock")
+            .remove(&username.trim().to_lowercase());
+    }
+}
 
 // ---------------------------------------------------------------------------
 // Password hashing (Argon2id)
@@ -252,27 +322,50 @@ pub struct LoginForm {
     pub password: String,
 }
 
-/// POST /login — authenticate, create a session, set the cookie (303 PRG).
+/// POST /login — rate-limit check, authenticate, create a session (303 PRG).
 pub async fn post_login(State(state): State<AppState>, Form(form): Form<LoginForm>) -> Response {
+    // P1-7: consecutive-failure lockout per username (checked BEFORE any
+    // credential work, so a locked account costs nothing to probe).
+    if let RateDecision::Locked { remaining_secs } = state.rate_limiter.check(&form.username) {
+        return login_page(
+            Some(format!(
+                "登入嘗試次數過多（問題：該帳號因連續失敗已暫時鎖定；處理方式：請於約 {remaining_secs} 秒後再試，或聯絡系統管理員）。"
+            )),
+            &form.username,
+        );
+    }
+
     match authenticate(&state.pool, &form.username, &form.password).await {
-        Some(user_id) => match create_session(&state.pool, &user_id).await {
-            Ok((session_id, _)) => {
-                let mut response = Redirect::to("/").into_response();
-                if let Ok(value) = header::HeaderValue::from_str(&session_cookie_value(&session_id))
-                {
-                    response.headers_mut().append(header::SET_COOKIE, value);
+        Some(user_id) => {
+            state.rate_limiter.record_success(&form.username);
+            match create_session(&state.pool, &user_id).await {
+                Ok((session_id, _)) => {
+                    let mut response = Redirect::to("/").into_response();
+                    if let Ok(value) =
+                        header::HeaderValue::from_str(&session_cookie_value(&session_id))
+                    {
+                        response.headers_mut().append(header::SET_COOKIE, value);
+                    }
+                    response
                 }
-                response
+                Err(e) => (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    format!("無法建立工作階段（可能原因：資料庫忙碌）；請重試。詳情：{e}"),
+                )
+                    .into_response(),
             }
-            Err(e) => (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                format!("無法建立工作階段（可能原因：資料庫忙碌）；請重試。詳情：{e}"),
-            )
-                .into_response(),
-        },
+        }
         // Generic failure: same page, same message for wrong username OR
-        // wrong password (no account enumeration).
-        None => login_page(Some(LOGIN_FAILURE_MSG.to_string()), &form.username),
+        // wrong password (no account enumeration). The attempt is recorded
+        // BEFORE rendering so the lockout is reported on the next attempt.
+        None => {
+            state.rate_limiter.record_failure(
+                &form.username,
+                MAX_LOGIN_ATTEMPTS,
+                Duration::from_secs(LOGIN_LOCKOUT_SECS),
+            );
+            login_page(Some(LOGIN_FAILURE_MSG.to_string()), &form.username)
+        }
     }
 }
 
@@ -320,4 +413,127 @@ pub fn login_router() -> Router<crate::api::AppState> {
     Router::new()
         .route("/login", get(get_login).post(post_login))
         .route("/logout", post(post_logout))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::time::Duration;
+
+    #[test]
+    fn rate_limiter_locks_after_threshold() {
+        let limiter = LoginRateLimiter::new();
+        assert_eq!(limiter.check("admin"), RateDecision::Allowed);
+        limiter.record_failure("admin", 3, Duration::from_secs(60));
+        limiter.record_failure("admin", 3, Duration::from_secs(60));
+        assert_eq!(
+            limiter.check("admin"),
+            RateDecision::Allowed,
+            "below threshold"
+        );
+        limiter.record_failure("admin", 3, Duration::from_secs(60));
+        match limiter.check("admin") {
+            RateDecision::Locked { remaining_secs } => {
+                assert!(remaining_secs > 0 && remaining_secs <= 60);
+            }
+            RateDecision::Allowed => panic!("account must be locked at threshold"),
+        }
+    }
+
+    #[test]
+    fn rate_limiter_is_per_username_and_case_insensitive() {
+        let limiter = LoginRateLimiter::new();
+        for _ in 0..MAX_LOGIN_ATTEMPTS {
+            limiter.record_failure("Admin", MAX_LOGIN_ATTEMPTS, Duration::from_secs(60));
+        }
+        assert!(
+            matches!(limiter.check("ADMIN"), RateDecision::Locked { .. }),
+            "lockout must be case-insensitive per username"
+        );
+        assert_eq!(
+            limiter.check("other"),
+            RateDecision::Allowed,
+            "other usernames must be unaffected"
+        );
+    }
+
+    #[test]
+    fn rate_limiter_unlocks_after_lockout_window() {
+        let limiter = LoginRateLimiter::new();
+        for _ in 0..MAX_LOGIN_ATTEMPTS {
+            limiter.record_failure("admin", MAX_LOGIN_ATTEMPTS, Duration::from_millis(50));
+        }
+        assert!(matches!(
+            limiter.check("admin"),
+            RateDecision::Locked { .. }
+        ));
+        std::thread::sleep(Duration::from_millis(80));
+        assert_eq!(
+            limiter.check("admin"),
+            RateDecision::Allowed,
+            "lockout must expire"
+        );
+    }
+
+    #[test]
+    fn rate_limiter_resets_on_success() {
+        let limiter = LoginRateLimiter::new();
+        limiter.record_failure("admin", MAX_LOGIN_ATTEMPTS, Duration::from_secs(60));
+        limiter.record_failure("admin", MAX_LOGIN_ATTEMPTS, Duration::from_secs(60));
+        limiter.record_success("admin");
+        assert_eq!(
+            limiter.check("admin"),
+            RateDecision::Allowed,
+            "successful login must clear the counter"
+        );
+    }
+
+    #[tokio::test]
+    async fn login_lockout_survives_correct_password() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .expect("pool");
+        crate::db::DatabaseManager::new(pool.clone())
+            .initialize()
+            .await
+            .expect("migrations");
+        seed_admin_if_empty_with_password(&pool, "correct-horse").await;
+        let state = AppState::new(pool).await.expect("state");
+
+        let form = |password: &str| LoginForm {
+            username: "admin".to_string(),
+            password: password.to_string(),
+        };
+
+        // Burn MAX_LOGIN_ATTEMPTS with wrong passwords.
+        for _ in 0..MAX_LOGIN_ATTEMPTS {
+            post_login(State(state.clone()), Form(form("wrong"))).await;
+        }
+
+        // Even the CORRECT password is now rejected with a lockout message.
+        let response = post_login(State(state.clone()), Form(form("correct-horse"))).await;
+        let body = axum::body::to_bytes(response.into_body(), 1_048_576)
+            .await
+            .expect("body");
+        let body = String::from_utf8_lossy(&body).to_string();
+        assert!(
+            body.contains("鎖定"),
+            "locked account must be told about the lockout"
+        );
+    }
+
+    /// Test-friendly seed: fixed password instead of random print.
+    async fn seed_admin_if_empty_with_password(pool: &SqlitePool, password: &str) {
+        let hash = hash_password(password).expect("hash");
+        sqlx::query(
+            "INSERT OR IGNORE INTO users (user_id, username, password_hash, is_active) \
+             VALUES ('user-admin', 'admin', ?, 1)",
+        )
+        .bind(&hash)
+        .execute(pool)
+        .await
+        .expect("seed");
+    }
 }
