@@ -56,6 +56,20 @@ Executed under the ELITE plan §9, session `.kilo/sessions/20261103-dev-elite-im
 This addendum records execution facts only; it does not approve product scope, certification, or release.
 
 
+
+## 2026-11-04 addendum #7 (Slice 10: multidimensional insight + methodology hardening)
+
+| Item | Disposition | Evidence |
+|---|---|---|
+| S10-FR-1 pivot | /reports/pivot whitelisted dimensions (R-PIV-WHITELIST), matrix with totals | pivot_matrix_matches_hand_computed_values + pivot_rejects_unknown_dimensions_with_rule_name |
+| S10-FR-2 parallel coordinates | core/src/parallel.rs integer min-max normalization; zero-JS SVG superior alternative to interactive 3D (OQ-8-1 deferred) | parallel_projection_renders_one_line_per_account_zero_js + core parallel tests |
+| S10-FR-3 AI suggestion | erp_config flag (default OFF -> 503), Ollama via existing ai module, strict schema gate (parse_ai_suggestion), suggestion-only rendering, /drafts/adopt human path (ledger untouched) | ai_suggest_disabled_by_default_returns_503 + ai_suggestion_adopt_never_posts_to_ledger + ai_suggestion_schema_validation_rejects_malformed_output |
+| S10-FR-4 builder | TransactionBuilder/TransactionItemBuilder; both clippy too_many_arguments exemptions removed (allow count = 0) | transaction_builder_constructs_domain_objects + clippy green |
+| S10-FR-5 coverage | /admin/parse_coverage (ROLE_MANAGE) rule-hit ratio over drafts | parse_coverage_computes_hit_ratio |
+| Methodology | BDD acceptance doc, traceability matrix, ubiquitous language glossary | docs/quality/bdd_acceptance.md, docs/testing/TRACEABILITY_MATRIX.md, docs/quality/ubiquitous_language.md |
+| Baseline @ 7eb5c1d | fmt/clippy -D warnings/test --locked/audit all EXIT=0; **73 tests passed, 0 failed** | session tests/20261104-1400-slice10-final.log |
+
+This addendum records execution facts only; it does not approve product scope, certification, or release.
 ## 2026-11-04 addendum #6 (Slice 9: hardening close-out)
 
 | Item | Disposition | Evidence |
