@@ -58,6 +58,20 @@ This addendum records execution facts only; it does not approve product scope, c
 
 
 
+
+## 2026-11-04 addendum #9 (completion audit close-out)
+
+| Item | Disposition | Evidence |
+|---|---|---|
+| CSRF coverage 10/10 | import_preview (multipart csrf field) and ai_suggest gated; verified by per-handler audit | CSRF matrix scan |
+| Value objects (DDD) | Money/AccountId in core/src/value_objects.rs with validation tests | core 30 tests passed |
+| Pivot row cap (OQ-10-2) | top-20 by total, overflow folded into OTHER with truncation notice | pivot_caps_rows_and_folds_into_other_bucket |
+| AI request audit (OQ-10-1) | AI_SUGGEST_REQUESTED with masked fields | api.rs ai_suggest |
+| P1-8 residual UI | Admin password-reset form on admin page | admin_users.html |
+| OQ-8-2 UI | AI suggestion form on drafts page | drafts.html |
+| Baseline @ c932753 | fmt/clippy/test/audit all EXIT=0; 87 tests passed, 0 failed | session tests/20261104-2100-final-audit.log |
+
+This addendum records execution facts only; it does not approve product scope, certification, or release.
 ## 2026-11-04 addendum #8 (Slice 11: deployment hardening)
 
 | Item | Disposition | Evidence |

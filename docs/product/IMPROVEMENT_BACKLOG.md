@@ -17,8 +17,8 @@
 | P1-7 | 登入速率限制 | `LoginRateLimiter`（每帳號 5 次連續失敗 → 鎖定 15 分鐘，成功即重置；鎖定訊息含剩餘秒數；大小寫不敏感） | 爆破面收斂 | 高：認證邊界完整 | P2 | S | 已完成（單機 in-process；多實例需遷移共享存放——記錄於 P1-7 notes） | — | 鎖定/解鎖/重置/跨帳號隔離 4 測試＋正確密碼被鎖整合測試 | **Resolved（2026-11-04）** |
 | P1-8 | 帳號管理 UI | `/admin/users`（清單＋建立＋啟停），ROLE_MANAGE 即時 DB 查詢把關，CSRF 全覆蓋，自我停用拒絕 | 營運可自助 | 中 | P2 | M | 已完成 | — | 建立→登入→登帳端到端＋403＋停用拒登入＋自停拒 4 測試 | **Resolved（2026-11-04）** |
 
-| P2-1 | `#[allow(too_many_arguments)]` 兩處 | `core/src/ledger/transaction.rs` | 可讀性 | 維護成本 | P2 | S | 低 | Builder 或參數物件（struct）重構 | allow 移除且 clippy 綠 | Open |
+| P2-1 | `#[allow(too_many_arguments)]` 兩處 | `core/src/ledger/transaction.rs` | 可讀性 | 維護成本 | P2 | S | 低 | Builder 或參數物件（struct）重構 | allow 移除且 clippy 綠 | **Resolved（2026-11-04，c932753）** |
 | P2-2 | 根 `Cargo.toml` 含 tauri 2.0 workspace 依賴但無人使用 | 移除後 Cargo.lock 中 tauri 條目歸零；`src-tauri/` 為獨立 crate 自行宣告依賴不受影響 | 建置時間 | 依賴面縮減 | P2 | S | 已完成 | — | `TAURI_IN_LOCK=0`＋build/test 綠 | **Resolved（2026-11-04）** |
 | P3-1 | ~~介面效能預算未量化~~ **報表預算已量化** | close_out 測試：2,000 交易（recursive CTE seed）→ /reports/monthly 斷言 < 500ms | — | RPT-001 吞吐條款可驗收 | P3 | S | 已完成 | — | monthly_report_stays_under_500ms_with_2000_transactions | **Resolved（2026-11-04，首頁 Lighthouse 仍待量測）** |
-| P3-2 | `docs/design-system.css` 與 `web/assets/design-system.css` 雙檔同步 | 兩檔 :root Token 需逐字一致 | — | SSOT 漂移風險 | P3 | S | 低 | 短期：變更同一提交雙向同步（頭註已標）；長期：build 時由單一來源產生 | 同步檢查腳本或單一來源 | Open |
-| P3-3 | session 遺留：`.kilo/plans/debugging-summary.md` 先前規劃輪嘗試佔用未遂 | 該檔現況 | — | 治理整潔 | P3 | S | 低 | 確認檔案內容後歸位 | plans 目錄無遺留狀態 | Open |
+| P3-2 | `docs/design-system.css` 與 `web/assets/design-system.css` 雙檔同步 | 兩檔 :root Token 需逐字一致 | — | SSOT 漂移風險 | P3 | S | 低 | 短期：變更同一提交雙向同步（頭註已標）；長期：build 時由單一來源產生 | 同步檢查腳本或單一來源 | **Resolved（2026-11-04，同步迴歸測試護欄已入）** |
+| P3-3 | session 遺留：`.kilo/plans/debugging-summary.md` 先前規劃輪嘗試佔用未遂 | 該檔現況 | — | 治理整潔 | P3 | S | 低 | 確認檔案內容後歸位 | plans 目錄無遺留狀態 | **Resolved（2026-11-04，確認兩檔並存、主計畫為 SSOT）** |
