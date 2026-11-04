@@ -7,6 +7,7 @@ pub mod money;
 pub mod parallel;
 pub mod parser;
 pub mod permission;
+pub mod value_objects;
 
 // Re-export key types
 pub use ledger::Account;
@@ -18,3 +19,4 @@ pub use money::{format_minor, parse_decimal_to_minor, MoneyError};
 pub use parser::{
     parse_ai_suggestion, parse_unstructured, AiSuggestion, DraftEntry, Evidence, ParsedSuggestion,
 };
+pub use value_objects::{AccountId, Money};

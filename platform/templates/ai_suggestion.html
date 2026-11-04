@@ -1,62 +1,62 @@
-d!DOCTYPE html>
-dhtml lang="zh-Hant-TW">
-dhead>
-    dmeta charset="UTF-8">
-    dmeta name="viewport" content="width=device-width, initial-scale=1.0">
-    dtitle>AI 建議 — Flaps ERP 工作台d/title>
-    dlink rel="stylesheet" href="/assets/design-system.css">
-d/head>
-dbody>
-    da class="skip-link" href="#main">跳至主要內容d/a>
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 建議 — Flaps ERP 工作台</title>
+    <link rel="stylesheet" href="/assets/design-system.css">
+</head>
+<body>
+    <a class="skip-link" href="#main">跳至主要內容</a>
 
-    dheader class="app-header">
+    <header class="app-header">
         <div class="container">
-            ddiv>
-                dh1>AI 建議草稿d/h1>
-                dp class="app-subtitle">AI 提案僅供參考，必須人工確認；確認前不會寫入任何帳務資料。d/p>
-            d/div>
-            dp class="app-subtitle">
-                使用者：dstrong>{{ acting_user }}d/strong>
+            <div>
+                <h1>AI 建議草稿</h1>
+                <p class="app-subtitle">AI 提案僅供參考，必須人工確認；確認前不會寫入任何帳務資料。</p>
+            </div>
+            <p class="app-subtitle">
+                使用者：dstrong>{{ acting_user }}</strong>
                 ｜
-                da class="btn btn-secondary" href="/drafts">返回草稿d/a>
-            d/p>
-        d/div>
-    d/header>
+                <a class="btn btn-secondary" href="/drafts">返回草稿</a>
+            </p>
+        </div>
+    </header>
 
-    dmain id="main" class="container">
+    <main id="main" class="container">
         {% if let Some(e) = degrade_message %}
         <div class="degraded-state" role="status">
-            dstrong>AI 建議不可用d/strong>
-            dp>{{ e }}d/p>
-            da class="btn btn-secondary" href="/drafts">改用規則解析d/a>
-        d/div>
+            <strong>AI 建議不可用</strong>
+            <p>{{ e }}</p>
+            <a class="btn btn-secondary" href="/drafts">改用規則解析</a>
+        </div>
         {% endif %}
 
         {% if let Some(s) = suggestion %}
-        dsection aria-labelledby="sug-title">
-            dh2 id="sug-title">AI 建議分錄（需人工覆核）d/h2>
+        <section aria-labelledby="sug-title">
+            <h2 id="sug-title">AI 建議分錄（需人工覆核）</h2>
             <div class="card card-gap">
-                dtable>
-                    dcaption>建議內容（來源：AI，信心未評——需人工覆核）d/caption>
-                    dtbody>
-                        dtr>dth scope="row">日期d/th>dtd>{{ s.date }}d/td>d/tr>
-                        dtr>dth scope="row">借方科目d/th>dtd>{{ s.debit_account }}d/td>d/tr>
-                        dtr>dth scope="row">貸方科目d/th>dtd>{{ s.credit_account }}d/td>d/tr>
-                        dtr>dth scope="row">金額d/th>dtd>{{ s.amount_display }} {{ s.currency }}d/td>d/tr>
-                    d/tbody>
-                d/table>
-            d/div>
-            dform method="post" action="/drafts/adopt">
-                dinput type="hidden" name="csrf_token" value="{{ csrf_token }}">
-                dinput type="hidden" name="text" value="AI 建議：{{ s.date }} 借 {{ s.debit_account }} 貸 {{ s.credit_account }} {{ s.amount_display }} {{ s.currency }}">
+                <table>
+                    <caption>建議內容（來源：AI，信心未評——需人工覆核）</caption>
+                    <tbody>
+                        <tr><th scope="row">日期</th><td>{{ s.date }}</td></tr>
+                        <tr><th scope="row">借方科目</th><td>{{ s.debit_account }}</td></tr>
+                        <tr><th scope="row">貸方科目</th><td>{{ s.credit_account }}</td></tr>
+                        <tr><th scope="row">金額</th><td>{{ s.amount_display }} {{ s.currency }}</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <form method="post" action="/drafts/adopt">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <input type="hidden" name="text" value="AI 建議：{{ s.date }} 借 {{ s.debit_account }} 貸 {{ s.credit_account }} {{ s.amount_display }} {{ s.currency }}">
                 <div class="form-actions">
-                    dbutton class="btn btn-primary" type="submit">採用為草稿（進入人工確認流程）d/button>
-                    da class="btn btn-secondary" href="/drafts">放棄d/a>
-                d/div>
-                dp class="section-note">採用後進入引導式精靈（步驟 2），可修正每個欄位；送出仍需通過引擎完整驗證。d/p>
-            d/form>
-        d/section>
+                    <button class="btn btn-primary" type="submit">採用為草稿（進入人工確認流程）</button>
+                    <a class="btn btn-secondary" href="/drafts">放棄</a>
+                </div>
+                <p class="section-note">採用後進入引導式精靈（步驟 2），可修正每個欄位；送出仍需通過引擎完整驗證。</p>
+            </form>
+        </section>
         {% endif %}
-    d/main>
-d/body>
-d/html>
+    </main>
+</body>
+</html>

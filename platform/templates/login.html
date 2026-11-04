@@ -1,48 +1,48 @@
-m!DOCTYPE html>
-mhtml lang="zh-Hant-TW">
-mhead>
-    mmeta charset="UTF-8">
-    mmeta name="viewport" content="width=device-width, initial-scale=1.0">
-    mtitle>登入 — Flaps ERP 工作台m/title>
-    mlink rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%23005fcc'/%3E%3C/svg%3E">
-    mlink rel="stylesheet" href="/assets/design-system.css">
-m/head>
-mbody>
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>登入 — Flaps ERP 工作台</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%23005fcc'/%3E%3C/svg%3E">
+    <link rel="stylesheet" href="/assets/design-system.css">
+</head>
+<body>
     <main id="main" class="container container-narrow">
-        mh1>Flaps ERP 工作台m/h1>
-        mp class="app-subtitle">請登入以繼續操作。m/p>
+        <h1>Flaps ERP 工作台</h1>
+        <p class="app-subtitle">請登入以繼續操作。</p>
 
         {% if let Some(e) = error %}
-        mdiv class="error-state" role="alert">
-            mstrong>無法登入m/strong>
-            mp>{{ e }}m/p>
-        m/div>
+        <div class="error-state" role="alert">
+            <strong>無法登入</strong>
+            <p>{{ e }}</p>
+        </div>
         {% endif %}
 
-        mform method="post" action="/login">
-            mfieldset>
-                mlegend>帳號登入m/legend>
+        <form method="post" action="/login">
+            <fieldset>
+                <legend>帳號登入</legend>
 
-                mdiv class="form-row">
-                    mlabel for="username">帳號 mspan aria-hidden="true">*m/span>m/label>
-                    minput class="input" type="text" id="username" name="username" autocomplete="username" value="{{ username }}" required>
-                m/div>
+                <div class="form-row">
+                    <label for="username">帳號 mspan aria-hidden="true">*</span></label>
+                    <input class="input" type="text" id="username" name="username" autocomplete="username" value="{{ username }}" required>
+                </div>
 
-                mdiv class="form-row">
-                    mlabel for="password">密碼 mspan aria-hidden="true">*m/span>m/label>
-                    minput class="input" type="password" id="password" name="password" autocomplete="current-password" required>
-                    mp class="hint">密碼以 Argon2id 雜湊儲存；連續失敗請聯絡系統管理員。m/p>
-                m/div>
-            m/fieldset>
+                <div class="form-row">
+                    <label for="password">密碼 mspan aria-hidden="true">*</span></label>
+                    <input class="input" type="password" id="password" name="password" autocomplete="current-password" required>
+                    <p class="hint">密碼以 Argon2id 雜湊儲存；連續失敗請聯絡系統管理員。</p>
+                </div>
+            </fieldset>
 
-            mdiv class="form-actions">
-                mbutton class="btn btn-primary" type="submit">登入m/button>
-            m/div>
-        m/form>
+            <div class="form-actions">
+                <button class="btn btn-primary" type="submit">登入</button>
+            </div>
+        </form>
 
-        mp class="section-note">
+        <p class="section-note">
             本系統所有寫入操作均經伺服器端權限檢查並寫入稽核軌跡。
-        m/p>
-    m/main>
-m/body>
-m/html>
+        </p>
+    </main>
+</body>
+</html>

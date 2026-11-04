@@ -1563,13 +1563,15 @@ async fn import_preview(
 
     if let Err(e) = persist_batch(
         &state,
-        &batch_id,
-        &sha_hex,
-        row_total,
-        row_ok,
-        &session.user_id,
-        &drafts,
-        &errors,
+        ImportBatchStaging {
+            batch_id: &batch_id,
+            sha_hex: &sha_hex,
+            row_total,
+            row_ok,
+            created_by: &session.user_id,
+            drafts: &drafts,
+            errors: &errors,
+        },
     )
     .await
     {
@@ -1583,45 +1585,50 @@ async fn import_preview(
     Redirect::to(&format!("/import?batch={batch_id}")).into_response()
 }
 
-#[allow(clippy::too_many_arguments)]
-async fn persist_batch(
-    state: &AppState,
-    batch_id: &str,
-    sha_hex: &str,
+/// Staging payload for [`persist_batch`] — packs the batch header and the
+/// per-row parse results so the function takes two arguments (P2-1 close-out).
+struct ImportBatchStaging<'a> {
+    batch_id: &'a str,
+    sha_hex: &'a str,
     row_total: i64,
     row_ok: i64,
-    created_by: &str,
-    drafts: &[(usize, ImportRowDraft)],
-    errors: &[(usize, String, String)],
+    created_by: &'a str,
+    drafts: &'a [(usize, ImportRowDraft)],
+    errors: &'a [(usize, String, String)],
+}
+
+async fn persist_batch(
+    state: &AppState,
+    staging: ImportBatchStaging<'_>,
 ) -> Result<(), sqlx::Error> {
     sqlx::query(
         "INSERT INTO import_batches (batch_id, file_sha256, row_total, row_ok, status, created_by) \
          VALUES (?, ?, ?, ?, 'draft', ?)",
     )
-    .bind(batch_id)
-    .bind(sha_hex)
-    .bind(row_total)
-    .bind(row_ok)
-    .bind(created_by)
+    .bind(staging.batch_id)
+    .bind(staging.sha_hex)
+    .bind(staging.row_total)
+    .bind(staging.row_ok)
+    .bind(staging.created_by)
     .execute(&state.pool)
     .await?;
-    for (line_no, draft) in drafts {
+    for (line_no, draft) in staging.drafts {
         sqlx::query(
             "INSERT INTO import_rows (batch_id, row_no, raw_line, status, draft_json) \
              VALUES (?, ?, '', 'ok', ?)",
         )
-        .bind(batch_id)
+        .bind(staging.batch_id)
         .bind(*line_no as i64)
         .bind(serde_json::to_string(draft).unwrap_or_default())
         .execute(&state.pool)
         .await?;
     }
-    for (line_no, raw, msg) in errors {
+    for (line_no, raw, msg) in staging.errors {
         sqlx::query(
             "INSERT INTO import_rows (batch_id, row_no, raw_line, status, error_msg, draft_json) \
              VALUES (?, ?, ?, 'error', ?, '{}')",
         )
-        .bind(batch_id)
+        .bind(staging.batch_id)
         .bind(*line_no as i64)
         .bind(raw)
         .bind(msg)
@@ -2398,6 +2405,8 @@ pub struct PivotMatrix {
     pub row_totals: Vec<String>,
     pub col_totals: Vec<String>,
     pub grand_total: String,
+    /// OQ-10-2: true when row_keys exceeded the cap and folded into OTHER.
+    pub rows_truncated: bool,
 }
 
 #[derive(Template)]
@@ -2472,7 +2481,22 @@ async fn report_pivot_page(
         .await
         .unwrap_or_default();
 
-    let matrix = assemble_pivot(&raw_cells, measure);
+    eprintln!(
+        "DIAG_ASSEMBLE raw_cells={} rows_truncated_in_fn=NA",
+        raw_cells.len()
+    );
+    let matrix = assemble_pivot(&raw_cells, measure, 20);
+    eprintln!(
+        "DIAG_RK len={} first={} last={} trunc={}",
+        matrix.row_headers.len(),
+        matrix
+            .row_headers
+            .first()
+            .map(|s| s.as_str())
+            .unwrap_or("-"),
+        matrix.row_headers.last().map(|s| s.as_str()).unwrap_or("-"),
+        matrix.rows_truncated
+    );
     let template = PivotTemplate {
         acting_user: session.user_id.clone(),
         rows_dim: rows_dim.to_string(),
@@ -2486,7 +2510,7 @@ async fn report_pivot_page(
 
 /// Assemble raw (row, col, value) triples into a full matrix with totals.
 /// Pure function over sorted data — derivable and unit-testable.
-fn assemble_pivot(raw: &[(String, String, i64)], measure: &str) -> PivotMatrix {
+fn assemble_pivot(raw: &[(String, String, i64)], measure: &str, max_rows: usize) -> PivotMatrix {
     use std::collections::BTreeMap;
     let mut row_keys: Vec<String> = Vec::new();
     let mut col_keys: Vec<String> = Vec::new();
@@ -2502,10 +2526,40 @@ fn assemble_pivot(raw: &[(String, String, i64)], measure: &str) -> PivotMatrix {
     }
     row_keys.sort();
     col_keys.sort();
+    // OQ-10-2: cap rows at max_rows (top by row total) so the matrix cannot
+    // explode with thousands of accounts; truncated rows fold into an
+    // explicit OTHER bucket (explainable, not silently dropped).
+    let mut rows_truncated = false;
+    if row_keys.len() > max_rows {
+        rows_truncated = true;
+        let mut ranked: Vec<(String, i64)> = row_keys
+            .iter()
+            .map(|r| {
+                let total: i64 = col_keys
+                    .iter()
+                    .map(|c| cells.get(&(r.clone(), c.clone())).copied().unwrap_or(0))
+                    .sum();
+                (r.clone(), total)
+            })
+            .collect();
+        ranked.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| a.0.cmp(&b.0)));
+        let dropped: Vec<String> = ranked[max_rows..].iter().map(|(r, _)| r.clone()).collect();
+        row_keys = ranked[..max_rows].iter().map(|(r, _)| r.clone()).collect();
+        for c in &col_keys {
+            let sum: i64 = dropped
+                .iter()
+                .map(|r| cells.get(&(r.clone(), c.clone())).copied().unwrap_or(0))
+                .sum();
+            if sum != 0 {
+                *cells.entry(("OTHER".to_string(), c.clone())).or_insert(0) += sum;
+            }
+        }
+        row_keys.push("OTHER".to_string());
+    }
 
     let fmt = |v: i64| -> String { format_minor(v, 2) };
     let mut row_totals: Vec<String> = Vec::new();
-    let mut col_totals: Vec<String> = vec![0.to_string(); col_keys.len()];
+    let mut col_totals: Vec<i64> = vec![0; col_keys.len()];
     let mut grand: i64 = 0;
     let mut rendered_rows: Vec<Vec<String>> = Vec::new();
 
@@ -2515,7 +2569,7 @@ fn assemble_pivot(raw: &[(String, String, i64)], measure: &str) -> PivotMatrix {
         for (ci, c) in col_keys.iter().enumerate() {
             let v = cells.get(&(r.clone(), c.clone())).copied().unwrap_or(0);
             row_sum += v;
-            col_totals[ci] = (col_totals[ci].parse::<i64>().unwrap_or(0) + v).to_string();
+            col_totals[ci] += v;
             row_cells.push(fmt(v));
         }
         row_totals.push(fmt(row_sum));
@@ -2529,13 +2583,12 @@ fn assemble_pivot(raw: &[(String, String, i64)], measure: &str) -> PivotMatrix {
         row_headers: row_keys,
         cells: rendered_rows,
         row_totals,
-        col_totals: col_totals
-            .iter()
-            .map(|c| fmt(c.parse::<i64>().unwrap_or(0)))
-            .collect(),
+        col_totals: col_totals.iter().map(|v| fmt(*v)).collect(),
         grand_total: fmt(grand),
+        rows_truncated,
     }
 }
+
 /// Query the data needed by the page and render the template. Any database
 /// failure degrades to the disconnected layout (db_connected = false, FR-004)
 /// instead of hiding the whole UI.
@@ -3628,6 +3681,108 @@ mod tests {
         );
     }
 
+    #[tokio::test]
+    async fn pivot_caps_rows_and_folds_into_other_bucket() {
+        let (app, pool, cookie, _csrf) = seeded_app_with_admin().await;
+
+        // PIV-003: 30 accounts x 1 month -> matrix capped at 20 rows, the
+        // remaining totals folded into the OTHER row (explainable, not
+        // silently dropped).
+        sqlx::query(
+            "WITH RECURSIVE seq(n) AS (SELECT 0 UNION ALL SELECT n + 1 FROM seq WHERE n < 29) \
+             INSERT INTO accounts (account_id, account_code, account_name, account_type, currency, is_active) \
+             SELECT 'PIV-' || n, 'PV' || n, 'Pivot ' || n, 'ASSETS', 'TWD', 1 FROM seq",
+        )
+        .execute(&pool)
+        .await
+        .expect("seed 30 accounts");
+
+        sqlx::query(
+            "INSERT INTO transactions (transaction_id, transaction_code, transaction_date, description, status, created_by) \
+             VALUES ('piv-t1', 'TX-PIV', '2026-11-05', 'p', 'POSTED', 'tester')",
+        )
+        .execute(&pool)
+        .await
+        .expect("seed header");
+
+        // 30 debit legs (one per account), all on one transaction.
+        let mut values: Vec<String> = Vec::new();
+        for n in 0..30 {
+            values.push(format!(
+                "('piv-i{}', 'piv-t1', 'PIV-{}', 'DEBIT', {}, 'TWD', 10000)",
+                n,
+                n,
+                100 + n
+            ));
+        }
+        sqlx::query(&format!(
+            "INSERT INTO transaction_items (item_id, transaction_id, account_id, item_type, amount_minor, currency, exchange_rate) VALUES {}",
+            values.join(", ")
+        ))
+        .execute(&pool)
+        .await
+        .expect("seed 30 legs");
+
+        let (status, page, _) = get_with_location(
+            &app,
+            "/reports/pivot?rows=account&cols=month&measure=debit",
+            &cookie,
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK);
+        // Capped at 20 rows + the OTHER fold row.
+        assert!(
+            page.contains("Rows capped at 20") && page.contains("OTHER"),
+            "truncation must be visible"
+        );
+        // Top-20 = PIV-10..PIV-29 (1.10..1.29); dropped PIV-0..PIV-9 fold
+        // into OTHER = 1045 minor = 10.45.
+        assert!(page.contains(">1.29<"), "top row boundary must be kept");
+        let mut piv_rows: Vec<String> = Vec::new();
+        let mut search = 0usize;
+        while let Some(pos) = page[search..].find("PIV-1") {
+            let abs = search + pos;
+            piv_rows.push(page[abs..(abs + 6).min(page.len())].to_string());
+            search = abs + 6;
+        }
+        eprintln!(
+            "DIAG10 piv_rows={:?} has_1_10={} has_1_29={} has_other={}",
+            piv_rows,
+            page.contains(">1.10<"),
+            page.contains(">1.29<"),
+            page.contains("OTHER")
+        );
+        assert!(
+            page.contains(">10.45<"),
+            "OTHER folded total (1045 minor = 10.45)"
+        );
+        assert!(
+            !page.contains(">1.00<"),
+            "dropped rows must not appear as-is"
+        );
+        // Top-20 = PIV-10..PIV-29 (1.10..1.29).
+        assert!(page.contains(">1.29<"), "top row boundary must be kept");
+        assert!(page.contains(">1.10<"), "top row start must be kept");
+    }
+
+    #[tokio::test]
+    async fn ai_suggest_rejects_forged_csrf_token() {
+        let (app, _pool, cookie, _csrf) = seeded_app_with_admin().await;
+        let request = Request::builder()
+            .method("POST")
+            .uri("/drafts/ai_suggest")
+            .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+            .header(header::COOKIE, cookie)
+            .body(Body::from("csrf_token=forged&text=test"))
+            .unwrap();
+        let (status, _, _) = send(app, request).await;
+        assert_eq!(
+            status,
+            StatusCode::FORBIDDEN,
+            "ai_suggest must enforce CSRF (T-08)"
+        );
+    }
+
     // ------------------------------------------------------------------
     // Slice 10 acceptance: parallel coordinates (PAR-001/002)
     // ------------------------------------------------------------------
@@ -3873,5 +4028,74 @@ mod tests {
                 .await
                 .expect("count");
         assert_eq!(after, 0, "expired sessions must be purged at login");
+    }
+
+    // ------------------------------------------------------------------
+    // Slice 10 acceptance: parse coverage (COV-001)
+    // ------------------------------------------------------------------
+
+    #[tokio::test]
+    async fn parse_coverage_computes_hit_ratio() {
+        let (app, pool, cookie, _csrf) = seeded_app_with_admin().await;
+        seed_credentials(&pool).await;
+
+        // 4 drafts: 2 complete, 2 incomplete -> 50%.
+        for (idx, complete) in [true, false, true, false].iter().enumerate() {
+            let json = if *complete {
+                r#"{"date":"2026-11-04","amount_minor":100,"debit_account":"A","credit_account":"B","currency":"TWD","evidence":[]}"#
+            } else {
+                r#"{"date":null,"amount_minor":null,"debit_account":null,"credit_account":null,"currency":null,"evidence":[]}"#
+            };
+            sqlx::query(
+                "INSERT INTO drafts (draft_id, source, draft_json, created_by) VALUES (?, 'text', ?, 'user-admin')",
+            )
+            .bind(format!("cov-{idx}"))
+            .bind(json)
+            .execute(&pool)
+            .await
+            .expect("seed draft");
+        }
+
+        let request = Request::builder()
+            .uri("/admin/parse_coverage")
+            .header(header::COOKIE, cookie)
+            .body(Body::empty())
+            .unwrap();
+        let (status, body, _) = send(app, request).await;
+        assert_eq!(status, StatusCode::OK);
+        assert!(body.contains("50%"), "coverage ratio must be 50% (COV-001)");
+        assert!(body.contains("4"), "total drafts must be shown");
+    }
+
+    // ------------------------------------------------------------------
+    // Slice 10 acceptance: builder refactor (H-001)
+    // ------------------------------------------------------------------
+
+    #[test]
+    fn transaction_builder_constructs_domain_objects() {
+        let built = flaps_core::ledger::transaction::Transaction::builder()
+            .transaction_id("tx-b1")
+            .transaction_code("TX-BUILDER")
+            .transaction_date(chrono::NaiveDate::from_ymd_opt(2026, 11, 4).unwrap())
+            .description("builder test")
+            .reference_number(None)
+            .status("POSTED")
+            .source_type(Some("test".to_string()))
+            .created_by("tester")
+            .build()
+            .expect("builder must construct");
+        assert_eq!(built.transaction_code, "TX-BUILDER");
+
+        let item = flaps_core::ledger::transaction::TransactionItem::builder()
+            .item_id("it-b1")
+            .transaction_id("tx-b1")
+            .account_id("ACC-B")
+            .item_type("DEBIT")
+            .amount_minor(100)
+            .currency("TWD")
+            .exchange_rate_scaled(10_000)
+            .build()
+            .expect("builder must construct");
+        assert_eq!(item.amount_minor, 100);
     }
 }

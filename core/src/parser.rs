@@ -262,17 +262,24 @@ pub fn parse_ai_suggestion(text: &str) -> Result<ParsedSuggestion, String> {
     }
     let debit = suggestion.debit_account.trim().to_string();
     let credit = suggestion.credit_account.trim().to_string();
-    if debit.is_empty() || credit.is_empty() || debit.eq_ignore_ascii_case(&credit) {
-        return Err("schema 驗證失敗（借貸科目空白或相同）".to_string());
+    // DDD value objects: construction-time validation (plan v3 §15).
+    crate::value_objects::AccountId::new(&debit)
+        .map_err(|e| format!("schema 驗證失敗（借方科目）：{e}"))?;
+    crate::value_objects::AccountId::new(&credit)
+        .map_err(|e| format!("schema 驗證失敗（貸方科目）：{e}"))?;
+    if debit.eq_ignore_ascii_case(&credit) {
+        return Err("schema 驗證失敗（借貸科目相同）".to_string());
     }
+    let money = crate::value_objects::Money::new(amount_minor, &suggestion.currency)
+        .map_err(|e| format!("schema 驗證失敗（{e}）"))?;
 
     Ok(ParsedSuggestion {
         date,
         debit_account: debit,
         credit_account: credit,
-        amount_minor,
-        amount_display: crate::money::format_minor(amount_minor, 2),
-        currency: suggestion.currency,
+        amount_minor: money.minor(),
+        amount_display: money.display(),
+        currency: money.currency().to_string(),
     })
 }
 

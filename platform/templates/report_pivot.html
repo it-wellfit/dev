@@ -29,6 +29,12 @@
         <section aria-labelledby="pivot-title">
             <h2 id="pivot-title">樞紐矩陣（rows：{{ rows_dim }}｜cols：{{ cols_dim }}｜measure：{{ measure }}｜期間：{{ ym }}）</h2>
 
+            {% if matrix.rows_truncated %}
+            <div class="degraded-state" role="status">
+                <strong>Rows capped at 20</strong>
+                <p>Remaining account totals are folded into the OTHER row (explainable, not silently dropped); narrow the period or use the monthly CSV for the full set.</p>
+            </div>
+            {% endif %}
             <div class="table-wrap">
                 <table>
                     <caption>{{ measure }} 樞紐（列：{{ rows_dim }}，欄：{{ cols_dim }}）</caption>

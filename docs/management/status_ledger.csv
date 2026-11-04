@@ -1,8 +1,8 @@
 ﻿專案ID,專案名稱,類型,階段,進度%,風險燈,阻礙,Owner,下一里程碑,里程碑日期,最後更新
 FLAPS-ROOT,Flaps ERP root workspace,R,原型,30,紅,clippy 18/fmt 192 (core/platform/web);flaps_bridge 完成(feature-gated COM, 7 tests綠/clippy 0/fmt 0, real-com feature builds);測試規格 21 項,DEV,root clippy/fmt 修補(R-04),2026-11-14,2026-11-03
-WELLFIT,Wellfit ERP 介接引擎,P,執行中,94,綠,BankPay QR stub 待沙盒;git remote 已設未 push;erp-batch/perf 腳本入庫;OQ-F1/F2 提案包已撰寫待送出,DEV,P2 端到端試行(T-202),2026-11-16,2026-11-03
+WELLFIT,Wellfit ERP 介接引擎,P,執行中,96,綠,3 commits 已入庫(Phase 1-3/整備文件/S1-1 影子擷取);397 tests綠;BankPay QR stub 待沙盒;git remote 待修正未 push;OQ-F1/F2 待原廠,DEV,Stage 1 影子試行(真實資料首跑),2026-11-18,2026-11-04
 EKPI,EKPI Platform,P,執行中,95,黃,78 檔 dirty;3 P0 缺陷,PMT/DEV,G5 部署,2026-12-15,2026-11-03
-RPA-ECOM,FlapsErp RPA 電商對接,N,需求,20,綠,ADR-003 已發(Layer3 三軌修正);OQ-F1/F2 待原廠,PMT,偵察 session+ADR-003 定稿,2026-11-10,2026-11-03
+RPA-ECOM,FlapsErp RPA 電商對接,N,需求,25,綠,ADR-003 已發;OQ-F1/F2 收件手冊已備;影子擷取(S1-1)完成待真實資料,PMT,偵察 session+ADR-003 定稿,2026-11-10,2026-11-04
 SYNCMESH,SyncMesh 同步引擎,P,執行中,85,綠,git clean;docs 齊全,X,維運,持續,2026-11-03
 RETOOL,re-toolchain 逆向工程,R,執行中,70,紅,無 git;evidence 空,DEV,建立 repo,2026-11-10,2026-11-03
 OEKAP,oekap 知識平台,P,執行中,75,紅,無 git,DEV,建立 repo,2026-11-10,2026-11-03
