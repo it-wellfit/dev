@@ -222,6 +222,7 @@ pub fn router(state: AppState) -> Router {
         .route("/transactions", post(create_transaction))
         .route("/admin/users", get(admin_users).post(admin_create_user))
         .route("/admin/users/toggle", post(admin_toggle_user))
+        .route("/admin/users/reset_password", post(admin_reset_password))
         .route("/import", get(import_upload_page))
         .route("/import/preview", post(import_preview))
         .route("/import/confirm", post(import_confirm))
@@ -708,9 +709,102 @@ async fn admin_toggle_user(
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("更新失敗：{e}")))
         .ok();
 
+    // P1-9: an account that is now inactive must lose its live sessions
+    // immediately (a deactivated operator must not keep working until the
+    // session naturally expires).
+    let (is_active,): (i64,) = sqlx::query_as("SELECT is_active FROM users WHERE user_id = ?")
+        .bind(&form.user_id)
+        .fetch_one(&state.pool)
+        .await
+        .unwrap_or((1,));
+    if is_active == 0 {
+        let _ = sqlx::query("DELETE FROM sessions WHERE user_id = ?")
+            .bind(&form.user_id)
+            .execute(&state.pool)
+            .await;
+    }
+
     Redirect::to("/admin/users").into_response()
 }
 
+#[derive(Debug, Deserialize)]
+pub struct AdminResetPasswordForm {
+    pub csrf_token: String,
+    pub user_id: String,
+    pub new_password: String,
+}
+
+/// POST /admin/users/reset_password — administrator sets a new password for
+/// an account (P1-8 residual). The old hash is replaced (Argon2id), all
+/// existing sessions of that account are revoked (a leaked password must not
+/// keep working after a reset), and the change is audited.
+async fn admin_reset_password(
+    State(state): State<AppState>,
+    session: Extension<Session>,
+    Form(form): Form<AdminResetPasswordForm>,
+) -> Response {
+    if !can_manage_users(&state, &session.user_id).await {
+        return render_admin_forbidden(&state, &session).await;
+    }
+    if form.csrf_token != session.csrf_token {
+        return (
+            StatusCode::FORBIDDEN,
+            "CSRF 驗證失敗；請重新整理頁面後再操作。".to_string(),
+        )
+            .into_response();
+    }
+    if form.new_password.len() < 8 {
+        return (
+            StatusCode::BAD_REQUEST,
+            "新密碼長度不足（至少 8 字元）；請設定更長的密碼。".to_string(),
+        )
+            .into_response();
+    }
+    let (exists,): (i64,) = sqlx::query_as("SELECT COUNT(*) FROM users WHERE user_id = ?")
+        .bind(&form.user_id)
+        .fetch_one(&state.pool)
+        .await
+        .unwrap_or((0,));
+    if exists == 0 {
+        return (StatusCode::BAD_REQUEST, "帳號不存在。".to_string()).into_response();
+    }
+
+    let hash = match auth::hash_password(&form.new_password) {
+        Ok(h) => h,
+        Err(e) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("密碼雜湊失敗：{e}"),
+            )
+                .into_response()
+        }
+    };
+    sqlx::query("UPDATE users SET password_hash = ? WHERE user_id = ?")
+        .bind(&hash)
+        .bind(&form.user_id)
+        .execute(&state.pool)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("更新失敗：{e}")))
+        .ok();
+
+    // Security: revoke the target account's sessions after a reset.
+    let _ = sqlx::query("DELETE FROM sessions WHERE user_id = ?")
+        .bind(&form.user_id)
+        .execute(&state.pool)
+        .await;
+
+    // Audit: password resets are security events (transaction_id NULL).
+    let _ = sqlx::query(
+        "INSERT INTO audit_log (log_id, transaction_id, event_type, event_data, performed_by) VALUES (?, NULL, 'PASSWORD_RESET', ?, ?)",
+    )
+    .bind(uuid::Uuid::new_v4().to_string())
+    .bind(format!("{{\"user_id\":\"{}\"}}", form.user_id))
+    .bind(&session.user_id)
+    .execute(&state.pool)
+    .await;
+
+    Redirect::to("/admin/users").into_response()
+}
 async fn build_admin_page(
     state: &AppState,
     session: &Session,
@@ -1945,8 +2039,7 @@ mod tests {
     async fn seed_credentials(pool: &SqlitePool) {
         let admin_hash = auth::hash_password(TEST_ADMIN_PASSWORD).expect("hash admin");
         sqlx::query(
-            "INSERT OR IGNORE INTO users (user_id, username, password_hash, is_active) \
-             VALUES ('user-admin', 'admin', ?, 1)",
+            "INSERT OR IGNORE INTO users (user_id, username, password_hash, is_active) VALUES ('user-admin', 'admin', ?, 1)",
         )
         .bind(&admin_hash)
         .execute(pool)

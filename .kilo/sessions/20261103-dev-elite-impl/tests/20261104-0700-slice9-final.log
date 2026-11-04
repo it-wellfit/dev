@@ -1,0 +1,133 @@
+﻿cargo :     Finished `test` profile [unoptimized + debuginfo] target(s) in 0.56s
+位於 線路:4 字元:170
++ ...  | Out-Null; "CLIPPY=$LASTEXITCODE"; cargo test --locked 2>&1 | Out-F ...
++                                          ~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (    Finished `t...get(s) in 0.56s:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+     Running unittests src\lib.rs (target\debug\deps\flaps_bridge-f2b120b80865bba6.exe)
+
+running 7 tests
+test real_com_tests::real_com_not_active_by_default ... ok
+test tests::mock_envelope_matches_measured_floor ... ok
+test tests::empty_batch_is_rejected ... ok
+test tests::failure_restores_pending_calls_atomically ... ok
+test tests::batch_flush_returns_all_results_in_order ... ok
+test tests::max_batch_splits_large_queues ... ok
+test tests::batching_beats_per_call_under_measured_envelope ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.06s
+
+     Running unittests src\lib.rs (target\debug\deps\flaps_core-6257194eba89b93c.exe)
+
+running 22 tests
+test money::tests::parse_exact_values ... ok
+test money::tests::format_round_trips ... ok
+test parser::tests::parse_garbage_yields_empty_draft ... ok
+test money::tests::parse_rejects_overflow ... ok
+test money::tests::parse_rejects_non_representable_input ... ok
+test parser::tests::parse_rejects_overprecise_amounts_silently ... ok
+test parser::tests::parse_without_arrow_leaves_legs_empty_but_dates_amounts_filled ... ok
+test parser::tests::parse_worked_example_from_plan ... ok
+test parser::tests::parse_zh_date_and_arrow_ascii ... ok
+test permission::tests::get_user_permissions_returns_codes_deduped ... ok
+test permission::tests::has_permission_matches_code_not_id ... ok
+test ledger::engine::tests::unbalanced_entry_is_rejected ... ok
+test ledger::engine::tests::invalid_item_type_is_rejected ... ok
+test ledger::engine::tests::nonpositive_exchange_rate_is_rejected ... ok
+test ledger::engine::tests::one_sided_entry_is_rejected ... ok
+test ledger::engine::tests::amount_over_cap_is_rejected ... ok
+test ledger::engine::tests::negative_amount_is_rejected ... ok
+test ledger::engine::tests::empty_items_are_rejected ... ok
+test ledger::engine::tests::zero_amount_item_is_rejected ... ok
+test ledger::engine::tests::future_date_is_rejected ... ok
+test ledger::engine::tests::balanced_entry_posts_and_roundtrips ... ok
+test ledger::engine::tests::auto_creates_missing_accounts ... ok
+
+test result: ok. 22 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running unittests src\lib.rs (target\debug\deps\platform-f7abe79d02fd1d99.exe)
+
+running 33 tests
+test api::tests::design_system_css_is_served ... ok
+test api::tests::health_reports_database_status ... ok
+test api::tests::dashboard_renders_chart_svg_zero_js ... ok
+test api::tests::admin_cannot_deactivate_self ... ok
+test api::tests::admin_users_forbidden_without_role_manage ... ok
+test api::tests::import_confirm_is_replay_guarded ... ok
+test api::tests::import_confirm_posts_only_valid_rows ... ok
+test api::tests::monthly_report_page_and_csv_render_posted_data ... ok
+test api::tests::drafts_parse_creates_draft_and_wizard_prefills ... ok
+test api::tests::get_index_renders_zero_js_page ... ok
+test auth::tests::rate_limiter_is_per_username_and_case_insensitive ... ok
+test api::tests::logout_revokes_the_session ... ok
+test api::tests::deactivated_user_cannot_login ... ok
+test auth::tests::rate_limiter_locks_after_threshold ... ok
+test api::tests::unauthenticated_get_redirects_to_login ... ok
+test auth::tests::rate_limiter_resets_on_success ... ok
+test db::tests::migration_is_safe_on_legacy_dynamic_schema ... ok
+test db::tests::migrations_are_idempotent_on_replay ... ok
+test db::tests::integer_money_schema_roundtrip ... ok
+test api::tests::post_rejects_negative_amount ... ok
+test db::tests::migrations_create_all_baseline_tables ... ok
+test api::tests::login_failure_shows_generic_error ... ok
+test api::tests::import_preview_reports_and_persists_no_ledger_effects ... ok
+test auth::tests::rate_limiter_unlocks_after_lockout_window ... ok
+test api::tests::post_rejects_future_date ... ok
+test api::tests::post_rejects_more_than_two_decimal_places ... ok
+test api::tests::admin_creates_user_who_can_then_login ... ok
+test api::tests::post_rejects_same_debit_and_credit_account ... ok
+test api::tests::post_requires_ledger_write_permission ... ok
+test api::tests::post_then_get_shows_posted_transaction_end_to_end ... ok
+test api::tests::post_rejects_wrong_csrf_token ... ok
+test api::tests::wizard_step2_rejects_same_account_and_preserves_values ... ok
+test auth::tests::login_lockout_survives_correct_password ... ok
+
+test result: ok. 33 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 6.60s
+
+     Running unittests src\bin\flaps-server.rs (target\debug\deps\flaps_server-0f6f79d447a8e740.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\close_out.rs (target\debug\deps\close_out-79fd94bee6a6461f.exe)
+
+running 4 tests
+test css_design_tokens_are_in_sync_between_docs_and_deployment ... ok
+test monthly_report_stays_under_500ms_with_2000_transactions ... ok
+test deactivating_a_user_revokes_their_live_session ... ok
+test admin_password_reset_revokes_sessions_and_rotates_credentials ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.74s
+
+     Running unittests src\lib.rs (target\debug\deps\web-1cce8e30b7a46dec.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests flaps_bridge
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests flaps_core
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests platform
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests web
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
