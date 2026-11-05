@@ -144,12 +144,18 @@
 - `grep -rn "f64" Dev/platform-hub/crates/udm/src/` → 僅允許出現在統計/評分欄位（且需註解說明不參與金額運算）
 - `grep -rn "kafka" Dev/platform-hub/Cargo.toml` → 0 命中（Kafka 僅為 trait 空槽）
 
-### Phase C — EKPI 治理面接軌
+### Phase C — EKPI 中樞擴充（沿用既有 Clean Architecture 分層，不另起平行架構）
 
-- **C1** `ekpi-platform/platform/src/` 新增 `workflow.rs`：以 `platform-hub` 的 `workflow` crate 為模型來源（**透過 API/事件而非 crate 依賴**），提供 EKPI 側的簽核任務檢視與操作端點。
-- **C2** `api.rs` 擴充路由（既有僅 `/health`、`/api/v1/cases/:id/decide`、`/api/v1/cases/:id/snapshot`）：新增 `/api/v1/workflows`、`/api/v1/approvals`、`/api/v1/approvals/:id/decide`、`/api/v1/events/replay`（僅本機、需角色權限）。沿用既有 `local_auth.rs` session 與分權（Viewer/Editor/Approver）。
-- **C3** `governance_web` 工作台新增簽核任務頁（CSS-first、零 JS、表單 POST + PRG，讀取用 GET）。含多急分級顯示、逾時升級提示、稽核鏈連結。
-- **C4** 稽核對接：`audit.rs` 的 SHA-256 追加式鏈納入平台側簽核事件（事件以 `source = "platform-hub"` 進入同一鏈格式），確保跨系統事件可驗證完整性。
+> **重要修正**（相對於初版計畫）：ekpi-platform 已有完整 6-crate Clean Architecture、PostgreSQL 18.6 adapters、Argon2id、CSRF、零 JS 工作台、稽核鏈。**本階段為擴充既有分層，不是新增 `platform/src/workflow.rs` 平行模組**（那會繞過 domain/application/adapters 分層，違反 Clean Architecture 與 `cargo_workspace_architecture` 決策）。
+
+- **C1** `ekpi-platform/crates/domain/src/` 新增 `workflow.rs`（**零 I/O、零框架依賴**，與既有 `governance.rs`/`tenant.rs`/`auth.rs` 同層）：定義 `WorkflowDefinition`（可版本化、stage 數量不限）、`Stage`（approver_rule / sla / urgency / conditions / escalation_path / on_timeout）、`ApprovalTask`（Pending → Approved/Rejected/Escalated/Expired/Cancelled）、`ConditionExpr`（金額門檻/平台/資料分類/風險分數/異常旗標的布林組合，**確定性求值，無模型推論**）、`Urgency`（Low/Normal/High/Critical）、`AgentDecision`。
+- **C2** `ekpi-platform/crates/domain/src/` 新增 `channels.rs`：`ChannelAdapter` trait 契約的**領域側**定義（`platform_id()` / `capabilities()` / `fetch_orders()` / `push_inventory()` / `verify_webhook_signature()` / `health()`）與 `FormatDeriver` trait（雙向格式衍生）。實作放在 `crates/adapters`。
+- **C3** `ekpi-platform/crates/application/src/ports.rs` 新增 port trait：`ApprovalRepository`（動態簽核任務 CRUD + 升級 + 清理）、`ChannelRepository`（適配器註冊與健康狀態）、`EventStore`（outbox/inbox 冪等存取）。**只定義介面，不命名具體實作**（沿用該檔既有風格：`GovernanceRepository` / `UserRepository` / `SessionRepository` / `AuditSink` / `Clock` / `TokenGenerator` / `LoginThrottle`）。新增 `GovernanceError` 語意保持不變（Validation/NotFound/Conflict/Storage），供簽核錯誤沿用。
+- **C4** `ekpi-platform/crates/application/src/` 新增 `approval.rs`：簽核用例（建立流程定義、發布、提交任務、核准、駁回、升級、逾期清理、Agent 自動核准閘）。Agent 判斷（`agent_policy`）在此層，**邊界**：Agent 僅能建議或在預授權低風險範圍自動核准；高風險/付費/敏感分類強制人工；失敗 fail-closed 退回人工。
+- **C5** `ekpi-platform/crates/adapters/src/postgres/` 新增 `approval.rs` + `channels.rs`：以既有 `postgres/governance.rs` 的 `pg_advisory_xact_lock` + `governance_audit_sequence` + SHA-256 鏈寫入序列化模式實作；對應 **新增 migration**（`migrations/<ts>_approval_workflow.sql`：approval_workflows / approval_stages / approval_tasks / channel_registry / event_outbox / event_inbox，含 FK、CHECK、索引）。既有 migration **不得**原地修改（migration_rules：破壞性變更採 Expand-and-Contract）。
+- **C6** `ekpi-platform/apps/web/` 擴充路由與頁面：`api.rs`（既有 `/health`、`/api/v1/cases/:id/decide`、`/api/v1/cases/:id/snapshot`）新增 `/api/v1/workflows`、`/api/v1/approvals`、`/api/v1/approvals/:id/decide`、`/api/v1/events/replay`（僅本機、需 approver 角色）。工作台新增簽核任務頁（**CSS-first、零 JS、表單 POST + PRG、讀取 GET**；沿用既有 `apps/web/templates/home.html` + `templates.rs` + `tests/zero_js_tests.rs` 規約），含多急分級顯示、逾時升級提示、稽核鏈連結。
+- **C7** 稽核對接：平台側簽核事件以 `source = "platform-hub"` 進入既有 `governance_audit_events` 鏈（`crates/adapters/src/postgres/governance.rs`），確保跨系統事件可驗證完整性；既有 `verify_integrity()` 涵蓋新事件類別。
+- **C8** 對帳：`wellfit_integration`（既有對帳/切換模組）擴充為三方對帳（EKPI 決策 ↔ 事件骨幹 ↔ Wellfit 執行結果），差異產出隔離清單而非靜默修正。**跨 repo 僅以 API/事件契約互通，不得 path dependency**。
 - **C5** 對帳：`wellfit_integration`（既有對帳/切換模組）擴充為三方對帳（EKPI 決策 ↔ 事件骨幹 ↔ Wellfit 執行結果），差異產出隔離清單而非靜默修正。
 
 **驗收**：EKPI `cargo test --locked` 全通過；既有 270 release-profile 測試數不得下降（只增不減）；`governance_web` 零 JS 合規測試通過；跨系統事件完整性鏈可驗證。
