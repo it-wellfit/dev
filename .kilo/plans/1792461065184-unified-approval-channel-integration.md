@@ -153,12 +153,23 @@
 - **C3** `ekpi-platform/crates/application/src/ports.rs` 新增 port trait：`ApprovalRepository`（動態簽核任務 CRUD + 升級 + 清理）、`ChannelRepository`（適配器註冊與健康狀態）、`EventStore`（outbox/inbox 冪等存取）。**只定義介面，不命名具體實作**（沿用該檔既有風格：`GovernanceRepository` / `UserRepository` / `SessionRepository` / `AuditSink` / `Clock` / `TokenGenerator` / `LoginThrottle`）。新增 `GovernanceError` 語意保持不變（Validation/NotFound/Conflict/Storage），供簽核錯誤沿用。
 - **C4** `ekpi-platform/crates/application/src/` 新增 `approval.rs`：簽核用例（建立流程定義、發布、提交任務、核准、駁回、升級、逾期清理、Agent 自動核准閘）。Agent 判斷（`agent_policy`）在此層，**邊界**：Agent 僅能建議或在預授權低風險範圍自動核准；高風險/付費/敏感分類強制人工；失敗 fail-closed 退回人工。
 - **C5** `ekpi-platform/crates/adapters/src/postgres/` 新增 `approval.rs` + `channels.rs`：以既有 `postgres/governance.rs` 的 `pg_advisory_xact_lock` + `governance_audit_sequence` + SHA-256 鏈寫入序列化模式實作；對應 **新增 migration**（`migrations/<ts>_approval_workflow.sql`：approval_workflows / approval_stages / approval_tasks / channel_registry / event_outbox / event_inbox，含 FK、CHECK、索引）。既有 migration **不得**原地修改（migration_rules：破壞性變更採 Expand-and-Contract）。
-- **C6** `ekpi-platform/apps/web/` 擴充路由與頁面：`api.rs`（既有 `/health`、`/api/v1/cases/:id/decide`、`/api/v1/cases/:id/snapshot`）新增 `/api/v1/workflows`、`/api/v1/approvals`、`/api/v1/approvals/:id/decide`、`/api/v1/events/replay`（僅本機、需 approver 角色）。工作台新增簽核任務頁（**CSS-first、零 JS、表單 POST + PRG、讀取 GET**；沿用既有 `apps/web/templates/home.html` + `templates.rs` + `tests/zero_js_tests.rs` 規約），含多急分級顯示、逾時升級提示、稽核鏈連結。
+- **C6** `ekpi-platform` 擴充路由與頁面。**兩套 web 介面並存，須先定性**（見 C6-0）：
+  - `platform/src/governance_web.rs`（`ekp_platform::governance_web::router`，既有完整治理工作台，18 條路由：`/ready` `/healthz` `/metrics` `/` `/login` `/logout` `/projects` `/evidence` `/evidence/{id}/review` `/workflows` `/workflows/{id}/{version}/publish` `/controls` `/controls/{id}/status` `/lifecycle` `/audit` `/assets/governance.css`；測試於 `platform/tests/governance_web.rs`、`integration_web.rs`、`web_health.rs`）→ **簽核任務頁在此擴充**。
+  - `apps/web`（`ekp_web` binary，較新的骨架 app，僅 `/` `/health` `/submit`，Askama `templates/home.html`，`tests/zero_js_tests.rs`）→ 保留為新架構落點，但**功能尚未接上**。
+  - **C6-0**（前置決策，見 §7-9）：確認 `apps/web` 是否為治理工作台的未來落點。若是，簽核頁建於 `apps/web`；若否，簽核頁建於 `governance_web.rs`，`apps/web` 維持骨架。**此選擇影響 C6 全部後續步驟，不得邊做邊決定**。
+  - **C6-1** 路由新增（兩種情形皆適用）：`/api/v1/workflows`、`/api/v1/approvals`、`/api/v1/approvals/{id}/decide`、`/api/v1/events/replay`（僅本機、需 approver 角色）。既有 `platform/src/api.rs:49` 的 3 條路由不動。
+  - **C6-2** 工作台新增簽核任務頁：**CSS-first、零 JS、表單 POST + PRG、讀取 GET**；含多急分級顯示、逾時升級提示、稽核鏈連結。沿用 `governance_web.rs` 既有模板與 `assets/governance.css` 慣例。
+  - **C6-3** **修正 `apps/web/src/main.rs:78-91` 的 CSRF 缺陷**：目前 `generate_csrf_token()` 以 `as_nanos()` 時間戳生成、`validate_csrf_token()` 僅檢查前綴 `csrf-`（可預測、可偽造），且程式碼自註「In production, this would verify against a stored session token」。→ 改為 CSPRNG 隨機 token + session 綁定 + 單次使用；不得沿用時間戳方案。此缺陷與本計畫簽核功能直接相關（簽核操作若掛在此 app 即為可偽造的核准）。
 - **C7** 稽核對接：平台側簽核事件以 `source = "platform-hub"` 進入既有 `governance_audit_events` 鏈（`crates/adapters/src/postgres/governance.rs`），確保跨系統事件可驗證完整性；既有 `verify_integrity()` 涵蓋新事件類別。
 - **C8** 對帳：`wellfit_integration`（既有對帳/切換模組）擴充為三方對帳（EKPI 決策 ↔ 事件骨幹 ↔ Wellfit 執行結果），差異產出隔離清單而非靜默修正。**跨 repo 僅以 API/事件契約互通，不得 path dependency**。
 - **C5** 對帳：`wellfit_integration`（既有對帳/切換模組）擴充為三方對帳（EKPI 決策 ↔ 事件骨幹 ↔ Wellfit 執行結果），差異產出隔離清單而非靜默修正。
 
-**驗收**：EKPI `cargo test --locked` 全通過；既有 270 release-profile 測試數不得下降（只增不減）；`governance_web` 零 JS 合規測試通過；跨系統事件完整性鏈可驗證。
+**驗收**：
+- EKPI `cargo test --locked` 全通過；既有 270 release-profile 測試數不得下降（只增不減）
+- `apps/web/tests/zero_js_tests.rs` 零 JS 合規測試通過（新增簽核頁後 `<script>` 計數仍為 0）
+- 跨系統事件完整性鏈可驗證（`verify_integrity()` 涵蓋新事件類別）
+- **CSRF 負向測試**：偽造／重放 token → 403（`apps/web` CSRF 缺陷已修）
+- **簽核權限負向測試**：viewer 角色呼叫 `/api/v1/approvals/{id}/decide` → 403；approver → 成功且寫入稽核鏈
 
 ### Phase D — 根工作區 stub 收斂（金額整數化已由 ADR-0002 落地，僅殘留 2 處）
 
@@ -227,24 +238,36 @@
 | **R-11** | **知識庫無版控 → 規格事實不可追溯、無 rollback、CI 無法驗證** | **高** | **Phase 0：獨立 git + 私有 remote + SHA 釘選 CI 消費 + `kb-verify.ps1`** | **知識庫維護者** |
 | **R-12** | **KB 進版控導致機敏資料外洩（對接樣本含客戶代碼與價格）** | **高** | **Phase 0-2：`.gitignore` 排除 `sources/snapshots/` 與樣本；只留 SHA-256 登錄；remote 必須私有** | **知識庫維護者** |
 | **R-13** | **KB 浮動版（main）造成程式碼與規格事實不同步** | **高** | **Phase 0-4：CI 以釘選 SHA checkout，禁用 `ref: main`** | **DevOps** |
-| **R-14** | **新 crate 擅自升級技術棧（edition 2024 / axum 0.8 / PostgreSQL）違反 ADR-0001** | 中 | **Phase B1 明定沿用 edition 2021 / resolver 2；升級須獨立 POC 並另立 ADR** | 架構負責人 |
+| **R-14** | **新 crate 擅自升級技術棧違反其 Accepted ADR** | 中 | **Phase B1：platform-hub 沿用 ekpi-platform 基線（edition 2024）；根工作區維持 ADR-0001（edition 2021/SQLite）；各自升級須獨立 POC + ADR** | 架構負責人 |
+| **R-15** | **ekpi-platform Phase B 閘門 Blocked（PR-02 部署目標 None；PR-07/08/09/13 未實作）→ C/F 階段的跨機部署與營運控制無處落地** | **高** | **明確標為範圍邊界：本計畫 C 階段在 loopback/本機完成；跨機部署、離機備份、SLO/告警、重試/斷路器、變更治理需擁有者核准部署目標後另立 Phase G。本計畫不得宣稱任何 prod 就緒** | 擁有者／營運負責人 |
+| **R-16** | **Redis 無官方 Windows 原生版，但部署目標含 Windows（sc.exe）** | 中 | **Phase B9 明確：Redis 為可選降級項；Windows 目標改用 Memurai 或 PostgreSQL 內建快取；不得假設 Redis 可用** | 架構負責人 |
+| **R-17** | **清理既有 migration 造成資料遺失**（ekpi-platform 已有 2 個 migration 且 `.sqlx/` 離線查詢已綁定） | 高 | **Phase C5 一律新增 migration，絕不原地修改既有 migration；改 schema 同步更新 `.sqlx/`（`cargo sqlx prepare`）；Expand-and-Contract** | 資料庫負責人 |
 
 ## 7. 未決事項（明確標記為待決，不阻擋 Phase 0–D 執行）
 
 1. **momo 規格取得時程** — 由對接方回覆時程決定 E 階段起點；在此之前 E 階段全部掛起。
 2. **Kafka 啟用條件** — 建議門檻：單表事件寫入持續 >5,000/s 或 outbox 積壓 >100k 且 Postgres 分區仍無法滿足 P99 <100ms。屆時評估 `KafkaEventStore`（`eventbus` crate 已留空槽）。
-3. **Redis 必要性** — 僅在多實例部署或分散式限流需求出現時啟用；單機部署以 in-process 降級。
+3. **Redis 必要性** — 僅在多實例部署或分散式限流需求出現時啟用；單機部署以 in-process 降級。**注意**：Redis 無官方 Windows 原生版，若部署目標含 Windows，需改用 Windows 相容替代（如 Memurai）或以 PostgreSQL 內建快取取代。
 4. **PChome/Cyberbiz 規格** — 各自獨立索取，骨架完成後依 E2–E6 流程填入。
-5. **EKPI 是否併入 Wellfit workspace** — 維持獨立（尊重既有 `no root Cargo workspace` 決策）；若未來合併需另立 ADR。
-6. **KB 私有 remote 位置** — 需擁有者指定（既有 remote 慣例：`github.com/it-wellfit/*`；KB 須為**私有** repo，且不得混入機敏樣本）。
-7. **風控與平台責邊界** — `platform-hub` 屬新系統，其技術選型（PostgreSQL）**不變更**根工作區既有 SQLite 基線（ADR-0001 D-02）；若後續要整體遷移，須另立 POC + ADR。
+5. **KB 私有 remote 位置** — 需擁有者指定（既有 remote 慣例：`github.com/it-wellfit/*`；KB 須為**私有** repo，且不得混入機敏樣本）。
+6. **ekpi-platform 部署目標核准** — PR-02 目前為「None」，Phase B 閘門 Blocked。本計畫可在本機/loopback 完成 C 階段，但**跨機部署、離機備份、SLO/告警、變更治理（PR-07/08/09/13）需擁有者核准部署目標後才可實作**。此為範圍邊界，非本計畫可自行解決。
+7. **三套技術基線是否統一** — ekpi-platform（edition 2024/PostgreSQL）、根工作區（edition 2021/SQLite）、Wellfit（edition 2021/SQLite）並存。統一屬跨系統 POC 議題，需另立 ADR；本計畫維持各系統基線不變。
+8. **`platform-hub` 與 ekpi-platform `crates/channels` 的職責切分** — 建議：`platform-hub` 持**實作**（憑證管理、HTTP 呼叫、轉換器），ekpi-platform `crates/domain` 持**契約**（trait 定義）與**治理**（哪些操作需簽核）；二者以契約測試保持一致。待 A3 ADR 確認。
+9. **ekpi-platform 兩套 web 介面的定性**（影響 C6 全部步驟） — `platform/src/governance_web.rs`（18 條路由、完整治理工作台、已有測試）vs `apps/web`（`ekp_web`，3 條路由、CSRF 實作有缺陷、功能未接上）。選項：(a) 簽核頁建於 `governance_web.rs`，`apps/web` 凍結或刪除；(b) 簽核頁建於 `apps/web`，需補齊 auth/session/CSRF/資料存取後才可承載簽核（工作量較大但與 Clean Architecture 一致）；(c) 兩者並存分工。**建議 (b)**：符合 Clean Architecture 分層意圖（`apps/web` 為 Presentation 層落點），但必須先修 CSRF 並接上 session/auth，**不得**在未修好前把簽核操作掛上**。
 
 ## 8. 參考文件
 
 - `Wellfit/AGENTS.md` §3–§4（建置入口、不變量）、`Wellfit/crates/wellfit_core/src/contract.rs`（名稱解析契約）、`.../access_control.rs`（RBAC）、`.../jit_permission.rs`（JIT 簽核）、`.../scaled.rs`（定點十進位）、`.../ledger.rs`（冪等帳本）、`.../release_gate.rs`（Release Gate）
 - `Wellfit/crates/wellfit_assist/src/data_transformer.rs`（多格式/編碼轉換）、`.../anomaly.rs`（異常偵測）、`.../shadow.rs`（影子模式）
 - `Wellfit/crates/wellfit_integration/src/`（對帳、切換）
-- `ekpi-platform/platform/src/governance.rs`（Ledger/GateDecision/Workflow）、`.../api.rs`（路由）、`.../audit.rs`、`.../local_auth.rs`、`.../governance_web.rs`
+- `ekpi-platform/Cargo.toml`（workspace 定義：6 member、resolver 3、edition 2024、sqlx postgres）、`ekpi-platform/crates/domain/src/governance.rs`（治理領域模型）、`.../tenant.rs`、`.../auth.rs`（角色）
+- `ekpi-platform/crates/application/src/ports.rs`（**port trait 定義風格範本**：GovernanceRepository / UserRepository / SessionRepository / PasswordHasher / Clock / TokenGenerator / LoginThrottle / AuditSink；`GovernanceError` 四態）、`.../governance.rs`、`.../authorization.rs`、`.../authentication.rs`
+- `ekpi-platform/crates/adapters/src/postgres/{mod,pool,governance,identity}.rs`（`pg_advisory_xact_lock` 序列化、`governance_audit_sequence`、SHA-256 鏈）、`.../jsonl_ledger.rs`、`.../audit.rs`、`.../password.rs`（Argon2id）
+- `ekpi-platform/platform/src/governance_web.rs`（**完整治理工作台**：18 條路由、session/CSRF/分權）、`platform/src/api.rs`（3 條既有路由）、`platform/src/audit.rs`、`platform/src/local_auth.rs`、`platform/src/{rules,engine,evidence,snapshot,coverage_report,eval}.rs`
+- `ekpi-platform/apps/web/src/main.rs`（`ekp_web`，**CSRF 缺陷待修**）、`apps/web/src/templates.rs`、`apps/web/templates/home.html`、`apps/web/tests/zero_js_tests.rs`
+- `ekpi-platform/migrations/20261102000000_init.sql`（PostgreSQL 18.6 schema）、`20261102000100_audit_sequence.sql`、`.sqlx/`
+- `ekpi-platform/docs/operations/production-readiness.md`（PR-02/07/08/09/13 缺口）、`docs/project-management-optimization.md`（待更新）、`docs/adr/adr-template.md`、`docs/development/quality-gates.md`
+- `ekpi-platform/docs/governance/06-data-and-state-model-v1.md`、`07-security-integration-spec-v1.md`（治理需求 SSOT）
 - `Dev/platform/src/ai/decision_gating.rs`（AI 簽核閘）、`Dev/web/src-tauri/src-tauri/commands.rs:156`（待收斂 stub）、`Dev/core/src/money.rs`（整數分解析）
 - `Dev/docs/adr/ADR-0001-tech-stack-baseline.md`（技術棧基線，已 Accepted）、`ADR-0002-api-layer.md`（零 JS API 層＋金額整數化）
 - `Dev/.github/workflows/ci.yml`（四環境多環境管線；目前無 Knowledge checkout）
