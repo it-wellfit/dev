@@ -1428,7 +1428,7 @@ fn validate_import_row(record: &csv::StringRecord) -> Result<ImportRowDraft, Str
     let date = chrono::NaiveDate::parse_from_str(record.get(0).unwrap().trim(), "%Y-%m-%d")
         .map_err(|_| format!("日期格式不正確：{}", record.get(0).unwrap()))?
         .to_string();
-    if chrono::NaiveDate::parse_from_str(&date, "%Y-%m-%d").unwrap()
+    if chrono::NaiveDate::parse_from_str(&date, "%Y-%m-%d").expect("date already validated")
         > chrono::Utc::now().date_naive()
     {
         return Err("日期不得為未來".to_string());

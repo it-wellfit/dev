@@ -2,6 +2,85 @@
 
 本檔記錄根 workspace（`core/`、`platform/`、`web/`、`crates/flaps_bridge`）的實際變更。格式參考 Keep a Changelog。子專案（ekpi-platform、Wellfit、SyncMesh）各自有變更記錄。
 
+
+## [Unreleased] — 2026-11-05（第九輪：Slice 12 Demo Kit 完成＋Phase 0 藍圖＋Phase 2 閘門）
+
+### Added
+- Demo Kit：`scripts/seed-demo.ps1`＋`reset-demo.ps1`（可重複展示；[DEMO] 資料經正式 API 種入，10/10 交易；demo-finance/demo-viewer 帳號）。
+- Demo 文件：DEMO_GUIDE／DEMO_SCENARIOS／DEMO_DATA／DEMO_LIMITATIONS（誠實揭露限制）。
+- Phase 0 藍圖文件：PRODUCT_VISION／USER_STORIES（US-1..16）／PRODUCT_ROADMAP（六階段閘門）／BUSINESS_MODEL（假設標示）／INFORMATION_ARCHITECTURE（22 路由 sitemap）／SYSTEM_ARCHITECTURE／DATABASE_DESIGN／API_DESIGN／TECH_STACK／TECHNICAL_DECISIONS（D-1..D-12）。
+- 進度制度：`docs/PROJECT_STATUS.md`＋`docs/NEXT_ACTIONS.md`。
+- Phase 2 閘門：`docs/production/PRODUCTION_READINESS.md`（Go/No-Go 矩陣 25 項；部署/監控/還原演練標示需授權——**NO-GO**）。
+- 啟動時過期會話清理（`AppState::new` → `purge_expired_sessions`）。
+- 遷移 0004：查詢索引（平行工作階段交付，已稽核入版控）。
+
+### Fixed
+- 桌面路徑檔案寫入回滾事故（測試檔合併）——以位元組級腳本＋讀回驗證修復。
+
+### Tests
+- 90 passed, 0 failed（含遷移 0004 重放）；基線四項 EXIT=0 @ 07b1d9c。
+## [Unreleased] — 2026-11-04（第八輪：完成度稽核收尾）
+
+### Added
+- 值物件 Money／AccountId（DDD 戰術模式，建構即驗證）＋測試（core/src/value_objects.rs）。
+- 樞紐列上限（OQ-10-2）：top-20 依合計，其餘摺疊至 OTHER 列＋截斷提示。
+- AI 建議請求稽核（OQ-10-1）：AI_SUGGEST_REQUESTED（記錄 text_len/prompt_version/schema 結果；原文遮罩）。
+- 管理頁密碼重設表單（P1-8 殘餘 UI）；草稿頁 AI 建議表單（OQ-8-2 UI）。
+
+### Fixed
+- CSRF 覆蓋缺口：import_preview（multipart）與 ai_suggest 補同步器驗證——POST 路由覆蓋 10/10。
+- persist_batch 改 ImportBatchStaging（最後一處 too_many_arguments 豁免移除）。
+- PIV-003 斷言修正為整數分語義。
+
+### Tests
+- 73→87 passed；基線四項 EXIT=0 @ c932753。
+## [Unreleased] — 2026-11-04（第七輪：Slice 11 部署硬化）
+
+### Added
+- 安全標頭 middleware：CSP（default-src 'none'、style-src 'self'、img-src 'self' data:、無任何 script 來源）、nosniff、DENY、no-referrer、no-store（全回應）。
+- 過期會話清理：登入邊界（新會話建立時刪除過期列）。
+- Secure cookie 旗標（erp_config security/cookie_secure；預設關，TLS 部署時啟用——R-07 準備）。
+- 根 README.md（Directive 13.1 全欄位）。
+
+### Changed
+- 模板 9 處內聯 style 屬性全數改為設計系統 utility classes（嚴格 CSP 成立）。
+
+### Fixed
+- 停用帳號安全缺口：停用後舊會話仍有效至自然過期（Slice 9 已閉，本輪補測試）。
+
+### Tests
+- 73 passed；基線四項 EXIT=0 @ 26bff52。
+## [Unreleased] — 2026-11-04（第六輪：Slice 10 多維洞察進階與方法論硬化）
+
+### Added
+- 樞紐分析：GET /reports/pivot（白名單維度 R-PIV-WHITELIST，矩陣＋合計；PIV-003 上限摺疊 OTHER）。
+- 平行座標投影：core/src/parallel.rs（整數 min-max 正規化，零浮點）＋GET /reports/parallel（每科目一折線＋無障礙 title）。
+- AI 建議草稿（特性旗標預設關）：POST /drafts/ai_suggest（schema 閘門 parse_ai_suggestion，畸形輸出拒絕）＋建議卡（需人工覆核）＋POST /drafts/adopt（唯一入徑，永不自動落地）。
+- Builder：TransactionBuilder／TransactionItemBuilder（P2-1 清償；兩處 too_many_arguments 豁免移除）。
+- 解析覆蓋率：GET /admin/parse_coverage（ROLE_MANAGE；COV-001）。
+- 方法論文件：docs/quality/bdd_acceptance.md、docs/testing/TRACEABILITY_MATRIX.md、docs/quality/ubiquitous_language.md。
+
+### Changed
+- Transaction/TransactionItem 建構改用 Builder（create_transaction、import_confirm、engine 測試；語義不變）。
+
+### Removed
+- 兩處 #[allow(clippy::too_many_arguments)]（allow 歸零）。
+
+### Tests
+- 70→73 passed；基線四項 EXIT=0 @ 7eb5c1d。
+## [Unreleased] — 2026-11-04（第五輪：Slice 9 硬化收尾）
+
+### Added
+- 帳號停用即撤銷會話（P1-9）：admin/users/toggle 停用時刪除該帳號全部工作階段。
+- 管理員密碼重設（P1-8 殘餘）：POST /admin/users/reset_password（ROLE_MANAGE、CSRF、≥8 字元）——Argon2id 輪換＋目標會話撤銷＋PASSWORD_RESET 稽核。
+- 報表效能預算量化（P3-1/RPT-001）：close_out 測試以 recursive CTE 播種 2,000 筆平衡交易，斷言 /reports/monthly < 500ms。
+- 設計 Token 同步迴歸測試（P3-2）：web/assets 與 docs 的 :root 區塊逐字一致。
+
+### Fixed
+- 停用帳號安全缺口：此前停用僅改旗標，舊會話仍有效至自然過期。
+
+### Tests
+- 66→70 passed；基線四項 EXIT=0 @ bc68b7e。
 ## [Unreleased] — 2026-11-04（第四輪：Slice 8 資料獲取與洞察層）
 
 ### Added
