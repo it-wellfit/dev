@@ -1,0 +1,8 @@
+﻿*                                           @it-wellfit/maintainers
+.github/workflows/                          @it-wellfit/devops
+docs/                                       @it-wellfit/architect
+core/                                       @it-wellfit/backend
+platform/                                   @it-wellfit/backend
+web/                                        @it-wellfit/frontend
+crates/                                     @it-wellfit/bridge
+scripts/                                    @it-wellfit/ops
