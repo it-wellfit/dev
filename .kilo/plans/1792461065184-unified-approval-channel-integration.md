@@ -11,7 +11,7 @@
 | 根工作區 | `Dev/` | FlapsErp RPA 線：`core`/`platform`/`web`/`crates/flaps_bridge`（edition 2021／resolver 2／axum 0.7／sqlx 0.8 SQLite／Tauri 2.0）。**現已是 git repo**（remote `it-wellfit/dev.git`），已有 develop/test/release/main 四分支 + `ci.yml` 多環境管線。`platform/src/ai/decision_gating.rs` 有 AI 簽核閘（`requires_human_approval`、`Action::EscalateToHuman`、`auto_approval_confidence: 0.95`）但 **`web/src-tauri/src-tauri/commands.rs:156` 的 `approve_transaction` 是 stub（`TODO: Implement actual transaction approval logic`）** |
 | SyncMesh | `SyncMesh/` | 4-crate（core/net/storage/cli），Ed25519 + CRDT version vector + SQLite content-addressed store。**已被 `wellfit_sync` 取代**，本計畫不納入 |
 | 既有簽核機制 | `Wellfit/crates/wellfit_core/src/` | `access_control.rs`（RBAC：PermissionLevel/Classification/SodConstraint/AccessController）與 `jit_permission.rs`（JIT：request/approve/reject/revoke/expire_stale_requests）**已存在且可重用** |
-| 知識庫 | `Projects/2026/Knowledge/` | 跨專案 SSOT，17 個子目錄（adr/sources/specs/reconciliation/issues/traceability/compliance/tools/...），含 12 份 ADR、87 項議題登錄、ISO 27001 合規套件。**位置已由 ADR-0004（Approved）裁定，引用方向單向**（專案→KB）。**但不在 git 版控內**（實測 `fatal: not a git repository`） |
+| 知識庫 | `Projects/2026/Knowledge/` | 跨專案 SSOT，18 個子目錄（adr/archive/compliance/data/docs/governance/issues/ops/rag-index/reconciliation/sources/specs/templates/tools/traceability/uat/updates），含 12 份 ADR（ADR-0001~0012）、87 項議題登錄、ISO 27001 合規套件。**位置已由 ADR-0004（Approved）裁定，引用方向單向**（專案→KB）。**但不在 git 版控內**（實測 `fatal: not a git repository`） |
 | 金額整數化 | `Dev/core/src/money.rs`、`Dev/platform/src/api.rs` | ADR-0002 已落地：`amount_minor: i64`（整數分）＋ `exchange_rate_scaled: i64`（10^4），`parse_decimal_to_minor` 純字串運算。**殘留 f64 僅 2 處**：`core/src/ledger/account.rs:57` `get_balance() -> f64`、`platform/src/ai/decision_gating.rs:32,34` `TransactionItem.amount/exchange_rate` |
 
 ### 已確認缺口（grep／實測）
@@ -46,7 +46,7 @@
                 │ 窄 API 契約 + PostgreSQL 事件表         │
                 │ (outbox/inbox, 可重播)                  │
 ┌───────────────▼──────────────────────────────────────▼──────────────────────┐
-│            共享整合層 (新: Dev/platform-hub 或獨立 crate)                    │
+│            共享整合層 (新: Dev/platform-hub/)                               │
 │ crates/channels/  ── ChannelAdapter trait + UDM + 規則引擎 + momo 適配器     │
 │ crates/eventbus/  ── Outbox/Inbox 事件骨幹（PostgreSQL）+ Redis 快取適配    │
 │ crates/workflow/  ── 跨系統簽核工作流（動態多級/多急/升級/Agent 判斷）       │
@@ -59,7 +59,23 @@
 │ assist(多格式/異常/影子)       │  │ stubs → 真實簽核      │  │ 排程觸發        │
 │ integration(對帳/切換)         │  │                       │  │                │
 └───────────────────────────────┘  └──────────────────────┘  └────────────────┘
+                ▲                                              ▲
+                │ 單向引用（ADR-0004）：專案 ──讀取──▶ KB      │
+┌───────────────┴─────────────────────────────────────────────┴────────────────┐
+│  知識庫 (Projects/2026/Knowledge/) — 跨專案 SSOT，獨立 git（私有）           │
+│  sources/ specs/ reconciliation/ issues/ adr/ traceability/ compliance/     │
+│  位置不動（ADR-0004）；CI 以 SHA 釘選消費；實作側唯讀，不得回寫              │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
+
+### 技術基線（依 ADR-0001，2026-11-03 Accepted）
+
+| 範圍 | 基線 | 備註 |
+|------|------|------|
+| 根工作區 `Dev/` | edition 2021 / resolver 2 / axum 0.7 / sqlx 0.8 (SQLite) / Askama 0.16 / tokio 1.0 | **不得擅自升級**；升級須獨立 POC + ADR |
+| `platform-hub`（新增） | 同上（沿用現行基線） | PostgreSQL 為其**新系統**選型，不變更根工作區 SQLite |
+| Wellfit | edition 2021 / rusqlite 0.32 (bundled) / clap 4.5 | 獨立 CI workflow；建置走 `Knowledge/tools/dev-env/build.ps1` |
+| ekpi-platform | edition 2021 / axum 0.8.9 / maud 0.27 | 獨立 crate（`platform` + `eval`），無根 workspace |
 
 ### 職責邊界（不可越界）
 
@@ -69,6 +85,7 @@
 | 共享整合層 | ChannelAdapter/UDM/規則引擎、事件骨幹、跨系統簽核工作流 | 不重複 EKPI 裁決邏輯、不重複 Wellfit 帳本 |
 | Wellfit 執行面 | 資料契約、冪等帳本、Release Gate、ERP 匯入/匯出、多格式轉換 | 不做簽核政策、不做平台 API 認證 |
 | 根工作區 | FlapsErp RPA、ERP 業務查詢 | 簽核邏輯實作（目前是 stub） |
+| 知識庫 | 契約事實、裁決紀錄、議題狀態、追溯對照、合規產物 | **不持有任何實作程式碼**；實作側不得回寫（ADR-0004 §2 單向引用）；spec.rs 等生成物以 KB 產生器為唯一來源（KB README §6.1 禁手寫副本） |
 
 ## 4. 執行工作清單
 
@@ -165,39 +182,48 @@
 | 閘門 | 指令 | 通過標準 |
 |------|------|----------|
 | 格式 | `cargo fmt --all -- --check` | 0 差異 |
-| 零警告 | `cargo clippy --workspace --all-targets -- -D warnings` | 0 警告（不得加 `allow`） |
-| 測試 | `cargo test --workspace` | 0 failed / 0 ignored |
+| 零警告 | `cargo clippy --workspace --all-targets -- -D warnings` | 0 警告（不得加 `allow`；ADR-0001 §3.4） |
+| 測試 | `cargo test --locked` | 0 failed / 0 ignored |
 | 不變量 | 掃描腳本 | 每個 `.rs` 首行 `#![forbid(unsafe_code)]`；金額路徑無 f64；`<script>` 計數 = 0 |
 | 契約 | `ColumnContract` 測試 | 必填欄缺漏必硬失敗；無序位退讓 |
 | 冪等 | 重播測試 | 同 event_id 重投僅生效一次 |
 | 完整性 | SHA-256 鏈驗證 | 竄改任一事件即驗證失敗 |
 | 溯源 | claims-vs-evidence | 每項數量對應到測試 ID / 指令 / 來源快照 |
 | 安全 | `cargo audit` | 0 未接受風險 |
+| **知識庫完整性** | `Knowledge/tools/kb-verify.ps1` | 重算雜湊一致；受控產物未漂移；竄改即 exit 1 |
+| **KB 版本同步** | `ci.yml` `knowledge` job | 四環境 deploy job 均依賴此 job；KB checkout 為 SHA 釘選（非 main） |
+| **KB 機敏隔離** | `git -C Knowledge ls-files` | 不含 `sources/snapshots/` 實體樣本 |
 
-> 執行注意：`Wellfit` 建置須用 `Knowledge/tools/dev-env/build.ps1`（工作站 Application Control 阻擋桌面路徑產物），且 `-TargetDir` 須各不相同以免 lock 競爭。
+> 執行注意：`Wellfit` 建置須用 `Knowledge/tools/dev-env/build.ps1`（工作站 Application Control 阻擋桌面路徑產物），且 `-TargetDir` 須各不相同以免 lock 競爭。根工作區與 `platform-hub` 各有獨立 CI workflow，勿共用 target 目錄。
 
 ## 6. 風險登記
 
 | ID | 風險 | 等級 | 緩解 | 擁有者 |
 |----|------|------|------|--------|
 | R-01 | momo API 規格未取得 → E 階段全數阻塞 | 高 | Phase E 明確標為條件式；先完成 B/C/D；對接方索取項掛 OQ-F2-5 | 整合負責人 |
-| R-02 | 規格事實被推測補值（違反研究規約 §1.1） | 高 | `VerifyStatus::Unverified` 強制標記；來源登錄 SHA-256 缺一不得實作；裁決與規格分離（沿用 ADR-0009 精神） | 知識庫維護者 |
+| R-02 | 規格事實被推測補值（違反研究規約 §1.1） | 高 | `Unverified` 強制標記、保留原值不做決策、登錄 `issues/`；來源登錄 SHA-256 缺一不得實作；裁決與規格分離（KB ADR-0009） | 知識庫維護者 |
 | R-03 | 跨 repo 耦合破壞獨立演進 | 中 | 禁止 path dependency；僅以 API + PostgreSQL 事件契約互通；契約變更走版本欄位 | 架構負責人 |
 | R-04 | 跨系統交易性不一致 | 高 | outbox/inbox + 冪等鍵 + 三方對帳；不確定狀態進隔離清單 | 整合負責人 |
 | R-05 | Agent 誤判導致未簽核執行 | 高 | 決定性風險分數優先；高風險/付費/敏感強制人工；fail-closed；完整稽核 | 安全負責人 |
 | R-06 | Agent 建議品質不足致人工負荷 | 中 | 先規則後模型；信心門檻可調；自動核准率與否決率納入監控；低信心自動轉人工 | 治理負責人 |
-| R-07 | 原始碼 `f64` 金額殘留（根工作區現況） | 高 | Phase D2 收斂；型別約束 + clippy + grep 雙重把關 | 根工作區負責人 |
-| R-08 | 文件漂移持續擴大 | 中 | Phase A 先校正；文件更新與代碼同提交（SHARED_STANDARDS §4.3） | 知識庫維護者 |
-| R-09 | 事件骨幹隨流量成長受限 | 中 | PostgreSQL 分區表 + outbox 索引；預留 Kafka 適配器插槽；壓測後再決 | 架構負責人 |
+| R-07 | `f64` 金額殘留（已縮減為 2 處：`account.rs:57`、`decision_gating.rs:32,34`） | 中 | Phase D2 精準收斂該 2 處；COM 橋接層 `com/bridge.rs:185` 不擴大範圍；型別約束 + clippy + grep 三重把關 | 根工作區負責人 |
+| R-08 | 文件漂移持續擴大（含 3 套平行 ADR 儲存處） | 中 | Phase A1/A6 校正 + 三處交叉索引；文件更新與代碼同提交（SHARED_STANDARDS §4.3） | 知識庫維護者 |
+| R-09 | 事件骨幹隨流量成長受限 | 中 | PostgreSQL 分區表 + outbox 索引；預留 Kafka 適配器插槽；壓測後再決（門檻見 §7） | 架構負責人 |
 | R-10 | 簽核流程過長致業務停滯 | 中 | 多急 SLA + 逾時升級 + 低風險自動核准 + 逾時監控告警 | 業務負責人 |
+| **R-11** | **知識庫無版控 → 規格事實不可追溯、無 rollback、CI 無法驗證** | **高** | **Phase 0：獨立 git + 私有 remote + SHA 釘選 CI 消費 + `kb-verify.ps1`** | **知識庫維護者** |
+| **R-12** | **KB 進版控導致機敏資料外洩（對接樣本含客戶代碼與價格）** | **高** | **Phase 0-2：`.gitignore` 排除 `sources/snapshots/` 與樣本；只留 SHA-256 登錄；remote 必須私有** | **知識庫維護者** |
+| **R-13** | **KB 浮動版（main）造成程式碼與規格事實不同步** | **高** | **Phase 0-4：CI 以釘選 SHA checkout，禁用 `ref: main`** | **DevOps** |
+| **R-14** | **新 crate 擅自升級技術棧（edition 2024 / axum 0.8 / PostgreSQL）違反 ADR-0001** | 中 | **Phase B1 明定沿用 edition 2021 / resolver 2；升級須獨立 POC 並另立 ADR** | 架構負責人 |
 
-## 7. 未決事項（明確標記為待決，不阻擋 A–D 執行）
+## 7. 未決事項（明確標記為待決，不阻擋 Phase 0–D 執行）
 
 1. **momo 規格取得時程** — 由對接方回覆時程決定 E 階段起點；在此之前 E 階段全部掛起。
-2. **Kafka 啟用條件** — 建議門檻：單表事件寫入持續 >5,000/s 或 outbox 積壓 >100k 且 Postgres 分區仍無法滿足 P99 <100ms。屆時評估 `KafkaEventStore`。
+2. **Kafka 啟用條件** — 建議門檻：單表事件寫入持續 >5,000/s 或 outbox 積壓 >100k 且 Postgres 分區仍無法滿足 P99 <100ms。屆時評估 `KafkaEventStore`（`eventbus` crate 已留空槽）。
 3. **Redis 必要性** — 僅在多實例部署或分散式限流需求出現時啟用；單機部署以 in-process 降級。
 4. **PChome/Cyberbiz 規格** — 各自獨立索取，骨架完成後依 E2–E6 流程填入。
 5. **EKPI 是否併入 Wellfit workspace** — 維持獨立（尊重既有 `no root Cargo workspace` 決策）；若未來合併需另立 ADR。
+6. **KB 私有 remote 位置** — 需擁有者指定（既有 remote 慣例：`github.com/it-wellfit/*`；KB 須為**私有** repo，且不得混入機敏樣本）。
+7. **風控與平台責邊界** — `platform-hub` 屬新系統，其技術選型（PostgreSQL）**不變更**根工作區既有 SQLite 基線（ADR-0001 D-02）；若後續要整體遷移，須另立 POC + ADR。
 
 ## 8. 參考文件
 
@@ -205,6 +231,9 @@
 - `Wellfit/crates/wellfit_assist/src/data_transformer.rs`（多格式/編碼轉換）、`.../anomaly.rs`（異常偵測）、`.../shadow.rs`（影子模式）
 - `Wellfit/crates/wellfit_integration/src/`（對帳、切換）
 - `ekpi-platform/platform/src/governance.rs`（Ledger/GateDecision/Workflow）、`.../api.rs`（路由）、`.../audit.rs`、`.../local_auth.rs`、`.../governance_web.rs`
-- `Dev/platform/src/ai/decision_gating.rs`（AI 簽核閘）、`Dev/web/src-tauri/src-tauri/commands.rs:156`（待收斂 stub）
+- `Dev/platform/src/ai/decision_gating.rs`（AI 簽核閘）、`Dev/web/src-tauri/src-tauri/commands.rs:156`（待收斂 stub）、`Dev/core/src/money.rs`（整數分解析）
+- `Dev/docs/adr/ADR-0001-tech-stack-baseline.md`（技術棧基線，已 Accepted）、`ADR-0002-api-layer.md`（零 JS API 層＋金額整數化）
+- `Dev/.github/workflows/ci.yml`（四環境多環境管線；目前無 Knowledge checkout）
+- `Projects/2026/Knowledge/README.md`（治理規則、維護規則、機敏規約）、`Knowledge/adr/ADR-0004-knowledge-base-location.md`（KB 位置裁定）、`ADR-0009-spec-derivation-vs-arbitration-separation.md`、`Knowledge/sources/research-protocol.md`（研究規約 §1.1）
 - `Dev/docs/research/proposals/OQ-F1_F2_輔翼ERP正式需求提案_v1.0.md`（對接方索取項）
-- `Dev/docs/NEXT_ACTIONS.md`、`Dev/docs/PROJECT_STATUS.md`、`Dev/docs/PLAN_REGISTER.md`
+- `Dev/docs/NEXT_ACTIONS.md`、`Dev/docs/PROJECT_STATUS.md`、`Dev/docs/PLAN_REGISTER.md`、`Dev/docs/standards/SHARED_STANDARDS.md`
