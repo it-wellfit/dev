@@ -59,6 +59,21 @@ This addendum records execution facts only; it does not approve product scope, c
 
 
 
+
+## 2026-11-05 addendum #10 (Slice 12: demo kit + Phase 0 blueprint + Phase 2 readiness)
+
+| Item | Disposition | Evidence |
+|---|---|---|
+| Demo kit | seed-demo/reset-demo scripts (repeatable, 10/10 [DEMO] transactions via real API); demo docs (GUIDE/SCENARIOS/DATA/LIMITATIONS) | scripts/seed-demo.ps1; docs/demo/ |
+| MVP docs | MVP_SCOPE (MoSCoW) / MVP_ACCEPTANCE / MVP_TEST_PLAN / MVP_TEST_REPORT (90 passed, Not Run honestly listed) | docs/product/ + docs/testing/ |
+| Phase 0 blueprint | 10 docs (vision/stories/roadmap/business-model/IA/system-arch/db-design/api-design/tech-stack/decisions) — consolidated, linked to existing ADRs | docs/product/ docs/design/ docs/architecture/ docs/engineering/ |
+| Progress system | PROJECT_STATUS.md + NEXT_ACTIONS.md | docs/ |
+| Phase 2 gate | PRODUCTION_READINESS.md Go/No-Go (NO-GO: env/TLS/restore-drill/monitoring/authorization) | docs/production/ |
+| Session hygiene | Expired-session purge at startup | api.rs AppState::new |
+| Baseline @ d6cf480 | fmt/clippy/test/audit all EXIT=0; 90 passed, 0 failed | session tests/20261104-2200-slice12-final.log |
+| Plan v4 | Sections 16 (phase mapping) + 17 (Slice 12 record) + 18 (Slice 13 candidates) appended | .kilo/plans/1793708660255-...md |
+
+This addendum records execution facts only; it does not approve product scope, certification, or release.
 ## 2026-11-04 addendum #9 (completion audit close-out)
 
 | Item | Disposition | Evidence |

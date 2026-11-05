@@ -1,6 +1,6 @@
 # ELITE PRODUCT ENGINEERING MASTER EXECUTION PLAN
 
-> 依據《ELITE PRODUCT ENGINEERING MASTER DIRECTIVE》v1.0 制定。狀態：**v3（2026-11-04）**——Slices 1–9 已完成（66 tests 全綠，git cd66388→40f46f9），本版新增 §15「Slice 10：多維洞察進階與方法論硬化」（市場與技術研究佐證＋TDD/BDD/SDD/DDD 貫穿）。驗證以 curl.exe／Rust 測試為主；Python 至多一次性小工具。
+> 依據《ELITE PRODUCT ENGINEERING MASTER DIRECTIVE》v1.0 制定。狀態：**v4（2026-11-05）**——Slices 1–12 已完成（90 tests 全綠，git cd66388→d6cf480；PLAN_REGISTER addenda #1–#10），本版新增 §16「六階段對映」與 §17「Slice 12 紀錄」（ELITE END-TO-END v2.0 六階段交付系統對映）。驗證以 curl.exe／Rust 測試為主；Python 至多一次性小工具。
 
 ## 1. 執行上下文（Environment Reconnaissance 已完成）
 
@@ -247,3 +247,36 @@ ISO/IEC 25010：效能效率（PIV/PAR/報表預算測試）、易用性（精�
 | OQ-10-1 | AI 建議的模型與提示詞治理（版本追蹤、離線行為） | 模型名入 erp_config；提示詞入版控常數；回應留存 audit |
 | OQ-10-2 | 樞紐資料上限（帳戶×月份矩陣爆炸） | 預設 top-20 帳戶＋單月，量測後調整 |
 | OQ-10-3 | 多實例速率限制遷移（P1-7 notes） | 維持 in-process 至多實例部署需求出現 |
+
+## 16. 六階段交付系統對映（ELITE END-TO-END v2.0，2026-11-05）
+
+| 階段 | 原始定義 | 現況 | 證據 |
+|---|---|---|---|
+| Phase 0 Discovery & Blueprint | 完整藍圖 | **完成**（藍圖 10 份＋PRD＋IA＋DB/API 設計） | docs/product/＋docs/architecture/＋docs/engineering/ |
+| Phase 1 POC → MVP Demo | 可操作展示 | **Demo Ready**（seed/reset 腳本可重複；[DEMO] 資料；Demo 文件 4 份） | scripts/seed-demo.ps1＋docs/demo/ |
+| Phase 2 Demo → Production | 正式營運 | **Readiness 文件就位；部署需授權**（NO-GO：環境/TLS/還原演練/監控/授權） | docs/production/PRODUCTION_READINESS.md |
+| Phase 3 Production → Scale-up | 容量與可靠性 | 未開始（需 Stage 2＋真實流量；效能預算測試已先行） | docs/testing/MVP_TEST_REPORT.md |
+| Phase 4 Product Line | 商業化 | 未開始（需商業決策；BUSINESS_MODEL 假設已標示） | docs/product/BUSINESS_MODEL.md |
+| Phase 5 Continuous Evolution | 持續迭代 | 制度運作中（PROJECT_STATUS/NEXT_ACTIONS/BACKLOG/PLAN_REGISTER） | docs/PROJECT_STATUS.md |
+
+## 17. Slice 12 紀錄（Demo Kit Completion & Stage 1→2 Gate Preparation）
+
+| 項目 | 證據 |
+|---|---|
+| Demo seed/reset 腳本（可重複，[DEMO] 標示，正式 API 種入） | scripts/seed-demo.ps1＋reset-demo.ps1；實跑 10/10 兩次一致 |
+| Demo 文件 4 份 | docs/demo/ |
+| MVP 文件 4 份 | docs/product/MVP_SCOPE.md＋MVP_ACCEPTANCE.md、docs/testing/MVP_TEST_PLAN.md＋MVP_TEST_REPORT.md |
+| Phase 0 藍圖 10 份 | docs/product/4＋docs/design/1＋docs/architecture/3＋docs/engineering/2 |
+| 進度制度 | docs/PROJECT_STATUS.md＋docs/NEXT_ACTIONS.md |
+| Stage 2 閘門 | docs/production/PRODUCTION_READINESS.md（NO-GO：環境/TLS/還原演練/監控/授權） |
+| 啟動時過期會話清理 | api.rs AppState::new（auth::purge_expired_sessions） |
+| 基線 | fmt/clippy/test/audit 全 EXIT=0；**90 tests passed, 0 failed** @ d6cf480 |
+
+## 18. Slice 13 候選（下一高價值，待授權）
+
+| # | 任務 | 階段 | 前置 |
+|---|---|---|---|
+| 1 | Backup/Restore 演練（本機可執行）＋BACKUP_RECOVERY.md | Phase 2 | 無 |
+| 2 | /api/health 強化（migration 版本＋DB 檢查） | Phase 2 | 無 |
+| 3 | 部署環境決策（TLS/主機）——**需授權** | Phase 2 | 授權 |
+| 4 | GitHub Actions workflow 驗證 | Phase 2 | 無 |
