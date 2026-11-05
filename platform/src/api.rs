@@ -4079,4 +4079,123 @@ mod tests {
             .expect("builder must construct");
         assert_eq!(item.amount_minor, 100);
     }
+
+    // ------------------------------------------------------------------
+    // Slice 12: P2 - 10,000 transaction stress test (OQ-10-1 performance)
+    // ------------------------------------------------------------------
+    #[tokio::test]
+    async fn stress_10000_transactions_p95_under_500ms() {
+        let (app, pool) = test_app().await;
+        seed_credentials(&pool).await;
+
+        // Seed accounts referenced by demo transactions.
+        sqlx::query("INSERT OR IGNORE INTO accounts (account_id, account_code, account_name, account_type, currency, is_active)
+            VALUES (?1, ?2, ?3, ?4, ?5, ?6)")
+            .bind("BANK-001").bind("BANK-001").bind("Bank Account").bind("ASSETS").bind("TWD").bind(1)
+            .execute(&pool).await.expect("seed BANK-001");
+        sqlx::query("INSERT OR IGNORE INTO accounts (account_id, account_code, account_name, account_type, currency, is_active)
+            VALUES (?1, ?2, ?3, ?4, ?5, ?6)")
+            .bind("SUPPLIES-EXP").bind("SUPPLIES-EXP").bind("Supplies Expense").bind("EXPENSES").bind("TWD").bind(1)
+            .execute(&pool).await.expect("seed SUPPLIES-EXP");
+
+        // Seed 10,000 transactions directly via SQL (fast setup).
+        let mut tx_count = 0i64;
+        for i in 0..10_000i64 {
+            let tx_id = format!("tx-stress-{}", i);
+            let tx_code = format!("TX-STRESS-{}", i);
+            let date = format!("2026-11-{:02}", 1 + (i % 30));
+            let desc = format!("Stress test transaction {}", i);
+            let debit = "BANK-001";
+            let credit = "SUPPLIES-EXP";
+            let amount = (1000 + (i % 990000)) * 100;
+            let currency = "TWD";
+            let status = "POSTED";
+
+            sqlx::query(
+                "INSERT INTO transactions (transaction_id, transaction_code, transaction_date, description, status, created_by)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+            )
+            .bind(&tx_id)
+            .bind(&tx_code)
+            .bind(&date)
+            .bind(&desc)
+            .bind(status)
+            .bind("system")
+            .execute(&pool)
+            .await
+            .expect("seed transaction");
+
+            sqlx::query(
+                "INSERT INTO transaction_items (item_id, transaction_id, account_id, item_type, amount_minor, currency, exchange_rate)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+            )
+            .bind(format!("it-{}-d", i))
+            .bind(&tx_id)
+            .bind(debit)
+            .bind("DEBIT")
+            .bind(amount)
+            .bind(currency)
+            .bind(10_000)
+            .execute(&pool)
+            .await
+            .expect("seed debit item");
+
+            sqlx::query(
+                "INSERT INTO transaction_items (item_id, transaction_id, account_id, item_type, amount_minor, currency, exchange_rate)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+            )
+            .bind(format!("it-{}-c", i))
+            .bind(&tx_id)
+            .bind(credit)
+            .bind("CREDIT")
+            .bind(amount)
+            .bind(currency)
+            .bind(10_000)
+            .execute(&pool)
+            .await
+            .expect("seed credit item");
+            tx_count += 1;
+        }
+        let (count,): (i64,) = sqlx::query_as("SELECT COUNT(*) FROM transactions")
+            .fetch_one(&pool)
+            .await
+            .expect("count seeded transactions");
+        assert_eq!(count, 10_000, "expected 10,000 seeded transactions");
+
+        // Login as admin for authenticated requests.
+        let (cookie, _) = login(&app, &pool, "admin", TEST_ADMIN_PASSWORD).await;
+
+        // Measure P95 query time for monthly report.
+        let mut timings_ms = Vec::new();
+        for month in ["09", "10", "11"] {
+            let start = std::time::Instant::now();
+            let request = Request::builder()
+                .method("GET")
+                .uri(format!("/reports/monthly?ym=2026-{}", month))
+                .header(header::CONTENT_TYPE, "text/html")
+                .header(header::COOKIE, cookie.clone())
+                .body(Body::empty())
+                .expect("build request");
+            let (status, _, _) = send(app.clone(), request).await;
+            assert_eq!(status, StatusCode::OK, "monthly report must return 200");
+            let elapsed_ms = start.elapsed().as_millis() as u64;
+            timings_ms.push(elapsed_ms);
+        }
+
+        timings_ms.sort_unstable();
+        let p95_idx = (timings_ms.len() as f64 * 0.95).ceil() as usize - 1;
+        let p95_ms = timings_ms[p95_idx];
+        let max_ms = timings_ms.iter().max().unwrap_or(&0);
+        let total_ms: u64 = timings_ms.iter().sum();
+
+        println!(
+            "Stress test: {} transactions, {} monthly queries, timings_ms={:?}, p95={}ms, max={}ms, total={}ms",
+            tx_count, timings_ms.len(), timings_ms, p95_ms, max_ms, total_ms
+        );
+        assert!(
+            p95_ms <= 500,
+            "P95 query time {}ms exceeds 500ms SLA",
+            p95_ms
+        );
+    }
 }
