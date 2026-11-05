@@ -49,6 +49,9 @@ impl AppState {
     /// (via [`DatabaseManager::initialize`]).
     pub async fn new(pool: SqlitePool) -> Result<Self, Box<dyn std::error::Error>> {
         DatabaseManager::new(pool.clone()).initialize().await?;
+        // Slice 11/12: purge expired session rows at startup so the table
+        // stays bounded even when no logins occur for long periods.
+        auth::purge_expired_sessions(&pool).await?;
         let permissions = PermissionManager::new(pool.clone()).await;
         let engine = LedgerEngine::with_pool(pool.clone()).await?;
         Ok(Self {
@@ -155,7 +158,7 @@ fn monthly_chart_svg(totals: &[flaps_core::ledger::engine::MonthlyTotal]) -> Str
     );
     for (idx, t) in totals.iter().enumerate() {
         let base_x = 30 + idx * 60;
-        let scale = |v: i64| -> usize { ((v as f64 / max as f64) * 120.0).round() as usize };
+        let scale = |v: i64| -> usize { (v * 120 / max) as usize };
         let d_h = scale(t.debit_minor);
         let c_h = scale(t.credit_minor);
         svg.push_str(&format!(
@@ -2481,22 +2484,7 @@ async fn report_pivot_page(
         .await
         .unwrap_or_default();
 
-    eprintln!(
-        "DIAG_ASSEMBLE raw_cells={} rows_truncated_in_fn=NA",
-        raw_cells.len()
-    );
     let matrix = assemble_pivot(&raw_cells, measure, 20);
-    eprintln!(
-        "DIAG_RK len={} first={} last={} trunc={}",
-        matrix.row_headers.len(),
-        matrix
-            .row_headers
-            .first()
-            .map(|s| s.as_str())
-            .unwrap_or("-"),
-        matrix.row_headers.last().map(|s| s.as_str()).unwrap_or("-"),
-        matrix.rows_truncated
-    );
     let template = PivotTemplate {
         acting_user: session.user_id.clone(),
         rows_dim: rows_dim.to_string(),
@@ -3745,13 +3733,6 @@ mod tests {
             piv_rows.push(page[abs..(abs + 6).min(page.len())].to_string());
             search = abs + 6;
         }
-        eprintln!(
-            "DIAG10 piv_rows={:?} has_1_10={} has_1_29={} has_other={}",
-            piv_rows,
-            page.contains(">1.10<"),
-            page.contains(">1.29<"),
-            page.contains("OTHER")
-        );
         assert!(
             page.contains(">10.45<"),
             "OTHER folded total (1045 minor = 10.45)"

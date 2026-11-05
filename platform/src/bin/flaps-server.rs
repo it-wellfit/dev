@@ -38,6 +38,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .await?;
     // G-1: bootstrap the administrator account (first run only).
     platform::auth::seed_admin_if_empty(&pool).await?;
+    // Housekeeping: purge expired sessions on startup so the table does not
+    // grow without bound across restarts.
+    let _ = platform::auth::purge_expired_sessions(&pool).await;
     let state = platform::api::AppState::new(pool).await?;
 
     let app = platform::api::router(state);

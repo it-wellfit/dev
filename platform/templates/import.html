@@ -16,7 +16,7 @@
                 <p class="app-subtitle">兩段式：先預檢（無副作用），確認後才登帳；全程可追溯。</p>
             </div>
             <p class="app-subtitle">
-                使用者：dstrong>{{ acting_user }}</strong>
+                使用者：<strong>{{ acting_user }}</strong>
                 ｜
                 <a class="btn btn-secondary" href="/">返回工作台</a>
             </p>
@@ -32,7 +32,7 @@
                 <fieldset>
                     <legend>檔案規格</legend>
                     <div class="form-row">
-                        <label for="file">檔案 dspan aria-hidden="true">*</span></label>
+                        <label for="file">檔案 <span aria-hidden="true">*</span></label>
                         <input class="input" type="file" id="file" name="file" accept=".csv,.tsv,text/csv,text/tab-separated-values" required>
                         <p class="hint">
                             上限 2MB／5,000 列。首行為欄位標題：date, debit_account, credit_account, amount, currency, description。
@@ -57,8 +57,8 @@
             {% endif %}
 
             <p class="preview-note">
-                批次 dstrong>{{ b.batch_id }}</strong> ｜ 指紋 sha256:{{ b.sha256_short }} ｜
-                狀態：dspan class="badge {% if b.status == "draft" %}badge-warning{% else %}badge-success{% endif %}">{{ b.status_display }}</span>
+                批次 <strong>{{ b.batch_id }}</strong> ｜ 指紋 sha256:{{ b.sha256_short }} ｜
+                狀態：<span class="badge {% if b.status == "draft" %}badge-warning{% else %}badge-success{% endif %}">{{ b.status_display }}</span>
                 ｜ 合格 {{ b.row_ok }}／{{ b.row_total }} 列
             </p>
 

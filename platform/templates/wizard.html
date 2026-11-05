@@ -16,7 +16,7 @@
                 <p class="app-subtitle">系統依記帳規範逐步引導；每個限制都標示來源規則。</p>
             </div>
             <p class="app-subtitle">
-                使用者：dstrong>{{ acting_user }}</strong>
+                使用者：<strong>{{ acting_user }}</strong>
                 ｜
                 <a class="btn btn-secondary" href="/">返回工作台</a>
             </p>
@@ -39,7 +39,7 @@
                 <fieldset>
                     <legend>模板（決定借貸方向的預設提示）</legend>
                     <div class="form-row">
-                        <label for="template">交易模板 dspan aria-hidden="true">*</span></label>
+                        <label for="template">交易模板 <span aria-hidden="true">*</span></label>
                         <select class="input" id="template" name="template" required>
                             <option value="cash-payment">現金支出（貸：現金；借：費用科目）</option>
                             <option value="cash-receipt">現金收入（借：現金；貸：來源科目）</option>
@@ -76,7 +76,7 @@
                     <legend>分錄內容</legend>
 
                     <div class="form-row">
-                        <label for="debit-account">借方科目（收／增） dspan aria-hidden="true">*</span></label>
+                        <label for="debit-account">借方科目（收／增） <span aria-hidden="true">*</span></label>
                         <input class="input" type="text" id="debit-account" name="debit_account" list="account-options" value="{{ form.debit_account }}" required>
                         <datalist id="account-options">
                             {% for a in accounts %}
@@ -86,19 +86,19 @@
                     </div>
 
                     <div class="form-row">
-                        <label for="credit-account">貸方科目（付／減） dspan aria-hidden="true">*</span></label>
+                        <label for="credit-account">貸方科目（付／減） <span aria-hidden="true">*</span></label>
                         <input class="input" type="text" id="credit-account" name="credit_account" list="account-options" value="{{ form.credit_account }}" required>
                         <p class="hint">借貸兩方必須為不同科目（複式記帳規則 R-BALANCE）。</p>
                     </div>
 
                     <div class="form-row">
-                        <label for="amount">金額 dspan aria-hidden="true">*</span></label>
+                        <label for="amount">金額 <span aria-hidden="true">*</span></label>
                         <input class="input" type="number" id="amount" name="amount" step="0.01" min="0" value="{{ form.amount }}" required>
                         <p class="hint">整數分（i64）儲存；最多兩位小數（規則 R-MONEY）。</p>
                     </div>
 
                     <div class="form-row">
-                        <label for="currency">幣別 dspan aria-hidden="true">*</span></label>
+                        <label for="currency">幣別 <span aria-hidden="true">*</span></label>
                         <select class="input" id="currency" name="currency" required>
                             {% if form.currency == "TWD" %}
                             <option value="TWD" selected>TWD — 新台幣</option>
@@ -124,12 +124,12 @@
                     </div>
 
                     <div class="form-row">
-                        <label for="description">摘要 dspan aria-hidden="true">*</span></label>
+                        <label for="description">摘要 <span aria-hidden="true">*</span></label>
                         <textarea class="input" id="description" name="description" rows="3" required>{{ form.description }}</textarea>
                     </div>
 
                     <div class="form-row">
-                        <label for="transaction-date">交易日期 dspan aria-hidden="true">*</span></label>
+                        <label for="transaction-date">交易日期 <span aria-hidden="true">*</span></label>
                         <input class="input" type="date" id="transaction-date" name="transaction_date" value="{{ form.transaction_date }}" required>
                         <p class="hint">不得為未來日期（規則 R-DATE-FUTURE）。</p>
                     </div>
