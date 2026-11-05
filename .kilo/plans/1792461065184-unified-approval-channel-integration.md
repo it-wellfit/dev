@@ -129,23 +129,24 @@
 
 **驗收**：EKPI `cargo test --locked` 全通過；既有 270 release-profile 測試數不得下降（只增不減）；`governance_web` 零 JS 合規測試通過；跨系統事件完整性鏈可驗證。
 
-### Phase D — 根工作區 stub 收斂
+### Phase D — 根工作區 stub 收斂（金額整數化已由 ADR-0002 落地，僅殘留 2 處）
 
-- **D1** `web/src-tauri/src-tauri/commands.rs:156` `approve_transaction` 移除 `TODO`，改為呼叫 `platform-hub` 簽核 API；`platform/src/ai/decision_gating.rs` 的 `AIDecision` 映射到統一簽核任務（保留 `requires_human_approval` 與 `Action::EscalateToHuman` 語意），移除 `f32 confidence` → 金額語境（僅保留非金額欄位）。
-- **D2** 根工作區 `platform` 對 f64 金額全面收斂為整數分/定點十進位（`core`/`platform`/`web` 三 crate 範圍內），以 `scaled.rs` 等價實作落地。
+- **D1** `web/src-tauri/src-tauri/commands.rs:156` `approve_transaction` 移除 `TODO`，改為呼叫 `platform-hub` 簽核 API；`platform/src/ai/decision_gating.rs` 的 `AIDecision` 映射到統一簽核任務（保留 `requires_human_approval` 與 `Action::EscalateToHuman` 語意）。**注意**：`decision_gating.rs` 目前非同步（`async fn` + Ollama/Chutes/Inference client），對接時簽核 API 呼叫須為非阻塞且逾時 fail-closed（退回人工），不得因 Agent 服務不可用而阻塞或自動放行。
+- **D2** 金額 f64 收斂（**範圍已由 grep 縮減為 2 處**）：`core/src/ledger/account.rs:57` `get_balance() -> f64` 改為回傳 `i64` 整數分（欄位查詢 `account.rs:59` 的 `query_as::<_, (f64, String)>` 一併改型別，確認 DB 欄位本身為 INTEGER）；`platform/src/ai/decision_gating.rs:32,34` `TransactionItem.amount/exchange_rate: f64` 改為 `amount_minor: i64` / `exchange_rate_scaled: i64`（10^4），與 ADR-0002 §3.4 schema 對齊。`core/src/config.rs:51` 的 `parse::<f64>()` 為設定值格式檢查（非金額），可保留但須加註說明。**不得**擴大範圍重寫 `core/src/com/bridge.rs:185` 的 COM 橋接型別（屬 Fuyi ERP 介面層，見 R-07）。
 - **D3** 補齊 `/api/health`：DB 查詢 + migration 版本 + 事件積壓 + 適配器健康（既有 `docs/NEXT_ACTIONS.md` 高價值項 #2）。
+- **D4** `platform/src/ai/decision_gating.rs` 的 `AIDecision.confidence_score: f32` 與 `auto_approval_confidence: f32` 屬**非金額**語境（信心分數），可保留 f32；但須在型別上明確與金額欄位分離，並在 `platform-hub` 側對應為確定性風險分數（`ConditionExpr` 求值），避免模型信心與規則分數混用。
 
-**驗收**：根工作區 `cargo clippy --workspace --all-targets -- -D warnings` 零警告；`grep -rn "TODO: Implement actual transaction approval logic"` → 0 命中；健康檢查端點回傳 DB 版本與積壓數。
+**驗收**：根工作區 `cargo clippy --workspace --all-targets -- -D warnings` 零警告；`grep -rn "TODO: Implement actual transaction approval logic"` → 0 命中；`grep -rn "f64" Dev/core/src/ledger/account.rs Dev/platform/src/ai/decision_gating.rs` → 僅剩非金額語境（`confidence_score`）且附註；健康檢查端點回傳 DB 版本與積壓數。
 
 ### Phase E — momo 首個完整實作（解除外部阻塞後）
 
-- **E1** 前置條件：取得 momo 官方 API 規格（認證方式、端點、欄位、簽章/驗證、錯誤碼、速率限制），登錄至 `Dev/Knowledge/sources/source-register.json` 含 SHA-256 與頁碼。未取得前 **E2–E6 不得執行**（禁止猜測）。
+- **E1** 前置條件：取得 momo 官方 API 規格（認證方式、端點、欄位、簽章/驗證、錯誤碼、速率限制），登錄至 `Projects/2026/Knowledge/sources/source-register.json` 含 SHA-256 與頁碼。未取得前 **E2–E6 不得執行**（禁止猜測，KB `research-protocol.md` §1.1）。
 - **E2** `adapters-momo` 實作真實端點：認證（token 取得/刷新）、分頁抓取、錯誤重試（指數退避 + jitter）、速率限制遵守。
 - **E3** momo 欄位 → UDM 轉換器，以 `ColumnContract` 名稱解析；反向 UDM → momo 格式（推播庫存）同樣具契約。
 - **E4** Webhook 接收端點（含簽章驗證）與重放保護（nonce/timestamp window）。
 - **E5** 冪等：momo 訂單/事件以平台 ID + 更新時間戳作冪等鍵，寫入 `event_inbox` 去重。
 - **E6** 端到端測試：以合成的 momo 格式 fixture（附 PROVENANCE 與 SHA-256）驗證 fetch → UDM → ERP 匯入 CSV 全鏈路；**fixture 必須標示為合成資料**（`Wellfit/AGENTS.md` §4 不變量 5）。
-- **E7** PChome / Cyberbiz：建立同一骨架下的 adapter stub（`pending_contract` 狀態），待各自規格取得後依 E2–E6 流程填入；每個平台一個待辦議題。
+- **E7** PChome / Cyberbiz：建立同一骨架下的 adapter stub（`pending_contract` 狀態），待各自規格取得後依 E2–E6 流程填入；每個平台一個待辦議題（登錄於 KB `issues/`）。
 
 **驗收**：momo fixture 端到端可跑且輸出金額全為整數分；簽章驗證測試涵蓋有效/無效/過期/重放四情境；缺欄位檔案硬失敗。
 
