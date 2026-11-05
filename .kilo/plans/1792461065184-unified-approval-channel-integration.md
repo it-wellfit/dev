@@ -7,7 +7,7 @@
 | 系統 | 路徑 | 現況事實 |
 |------|------|----------|
 | Wellfit | `Wellfit/` | **9-crate** Rust 工作區（非 5-crate）：`wellfit_core` / `wellfit_shopee` / `wellfit_reports` / `wellfit_mtrix` / `wellfit_cli` / `wellfit_sync` / `wellfit_bankpay` / `wellfit_assist` / `wellfit_integration`。CLI 已有 10 子命令（status/shopee/reports/mtrix/audit/spec/access-control/jit/bankpay/shadow）。235+ tests passed |
-| EKPI | `ekpi-platform/` | 2 crate（`platform` / `eval`），**無根 Cargo workspace**。已實作：確定性裁決引擎、治理狀態機（12 階段/5 關卡 G1–G5）、`governance_web` 工作台（Viewer/Editor/Approver 分權、PBKDF2 600k、CSRF、same-origin）、SHA-256 追加式稽核、WORM、`governance.rs:365` Ledger。`api.rs:49` 僅 3 條路由 |
+| EKPI | `ekpi-platform/` | **6-crate Cargo workspace**（`apps/web` + `crates/domain` + `crates/application` + `crates/adapters` + `eval` + `platform`），**resolver 3 / edition 2024 / rust-version 1.99**；axum 0.8.9、askama 0.16.1、tokio 1、sqlx 0.9.0（postgres）、argon2 0.6、tower-http 0.7。Clean Architecture：Presentation(`apps/web`) → Application(`crates/application`，`ports.rs` 定義介面) → Domain(`crates/domain`，零 I/O) ← Infrastructure(`crates/adapters`：JSONL + PostgreSQL 雙存儲、Argon2id、session/token、audit)。**PostgreSQL 18.6 已就緒**：`migrations/20261102000000_init.sql`（users/sessions/login_failures/governance_projects/governance_evidence/...，TIMESTAMPTZ + CHECK 約束 + 稽核鏈 append-only trigger）、`migrations/20261102000100_audit_sequence.sql`、`pg_advisory_xact_lock` 寫入序列化、`governance_audit_sequence` + SHA-256 鏈、`.sqlx/` 離線查詢資料。已實作：確定性裁決引擎、治理狀態機（12 階段/5 關卡 G1–G5）、`governance_web` 工作台（`apps/web`，Viewer/Editor/Approver/Admin 分權、Argon2id、CSRF、same-origin、`tests/zero_js_tests.rs`）。**已有 Dockerfile + `.github/workflows/ci.yml` + git repo**（remote `it-wellfit/ekpi-platform.git`，branch `main` + `audit/export-hardening`）。`platform/src/api.rs:49` 僅 3 條路由 |
 | 根工作區 | `Dev/` | FlapsErp RPA 線：`core`/`platform`/`web`/`crates/flaps_bridge`（edition 2021／resolver 2／axum 0.7／sqlx 0.8 SQLite／Tauri 2.0）。**現已是 git repo**（remote `it-wellfit/dev.git`），已有 develop/test/release/main 四分支 + `ci.yml` 多環境管線。`platform/src/ai/decision_gating.rs` 有 AI 簽核閘（`requires_human_approval`、`Action::EscalateToHuman`、`auto_approval_confidence: 0.95`）但 **`web/src-tauri/src-tauri/commands.rs:156` 的 `approve_transaction` 是 stub（`TODO: Implement actual transaction approval logic`）** |
 | SyncMesh | `SyncMesh/` | 4-crate（core/net/storage/cli），Ed25519 + CRDT version vector + SQLite content-addressed store。**已被 `wellfit_sync` 取代**，本計畫不納入 |
 | 既有簽核機制 | `Wellfit/crates/wellfit_core/src/` | `access_control.rs`（RBAC：PermissionLevel/Classification/SodConstraint/AccessController）與 `jit_permission.rs`（JIT：request/approve/reject/revoke/expire_stale_requests）**已存在且可重用** |
@@ -18,9 +18,10 @@
 
 1. **momo / PChome / Cyberbiz 零實作**：全 repo 僅出現於 `docs/research/輔翼ERP逆向分析與最佳化方案_v1.0.md:79,194`、`docs/research/proposals/OQ-F1_F2_輔翼ERP正式需求提案_v1.0.md:70`（列為 P2 待索取項）與 MDM 渠道碼 `995E`(MOMO)/`995F`(PCHOME)，後者明確標為 `UNVERIFIED_CHANNELS`（須對接方確認）。
 2. **Kafka / PostgreSQL / Redis / NATS 全未導入**：全 repo 唯一命中為 `.cargo/audit.toml:12` 註解。現況為 SQLite（`rusqlite` bundled）+ JSONL ledger。
-3. **文件漂移**：`ekpi-platform/docs/project-management-optimization.md:20` 宣稱「6 個 crate (apps/web, crates/domain, crates/application, crates/adapters)」— 該工作區實際不存在（僅 `platform`/`eval`）；同檔 §4 建議 Python 處理非 ASCII（違反 Rust-first 修正）、§8 建議 Docker 部署（違反原生部署決策）。
+3. **`project-management-optimization.md` 與實作一致，但含過期建議**：`ekpi-platform/docs/project-management-optimization.md:20` 宣稱「6 個 crate (apps/web, crates/domain, crates/application, crates/adapters)」— **經查證此描述正確且已實作**（非文件漂移）。但同檔 §4 建議以 Python 處理非 ASCII（違反 Rust-first 修正）、§8 建議 Docker 部署（與原生部署決策衝突）、附錄 A 的 `Dockerfile` 與 `crates/*` 路徑需與現況核對。→ **修正為「刪除 Python/Docker 建議、補入 2026-11-05 已實作狀態」**，而非刪除架構敘述。
 4. **知識庫無版控且 CI 抓不到**：`Knowledge/` 非 git repo；`ci.yml` 全檔 grep `Knowledge` → **0 命中**（僅 `defaults.run.shell: pwsh`）。四環境 CI 在**缺少規格事實**下建置測試；ADR-0004 宣稱「可版本控管」不成立。
 5. **三套平行 ADR／治理儲存處**：`Dev/docs/adr/`（ADR-0001~0011，根工作區範圍）、`Knowledge/adr/`（KNB-ADR-001~012，跨專案範圍）、`ekpi-platform/docs/adr/`（ekpi 範圍）。三者互不交叉引用（`ekpi-platform` grep `Knowledge` → 0 命中）。
+6. **ekpi-platform 無核准部署目標**：`ekpi-platform/docs/operations/production-readiness.md:23` PR-02 = "None | No target approved; local process only"；PR-07（離機備份/RPO/RTO）、PR-08（SLO/告警）、PR-09（重試/冪等/斷路器）、PR-13（變更治理）皆為未實作控制。Phase B 閘門狀態 = **Blocked**。→ 本計畫不得宣稱任何 prod 就緒。
 
 ## 2. 已定案決策
 
@@ -28,25 +29,29 @@
 |------|------|------|
 | 基礎設施 | **PostgreSQL 18 為共享事實來源 + 事件表（outbox/inbox）作可重播骨幹；Redis 僅用於快取與分散式限流；全部原生 binary 部署（sc.exe/systemd/launchd）；Kafka 降為未來可插拔適配器，預留不實作** | 本 session 裁定；推翻早前 Kafka+k3s 提議以符合「不使用 Docker」決策 |
 | 電商整合邊界 | **通用骨架（ChannelAdapter trait + UDM + 規則引擎）先行，momo 為第一個完整實作（須先取得其 API 規格）；PChome/Cyberbiz 待規格取得後套同一骨架** | 本 session 裁定；遵守 `Knowledge/sources/research-protocol.md` §1.1（契約事實禁止網路推測） |
-| 三系統整合 | Wellfit（執行面/資料面）、EKPI（治理面/簽核面）、根工作區 FlapsErp（ERP 執行面）**各自獨立演進**，以 PostgreSQL + 事件表 + 窄 API 契約互通；禁止跨 repo 直接依賴 | 本 session 裁定；`cargo_workspace_architecture` 決策要求依賴方向 Presentation→Application→Domain |
+| 三系統整合 | **以 ekpi-platform 為治理/簽核中樞**（既有 6-crate Clean Architecture + PostgreSQL 18.6 + 稽核鏈 + 分權工作台，擴充而非另起）；Wellfit（執行面/資料面）與根工作區 FlapsErp（ERP 執行面）**各自獨立演進**，以 PostgreSQL 事件表 + 窄 API 契約互通；**禁止跨 repo path dependency** | 本 session 裁定；`cargo_workspace_architecture` 決策（Clean Architecture、Presentation→Application→Domain）；ekpi-platform 已具備目標架構 |
 | 簽核狀態機 | 動態多級（>5）、多急、條件分支、超時升級、定期提醒/清理、Agent 判斷免簽核、付費動作權限控管 | 本 session 裁定 |
-| 技術基線 | **新增程式碼一律沿用根工作區現行基線**：Rust edition 2021、Cargo resolver 2、axum 0.7、sqlx 0.8、Askama 0.16、tokio 1.0；**Rust-first，禁止 Python** | ADR-0001（Accepted，2026-11-03）D-02 明定「維持 edition 2021／resolver 2／axum 0.7／SQLite；升級至 2024/Axum 0.8/PostgreSQL 列為獨立 POC，需先有明確收益證據」。本計畫**不得**擅自升級 |
-| PostgreSQL 採用方式 | 本計畫新增的跨系統整合層（`platform-hub`）以 PostgreSQL 18 為共享事實來源，屬**新系統的技術選型**，不構成對根工作區既有 SQLite 基線的變更；根工作區維持 SQLite（ADR-0001 D-02 不變） | ADR-0001 §3.2；ADR-0001 §6 要求升級須獨立 POC |
+| 技術基線 | **分系統依其既有 Accepted ADR**：ekpi-platform = edition 2024 / resolver 3 / axum 0.8.9 / askama 0.16.1 / sqlx 0.9.0 / PostgreSQL 18.6（**維持不變**）；根工作區 `Dev/` = edition 2021 / resolver 2 / axum 0.7 / sqlx 0.8 SQLite（ADR-0001 D-02，**維持不變**，升級須獨立 POC）；新 `platform-hub` = 沿用 ekpi-platform 基線。**Rust-first，禁止 Python** | `ekpi-platform/Cargo.toml`（實測）、`Dev/docs/adr/ADR-0001` D-02、`corrections.md` Rust-first |
+| PostgreSQL 採用方式 | **ekpi-platform 既有 PostgreSQL 18.6 為共享事實來源**（擴充既有 migrations，不新建資料庫）；事件表 outbox/inbox 以新 migration 加入。根工作區 `Dev/` 維持 SQLite（ADR-0001 D-02 不變），其事件以 outbox 模式寫入本地 SQLite 或經 API 投递至 ekpi-platform | ADR-0001 §3.2；ekpi-platform `migrations/` 現況 |
 | 知識庫版控與多環境共用 | **位置不動（ADR-0004 已 Approved，不重開）；`Knowledge/` 單獨初始化 git（私有 remote）；CI 以 SHA 釘選消費，確保 develop/test/release/main 取得與程式碼同一 commit 的規格事實；敏感檔（實體交付位元組）排除版控，改以 SHA-256 登錄引用** | 本 session 裁定；ADR-0004 §2；KB README §6.5 機敏資料規約 |
-| 硬性不變量 | 每個 `.rs` 第一行 `#![forbid(unsafe_code)]`；`clippy --all-targets -- -D warnings` 零警告（不得加 allow）；金額/數量禁用浮點（根工作區用 `flaps_core::money`、Wellfit 用 `wellfit_core::scaled::ScaledDecimal`）；展示層零 JS；欄位以名稱解析禁止序位退讓 | `Wellfit/AGENTS.md` §4、憲章 §2.2–2.3、ADR-0001 §3.4、ADR-0002 §3.4 |
+| 部署模型 | **原生 binary 部署（Windows sc.exe / Linux systemd / macOS launchd），不使用容器**；ekpi-platform 既有 Dockerfile 保留但非部署路徑；PostgreSQL 以原生服務部署 | 本 session 裁定；`windmill_deployment_no_docker` 修正 |
+| 硬性不變量 | 每個 `.rs` 第一行 `#![forbid(unsafe_code)]`；`clippy --all-targets -- -D warnings` 零警告（不得加 allow）；金額/數量禁用浮點（根工作區用 `flaps_core::money`、Wellfit 用 `wellfit_core::scaled::ScaledDecimal`、ekpi-platform 用 i64/TIMESTAMPTZ）；展示層零 JS；欄位以名稱解析禁止序位退讓 | `Wellfit/AGENTS.md` §4、憲章 §2.2–2.3、ADR-0001 §3.4、ADR-0002 §3.4、`ekpi-platform/apps/web/tests/zero_js_tests.rs` |
 
 ## 3. 目標架構
 
 ```
-┌──────────────────── EKPI 治理面 (ekpi-platform/platform) ────────────────────┐
-│ governance_web (CSS-first, 零JS)  │ 裁決引擎  │ audit.rs (SHA-256 追加式)   │
-│ 12階段/5關卡 → 擴充為動態多級簽核工作流引擎                                │
-│ 新增: workflow.rs (動態簽核圖) / escalation.rs / agent_policy.rs            │
+┌──── EKPI 治理/簽核中樞 (ekpi-platform/, 6-crate, edition 2024, resolver 3) ────┐
+│ apps/web (Axum 0.8.9 + Askama 0.16.1, CSS-first 零JS, Viewer/Editor/Approver)  │
+│ crates/application (ports.rs: GovernanceRepository/UserRepository/Session...)  │
+│ crates/domain (governance/tenant/auth/hashing, 零 I/O)                        │
+│ crates/adapters (postgres 18.6 + jsonl_ledger + argon2id + audit)             │
+│ platform/ (裁決引擎, rules, evidence, snapshot, coverage, eval)              │
+│ 【擴充】crates/channels + crates/workflow → 動態簽核 + ChannelAdapter          │
 └───────────────┬──────────────────────────────────────┬──────────────────────┘
                 │ 窄 API 契約 + PostgreSQL 事件表         │
                 │ (outbox/inbox, 可重播)                  │
 ┌───────────────▼──────────────────────────────────────▼──────────────────────┐
-│            共享整合層 (新: Dev/platform-hub/)                               │
+│            共享整合層 (新: Dev/platform-hub/, 沿用 edition 2024 基線)         │
 │ crates/channels/  ── ChannelAdapter trait + UDM + 規則引擎 + momo 適配器     │
 │ crates/eventbus/  ── Outbox/Inbox 事件骨幹（PostgreSQL）+ Redis 快取適配    │
 │ crates/workflow/  ── 跨系統簽核工作流（動態多級/多急/升級/Agent 判斷）       │
@@ -57,7 +62,7 @@
 │ core(帳本/ReleaseGate/合約)   │  │ core/platform/web    │  │ + PowerShell    │
 │ shopee/reports/mtrix/bankpay  │  │ AI decision_gating   │  │ + wellfit.exe   │
 │ assist(多格式/異常/影子)       │  │ stubs → 真實簽核      │  │ 排程觸發        │
-│ integration(對帳/切換)         │  │                       │  │                │
+│ integration(對帳/切換)         │  │ (edition 2021/SQLite) │  │                │
 └───────────────────────────────┘  └──────────────────────┘  └────────────────┘
                 ▲                                              ▲
                 │ 單向引用（ADR-0004）：專案 ──讀取──▶ KB      │
@@ -68,14 +73,17 @@
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 技術基線（依 ADR-0001，2026-11-03 Accepted）
+### 技術基線（分系統依其既有 Accepted ADR，皆不得擅自升級）
 
-| 範圍 | 基線 | 備註 |
-|------|------|------|
-| 根工作區 `Dev/` | edition 2021 / resolver 2 / axum 0.7 / sqlx 0.8 (SQLite) / Askama 0.16 / tokio 1.0 | **不得擅自升級**；升級須獨立 POC + ADR |
-| `platform-hub`（新增） | 同上（沿用現行基線） | PostgreSQL 為其**新系統**選型，不變更根工作區 SQLite |
-| Wellfit | edition 2021 / rusqlite 0.32 (bundled) / clap 4.5 | 獨立 CI workflow；建置走 `Knowledge/tools/dev-env/build.ps1` |
-| ekpi-platform | edition 2021 / axum 0.8.9 / maud 0.27 | 獨立 crate（`platform` + `eval`），無根 workspace |
+| 範圍 | 基線 | 產物管理 |
+|------|------|----------|
+| `ekpi-platform/` | edition 2024 / resolver 3 / rust-version 1.99 / axum 0.8.9 / askama 0.16.1 / sqlx 0.9.0 (postgres) / PostgreSQL 18.6 | **Cargo workspace 根**（`Cargo.lock`）＋ `migrations/` ＋ `.sqlx/` |
+| `Dev/platform-hub/`（新增） | 同 ekpi-platform 基線（edition 2024 / resolver 3） | 獨立 Cargo workspace（隔離耦合） |
+| `Dev/`（根工作區） | edition 2021 / resolver 2 / axum 0.7 / sqlx 0.8 (SQLite) / Tauri 2.0 | ADR-0001 D-02 不變；升級須獨立 POC + ADR |
+| `Dev/Wellfit/` | edition 2021 / rusqlite 0.32 (bundled) / clap 4.5 | 獨立 repo + CI；建置走 `Knowledge/tools/dev-env/build.ps1` |
+| `Dev/SyncMesh/` | 不納入本計畫（已被 `wellfit_sync` 取代） | — |
+
+> 三套基線並存是**現況事實**（各系統獨立演進之必然結果），非缺陷。統一基線若要做，屬跨系統 POC 議題，需另立 ADR，不在本計畫範圍。
 
 ### 職責邊界（不可越界）
 
@@ -108,9 +116,9 @@
 
 ### Phase A — 文件與決策校正（Phase 0 之後）
 
-- **A1** 修正 `ekpi-platform/docs/project-management-optimization.md`：刪除不存在的 6-crate 架構敘述，改為實際 `platform`+`eval`；移除 Python 建議（Rust-first）；移除 Docker 建議（原生部署）。新增「本文件為歷史草案」標頭與 ADR 連結。
-- **A2** 新增 ADR：統一整合架構（PostgreSQL 事件骨幹 + 原生部署 + Kafka 保留插槽 + 動態簽核工作流），置於 `Dev/docs/adr/`，編號接續現有 `ADR-0011` → **ADR-0012**。明確記載「推翻 Kafka+k3s 提議」的理由與推翻時點，並聲明根工作區技術基線維持 ADR-0001 不變。
-- **A3** 新增 ADR：電商平台整合邊界（通用骨架 + momo 首個完整實作；契約事實禁止網路推測）→ **ADR-0013**。
+- **A1** 更新 `ekpi-platform/docs/project-management-optimization.md`（**架構描述正確，僅建議過期**）：刪除 §4/§10.3 的 Python 建議（違反 Rust-first 修正）；將 §8 Docker 部署建議改為原生 binary（保留 Dockerfile 但註明非部署路徑）；補入 2026-11-05 已實作狀態（6-crate 已就位、PostgreSQL 18.6 migrations 已就位、Argon2id 已落地）；更新 §7.2 KPI 儀表板「當前」欄為實測值。**不得**刪除 6-crate 架構敘述（經查證正確）。
+- **A2** 新增 ADR：統一整合架構（ekpi-platform 為治理/簽核中樞 + PostgreSQL 事件骨幹 + 原生部署 + Kafka 保留插槽 + 動態簽核工作流），置於 `ekpi-platform/docs/adr/`（**該 repo 已有 ADR 目錄與 `adr-template.md`**），編號接續現有 → **ADR-0002**（ekpi 範圍）。明確記載「推翻 Kafka+k3s 提議」的理由與推翻時點，並聲明根工作區基線維持 ADR-0001 不變。
+- **A3** 新增 ADR：電商平台整合邊界（通用骨架 + momo 首個完整實作；契約事實禁止網路推測）→ **ADR-0003**（ekpi 範圍）。
 - **A4** 更新 `Dev/docs/PROJECT_STATUS.md`、`Dev/docs/NEXT_ACTIONS.md`、`Dev/docs/PLAN_REGISTER.md`，納入本計畫。
 - **A5** 在 `Projects/2026/Knowledge/issues/mtx-issue-register.md` 登錄（**注意：知識庫不在 `Dev/` 之下**）：momo/PChome/Cyberbiz API 規格待取得（掛 OQ-F2-5 對接方索取項）；PChome 渠道碼 995F 待確認；KB 版控化（Phase 0）。
 - **A6** 登錄三套平行 ADR 儲存處的權威邊界（`Dev/docs/adr/`＝根工作區範圍、`Knowledge/adr/`＝跨專案介接事實、`ekpi-platform/docs/adr/`＝ekpi 範圍），並於三處各加交叉索引，避免日後誤引。
