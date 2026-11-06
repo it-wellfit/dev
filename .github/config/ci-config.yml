@@ -1,0 +1,59 @@
+﻿# CI/CD 配置 — 動態驅動 GitHub Actions 工作流
+# 修改此檔案即可調整 CI/CD 行為，無需修改 workflow YAML
+
+branches:
+  production: main
+  integration: develop
+  testing: test
+  release: release
+  feature_prefix: "feature/"
+  fix_prefix: "fix/"
+  hotfix_prefix: "hotfix/"
+
+environments:
+  develop:
+    branch: develop
+    deploy_on_push: true
+    smoke_test: true
+    full_test: false
+  test:
+    branch: test
+    deploy_on_push: true
+    smoke_test: false
+    full_test: true
+  release:
+    branch: release
+    deploy_on_push: true
+    smoke_test: false
+    full_test: true
+    tag_prefix: "rc-"
+  production:
+    branch: main
+    deploy_on_push: true
+    smoke_test: false
+    full_test: true
+    require_pr: true
+    require_approval: true
+
+build:
+  os: [ubuntu-latest, windows-latest]
+  rust_channel: stable
+  features: []
+  profile: release
+
+quality_gates:
+  fmt: true
+  clippy: true
+  clippy_deny_warnings: true
+  test: true
+  audit: true
+  min_test_count: 0
+
+deploy:
+  method: native-binary
+  windmill: true
+  target_dir: "$LOCALAPPDATA\Temp\dev-target"
+
+notifications:
+  on_failure: true
+  on_success: false
