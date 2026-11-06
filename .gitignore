@@ -34,3 +34,6 @@
 # OS noise
 Thumbs.db
 .DS_Store
+
+# Git worktrees (local development environments, not tracked)
+/worktrees/
