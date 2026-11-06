@@ -358,3 +358,20 @@ a:hover { color: var(--color-primary-hover); }
 ---
 
 *OEKAP Design System v1.0 — CSS-First, Zero JavaScript, WCAG 2.2 AA Compliant*
+
+/* Pagination (blueprint M1): zero-JS link navigation, tabular page status */
+.pagination {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2, 8px);
+  flex-wrap: wrap;
+  margin: var(--space-4, 16px) 0;
+}
+.pagination .page-status {
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-muted, #666666);
+}
+.pagination .is-disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

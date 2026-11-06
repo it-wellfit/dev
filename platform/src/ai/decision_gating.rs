@@ -29,9 +29,9 @@ pub struct TransactionItem {
     pub transaction_id: String,
     pub account_id: String,
     pub item_type: String,
-    pub amount: f64,
+    pub amount_minor: i64,
     pub currency: String,
-    pub exchange_rate: f64,
+    pub exchange_rate_scaled: i64,
     pub reference: Option<String>,
     pub description: Option<String>,
 }
@@ -243,7 +243,7 @@ impl AIDecisionGating {
             transaction.transaction_id,
             transaction.transaction_date,
             transaction.description,
-            items.iter().map(|item| format!("  - {} {} (Account: {})", item.item_type, item.amount, item.account_id)).collect::<Vec<_>>().join("\n"),
+            items.iter().map(|item| format!("  - {} {} (Account: {})", item.item_type, item.amount_minor, item.account_id)).collect::<Vec<_>>().join("\n"),
             context.user_id,
             context.branch_id,
             serde_json::to_string(&context.metadata).unwrap_or_default()

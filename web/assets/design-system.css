@@ -723,3 +723,20 @@ legend {
     max-width: 100%;
   }
 }
+
+/* Pagination (blueprint M1): zero-JS link navigation, tabular page status */
+.pagination {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2, 8px);
+  flex-wrap: wrap;
+  margin: var(--space-4, 16px) 0;
+}
+.pagination .page-status {
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-muted, #666666);
+}
+.pagination .is-disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

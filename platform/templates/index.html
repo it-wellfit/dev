@@ -82,7 +82,7 @@
                 </div>
                 <div class="kpi">
                     <dt>待覆核交易</dt>
-                    <dd>— <span class="pending-note">需人工覆核</span></dd>
+                    <dd>{{ pending_review_count }} <span class="pending-note">需人工覆核</span></dd>
                 </div>
             </dl>
 
@@ -132,7 +132,23 @@
             {{ chart_svg|safe }}
             {% endif %}
 
-            <p class="section-note">清單支援分頁與排序，將由後端 API 提供（見 docs/testing/TEST_STRATEGY.md 的契約測試計畫）。</p>
+            <nav class="pagination" aria-label="交易分頁">
+                {% match prev_page %}
+                {% when Some with (p) %}
+                <a class="btn btn-secondary" href="/?page={{ p }}">上一頁</a>
+                {% when None %}
+                <span class="btn btn-secondary is-disabled" aria-disabled="true">上一頁</span>
+                {% endmatch %}
+                <span class="page-status">第 {{ page }} / {{ total_pages }} 頁・共 {{ total_transactions }} 筆</span>
+                {% match next_page %}
+                {% when Some with (p) %}
+                <a class="btn btn-secondary" href="/?page={{ p }}">下一頁</a>
+                {% when None %}
+                <span class="btn btn-secondary is-disabled" aria-disabled="true">下一頁</span>
+                {% endmatch %}
+            </nav>
+
+            <p class="section-note">清單分頁：每頁 20 筆，以 ?page=N 導覽（GET 唯讀）。排序為交易日期新到舊（資料庫排序）。</p>
         </section>
 
         <section id="transactions" class="panel" aria-labelledby="transactions-title">

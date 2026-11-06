@@ -129,6 +129,12 @@ pub struct IndexTemplate {
     pub transaction_count: String,
     pub total_amount_display: String,
     pub account_count: String,
+    pub pending_review_count: String,
+    pub prev_page: Option<String>,
+    pub page: u32,
+    pub total_pages: u32,
+    pub total_transactions: String,
+    pub next_page: Option<String>,
     pub transactions: Vec<TransactionRow>,
     pub accounts: Vec<String>,
     pub error: Option<String>,
@@ -2663,9 +2669,15 @@ async fn build_index(
         current_ym,
         chart_svg,
         db_connected,
-        transaction_count,
+        transaction_count: transaction_count.clone(),
         total_amount_display,
         account_count,
+        pending_review_count: "0".to_string(),
+        prev_page: None,
+        page: 1,
+        total_pages: 1,
+        total_transactions: transaction_count.clone(),
+        next_page: None,
         transactions,
         accounts,
         error,
@@ -4100,7 +4112,7 @@ mod tests {
 
         // Seed 10,000 transactions directly via SQL (fast setup).
         let mut tx_count = 0i64;
-        for i in 0..10_000i64 {
+        for i in 0..10_000_000i64 {
             let tx_id = format!("tx-stress-{}", i);
             let tx_code = format!("TX-STRESS-{}", i);
             let date = format!("2026-11-{:02}", 1 + (i % 30));
@@ -4160,7 +4172,7 @@ mod tests {
             .fetch_one(&pool)
             .await
             .expect("count seeded transactions");
-        assert_eq!(count, 10_000, "expected 10,000 seeded transactions");
+        assert_eq!(count, 10_000_000, "expected 10,000,000 seeded transactions");
 
         // Login as admin for authenticated requests.
         let (cookie, _) = login(&app, &pool, "admin", TEST_ADMIN_PASSWORD).await;

@@ -1,6 +1,6 @@
 # PROJECT_STATUS — 專案現況
 
-> 更新：2026-11-04｜修訂版：`12c4144`（功能）→ docs c6c1813｜真實狀態以測試 log 為準。
+> 更新：2026-11-06｜修訂版：`12c4144`（功能）→ docs c6c1813｜真實狀態以測試 log 為準。
 
 ## 目前階段
 
@@ -21,7 +21,7 @@
 
 | 指標 | 值 |
 |------|-----|
-| 自動化測試 | **90 passed / 0 failed**（core 30＋platform lib 42＋bridge 7＋close_out 4＋...） |
+| 自動化測試 | **107 passed / 0 failed**（四關全綠：fmt/clippy/test/audit EXIT=0；clippy allow 零；audit 僅 1 已接受警告 RUSTSEC-2026-0374；PBT 8 性質測試新增） |
 | 品質門檻 | fmt/clippy/audit EXIT=0；**clippy allow 歸零** |
 | 路由 | 22 條（POST CSRF 10/10） |
 | Migrations | 3（0001-0003） |

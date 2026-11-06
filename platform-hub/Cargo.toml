@@ -1,0 +1,45 @@
+[workspace]
+members = [
+    "crates/udm",
+    "crates/channels",
+    "crates/eventbus",
+    "crates/adapters-momo",
+    "crates/agent-policy",
+]
+resolver = "3"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.99"
+license = "Proprietary"
+
+[workspace.dependencies]
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# IDs and time
+uuid = { version = "1", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+
+# Error handling
+thiserror = "2"
+anyhow = "1"
+
+# Async
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+async-trait = "0.1"
+
+# Database (PostgreSQL 18.6, same as ekpi-platform)
+sqlx = { version = "0.9.0", default-features = false, features = ["runtime-tokio", "tls-rustls-ring", "postgres", "macros", "migrate", "uuid", "chrono"] }
+
+# Logging
+tracing = "0.1"
+
+# Internal crates
+platform-hub-udm = { path = "crates/udm", version = "0.1.0" }
+platform-hub-channels = { path = "crates/channels", version = "0.1.0" }
+platform-hub-eventbus = { path = "crates/eventbus", version = "0.1.0" }
+platform-hub-adapters-momo = { path = "crates/adapters-momo", version = "0.1.0" }
+platform-hub-agent-policy = { path = "crates/agent-policy", version = "0.1.0" }

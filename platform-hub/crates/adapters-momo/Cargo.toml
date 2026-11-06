@@ -1,0 +1,18 @@
+[package]
+name = "platform-hub-adapters-momo"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[lib]
+name = "platform_hub_adapters_momo"
+path = "src/lib.rs"
+
+[dependencies]
+platform-hub-channels = { workspace = true }
+platform-hub-udm = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+async-trait = { workspace = true }

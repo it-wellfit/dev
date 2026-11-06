@@ -3,6 +3,27 @@
 本檔記錄根 workspace（`core/`、`platform/`、`web/`、`crates/flaps_bridge`）的實際變更。格式參考 Keep a Changelog。子專案（ekpi-platform、Wellfit、SyncMesh）各自有變更記錄。
 
 
+## [Unreleased] — 2026-11-06（第十輪：重新設計藍圖 R2/M1/M3＋TDD/BDD/SDD/DDD/ADD 體系）
+
+### Added
+- **REDESIGN_BLUEPRINT_v2.0**（docs/product/）：全面深化設計——架構 R1-R3、模組 M1-M6、介面互動設計、十二維度品質準則、硬性不變量。深化而非推翻：ADR-0001/0002/0003 決策全數保留。
+- **PBT（proptest 1.12.0）**：core dev-dependencies 新增 proptest；8 個性質測試（parse/format round-trip i64+i128、非負、overflow、TooManyDecimalPlaces、empty、negative）全部通過；INV-01 零浮點護欄強化。
+- **DDD 狀態機測試**：engine `status_transition_posted_to_pending_review`（POSTED→PENDING_REVIEW），core 31→39 測試。
+- **CI 工作流**：.github/workflows/flexible-ci.yml 已在本機提交；推送至 origin 需 `workflow` scope（OAuth token 限制），本機已模擬 CI 四關全綠。
+
+- **測試驗證計畫**（docs/testing/REDESIGN_TEST_PLAN_v2.0.md）與**交付清單**（docs/delivery/DELIVERY_MANIFEST_v2.0.md）。
+- **開發方法論體系**（docs/engineering/DEVELOPMENT_METHODOLOGY.md）：TDD 紅綠循環（強制基線）＋BDD 場景註冊表（docs/testing/BDD_SCENARIOS.feature，8 Scenario／10 綁定測試，全部驗證存在）＋SDD 追溯表（需求→規格→測試→證據）＋DDD 界限上下文圖與聚合不變量審計＋ADD 品質屬性戰術表。
+
+### Changed
+- **M1 交易分頁**（TDD，RED→GREEN）：RED `pagination_shows_twenty_rows_per_page_with_page_two`（首頁曾全量列出）→ GREEN `engine::query_transaction_summaries_paged`（LIMIT/OFFSET 全 bind）＋`post_json` `?page=N`（非法→第 1 頁、越界→末頁）＋模板分頁導覽（`{{ page }}/{{ total_pages }}`，首末頁禁用態）。測試：3 整合＋`parse_page` 7 斷言。
+- **M2/R2 健康檢查強化**（TDD，RED→GREEN）：RED `health_reports_degraded_when_database_unreachable`（預期 200 ok）→ GREEN `/api/health` 回報 migration 版本＋交易總數；DB 不可達時 503＋status=degraded（部署探測可用）。測試：`health_reports_*`×2。
+- **M3 待覆核 KPI**（TDD，RED→GREEN）：RED `pending_review_kpi_shows_real_count_instead_of_placeholder`（KPI 顯示「—」）→ GREEN `build_index` 加 `COUNT(*) WHERE status='PENDING_REVIEW'` ＋`IndexTemplate.pending_review_count` ＋模板 `{{ pending_review_count }}`（0 起跳，斷線時仍為「—」）。測試：`pending_review_kpi_shows_real_count_instead_of_placeholder`。
+- `.pagination` 元件樣式（tabular-nums 頁碼、禁用態）。
+
+### Verified
+- 四關全綠：fmt EXIT=0／clippy -D warnings EXIT=0／test --locked **98 passed 0 failed**（90→98）／audit 1 allowed warning（既有）。
+- 零 JS 護欄：templates script=0、內聯事件=0。
+- 併行工作流相容：governance-hub（Phase D3）與模組化重組之變更與本輪全部共存且測試通過。
 ## [Unreleased] — 2026-11-05（第九輪：Slice 12 Demo Kit 完成＋Phase 0 藍圖＋Phase 2 閘門）
 
 ### Added

@@ -410,6 +410,31 @@ impl LedgerEngine {
 
         Ok(rows)
     }
+
+    /// Paged variant of `query_recent_transaction_summaries`. `limit` and
+    /// `offset` are bound parameters — the page number never reaches SQL as
+    /// concatenated text. Callers validate/clamp the page number.
+    pub async fn query_transaction_summaries_paged(
+        &self,
+        limit: i64,
+        offset: i64,
+    ) -> Result<Vec<TransactionSummary>, Box<dyn std::error::Error>> {
+        let rows = sqlx::query_as::<_, TransactionSummary>(
+            "SELECT t.transaction_id, t.transaction_code, t.transaction_date, t.description, \
+             t.reference_number, t.status, t.source_type, t.created_by, t.created_at, t.updated_at, \
+             COALESCE(SUM(CASE WHEN i.item_type = 'DEBIT' THEN i.amount_minor ELSE 0 END), 0) AS total_amount_minor, \
+             COALESCE(MIN(i.currency), 'TWD') AS currency \
+             FROM transactions t LEFT JOIN transaction_items i ON i.transaction_id = t.transaction_id \
+             GROUP BY t.transaction_id \
+             ORDER BY t.transaction_date DESC, t.created_at DESC LIMIT ? OFFSET ?",
+        )
+        .bind(limit)
+        .bind(offset)
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(rows)
+    }
 }
 
 /// One month's debit/credit totals (dashboard chart, Slice 8 Layer D).
@@ -665,6 +690,16 @@ mod tests {
         .await
         .expect("audit query");
         assert_eq!(audit_count.0, 1, "posting must be audited");
+    }
+
+    #[test]
+    fn status_transition_posted_to_pending_review() {
+        // DDD 聚合狀態機：POSTED（建立時預設）→ PENDING_REVIEW（覆核中）。
+        let today = chrono::Utc::now().date_naive();
+        let mut tx = header("tx-status-review", today);
+        assert_eq!(tx.status, "POSTED", "header 預設狀態為 POSTED");
+        tx.update_status("PENDING_REVIEW".to_string());
+        assert_eq!(tx.status, "PENDING_REVIEW", "狀態轉移至 PENDING_REVIEW");
     }
 
     #[tokio::test]

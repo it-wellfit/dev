@@ -7,8 +7,8 @@
 | # | 任務 | 階段 | 前置 |
 |---|------|------|------|
 | 1 | **Backup/Restore 演練**（data\flaps.db 複製→還原→查詢驗證）＋BACKUP_RECOVERY.md | Phase 2 | 無（可本機執行） |
-| 2 | **Health check 強化**（DB 查詢＋migration 版本納入 /api/health） | Phase 2 | 無 |
-| 3 | **部署環境決策**（TLS／網域／主機）——**需擁有者授權** | Phase 2 | 授權 |
+| ~~2. **Health check 強化**~~（已完成：/api/health 回報 migration 版本＋交易總數；DB 不可達時 503 degraded；測試 health_reports_*×2 通過） | Phase 2 | 無（已完成） |
+| 2.5 | **驗證方法論體系**：TDD 紅綠循環（M3 待覆核 KPI 先紅後綠）、BDD 場景註冊表 docs/testing/BDD_SCENARIOS.feature（8 Scenario 全綁定現有通過測試）、SDD 追溯表（docs/engineering/DEVELOPMENT_METHODOLOGY.md §3）、DDD 聚合不變量審計（新增 status_transition_posted_to_pending_review）、ADD 品質屬性戰術表（§5） | Phase 1→2 銜接 | 無 |` + "`n`| 2.6 | **DDD 狀態機測試**：POSTED→PENDING_REVIEW（core/src/ledger/engine.rs，31 passed / 0 failed） | Phase 1 | 無 |` + "`n`| 3 | **部署環境決策**（TLS／網域／主機）——**需擁有者授權** | Phase 2 | 授權 |
 | 4 | OpenTelemetry 導入評估 | Phase 2 | 部署環境 |
 
 ## 高風險問題

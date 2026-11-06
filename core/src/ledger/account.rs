@@ -53,24 +53,24 @@ impl Account {
         Ok(count.0 == 0)
     }
 
-    /// Get account balance
-    pub async fn get_balance(&self, pool: &sqlx::SqlitePool) -> Result<f64, sqlx::Error> {
+    /// Get account balance (in minor units, i64)
+    pub async fn get_balance(&self, pool: &sqlx::SqlitePool) -> Result<i64, sqlx::Error> {
         // Query all transaction items for this account
-        let rows = sqlx::query_as::<_, (f64, String)>(
-            "SELECT amount, item_type FROM transaction_items WHERE account_id = ?",
+        let rows = sqlx::query_as::<_, (i64, String)>(
+            "SELECT amount_minor, item_type FROM transaction_items WHERE account_id = ?",
         )
         .bind(&self.account_id)
         .fetch_all(pool)
         .await?;
 
-        let mut balance = 0.0;
+        let mut balance: i64 = 0;
         for (amount, item_type) in rows {
             // Determine sign based on item type and account type
             let is_debit_account = matches!(self.account_type.as_str(), "ASSETS" | "EXPENSE");
-            let delta = match item_type.as_str() {
+            let delta: i64 = match item_type.as_str() {
                 "DEBIT" => amount,
                 "CREDIT" => -amount,
-                _ => 0.0,
+                _ => 0,
             };
             // For liability/equity/revenue accounts, debit decreases balance
             let signed = if is_debit_account { delta } else { -delta };
