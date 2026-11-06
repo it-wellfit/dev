@@ -1,0 +1,112 @@
+﻿# Flexible CI/CD Pipeline — 配置驅動，動態調整
+name: Flexible CI/CD
+
+on:
+  push:
+    branches: [ main, develop, test, release ]
+  pull_request:
+    branches: [ main, develop, test, release ]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment"
+        required: true
+        default: "develop"
+        type: choice
+        options: [develop, test, release, production]
+      skip_tests:
+        description: "Skip tests (emergency only)"
+        required: false
+        default: false
+        type: boolean
+      custom_branch:
+        description: "Custom branch to build (optional)"
+        required: false
+        type: string
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: -D warnings
+  CONFIG_FILE: .github/config/ci-config.yml
+
+defaults:
+  run:
+    shell: pwsh
+
+jobs:
+  load-config:
+    name: Load Configuration
+    runs-on: ubuntu-latest
+    outputs:
+      branches: ${{ steps.config.outputs.branches }}
+      os_matrix: ${{ steps.config.outputs.os_matrix }}
+      rust_channel: ${{ steps.config.outputs.rust_channel }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Read config
+        id: config
+        run: |
+          $branches = '["main","develop","test","release"]'
+          $os = '["ubuntu-latest","windows-latest"]'
+          $rust = "stable"
+          "branches=$branches" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          "os_matrix=$os" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          "rust_channel=$rust" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
+  baseline:
+    name: Baseline (${{ matrix.os }})
+    needs: load-config
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        rust: [stable]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ matrix.rust }}
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/index
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.toml') }}
+      - name: Format check
+        run: cargo fmt -- --check
+      - name: Clippy lint
+        run: cargo clippy --all-targets -- -D warnings
+      - name: Run tests
+        if: github.event.inputs.skip_tests != 'true'
+        run: cargo test --locked
+      - name: Security audit
+        run: |
+          cargo install cargo-audit
+          cargo audit
+
+  deploy:
+    name: Deploy
+    needs: baseline
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+      - name: Build release
+        run: cargo build --release --locked
+      - name: Deploy
+        run: |
+          $envName = if ($env:INPUT_ENVIRONMENT) { $env:INPUT_ENVIRONMENT } elseif ($env:GITHUB_REF -eq 'refs/heads/main') { 'production' } elseif ($env:GITHUB_REF -eq 'refs/heads/release') { 'release' } elseif ($env:GITHUB_REF -eq 'refs/heads/test') { 'test' } else { 'develop' }
+          Write-Host "Deploying to $envName environment..."
+    env:
+      INPUT_ENVIRONMENT: ${{ github.event.inputs.environment }}
