@@ -79,8 +79,10 @@ fn run() -> Result<(), KemError> {
         "capture" => cmd_capture(&root, &ledger, &args.flags),
         "ingest" => cmd_ingest(&root, &ledger, flag(&args.flags, "file")?),
         "finalize" => cmd_finalize(&root, &ledger),
+        "ask" => cmd_ask(&root, &args.flags),
+        "eval" => cmd_eval(&root, &args.flags),
         other => Err(KemError::InvalidInput(format!(
-            "unknown command {other:?} (P2+ commands ship with their phase)"
+            "unknown command {other:?}"
         ))),
     }
 }
@@ -270,6 +272,54 @@ fn cmd_finalize(root: &Path, ledger: &Path) -> Result<(), KemError> {
     write_log(root, ledger)?;
     println!("finalize: index.md + log.md regenerated ({} claims)", claims.len());
     Ok(())
+}
+
+/// P2 M5: BM25 ask — lifecycle filter BEFORE ranking, top-N with scores.
+fn cmd_ask(root: &Path, flags: &std::collections::HashMap<String, String>) -> Result<(), KemError> {
+    let query = flag(flags, "query")?;
+    let top: usize = flags
+        .get("top")
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(5);
+    let claims = load_claims(&root.join("claims"))?;
+    let visible = kem::search::visible_at(&claims, None);
+    let index = kem::search::Index::build(&visible);
+    let hits = index.search(&visible, &query, top);
+    if hits.is_empty() {
+        println!("no results (honest refusal — query outside current knowledge)");
+        return Ok(());
+    }
+    for h in &hits {
+        println!(
+            "{:.4}  {}  [{}] conf={:.2}  {}",
+            h.score, h.id, format!("{:?}", h.status).to_lowercase(), h.confidence, h.title
+        );
+    }
+    Ok(())
+}
+
+/// P2 V1: golden-set evaluation — top-1 accuracy with refusal cases.
+fn cmd_eval(root: &Path, flags: &std::collections::HashMap<String, String>) -> Result<(), KemError> {
+    let set = flags
+        .get("set")
+        .cloned()
+        .unwrap_or_else(|| "crates/kem/tests/golden-20.json".into());
+    let cases = kem::search::load_golden(Path::new(&set))?;
+    let claims = load_claims(&root.join("claims"))?;
+    let visible = kem::search::visible_at(&claims, None);
+    let index = kem::search::Index::build(&visible);
+    let (pass, total, failures) = kem::search::run_golden(&index, &claims, &cases)?;
+    for f in &failures {
+        eprintln!("FAIL {f}");
+    }
+    println!("eval: {pass}/{total} top-1 pass ({} golden cases)", total);
+    if pass == total {
+        Ok(())
+    } else {
+        Err(KemError::InvalidInput(format!(
+            "golden set failed: {pass}/{total}"
+        )))
+    }
 }
 
 fn next_id(existing: &[Claim], known: &std::collections::BTreeSet<String>) -> Result<String, KemError> {

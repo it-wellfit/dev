@@ -16,6 +16,7 @@ pub mod capture;
 pub mod filing;
 pub mod ledger;
 pub mod schema;
+pub mod search;
 pub mod seed;
 pub mod vetting;
 
