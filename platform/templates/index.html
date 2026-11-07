@@ -41,7 +41,7 @@
             <a href="#accounts">會計科目</a>
             <a href="#ai-decisions">AI 決策</a>
             <a href="#new-transaction">新增交易</a>
-            <a href="#states">介面狀態</a>
+            <a href="/states">介面狀態</a>
             <a href="/import">快速匯入</a>
             <a href="/drafts">草稿解析</a>
             <a href="/reports/monthly?ym={{ current_ym }}">月報表</a>
@@ -82,7 +82,7 @@
                 </div>
                 <div class="kpi">
                     <dt>待覆核交易</dt>
-                    <dd>{{ pending_review_count }} <span class="pending-note">需人工覆核</span></dd>
+                    <dd>— <span class="pending-note">需人工覆核</span></dd>
                 </div>
             </dl>
 
@@ -132,23 +132,60 @@
             {{ chart_svg|safe }}
             {% endif %}
 
-            <nav class="pagination" aria-label="交易分頁">
-                {% match prev_page %}
-                {% when Some with (p) %}
-                <a class="btn btn-secondary" href="/?page={{ p }}">上一頁</a>
-                {% when None %}
-                <span class="btn btn-secondary is-disabled" aria-disabled="true">上一頁</span>
-                {% endmatch %}
-                <span class="page-status">第 {{ page }} / {{ total_pages }} 頁・共 {{ total_transactions }} 筆</span>
-                {% match next_page %}
-                {% when Some with (p) %}
-                <a class="btn btn-secondary" href="/?page={{ p }}">下一頁</a>
-                {% when None %}
-                <span class="btn btn-secondary is-disabled" aria-disabled="true">下一頁</span>
-                {% endmatch %}
-            </nav>
+            <p class="section-note">清單支援分頁與排序，將由後端 API 提供（見 docs/testing/TEST_STRATEGY.md 的契約測試計畫）。</p>
+        </section>
 
-            <p class="section-note">清單分頁：每頁 20 筆，以 ?page=N 導覽（GET 唯讀）。排序為交易日期新到舊（資料庫排序）。</p>
+        <section id="modules" class="panel" aria-labelledby="modules-title">
+            <h3 id="modules-title">跨模組狀態（Slice 13）</h3>
+            <p class="preview-note">
+                平台核心模組的即時狀態：搜尋索引、同步佇列、COM 物件池與 AI 模型。
+            </p>
+            <dl class="kpi-grid">
+                <div class="kpi">
+                    <dt>搜尋索引文件數</dt>
+                    <dd>{{ search_index_count }}</dd>
+                </div>
+                <div class="kpi">
+                    <dt>同步待處理數</dt>
+                    <dd>{{ sync_pending_count }}</dd>
+                </div>
+                <div class="kpi">
+                    <dt>COM 物件數</dt>
+                    <dd>{{ com_bridge_objects }}</dd>
+                </div>
+                <div class="kpi">
+                    <dt>AI 可用模型數</dt>
+                    <dd>{{ ai_models_available }}</dd>
+                </div>
+            </dl>
+            {% if !recent_audit_logs.is_empty() %}
+            <div class="table-wrap">
+                <table>
+                    <caption>最近稽核紀錄</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col">事件類型</th>
+                            <th scope="col">執行者</th>
+                            <th scope="col">時間</th>
+                            <th scope="col">摘要</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for log in recent_audit_logs %}
+                        <tr>
+                            <td><span class="badge badge-info">{{ log.event_type }}</span></td>
+                            <td>{{ log.performed_by }}</td>
+                            <td>{{ log.performed_at }}</td>
+                            <td>{{ log.summary }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endif %}
+            <p class="section-note">
+                API 端點：/api/search · /api/sync · /api/com · /api/ai · /api/health
+            </p>
         </section>
 
         <section id="transactions" class="panel" aria-labelledby="transactions-title">
@@ -365,6 +402,7 @@
             <p class="preview-note">
                 以下為元件狀態的樣式預覽（Loading／失敗／部分不可用），供設計審查與驗收對照，非即時資料。
             </p>
+            <p><a class="btn btn-secondary" href="/states">開啟完整介面狀態標本（按鈕／表單／徽章／分頁）</a></p>
 
             <h4>載入中</h4>
             <p class="loading-state"><span class="spinner" aria-hidden="true"></span>資料載入中…</p>

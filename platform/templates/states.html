@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>介面狀態 — Flaps ERP 工作台</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%23005fcc'/%3E%3Ctext x='8' y='12' font-size='10' font-family='sans-serif' fill='white' text-anchor='middle' font-weight='bold'%3EF%3C/text%3E%3C/svg%3E">
+    <link rel="stylesheet" href="/assets/design-system.css">
+</head>
+<body>
+    <a class="skip-link" href="#main">跳至主要內容</a>
+
+    <header class="app-header">
+        <div class="container">
+            <div>
+                <h1>介面狀態</h1>
+                <p class="app-subtitle">設計系統標本頁（UI-UX 規格 E3.7）— 供設計審查、驗收與新頁面開發對照</p>
+            </div>
+            <p class="app-subtitle">
+                使用者：<strong>{{ acting_user }}</strong>
+                ｜
+                <a class="btn btn-secondary" href="/">返回工作台</a>
+            </p>
+        </div>
+    </header>
+
+    <main id="main" class="container">
+        <p class="preview-note">
+            本頁所有樣式皆來自 <code>design-system.css</code>（Design Token 驅動、零 JavaScript、支援
+            <code>prefers-reduced-motion</code>）。互動狀態以 CSS 呈現：請以滑鼠懸停、Tab 鍵巡覽、於必填欄位直接送出，
+            觀察 Hover／Focus／Invalid 三種回饋。
+        </p>
+
+        <section class="panel" aria-labelledby="s-buttons">
+            <h2 id="s-buttons">按鈕（Button）</h2>
+            <p>
+                <button class="btn btn-primary" type="button">主要動作</button>
+                <button class="btn btn-secondary" type="button">次要動作</button>
+                <button class="btn btn-ghost" type="button">低調動作</button>
+                <button class="btn btn-success" type="button">確認送出</button>
+                <button class="btn btn-danger" type="button">危險動作</button>
+            </p>
+            <p>
+                <button class="btn btn-primary btn-sm" type="button">小尺寸</button>
+                <button class="btn btn-primary btn-lg" type="button">大尺寸</button>
+                <button class="btn btn-secondary" type="button" disabled>停用（Disabled）</button>
+            </p>
+            <p class="section-note">Hover／Focus／Active／Disabled 狀態各自獨立；鍵盤 Tab 巡覽時顯示可見焦點環（--focus-ring，對比 ≥ 3:1）。</p>
+        </section>
+
+        <section class="panel" aria-labelledby="s-forms">
+            <h2 id="s-forms">表單（Form）</h2>
+            <form method="get" action="/states">
+                <div class="form-row">
+                    <label for="fx-name">科目名稱（一般輸入）<span aria-hidden="true"> *</span></label>
+                    <input class="input" type="text" id="fx-name" name="fx_name" placeholder="例如：銀行存款－玉山" required>
+                    <p class="hint">Default／Hover／Focus 由 CSS 呈現；未填送出時瀏覽器標記 :user-invalid（紅框＋提示）。</p>
+                </div>
+                <div class="form-row">
+                    <label for="fx-locked">科目代碼（停用範例）</label>
+                    <input class="input" type="text" id="fx-locked" value="BANK-001" disabled>
+                    <p class="hint">停用欄位不進 Tab 序列、不隨表單送出。</p>
+                </div>
+                <div class="form-row">
+                    <label for="fx-type">科目類型（下拉）</label>
+                    <select class="input" id="fx-type" name="fx_type">
+                        <option>ASSETS — 資產</option>
+                        <option>LIABILITIES — 負債</option>
+                        <option>EQUITY — 權益</option>
+                        <option>REVENUE — 收入</option>
+                        <option>EXPENSES — 費用</option>
+                    </select>
+                </div>
+                <div class="form-row">
+                    <label for="fx-note">摘要（多行）</label>
+                    <textarea class="input" id="fx-note" name="fx_note" rows="3" placeholder="最多 200 字"></textarea>
+                </div>
+                <div class="form-actions">
+                    <button class="btn btn-primary" type="submit">送出（GET 讀取示範）</button>
+                    <button class="btn btn-secondary" type="button">取消</button>
+                </div>
+            </form>
+            <p class="section-note">本示範為讀取（GET）；正式功能之建立／修改／刪除一律 POST＋CSRF，成功後 303 導回（Post/Redirect/Get）。</p>
+        </section>
+
+        <section class="panel" aria-labelledby="s-badges">
+            <h2 id="s-badges">徽章與交易狀態（Badge）</h2>
+            <p>
+                <span class="badge badge-success">已完成 0000</span>
+                <span class="badge badge-info">待處理 1000–1008</span>
+                <span class="badge badge-warning">待覆核</span>
+                <span class="badge badge-error">失敗 4000</span>
+                <span class="badge badge-neutral">無資料 9999</span>
+                <span class="badge badge-primary">已建立</span>
+            </p>
+            <p class="section-note">狀態一律「顏色＋文字」雙軌傳達（不以顏色為唯一訊息），符合 WCAG 2.2 AA Use of Color。</p>
+        </section>
+
+        <section class="panel" aria-labelledby="s-feedback">
+            <h2 id="s-feedback">回饋與系統狀態（Feedback）</h2>
+
+            <h3>載入中（Loading）</h3>
+            <p class="loading-state"><span class="spinner" aria-hidden="true"></span>資料載入中…（僅在 &gt;300ms 時顯示；尊重 reduced-motion）</p>
+
+            <h3>錯誤（Error）— 問題＋可能原因＋處理方式</h3>
+            <div class="error-state" role="alert">
+                <strong>無法載入交易清單</strong>
+                <p>可能原因：後端服務未啟動或連線中斷。請確認服務狀態後重試；若持續失敗，請聯絡系統管理員。</p>
+                <p><a class="btn btn-secondary" href="/states">重試</a></p>
+            </div>
+
+            <h3>部分不可用（Degraded）</h3>
+            <div class="degraded-state" role="status">
+                <strong>AI 決策服務暫停</strong>
+                <p>規則引擎不受影響，登帳與查詢照常運作；服務恢復後本區塊回到完整狀態。</p>
+            </div>
+
+            <h3>空狀態（Empty）</h3>
+            <p class="empty-state">
+                <strong>尚無資料</strong>
+                未知或無資料一律以「—」呈現，不以範例數字冒充真實帳務。
+            </p>
+        </section>
+
+        <section class="panel" aria-labelledby="s-table">
+            <h2 id="s-table">表格（Table）</h2>
+            <div class="table-wrap">
+                <table>
+                    <caption>範例：交易清單（示意資料，非真實帳務）</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col">交易編號</th>
+                            <th scope="col">摘要</th>
+                            <th scope="col">日期</th>
+                            <th scope="col">金額</th>
+                            <th scope="col">狀態</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>TX-DEMO-001</td>
+                            <td>文具用品採購</td>
+                            <td>2026-11-06</td>
+                            <td>1,234.50 TWD</td>
+                            <td><span class="badge badge-success">已完成</span></td>
+                        </tr>
+                        <tr>
+                            <td>TX-DEMO-002</td>
+                            <td>銀行轉帳－貨款</td>
+                            <td>2026-11-06</td>
+                            <td>98,000.00 TWD</td>
+                            <td><span class="badge badge-info">待處理</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <p class="section-note">金額右對齊並使用 tabular-nums（會計數字對齊）；列 Hover 高亮；表格具 caption 與 scope 標記。</p>
+        </section>
+
+        <section class="panel" aria-labelledby="s-kpi">
+            <h2 id="s-kpi">KPI 卡（Stat）</h2>
+            <dl class="kpi-grid">
+                <div class="kpi">
+                    <dt>交易總筆數</dt>
+                    <dd>2</dd>
+                </div>
+                <div class="kpi">
+                    <dt>交易總金額</dt>
+                    <dd>99,234.50</dd>
+                </div>
+                <div class="kpi">
+                    <dt>啟用科目數</dt>
+                    <dd>—</dd>
+                </div>
+            </dl>
+            <p class="section-note">數字以整數分（i64）儲存，顯示時還原兩位小數；未知值顯示「—」。</p>
+        </section>
+
+        <section class="panel" aria-labelledby="s-pagination">
+            <h2 id="s-pagination">分頁（Pagination，零 JavaScript）</h2>
+            <nav class="pagination" aria-label="分頁導覽範例">
+                <span class="is-disabled" aria-disabled="true">← 上一頁</span>
+                <span class="page-status">第 1 / 2 頁・共 25 筆</span>
+                <a href="/states">下一頁 →</a>
+            </nav>
+            <p class="section-note">純連結導覽（GET 唯讀）；首／末頁以 is-disabled＋aria-disabled 呈現不可用狀態。</p>
+        </section>
+
+        <section class="panel" aria-labelledby="s-a11y">
+            <h2 id="s-a11y">無障礙與設計系統</h2>
+            <ul>
+                <li>跳至主要內容（skip-link）、語義地標（header／nav／main／footer）、標題層級 h1→h2→h3 無跳級。</li>
+                <li>可見焦點：鍵盤 Tab 全頁可巡覽，焦點環對比 ≥ 3:1。</li>
+                <li>動態偏好：<code>prefers-reduced-motion</code> 時停用非必要動畫。</li>
+                <li>色彩對比：文字 ≥ 4.5:1、大字 ≥ 3:1（WCAG 2.2 AA）。</li>
+                <li>設計系統原始檔：<a href="/assets/design-system.css">design-system.css</a>（Cascade Layers＋Design Tokens）。</li>
+            </ul>
+        </section>
+    </main>
+
+    <footer class="site-footer">
+        <div class="container">
+            <p>Flaps ERP 工作台 · 介面狀態標本 v1（零 JavaScript，WCAG 2.2 AA 方向）</p>
+            <p>規格：docs/ux/UI-UX_需求規格.md §E3.7 · 設計系統：web/assets/design-system.css</p>
+        </div>
+    </footer>
+</body>
+</html>
