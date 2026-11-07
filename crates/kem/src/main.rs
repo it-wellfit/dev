@@ -74,7 +74,7 @@ fn run() -> Result<(), KemError> {
     let root = args.root;
     let ledger = root.join(".kem/ledger.jsonl");
     match args.cmd.as_str() {
-        "seed" => cmd_seed(&root, &ledger),
+        "seed" => cmd_seed(&root, &ledger, args.flags.contains_key("force")),
         "validate" => cmd_validate(&root),
         "capture" => cmd_capture(&root, &ledger, &args.flags),
         "ingest" => cmd_ingest(&root, &ledger, flag(&args.flags, "file")?),
@@ -93,8 +93,25 @@ fn flag(flags: &std::collections::HashMap<String, String>, name: &str) -> Result
 }
 
 /// P0: stage raw sources, vet and file the 20 seed claims, record the ledger.
-fn cmd_seed(root: &Path, ledger: &Path) -> Result<(), KemError> {
+/// `--force` resets ONLY what seed itself created (guarded: every existing
+/// ledger entry must be actor=kem-seed; any other actor refuses the reset).
+fn cmd_seed(root: &Path, ledger: &Path, force: bool) -> Result<(), KemError> {
     std::fs::create_dir_all(root.join(".kem"))?;
+    if force && ledger.exists() {
+        let entries = kem::ledger::read_all(ledger)?;
+        let foreign = entries.iter().filter(|e| e.actor != "kem-seed").count();
+        if foreign > 0 {
+            return Err(KemError::InvalidInput(format!(
+                "--force refused: ledger holds {foreign} non-seed entries"
+            )));
+        }
+        for dir in ["raw", "claims"] {
+            if root.join(dir).exists() {
+                std::fs::remove_dir_all(root.join(dir))?;
+            }
+        }
+        std::fs::remove_file(ledger)?;
+    }
     let now = Utc::now();
     let mut staged = 0usize;
     for (topic, content) in seed_raw_sources() {

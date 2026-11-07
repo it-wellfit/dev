@@ -185,7 +185,7 @@ const SEEDS: [SeedSpec; 20] = [
         body: "platform/src/api.rs and web/* follow a single-writer rule to break the dual-writer merge-conflict loop; this is a structural intervention, not a process preference.",
         path: "docs/engineering/THINKING_OPERATING_SYSTEM.md",
         rev: ROOT_REV,
-        quote: "單一寫者原則（api.rs/web/*）——不是流程偏好，是對「雙寫者合併衝突迴路」的規則層介入",
+        quote: "**工作區錨點**：單一寫者原則（api.rs）不是流程偏好，是對「雙寫者合併衝突迴路」的規則層介入。",
         raw_topic: "methodology",
     },
     SeedSpec {
