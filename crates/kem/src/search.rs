@@ -150,7 +150,7 @@ pub fn visible_at(claims: &[Claim], at: Option<chrono::NaiveDate>) -> Vec<Claim>
         .filter(|c| {
             c.status.retrievable()
                 && c.valid_from <= at
-                && c.valid_to.map_or(true, |v| at <= v)
+                && c.valid_to.is_none_or(|v| at <= v)
         })
         .cloned()
         .collect()
@@ -174,7 +174,7 @@ pub fn run_golden(index: &Index, all: &[Claim], cases: &[GoldenCase]) -> Result<
         let ok = if case.expect == "none" {
             hits.is_empty()
         } else {
-            hits.first().map_or(false, |h| &h.id == &case.expect)
+            hits.first().is_some_and(|h| h.id == case.expect)
         };
         if ok {
             pass += 1;
@@ -210,7 +210,7 @@ pub fn load_golden(path: &Path) -> Result<Vec<GoldenCase>, KemError> {
 mod tests {
     use super::*;
     use crate::schema::{ClaimType, Evidence, Track};
-    use chrono::TimeZone;
+    use chrono::{TimeZone, Utc};
 
     fn claim(id: &str, title: &str, body: &str, status: ClaimStatus) -> Claim {
         Claim {
@@ -221,7 +221,7 @@ mod tests {
             confidence: 0.9,
             valid_from: chrono::NaiveDate::from_ymd_opt(2026, 1, 1).unwrap(),
             valid_to: None,
-            recorded_at: Utc.with_ymd_and_hms(2026, 11, 7, 0, 0, 0).unwrap(),
+            recorded_at: chrono::Utc.with_ymd_and_hms(2026, 11, 7, 0, 0, 0).unwrap(),
             supersedes: vec![],
             superseded_by: None,
             evidence: vec![Evidence {
