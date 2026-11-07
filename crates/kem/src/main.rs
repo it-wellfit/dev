@@ -9,9 +9,9 @@ use chrono::Utc;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
-use kem::filing::{load_claims, save_claim, status_counts, write_index, write_log};
+use kem::filing::{load_claims, write_index, write_log};
 use kem::ledger::LedgerAction;
-use kem::schema::{Claim, ClaimStatus, KemError, ValidationContext, known_ids_of, validate_claim};
+use kem::schema::{Claim, KemError, ValidationContext, known_ids_of, validate_claim};
 use kem::seed::{seed_claims, seed_raw_sources};
 use kem::vetting::{Outcome, VetContext, record_verdict, stage_claim, vet_t1};
 
@@ -99,18 +99,22 @@ fn cmd_seed(root: &Path, ledger: &Path) -> Result<(), KemError> {
     let mut staged = 0usize;
     for (topic, content) in seed_raw_sources() {
         let src = kem::capture::capture_source(root, topic, "seed", "md", &content, now)?;
-        kem::ledger::append(
-            ledger,
-            "kem-seed",
-            LedgerAction::Capture,
-            "",
-            serde_json::json!({"rel": src.rel_path, "sha256": src.sha256}),
-            now,
-        )?;
+        if src.created {
+            kem::ledger::append(
+                ledger,
+                "kem-seed",
+                LedgerAction::Capture,
+                "",
+                serde_json::json!({"rel": src.rel_path, "sha256": src.sha256}),
+                now,
+            )?;
+        }
         staged += 1;
     }
     let claims = seed_claims();
-    let ctx = VetContext::new(root.to_path_buf(), Vec::new());
+    // Evidence paths are workspace-relative (KEM doc §4.2): resolve against
+    // the workspace root (cwd), not the knowledge store root.
+    let ctx = VetContext::new(PathBuf::from("."), Vec::new());
     let mut accepted = 0usize;
     for claim in &claims {
         let verdict = vet_t1(claim, &ctx);
@@ -193,7 +197,7 @@ fn cmd_ingest(root: &Path, ledger: &Path, batch_file: String) -> Result<(), KemE
         return Err(KemError::InvalidInput("batch is empty".into()));
     }
     let existing = load_claims(&root.join("claims"))?;
-    let ctx = VetContext::new(root.to_path_buf(), existing.clone());
+    let ctx = VetContext::new(PathBuf::from("."), existing.clone());
     let mut known = known_ids_of(existing.iter());
     let queue = root.join(".kem/review-queue.jsonl");
     let now = Utc::now();
@@ -266,10 +270,4 @@ fn append_jsonl(path: &Path, value: &serde_json::Value) -> Result<(), KemError> 
     f.write_all(serde_json::to_string(value)?.as_bytes())?;
     f.write_all(b"\n")?;
     Ok(())
-}
-
-// Keep ClaimStatus import used (status helper for future status cmd).
-#[allow(dead_code)]
-fn _unused(c: &Claim) -> ClaimStatus {
-    c.status
 }

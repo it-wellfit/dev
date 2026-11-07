@@ -8,7 +8,7 @@
 use chrono::{DateTime, Local, Utc};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use crate::KemError;
 
@@ -21,6 +21,8 @@ pub struct CapturedSource {
     pub sha256: String,
     pub bytes: u64,
     pub captured_at: DateTime<Utc>,
+    /// True when this call wrote the file; false for an idempotent re-run.
+    pub created: bool,
 }
 
 pub fn sha256_hex(data: &[u8]) -> String {
@@ -29,7 +31,9 @@ pub fn sha256_hex(data: &[u8]) -> String {
 }
 
 /// Stage `content` under `raw/<topic>/<YYYY-MM-DD>-<name>.<ext>`.
-/// Refuses overwrite: raw files are immutable once captured.
+/// Idempotent: an existing file with identical content is accepted as
+/// already-captured; an existing file with different content is an
+/// immutability violation (raw files never change once captured).
 pub fn capture_source(
     root: &Path,
     topic: &str,
@@ -51,9 +55,21 @@ pub fn capture_source(
     let _ = now; // ledger timestamp stays UTC
     let rel = format!("raw/{topic}/{date}-{name}.{ext}");
     let abs = root.join(&rel);
+    let captured = CapturedSource {
+        rel_path: rel,
+        sha256: sha256_hex(content.as_bytes()),
+        bytes: u64::try_from(content.len()).unwrap_or(u64::MAX),
+        captured_at: now,
+        created: false,
+    };
     if abs.exists() {
+        let existing = std::fs::read(&abs)?;
+        if sha256_hex(&existing) == captured.sha256 {
+            return Ok(captured); // idempotent re-run
+        }
         return Err(KemError::InvalidInput(format!(
-            "raw source already captured (immutable): {rel}"
+            "raw source already captured with different content (immutable): {}",
+            captured.rel_path
         )));
     }
     if let Some(parent) = abs.parent() {
@@ -61,10 +77,8 @@ pub fn capture_source(
     }
     std::fs::write(&abs, content)?;
     Ok(CapturedSource {
-        rel_path: rel,
-        sha256: sha256_hex(content.as_bytes()),
-        bytes: u64::try_from(content.len()).unwrap_or(u64::MAX),
-        captured_at: now,
+        created: true,
+        ..captured
     })
 }
 
