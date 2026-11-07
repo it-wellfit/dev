@@ -1,0 +1,25 @@
+2026-11-07 — api.rs encoding-corruption incident & repair (session 20261107-dev-flaps-completion)
+
+INCIDENT (all +0800):
+- 18:20 e82a49e: api.rs corrupted via UTF-8 -> CP950 re-encode accident (BOM added).
+  Evidence: blob df3b20cc, 157,455 bytes, PUA=712, FIRST3=EF BB BF.
+- 18:46 c6c1d54: stress seed 100_000 -> 1_000 (transient) + blank-line appends.
+- 18:59 c0790da / 19:01 2d6411b: blank-line appends to EOF.
+- 19:02 8b8b92b: stress restored 100_000 + assert 100_000 (deliberate final calibration).
+- 19:12 bca0ab7: whole-file rewrite accident (line endings converted LF -> CRLF).
+  Evidence: blob 9e9fcd9, 161,029 bytes, PUA=713, CR count = 4,201.
+- At HEAD 9704933: rustfmt parse errors = 28; platform crate unbuildable.
+
+REPAIR:
+- Last clean revision identified: dc414ac (blob ffc4036, 156,879 bytes, PUA=0).
+- All 10 intervening commits inspected against dc414ac: only corruption, CRLF, BOM,
+  blank-line churn, transient 1k value. No other semantic deltas.
+- Byte-restore: git show dc414ac:platform/src/api.rs -> platform/src/api.rs (+ rustfmt).
+- Verification: 156,879 bytes, PUA=0, PARSE_ERRORS=0, FMT_DIFFS=0, FIRST3=2F 2F 21 (no BOM).
+- Compile proof: cargo check -p platform -> Finished dev profile in 16.04s, EXIT=0.
+- Commit d8429af "fix(platform): repair api.rs encoding corruption, restore buildable state"
+  staged scope: platform/src/api.rs only (parallel streams' WIP untouched).
+- Post-check: HEAD:platform/src/api.rs == ffc4036 (byte-identical to clean baseline);
+  3e0db70 (parallel stream, 20:40) independently reverted the CRLF layer (9e9fcd9->7f81419).
+
+GUARDS ADDED THIS SESSION: (pending) platform/tests/guards.rs — PUA/FFFD/BOM scan over sources.
