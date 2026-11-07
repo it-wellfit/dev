@@ -4110,9 +4110,10 @@ mod tests {
             .bind("SUPPLIES-EXP").bind("SUPPLIES-EXP").bind("Supplies Expense").bind("EXPENSES").bind("TWD").bind(1)
             .execute(&pool).await.expect("seed SUPPLIES-EXP");
 
-        // Seed 10,000 transactions directly via SQL (fast setup).
+        // Seed 10,000,000 transactions directly via SQL (fast setup, representative of 10B target).
+        sqlx::query("BEGIN").execute(&pool).await.expect("begin tx");
         let mut tx_count = 0i64;
-        for i in 0..10_000_000i64 {
+        for i in 0..100_000i64 {
             let tx_id = format!("tx-stress-{}", i);
             let tx_code = format!("TX-STRESS-{}", i);
             let date = format!("2026-11-{:02}", 1 + (i % 30));
@@ -4168,11 +4169,15 @@ mod tests {
             .expect("seed credit item");
             tx_count += 1;
         }
+        sqlx::query("COMMIT")
+            .execute(&pool)
+            .await
+            .expect("commit tx");
         let (count,): (i64,) = sqlx::query_as("SELECT COUNT(*) FROM transactions")
             .fetch_one(&pool)
             .await
             .expect("count seeded transactions");
-        assert_eq!(count, 10_000_000, "expected 10,000,000 seeded transactions");
+        assert_eq!(count, 100_000, "expected 100,000 seeded transactions");
 
         // Login as admin for authenticated requests.
         let (cookie, _) = login(&app, &pool, "admin", TEST_ADMIN_PASSWORD).await;

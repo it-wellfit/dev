@@ -1,0 +1,6 @@
+core/src/ledger/engine.rs:39:9: replace LedgerEngine::apply_pragmas -> Result<(), sqlx::Error> with Ok(())
+core/src/ledger/engine.rs:262:34: replace > with >= in LedgerEngine::validate_journal_entry
+core/src/ledger/engine.rs:345:9: replace LedgerEngine::query_transactions -> Result<Vec<crate::ledger::transaction::Transaction>, Box<dyn std::error::Error>> with Ok(vec![])
+core/src/ledger/engine.rs:422:9: replace LedgerEngine::query_transaction_summaries_paged -> Result<Vec<TransactionSummary>, Box<dyn std::error::Error>> with Ok(vec![])
+core/src/ledger/engine.rs:463:9: replace LedgerEngine::monthly_totals -> Result<Vec<MonthlyTotal>, Box<dyn std::error::Error>> with Ok(vec![])
+core/src/ledger/engine.rs:481:9: replace LedgerEngine::monthly_by_account -> Result<Vec<AccountMonthTotal>, Box<dyn std::error::Error>> with Ok(vec![])

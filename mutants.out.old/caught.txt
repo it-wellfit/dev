@@ -1,0 +1,56 @@
+core/src/money.rs:65:5: replace parse_decimal_to_minor -> Result<i64, MoneyError> with Ok(0)
+core/src/money.rs:65:5: replace parse_decimal_to_minor -> Result<i64, MoneyError> with Ok(1)
+core/src/money.rs:65:5: replace parse_decimal_to_minor -> Result<i64, MoneyError> with Ok(-1)
+core/src/money.rs:73:60: replace || with && in parse_decimal_to_minor
+core/src/money.rs:73:8: delete ! in parse_decimal_to_minor
+core/src/money.rs:73:46: replace || with && in parse_decimal_to_minor
+core/src/money.rs:73:51: replace == with != in parse_decimal_to_minor
+core/src/money.rs:73:86: replace > with == in parse_decimal_to_minor
+core/src/money.rs:73:86: replace > with < in parse_decimal_to_minor
+core/src/money.rs:73:86: replace > with >= in parse_decimal_to_minor
+core/src/money.rs:81:25: replace > with == in parse_decimal_to_minor
+core/src/money.rs:81:25: replace > with < in parse_decimal_to_minor
+core/src/money.rs:81:25: replace > with >= in parse_decimal_to_minor
+core/src/money.rs:89:49: replace > with == in parse_decimal_to_minor
+core/src/money.rs:89:49: replace > with < in parse_decimal_to_minor
+core/src/money.rs:89:49: replace > with >= in parse_decimal_to_minor
+core/src/money.rs:89:30: replace + with - in parse_decimal_to_minor
+core/src/money.rs:89:30: replace + with * in parse_decimal_to_minor
+core/src/money.rs:98:30: replace - with + in parse_decimal_to_minor
+core/src/money.rs:98:30: replace - with / in parse_decimal_to_minor
+core/src/money.rs:113:5: replace format_minor -> String with String::new()
+core/src/money.rs:113:5: replace format_minor -> String with "xyzzy".into()
+core/src/money.rs:113:26: replace < with == in format_minor
+core/src/money.rs:113:26: replace < with > in format_minor
+core/src/money.rs:113:26: replace < with <= in format_minor
+core/src/money.rs:116:30: replace / with % in format_minor
+core/src/money.rs:116:30: replace / with * in format_minor
+core/src/money.rs:117:30: replace % with / in format_minor
+core/src/money.rs:117:30: replace % with + in format_minor
+core/src/money.rs:122:20: replace && with || in format_minor
+core/src/money.rs:122:16: replace > with == in format_minor
+core/src/money.rs:122:16: replace > with < in format_minor
+core/src/money.rs:122:16: replace > with >= in format_minor
+core/src/money.rs:122:43: replace - with + in format_minor
+core/src/money.rs:122:43: replace - with / in format_minor
+core/src/money.rs:128:11: replace == with != in format_minor
+core/src/money.rs:309:5: replace parse_decimal_to_minor_i128 -> Result<i128, MoneyError> with Ok(0)
+core/src/money.rs:309:5: replace parse_decimal_to_minor_i128 -> Result<i128, MoneyError> with Ok(1)
+core/src/money.rs:309:5: replace parse_decimal_to_minor_i128 -> Result<i128, MoneyError> with Ok(-1)
+core/src/money.rs:317:8: delete ! in parse_decimal_to_minor_i128
+core/src/money.rs:317:46: replace || with && in parse_decimal_to_minor_i128
+core/src/money.rs:317:51: replace == with != in parse_decimal_to_minor_i128
+core/src/money.rs:317:86: replace > with == in parse_decimal_to_minor_i128
+core/src/money.rs:317:86: replace > with >= in parse_decimal_to_minor_i128
+core/src/money.rs:325:25: replace > with == in parse_decimal_to_minor_i128
+core/src/money.rs:325:25: replace > with >= in parse_decimal_to_minor_i128
+core/src/money.rs:333:49: replace > with < in parse_decimal_to_minor_i128
+core/src/money.rs:342:30: replace - with + in parse_decimal_to_minor_i128
+core/src/money.rs:342:30: replace - with / in parse_decimal_to_minor_i128
+core/src/money.rs:356:5: replace format_minor_i128 -> String with String::new()
+core/src/money.rs:356:5: replace format_minor_i128 -> String with "xyzzy".into()
+core/src/money.rs:356:26: replace < with > in format_minor_i128
+core/src/money.rs:359:30: replace / with % in format_minor_i128
+core/src/money.rs:359:30: replace / with * in format_minor_i128
+core/src/money.rs:360:30: replace % with / in format_minor_i128
+core/src/money.rs:360:30: replace % with + in format_minor_i128

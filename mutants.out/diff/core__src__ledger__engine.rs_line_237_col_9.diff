@@ -1,0 +1,80 @@
+--- core/src/ledger/engine.rs
++++ replace LedgerEngine::validate_journal_entry -> Result<(), Box<dyn std::error::Error>> with Ok(())
+@@ -229,76 +229,17 @@
+     /// total must be positive. Enforced here so NO caller — form, API, or
+     /// future batch importer — can persist a one-sided or zero entry.
+     async fn validate_journal_entry(
+         &self,
+         transaction: &crate::ledger::transaction::Transaction,
+         items: &[crate::ledger::transaction::TransactionItem],
+     ) -> Result<(), Box<dyn std::error::Error>> {
+         // Check required fields
+-        if transaction.transaction_id.is_empty() {
+-            return Err("Transaction ID is required".into());
+-        }
+-
+-        if transaction.transaction_date > chrono::Utc::now().date_naive() {
+-            return Err("Transaction date cannot be in the future".into());
+-        }
+-
+-        if items.is_empty() {
+-            return Err("At least one transaction item is required".into());
+-        }
+-
+-        let mut total_debit: i128 = 0;
+-        let mut total_credit: i128 = 0;
+-
+-        // Validate each item
+-        for item in items {
+-            if item.account_id.is_empty() {
+-                return Err("Account ID is required for transaction items".into());
+-            }
+-
+-            if item.amount_minor <= 0 {
+-                return Err("Transaction item amount must be positive".into());
+-            }
+-
+-            if item.amount_minor > MAX_AMOUNT_MINOR {
+-                return Err(format!(
+-                    "Transaction item amount exceeds the schema cap DECIMAL(15,2) (max minor units {MAX_AMOUNT_MINOR})"
+-                )
+-                .into());
+-            }
+-
+-            if item.exchange_rate_scaled <= 0 {
+-                return Err("Exchange rate must be positive (scaled by 10^4)".into());
+-            }
+-
+-            if !["DEBIT", "CREDIT"].contains(&item.item_type.as_str()) {
+-                return Err("Invalid item type. Must be DEBIT or CREDIT".into());
+-            }
+-
+-            // i128 accumulation: MAX_AMOUNT_MINOR is 17 digits, i64 could
+-            // overflow on many items; i128 makes the sum total-order safe.
+-            match item.item_type.as_str() {
+-                "DEBIT" => total_debit += i128::from(item.amount_minor),
+-                _ => total_credit += i128::from(item.amount_minor),
+-            }
+-        }
+-
+-        if total_debit != total_credit {
+-            return Err(format!(
+-                "Journal entry is not balanced: debits ({total_debit}) must equal credits ({total_credit})"
+-            )
+-            .into());
+-        }
+-
+-        if total_debit == 0 {
+-            return Err("Journal entry total must be greater than zero".into());
+-        }
+-
+-        Ok(())
++        Ok(()) /* ~ changed by cargo-mutants ~ */
+     }
+ 
+     /// Ensure account exists, create if not
+     async fn ensure_account_exists(&self, account_id: &str) -> Result<(), sqlx::Error> {
+         let exists: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM accounts WHERE account_id = ?")
+             .bind(account_id)
+             .fetch_one(&self.pool)
+             .await?;

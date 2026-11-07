@@ -1,0 +1,32 @@
+--- core/src/ledger/engine.rs
++++ replace LedgerEngine::monthly_by_account -> Result<Vec<AccountMonthTotal>, Box<dyn std::error::Error>> with Ok(vec![])
+@@ -473,28 +473,17 @@
+         Ok(rows.into_iter().rev().collect())
+     }
+ 
+     /// Per-account debit/credit totals for one `YYYY-MM` month.
+     pub async fn monthly_by_account(
+         &self,
+         ym: &str,
+     ) -> Result<Vec<AccountMonthTotal>, Box<dyn std::error::Error>> {
+-        let rows = sqlx::query_as::<_, AccountMonthTotal>(
+-            "SELECT i.account_id, \
+-             COALESCE(SUM(CASE WHEN i.item_type = 'DEBIT' THEN i.amount_minor ELSE 0 END), 0) AS debit_minor, \
+-             COALESCE(SUM(CASE WHEN i.item_type = 'CREDIT' THEN i.amount_minor ELSE 0 END), 0) AS credit_minor \
+-             FROM transaction_items i JOIN transactions t ON i.transaction_id = t.transaction_id \
+-             WHERE strftime('%Y-%m', t.transaction_date) = ? \
+-             GROUP BY i.account_id ORDER BY i.account_id",
+-        )
+-        .bind(ym)
+-        .fetch_all(&self.pool)
+-        .await?;
+-        Ok(rows)
++        Ok(vec![]) /* ~ changed by cargo-mutants ~ */
+     }
+ }
+ 
+ #[cfg(test)]
+ mod tests {
+     use super::*;
+     use crate::ledger::transaction::TransactionItem;
+     use sqlx::sqlite::SqlitePoolOptions;

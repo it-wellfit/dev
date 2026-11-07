@@ -1,0 +1,21 @@
+--- core/src/ledger/engine.rs
++++ replace == with != in LedgerEngine::validate_journal_entry
+@@ -284,17 +284,17 @@
+ 
+         if total_debit != total_credit {
+             return Err(format!(
+                 "Journal entry is not balanced: debits ({total_debit}) must equal credits ({total_credit})"
+             )
+             .into());
+         }
+ 
+-        if total_debit == 0 {
++        if total_debit != /* ~ changed by cargo-mutants ~ */ 0 {
+             return Err("Journal entry total must be greater than zero".into());
+         }
+ 
+         Ok(())
+     }
+ 
+     /// Ensure account exists, create if not
+     async fn ensure_account_exists(&self, account_id: &str) -> Result<(), sqlx::Error> {

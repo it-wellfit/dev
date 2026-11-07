@@ -1,0 +1,21 @@
+--- core/src/money.rs
++++ replace - with / in format_minor
+@@ -114,17 +114,17 @@
+     let magnitude = minor.unsigned_abs();
+     let scale = 10u64.pow(dp);
+     let integral = magnitude / scale;
+     let fraction = magnitude % scale;
+ 
+     let integral_str = integral.to_string();
+     let mut grouped = String::with_capacity(integral_str.len() + integral_str.len() / 3);
+     for (idx, ch) in integral_str.chars().enumerate() {
+-        if idx > 0 && (integral_str.len() - idx).is_multiple_of(3) {
++        if idx > 0 && (integral_str.len() / /* ~ changed by cargo-mutants ~ */ idx).is_multiple_of(3) {
+             grouped.push(',');
+         }
+         grouped.push(ch);
+     }
+ 
+     if dp == 0 {
+         return format!(
+             "{negative_sign}{grouped}",

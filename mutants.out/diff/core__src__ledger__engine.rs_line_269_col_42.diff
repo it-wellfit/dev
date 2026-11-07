@@ -1,0 +1,21 @@
+--- core/src/ledger/engine.rs
++++ replace <= with > in LedgerEngine::validate_journal_entry
+@@ -261,17 +261,17 @@
+ 
+             if item.amount_minor > MAX_AMOUNT_MINOR {
+                 return Err(format!(
+                     "Transaction item amount exceeds the schema cap DECIMAL(15,2) (max minor units {MAX_AMOUNT_MINOR})"
+                 )
+                 .into());
+             }
+ 
+-            if item.exchange_rate_scaled <= 0 {
++            if item.exchange_rate_scaled > /* ~ changed by cargo-mutants ~ */ 0 {
+                 return Err("Exchange rate must be positive (scaled by 10^4)".into());
+             }
+ 
+             if !["DEBIT", "CREDIT"].contains(&item.item_type.as_str()) {
+                 return Err("Invalid item type. Must be DEBIT or CREDIT".into());
+             }
+ 
+             // i128 accumulation: MAX_AMOUNT_MINOR is 17 digits, i64 could

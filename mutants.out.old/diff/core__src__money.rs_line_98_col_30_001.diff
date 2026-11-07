@@ -1,0 +1,21 @@
+--- core/src/money.rs
++++ replace - with / in parse_decimal_to_minor
+@@ -90,17 +90,17 @@
+         return Err(MoneyError::Overflow {
+             max_total_digits: MAX_TOTAL_DIGITS,
+         });
+     }
+ 
+     let mut digits = String::with_capacity(integral_digits.len() + dp as usize);
+     digits.push_str(integral_digits);
+     digits.push_str(fractional);
+-    for _ in 0..(dp as usize - fractional.len()) {
++    for _ in 0..(dp as usize / /* ~ changed by cargo-mutants ~ */ fractional.len()) {
+         digits.push('0');
+     }
+ 
+     if digits.is_empty() {
+         return Ok(0);
+     }
+     digits.parse::<i64>().map_err(|_| MoneyError::Overflow {
+         max_total_digits: MAX_TOTAL_DIGITS,

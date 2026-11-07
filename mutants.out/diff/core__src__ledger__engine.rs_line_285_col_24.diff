@@ -1,0 +1,21 @@
+--- core/src/ledger/engine.rs
++++ replace != with == in LedgerEngine::validate_journal_entry
+@@ -277,17 +277,17 @@
+             // i128 accumulation: MAX_AMOUNT_MINOR is 17 digits, i64 could
+             // overflow on many items; i128 makes the sum total-order safe.
+             match item.item_type.as_str() {
+                 "DEBIT" => total_debit += i128::from(item.amount_minor),
+                 _ => total_credit += i128::from(item.amount_minor),
+             }
+         }
+ 
+-        if total_debit != total_credit {
++        if total_debit == /* ~ changed by cargo-mutants ~ */ total_credit {
+             return Err(format!(
+                 "Journal entry is not balanced: debits ({total_debit}) must equal credits ({total_credit})"
+             )
+             .into());
+         }
+ 
+         if total_debit == 0 {
+             return Err("Journal entry total must be greater than zero".into());

@@ -1,7 +1,7 @@
 # Flaps ERP 工作台 — 全面重新設計與開發：完成執行計畫
 
 > **Plan file:** `.kilo/plans/1793033512795-flaps-erp-workbench-completion.md`
-> **日期:** 2026-11-06｜**狀態:** Implementation-ready（可交實作代理執行）
+> **日期:** 2026-11-06｜**狀態:** Implementation-ready（可交實作代理執行）｜**修訂:** v1.1（增 §11 追溯矩陣／§12 來源登錄與查證／§13 決策推導／§14 計畫自我驗證）
 > **觸發:** 使用者要求「依據完整規格計畫，對本產品進行全面重新設計與開發」——所有頁面、功能與實作必須完整，十二工藝維度（精緻/精美/精密/精良/精巧/精雕/精準/精湛/精品/精益/精研/精選）＋延伸維度（無障礙/效能/安全/耐用/可維護）達專業級，快速高效解決所有問題。
 > **產品:** Flaps ERP 工作台（輔翼ERP 工作平台）＝Dev 根工作區 `core/`＋`platform/`＋`web/`（Rust Axum 0.7＋Askama＋SQLite，Strict Zero-JS）。
 > **本計畫邊界:** 以 v2.0 規格套件為「完整規格計畫」權威版本；本檔為將其**執行完成**的主計畫（S0–S7），並補齊套件尚未涵蓋的完整性缺口（頁面齊備、防護測試、維運交付）。
@@ -28,7 +28,7 @@
 ### 1.1 已驗證
 - 測試：96 passed / 0 failed（REDESIGN 執行記錄）；R1 併行流回報 97 綠。→ **S0 重測為準**。
 - 四關：`fmt` / `clippy -D warnings` / `test --locked` / `audit` 最近一次全 EXIT=0。
-- 路由 22 條（`platform/src/api.rs:230–254`）；模板 11 個；migrations 0001–0004；CSS 雙檔同步護欄測試綠。
+- 路由：記載 22 條（`PROJECT_STATUS.md`）＋`api.rs:230–254` 觀察 23 個註冊、`auth.rs:483–484` 子路由 → **S0 清點定案**；模板 11 個（glob 實測）；migrations 0001–0004（實察）；CSS 雙檔同步護欄測試綠（記載）。
 - 已完成（藍圖 §5）：M1 分頁、M2 健康檢查、M3 待覆核 KPI、R-07 Secure cookie。
 - 既有護欄：零 JS 掃描、`:root` token 同步測試、migrations 重放測試、CSRF 10/10、安全標頭 middleware、整數金額測試。
 
@@ -54,7 +54,7 @@
 
 | 步驟 | 新模組 | 內容 | 驗收 |
 |---|---|---|---|
-| R1.1 | `platform/src/web/mod.rs` | `router()`、`AppState`、共用型別、render 輔助 | 路由 22 條逐一存在 |
+| R1.1 | `platform/src/web/mod.rs` | `router()`、`AppState`、共用型別、render 輔助 | 既有路由全數逐一存在（S0 清點為計數基線） |
 | R1.2 | `web/dashboard.rs` | index、build_index、monthly_chart_svg、IndexTemplate、分頁 | 分頁測試續綠 |
 | R1.3 | `web/{transactions,import,drafts,wizard}.rs` | create/驗證、import_*、drafts_*、ai_suggest、wizard_* | CSRF 矩陣不減 |
 | R1.4 | `web/{reports,admin}.rs` | report_*、CSV、admin_*、parse_coverage | 全部測試綠 |
@@ -151,6 +151,8 @@
 
 ## 4. 交付物③完成版：測試驗證計畫（TEST-RD-2.0 全量＋補齊）
 
+> 測試案例 ID 對照見 §11.2；實作測試命名須對齊 ID（或於測試註解標註），以利機器／人工溯源。
+
 ### 4.1 單元（Unit）
 parse_page（0/負/非數字/巨大值/正常→合法頁碼）；format_minor 邊界；M4 換算（i128 中間值、四捨五入）；健康檢查 payload 組裝；科目樹組裝；風險分區間判定。
 
@@ -162,7 +164,7 @@ parse_page（0/負/非數字/巨大值/正常→合法頁碼）；format_minor �
 | 健康檢查（M2） | 200 ok＋migrations 欄位；DB 關閉→503 degraded |
 | Secure cookie | HTTPS 綁定時 Set-Cookie 含 Secure；HttpOnly＋SameSite=Lax 恆在 |
 | **渲染守衛（R5-3）** | 種子＋登入 session 逐頁 GET：全部 200；關鍵標記（頁名/KPI 數字/分頁列）存在；`script`=0 |
-| **路由凍結（R5-2）** | 既有 22 條＋新增 P1–P5 路由全數存在（清單比對） |
+| **路由凍結（R5-2）** | 既有路由（S0 清點基線）＋新增 P1–P5 路由全數存在（清單比對） |
 | **CSRF 補齊** | 新增 POST（accounts create/toggle、ai-decisions/decide、m6 CRUD）逐一：缺 token→403；含量測計數 |
 | **RBAC 負向** | 無權限角色存取新管理動作→403；停用即撤銷會話（既有） |
 | **錯誤頁（R4）** | 400/403/404/500 形狀：三段式文案＋回首頁；API 路徑 JSON |
@@ -336,5 +338,138 @@ cargo audit
 M1–M6＝藍圖模組項；R1–R5＝架構項；P1–P5＝新頁面；S0–S7＝本計畫 slices；PA＝完成判準；OD＝開立決策。
 
 ---
+
+## 11. 追溯矩陣（可追溯）
+
+### 11.1 使用者需求 → 計畫對策（原文級追溯）
+
+| 使用者原話（歷次訊息） | 解讀 | 計畫對策（章節） | 驗收 |
+|---|---|---|---|
+| 「現有版本存在錯誤」 | 執行期錯誤與頁面破損風險 | S0 重測＋R4 統一錯誤頁＋R5 防護測試 | PA-08／R4／R5 |
+| 「功能不穩」 | flaky／回歸風險 | §4.8 回歸協議（flaky 視同缺陷）＋每 slice 四關 | PA-08 |
+| 「外觀粗糙」 | 視覺與狀態不完備 | S4：Token 擴充＋7 狀態矩陣＋`/states` 樣板 | PA-04 |
+| 「耐用性不足」 | 資料與運維韌性 | S6：備份還原演練＋degraded（既有）＋冪等（既有） | PA-06 |
+| 「與規格計畫相距甚遠」 | 規格未落實 | §0 套件逐項完成＋狀態表同步（不宣稱未做） | PA-01／PA-05 |
+| 「所有頁面、功能與實作必須完整」 | 頁面齊備 | S2（P1–P5）＋S3（M4–M6） | PA-01／PA-03 |
+| 「十二維度…專業級品質」 | 品質標準 | §2.3＋§3.1（維度→可驗證準則） | PA-04／PA-07 |
+| 「快速高效解決所有問題」 | 執行效率 | §6 序列＋§7 並行安全區（衝突面最小化） | 方法性（過程紀錄） |
+| 「可追溯可查證可解釋／可推導／驗證完全」 | 計畫自身品質 | §11／§12／§13／§14 | §14 全項 |
+
+### 11.2 規格項 → 計畫項 → 測試 ID → 證據（完整矩陣）
+
+| 來源規格 | 計畫項 | 測試 ID（命名對齊） | 證據位置 |
+|---|---|---|---|
+| 藍圖 R1.1–R1.4 | S1 | `r1_step1_router` … `r1_step4_reports_admin` | 每步四關 log |
+| 藍圖 R2 | 已完成 | `health_ok_payload`、`health_degraded_503`（既有） | 基線 log |
+| 藍圖 R3 | 沿既有 | 金額邊界測試（既有） | 基線 log |
+| 本計畫 R4 | S1 | `errpage_400/403/404/500`、`errpage_api_json` | 整合測試 log |
+| 本計畫 R5 | S1 | `guard_templates_utf8_zerojs`、`guard_routes_frozen`、`guard_render_all_pages` | guards log |
+| 藍圖 M1/M2/M3/R-07 | 已完成 | `pagination_*`、`health_*`、`pending_review_kpi`、`secure_cookie_*`（既有） | 96 基線 |
+| 藍圖 M4 | S3 | `mc_convert_exact_312500`、`mc_report_twd_column` | 單元＋整合 |
+| 藍圖 M5 | S3 | `voucher_debit_credit_balance`、print-CSS 審查 | 整合＋目視 |
+| 藍圖 M6 | S3 | `rules_crud_roundtrip`、`rules_403`、`rules_csrf_negative` | 整合 |
+| UI-UX E3.4／手冊 E5／治理 G1.1 | S2-P1 | `txl_pagination_25_rows`、`txl_clamp_bounds`、`txl_search_q`、`txl_status_label_text` | 整合＋SLO 量測 |
+| UI-UX E3.4 | S2-P2 | `txd_detail_ok`、`txd_detail_404` | 整合 |
+| UI-UX E3.5／治理 G1.1 | S2-P3 | `acc_tree_structure`、`acc_toggle_prg`、`acc_403_csrf_negative` | 整合＋SLO 量測 |
+| UI-UX E3.6 | S2-P4 | `aid_risk_bands`、`aid_source_visible`、`aid_adopt_via_drafts` | 整合 |
+| UI-UX E3.7 | S2-P5 | `states_page_zero_js` | 整合＋目視 |
+| TEST-RD §3 | S5 | `e2e_smoke_all_pages` | 腳本 log |
+| TEST-RD §4／治理 G1.1 | S5 | `perf_index_paged_2000`、`perf_txl_p99`、`perf_acc_p99`、`perf_health`、`perf_txd_200ms` | artifacts/perf |
+| TEST-RD §5 | S5 | `sec_page_param_injection`、`csrf_count_no_regression` | 整合 |
+| TEST-RD §6 | S5 | `a11y_keyboard`、`a11y_focus_ring`、`a11y_contrast`、`a11y_reduced_motion`、`a11y_baseline_*` | 量測表＋log |
+| NEXT_ACTIONS #1 | S6 | `bak_restore_drill` | 演練 log＋BACKUP_RECOVERY.md |
+| NEXT_ACTIONS #4 | S6 | `ci_workflow_verify`（或 Blocked 記錄） | CI log |
+| §0 交付物本文狀態 | S7 | `docs_status_sync`（三份狀態表） | 勾稽表 |
+
+### 11.3 PA → 驗證方法（每個完成判準怎麼驗）
+
+| PA | 驗證方法 | 證據 |
+|---|---|---|
+| PA-01 | guards 渲染測試＋Playwright／人工逐頁走查（7 頁） | 測試 log＋走查表 |
+| PA-02 | 四關全綠＋路由凍結測試＋api.rs 歸零／re-export 檢查 | 四關 log |
+| PA-03 | M4/M5/M6 測試案例全過 | 測試 log |
+| PA-04 | token 同步護欄測試＋矩陣逐頁簽核表 | 測試 log＋審查表 |
+| PA-05 | S5 全部案例＋SLO 量測達標 | artifacts/perf＋量測表 |
+| PA-06 | 演練 log＋CI 紀錄＋health 測試 | 演練 log |
+| PA-07 | DEL-RD-2.0 勾稽＋BACKLOG 掃描（0 P0/P1 open） | 勾稽表 |
+| PA-08 | 四關＋`script` 掃描＋金額測試＋CSRF 計數 | 四關 log |
+
+## 12. 來源登錄與查證（可查證）
+
+### 12.1 來源登錄（本計畫所有依據）
+
+| 文件 | 版本／日期 | 本計畫用途 | 查證方式與等級 |
+|---|---|---|---|
+| `docs/product/REDESIGN_BLUEPRINT_v2.0.md` | PRD-RD-2.0 Active 2026-11-06 | M／R／token／矩陣／品質／§5 狀態 | 全文已讀（154 行）；2026-11-06 12:16 複查 §5 未變 |
+| `docs/testing/REDESIGN_TEST_PLAN_v2.0.md` | TEST-RD-2.0 2026-11-06 | 測試全量＋§7 Pending | 全文已讀（61 行） |
+| `docs/delivery/DELIVERY_MANIFEST_v2.0.md` | DEL-RD-2.0 2026-11-06 | 交付清單＋§G 限制 | 全文已讀（50 行） |
+| `docs/ux/UI-UX_需求規格.md` | v1.0 草案 2026-11-06 | 頁面 E3／狀態／無障礙 E4／DoD E5 | 全文已讀（148 行） |
+| `docs/knowledge-hub/手冊-A-F.md` | §E 區段 | 頁面清單 E5／錯誤三要素／狀態矩陣 | 行 225–307 已讀 |
+| `docs/management/營運治理機制.md` | v1.0 草案 | G1 查詢 SLO／G2.2 測試缺口 | 行 1–80 已讀 |
+| `docs/PROJECT_STATUS.md` | 2026-11-04 | 期程／90 測試／22 路由記載 | 已讀 |
+| `docs/PLAN_REGISTER.md` | addenda 1–10 | 沿革／四關證據史 | 行 1–150 已讀 |
+| `docs/NEXT_ACTIONS.md` | — | 維運項 #1–#4 | 已讀（35 行） |
+| `platform/src/`、`migrations/`、`templates/` | 2026-11-06 12:16 實察 | 現況：`web/` 不存在、11 模板、0001–0004 | 目錄／glob 實察 |
+| root `.git/logs/HEAD` | — | 提交沿革（含 R1 相關） | 已讀（截斷不影響結論） |
+| 根 `AGENTS.md` | v1.0 | 建置規範（CARGO_TARGET_DIR、`;` 等） | 已讀 |
+
+### 12.2 關鍵數字推導鏈（每個數字可追出處與重驗方式）
+
+| 數字 | 出處 | 等級 | S0 重驗方式 |
+|---|---|---|---|
+| 96 passed／0 failed | DEL-RD-2.0 §F（執行記錄） | 記載（規劃期未重跑） | `cargo test --locked` 計數 |
+| 97 綠 | 藍圖 §5（R1 註記） | 記載 | 同上 |
+| 22 路由 | PROJECT_STATUS 記載；實察 api.rs 23 註冊 | **待清點** | 路由凍結測試＋清點 |
+| 11 模板 | glob 實測（本次） | 已驗 | 再 glob |
+| 0001–0004 migrations | 目錄實察 | 已驗 | 目錄檢視 |
+| CSRF 10/10 | PLAN_REGISTER／PROJECT_STATUS | 記載 | 測試計數 |
+| SLO 50／100／200／500ms | 營運治理 G1.1（草案） | 草案值（量測後定案；允許依量測調整並註記） | 效能測試量測 |
+| 41 測試缺口 | 營運治理 G2.2 | 草案記載 | 收口時更新 |
+
+### 12.3 規劃效力邊界（誠實聲明；UNKNOWN ≠ PASS）
+
+- 本規劃**未執行任何測試、建置或變更**（唯讀盤點）；所有測試數字為「記載值」，S0 必須重測後才可引用為事實。
+- 未與 R1 併行流直接通訊；R1 狀態為「文件＋目錄觀察」之判讀（`web/` 未出現 ≠ 必然未進行）；以 S0 交接判定為準。
+- 本計畫不修改 v2.0 套件本文；套件狀態表由實作代理逐項更新（同一提交）。
+- 若實作期發現本計畫與現況牴觸（例如 R1 已落地且結構不同），以**現況＋套件本文**為準，修訂本計畫並記差異（不得默默偏離）。
+
+## 13. 決策推導（可解釋／可推導）
+
+### 13.1 排序推導（為什麼 S0→S1→S2→S3；S4/S6 可並行；S5 最後）
+- **S0 先行**：所有後續決策依賴可信基線；記載 ≠ 事實（§12.2），先重測凍結。
+- **S1 先於 S2/S3**：新頁面（P1–P5）與 M6 都會新增路由、進入 `api.rs` 領地；R1 正在搬移同一檔案——先把領地整理完成（或確認其已落地），避免「同一路由被搬兩次」的雙重工作與衝突。
+- **S4 可並行**：token／CSS／文件不觸 `api.rs`（衝突面＝0）；且狀態矩陣與 `/states` 樣板是 S2 各頁的驗收依據，可預先備好。
+- **S6 可並行**：備份演練／CI 與程式碼面無交集。
+- **S5 最後**：E2E／效能／無障礙驗證對象是 S2/S3 的成品；提前執行會重測、證據失效。
+- 推導原則：**衝突面最小、依賴面單向**（對所有任務逐一檢核後排序）。
+
+### 13.2 範圍推導（為什麼 P1–P5 在內、F2–F4 在外）
+- **P1–P5 在內**：三份獨立文件共同定義（UI-UX §E3＋手冊 §E5＋治理 G1.1）→ 多源一致＝高信度，屬「完整規格計畫」範圍。
+- **M4–M6 在內**：藍圖 §2 明列且 §5 標 Pending（Active 文件）。
+- **F2 批次交易／F3 自訂報表／F4 作廢沖銷在外的**：僅見於較舊的多維演進計畫；v2.0 套件無對應驗收規格 → 依「邊界＝權威套件」推導為後續（OD-8）。
+- **Dark mode／進階動畫在外**：僅舊計畫；v2.0 §3.1 token 清單不含 → 後續品質切片（OD-5）。
+
+### 13.3 協調推導（為什麼單一寫者）
+- 證據：藍圖 §5 自記「本藍圖執行方暫停觸碰 api.rs 以免衝突」→ 雙流碰撞風險**已實際發生並被記錄**；推導出 §7 單一寫者＋S0 交接判定＋不衝突區先行。
+
+### 13.4 證據制度推導（為什麼「指令＋退出碼」）
+- 沿革證據：PLAN_REGISTER addenda 1–10 全以「指令＋EXIT=0＋修訂版」記載；歷史上有模板損壞、未驗證宣稱等事故 → 制度性防呆（§3.5）而非個人細心。
+
+## 14. 計畫自我驗證（驗證完全）
+
+S0 執行時（確認計畫與現況一致）與 S7 執行時（確認交付與計畫一致），逐項核對並記錄：
+
+- [ ] 14.1 **來源覆蓋掃描**：逐份讀 §12.1 全部來源；凡標 `Pending`／`未完成`／`Not Run` 處，皆能對應到本計畫某項，或有 OD／BACKLOG 記錄（無遺漏、無暗項）。
+- [ ] 14.2 **頁面覆蓋**：UI-UX E3.1–E3.7＋手冊 E5 全 7 項 → 每項有計畫項＋測試 ID＋證據（§11.2 逐列核對）。
+- [ ] 14.3 **模組覆蓋**：藍圖 R1–R3、M1–M6 全數「已完成或已排程」。
+- [ ] 14.4 **測試覆蓋**：TEST-RD-2.0 全部案例 → 有 ID、有 slice、有證據路徑；§7 Pending 清零。
+- [ ] 14.5 **交付覆蓋**：DEL-RD-2.0 §A–§D 全項＋§G 限制清零或明列。
+- [ ] 14.6 **PA 覆蓋**：PA-01..08 每項有可執行驗證方法（§11.3）。
+- [ ] 14.7 **不變量覆蓋**：§3.2 六條不變量各有自動檢測（掃描／測試）。
+- [ ] 14.8 **反面檢查**：專案中任一「已知問題」清單（IMPROVEMENT_BACKLOG、NEXT_ACTIONS、G2.2 缺口表）不含未映射項。
+- [ ] 14.9 **證據存在性**（S7）：§5.3 所列每份證據檔案在 `.kilo/sessions/…`／`artifacts/` 真實存在且非空。
+- [ ] 14.10 **狀態表同步**（S7）：藍圖／測試計畫／交付清單三份狀態表與實況一致（無虛標 Done）。
+
+> 執行方式：14.1–14.8 於 S0 全跑一次並記錄；14.9–14.10 於 S7 全跑一次並記錄。未過項即修正計畫或補做，不得跳過。
 
 *本計畫為執行主計畫；完成時以 PA-01..08 全數達成且四關全綠結案。歷史紀錄不刪改，狀態表疊加更新。*

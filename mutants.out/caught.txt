@@ -1,0 +1,21 @@
+core/src/ledger/engine.rs:63:9: replace LedgerEngine::ensure_tables -> Result<(), sqlx::Error> with Ok(())
+core/src/ledger/engine.rs:162:9: replace LedgerEngine::post_journal_entry -> Result<(), Box<dyn std::error::Error>> with Ok(())
+core/src/ledger/engine.rs:237:9: replace LedgerEngine::validate_journal_entry -> Result<(), Box<dyn std::error::Error>> with Ok(())
+core/src/ledger/engine.rs:241:41: replace > with == in LedgerEngine::validate_journal_entry
+core/src/ledger/engine.rs:241:41: replace > with < in LedgerEngine::validate_journal_entry
+core/src/ledger/engine.rs:241:41: replace > with >= in LedgerEngine::validate_journal_entry
+core/src/ledger/engine.rs:258:34: replace <= with > in LedgerEngine::validate_journal_entry
+core/src/ledger/engine.rs:262:34: replace > with == in LedgerEngine::validate_journal_entry
+core/src/ledger/engine.rs:262:34: replace > with < in LedgerEngine::validate_journal_entry
+core/src/ledger/engine.rs:269:42: replace <= with > in LedgerEngine::validate_journal_entry
+core/src/ledger/engine.rs:273:16: delete ! in LedgerEngine::validate_journal_entry
+core/src/ledger/engine.rs:280:17: delete match arm "DEBIT" in LedgerEngine::validate_journal_entry
+core/src/ledger/engine.rs:280:40: replace += with -= in LedgerEngine::validate_journal_entry
+core/src/ledger/engine.rs:280:40: replace += with *= in LedgerEngine::validate_journal_entry
+core/src/ledger/engine.rs:281:35: replace += with -= in LedgerEngine::validate_journal_entry
+core/src/ledger/engine.rs:281:35: replace += with *= in LedgerEngine::validate_journal_entry
+core/src/ledger/engine.rs:285:24: replace != with == in LedgerEngine::validate_journal_entry
+core/src/ledger/engine.rs:292:24: replace == with != in LedgerEngine::validate_journal_entry
+core/src/ledger/engine.rs:301:9: replace LedgerEngine::ensure_account_exists -> Result<(), sqlx::Error> with Ok(())
+core/src/ledger/engine.rs:306:21: replace == with != in LedgerEngine::ensure_account_exists
+core/src/ledger/engine.rs:398:9: replace LedgerEngine::query_recent_transaction_summaries -> Result<Vec<TransactionSummary>, Box<dyn std::error::Error>> with Ok(vec![])

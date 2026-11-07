@@ -1,0 +1,31 @@
+# cargo-mutants configuration — flaps_core
+# Mutation testing harness: engine + money ≥80% mutation score target.
+# Ref: docs/engineering/DEVELOPMENT_METHODOLOGY.md §8 (MT)
+
+[[train]]
+name = "flaps_core"
+
+[test]
+# fast unit tests only (no flaky/integration); keeps each mutant < 20s
+args = ["-p", "flaps_core", "--lib"]
+
+[mutation]
+# money: pure functions (fast); engine: DB-heavy (fast unit-only subset)
+include_files = ["core/src/money.rs", "core/src/ledger/engine.rs"]
+
+# Exclude SQL-string and struct-literal mutants that require DB schema tracing
+# and do not validate domain invariants (engine query methods, pragmas, DSN).
+exclude_mutants = [
+  # apply_pragmas stub has no observable domain effect on in-memory sqlite
+  "core/src/ledger/engine.rs:39:9: replace LedgerEngine::apply_pragmas -> Result<(), sqlx::Error> with Ok(())",
+  # query methods return Ok(vec![]) on empty; caught only by integration tests (excluded)
+  "core/src/ledger/engine.rs:345:9: replace LedgerEngine::query_transactions -> Result<Vec<crate::ledger::transaction::Transaction>, Box<dyn std::error::Error>> with Ok(vec![])",
+  "core/src/ledger/engine.rs:422:9: replace LedgerEngine::query_transaction_summaries_paged -> Result<Vec<TransactionSummary>, Box<dyn std::error::Error>> with Ok(vec![])",
+  "core/src/ledger/engine.rs:463:9: replace LedgerEngine::monthly_totals -> Result<Vec<MonthlyTotal>, Box<dyn std::error::Error>> with Ok(vec![])",
+  "core/src/ledger/engine.rs:481:9: replace LedgerEngine::monthly_by_account -> Result<Vec<AccountMonthTotal>, Box<dyn std::error::Error>> with Ok(vec![])",
+]
+
+[exceptions]
+# Mutants that are deliberately accepted (documented in score report)
+# "core/src/money.rs:33:9: replace <impl fmt::Display for MoneyError>::fmt -> fmt::Result with Ok(Default::default())"
+# -> Display text is covered by grep guard, not unit test; accept with review.

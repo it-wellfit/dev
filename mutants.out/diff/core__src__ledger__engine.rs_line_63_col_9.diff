@@ -1,0 +1,107 @@
+--- core/src/ledger/engine.rs
++++ replace LedgerEngine::ensure_tables -> Result<(), sqlx::Error> with Ok(())
+@@ -55,103 +55,17 @@
+     }
+ 
+     /// Ensure all required tables exist (legacy bootstrap path).
+     ///
+     /// Mirrors `platform/migrations/0001_baseline_schema.sql` (schema SSOT).
+     /// Keep in sync until this path is retired (IMPROVEMENT_BACKLOG P1-2).
+     async fn ensure_tables(pool: &sqlx::SqlitePool) -> Result<(), sqlx::Error> {
+         // Accounts table
+-        sqlx::query(
+-            "CREATE TABLE IF NOT EXISTS accounts (
+-                account_id TEXT PRIMARY KEY,
+-                account_code TEXT NOT NULL,
+-                account_name TEXT NOT NULL,
+-                account_type TEXT NOT NULL,
+-                parent_account_id TEXT,
+-                currency TEXT DEFAULT 'TWD',
+-                description TEXT,
+-                is_active BOOLEAN DEFAULT true,
+-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+-            )",
+-        )
+-        .execute(pool)
+-        .await?;
+-
+-        // Transactions table
+-        sqlx::query(
+-            "CREATE TABLE IF NOT EXISTS transactions (
+-                transaction_id TEXT PRIMARY KEY,
+-                transaction_code TEXT NOT NULL,
+-                transaction_date DATE NOT NULL,
+-                description TEXT NOT NULL,
+-                reference_number TEXT,
+-                status TEXT NOT NULL,
+-                source_type TEXT,
+-                created_by TEXT,
+-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+-            )",
+-        )
+-        .execute(pool)
+-        .await?;
+-
+-        // Transaction items table (integer money: INV-01)
+-        sqlx::query(
+-            "CREATE TABLE IF NOT EXISTS transaction_items (
+-                item_id TEXT PRIMARY KEY,
+-                transaction_id TEXT NOT NULL,
+-                account_id TEXT NOT NULL,
+-                item_type TEXT NOT NULL,
+-                amount_minor INTEGER NOT NULL,
+-                currency TEXT DEFAULT 'TWD',
+-                exchange_rate INTEGER DEFAULT 10000,
+-                reference TEXT,
+-                description TEXT,
+-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+-                FOREIGN KEY (transaction_id) REFERENCES transactions(transaction_id),
+-                FOREIGN KEY (account_id) REFERENCES accounts(account_id)
+-            )",
+-        )
+-        .execute(pool)
+-        .await?;
+-
+-        // Audit log table
+-        sqlx::query(
+-            "CREATE TABLE IF NOT EXISTS audit_log (
+-                log_id TEXT PRIMARY KEY,
+-                transaction_id TEXT,
+-                event_type TEXT NOT NULL,
+-                event_data TEXT,
+-                performed_by TEXT,
+-                performed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+-                FOREIGN KEY (transaction_id) REFERENCES transactions(transaction_id)
+-            )",
+-        )
+-        .execute(pool)
+-        .await?;
+-
+-        // Hot-path indexes (FR-007)
+-        sqlx::query("CREATE INDEX IF NOT EXISTS idx_transactions_date ON transactions (transaction_date DESC)")
+-            .execute(pool)
+-            .await?;
+-        sqlx::query("CREATE INDEX IF NOT EXISTS idx_transactions_status ON transactions (status)")
+-            .execute(pool)
+-            .await?;
+-        sqlx::query("CREATE INDEX IF NOT EXISTS idx_transaction_items_transaction ON transaction_items (transaction_id)")
+-            .execute(pool)
+-            .await?;
+-        sqlx::query(
+-            "CREATE INDEX IF NOT EXISTS idx_audit_log_transaction ON audit_log (transaction_id)",
+-        )
+-        .execute(pool)
+-        .await?;
+-
+-        Ok(())
++        Ok(()) /* ~ changed by cargo-mutants ~ */
+     }
+ 
+     /// Post a journal entry: validate, ensure accounts exist, then write the
+     /// header, items, and audit event in ONE atomic transaction (INV-04).
+     ///
+     /// Idempotency: callers generate the `transaction_id` (UUID) — replaying
+     /// an identical id fails on the primary key instead of double-posting.
+     pub async fn post_journal_entry(

@@ -478,15 +478,31 @@ impl LedgerEngine {
         &self,
         ym: &str,
     ) -> Result<Vec<AccountMonthTotal>, Box<dyn std::error::Error>> {
+        // Convert "YYYY-MM" to date range for index-friendly query.
+        let start = format!("{}-01", ym);
+        let end = if ym.ends_with("-12") {
+            format!("{}-01-01", &ym[..4])
+        } else {
+            // Next month
+            let parts: Vec<&str> = ym.split('-').collect();
+            let year: i32 = parts[0].parse().unwrap_or(2026);
+            let month: u32 = parts[1].parse().unwrap_or(1);
+            if month == 12 {
+                format!("{}-01-01", year + 1)
+            } else {
+                format!("{:04}-{:02}-01", year, month + 1)
+            }
+        };
         let rows = sqlx::query_as::<_, AccountMonthTotal>(
             "SELECT i.account_id, \
              COALESCE(SUM(CASE WHEN i.item_type = 'DEBIT' THEN i.amount_minor ELSE 0 END), 0) AS debit_minor, \
              COALESCE(SUM(CASE WHEN i.item_type = 'CREDIT' THEN i.amount_minor ELSE 0 END), 0) AS credit_minor \
              FROM transaction_items i JOIN transactions t ON i.transaction_id = t.transaction_id \
-             WHERE strftime('%Y-%m', t.transaction_date) = ? \
+             WHERE t.transaction_date >= ? AND t.transaction_date < ? \
              GROUP BY i.account_id ORDER BY i.account_id",
         )
-        .bind(ym)
+        .bind(&start)
+        .bind(&end)
         .fetch_all(&self.pool)
         .await?;
         Ok(rows)

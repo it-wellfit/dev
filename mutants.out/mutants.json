@@ -1,0 +1,1058 @@
+[
+  {
+    "diff": "--- core/src/ledger/engine.rs\n+++ replace LedgerEngine::with_pool -> Result<Self, Box<dyn std::error::Error>> with Ok(Default::default())\n@@ -24,18 +24,17 @@\n     }\n \n     /// Build the engine over an existing pool WITHOUT creating tables.\n     ///\n     /// Schema SSOT is `platform/migrations/` — apply those first via\n     /// `DatabaseManager::initialize`. This is the preferred constructor for\n     /// servers and tests.\n     pub async fn with_pool(pool: sqlx::SqlitePool) -> Result<Self, Box<dyn std::error::Error>> {\n-        Self::apply_pragmas(&pool).await?;\n-        Ok(Self { pool })\n+        Ok(Default::default()) /* ~ changed by cargo-mutants ~ */\n     }\n \n     /// Performance optimizations (INV-03: WAL, busy_timeout, bounded cache;\n     /// write transactions must stay ≤ 50 ms).\n     async fn apply_pragmas(pool: &sqlx::SqlitePool) -> Result<(), sqlx::Error> {\n         sqlx::query(\"PRAGMA journal_mode = WAL\")\n             .execute(pool)\n             .await?;\n",
+    "file": "core/src/ledger/engine.rs",
+    "function": {
+      "function_name": "LedgerEngine::with_pool",
+      "return_type": "-> Result<Self, Box<dyn std::error::Error>>",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 34
+        },
+        "start": {
+          "column": 5,
+          "line": 26
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "core/src/ledger/engine.rs:32:9: replace LedgerEngine::with_pool -> Result<Self, Box<dyn std::error::Error>> with Ok(Default::default())",
+    "package": "flaps_core",
+    "replacement": "Ok(Default::default())",
+    "span": {
+      "end": {
+        "column": 26,
+        "line": 33
+      },
+      "start": {
+        "column": 9,
+        "line": 32
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/ledger/engine.rs\n+++ replace LedgerEngine::apply_pragmas -> Result<(), sqlx::Error> with Ok(())\n@@ -31,32 +31,17 @@\n     pub async fn with_pool(pool: sqlx::SqlitePool) -> Result<Self, Box<dyn std::error::Error>> {\n         Self::apply_pragmas(&pool).await?;\n         Ok(Self { pool })\n     }\n \n     /// Performance optimizations (INV-03: WAL, busy_timeout, bounded cache;\n     /// write transactions must stay ≤ 50 ms).\n     async fn apply_pragmas(pool: &sqlx::SqlitePool) -> Result<(), sqlx::Error> {\n-        sqlx::query(\"PRAGMA journal_mode = WAL\")\n-            .execute(pool)\n-            .await?;\n-        sqlx::query(\"PRAGMA synchronous = NORMAL\")\n-            .execute(pool)\n-            .await?;\n-        sqlx::query(\"PRAGMA cache_size = -64000\")\n-            .execute(pool)\n-            .await?;\n-        sqlx::query(\"PRAGMA temp_store = MEMORY\")\n-            .execute(pool)\n-            .await?;\n-        sqlx::query(\"PRAGMA busy_timeout = 5000\")\n-            .execute(pool)\n-            .await?;\n-        Ok(())\n+        Ok(()) /* ~ changed by cargo-mutants ~ */\n     }\n \n     /// Ensure all required tables exist (legacy bootstrap path).\n     ///\n     /// Mirrors `platform/migrations/0001_baseline_schema.sql` (schema SSOT).\n     /// Keep in sync until this path is retired (IMPROVEMENT_BACKLOG P1-2).\n     async fn ensure_tables(pool: &sqlx::SqlitePool) -> Result<(), sqlx::Error> {\n         // Accounts table\n",
+    "file": "core/src/ledger/engine.rs",
+    "function": {
+      "function_name": "LedgerEngine::apply_pragmas",
+      "return_type": "-> Result<(), sqlx::Error>",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 55
+        },
+        "start": {
+          "column": 5,
+          "line": 36
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "core/src/ledger/engine.rs:39:9: replace LedgerEngine::apply_pragmas -> Result<(), sqlx::Error> with Ok(())",
+    "package": "flaps_core",
+    "replacement": "Ok(())",
+    "span": {
+      "end": {
+        "column": 15,
+        "line": 54
+      },
+      "start": {
+        "column": 9,
+        "line": 39
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/ledger/engine.rs\n+++ replace LedgerEngine::ensure_tables -> Result<(), sqlx::Error> with Ok(())\n@@ -55,103 +55,17 @@\n     }\n \n     /// Ensure all required tables exist (legacy bootstrap path).\n     ///\n     /// Mirrors `platform/migrations/0001_baseline_schema.sql` (schema SSOT).\n     /// Keep in sync until this path is retired (IMPROVEMENT_BACKLOG P1-2).\n     async fn ensure_tables(pool: &sqlx::SqlitePool) -> Result<(), sqlx::Error> {\n         // Accounts table\n-        sqlx::query(\n-            \"CREATE TABLE IF NOT EXISTS accounts (\n-                account_id TEXT PRIMARY KEY,\n-                account_code TEXT NOT NULL,\n-                account_name TEXT NOT NULL,\n-                account_type TEXT NOT NULL,\n-                parent_account_id TEXT,\n-                currency TEXT DEFAULT 'TWD',\n-                description TEXT,\n-                is_active BOOLEAN DEFAULT true,\n-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n-            )\",\n-        )\n-        .execute(pool)\n-        .await?;\n-\n-        // Transactions table\n-        sqlx::query(\n-            \"CREATE TABLE IF NOT EXISTS transactions (\n-                transaction_id TEXT PRIMARY KEY,\n-                transaction_code TEXT NOT NULL,\n-                transaction_date DATE NOT NULL,\n-                description TEXT NOT NULL,\n-                reference_number TEXT,\n-                status TEXT NOT NULL,\n-                source_type TEXT,\n-                created_by TEXT,\n-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n-            )\",\n-        )\n-        .execute(pool)\n-        .await?;\n-\n-        // Transaction items table (integer money: INV-01)\n-        sqlx::query(\n-            \"CREATE TABLE IF NOT EXISTS transaction_items (\n-                item_id TEXT PRIMARY KEY,\n-                transaction_id TEXT NOT NULL,\n-                account_id TEXT NOT NULL,\n-                item_type TEXT NOT NULL,\n-                amount_minor INTEGER NOT NULL,\n-                currency TEXT DEFAULT 'TWD',\n-                exchange_rate INTEGER DEFAULT 10000,\n-                reference TEXT,\n-                description TEXT,\n-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n-                FOREIGN KEY (transaction_id) REFERENCES transactions(transaction_id),\n-                FOREIGN KEY (account_id) REFERENCES accounts(account_id)\n-            )\",\n-        )\n-        .execute(pool)\n-        .await?;\n-\n-        // Audit log table\n-        sqlx::query(\n-            \"CREATE TABLE IF NOT EXISTS audit_log (\n-                log_id TEXT PRIMARY KEY,\n-                transaction_id TEXT,\n-                event_type TEXT NOT NULL,\n-                event_data TEXT,\n-                performed_by TEXT,\n-                performed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n-                FOREIGN KEY (transaction_id) REFERENCES transactions(transaction_id)\n-            )\",\n-        )\n-        .execute(pool)\n-        .await?;\n-\n-        // Hot-path indexes (FR-007)\n-        sqlx::query(\"CREATE INDEX IF NOT EXISTS idx_transactions_date ON transactions (transaction_date DESC)\")\n-            .execute(pool)\n-            .await?;\n-        sqlx::query(\"CREATE INDEX IF NOT EXISTS idx_transactions_status ON transactions (status)\")\n-            .execute(pool)\n-            .await?;\n-        sqlx::query(\"CREATE INDEX IF NOT EXISTS idx_transaction_items_transaction ON transaction_items (transaction_id)\")\n-            .execute(pool)\n-            .await?;\n-        sqlx::query(\n-            \"CREATE INDEX IF NOT EXISTS idx_audit_log_transaction ON audit_log (transaction_id)\",\n-        )\n-        .execute(pool)\n-        .await?;\n-\n-        Ok(())\n+        Ok(()) /* ~ changed by cargo-mutants ~ */\n     }\n \n     /// Post a journal entry: validate, ensure accounts exist, then write the\n     /// header, items, and audit event in ONE atomic transaction (INV-04).\n     ///\n     /// Idempotency: callers generate the `transaction_id` (UUID) — replaying\n     /// an identical id fails on the primary key instead of double-posting.\n     pub async fn post_journal_entry(\n",
+    "file": "core/src/ledger/engine.rs",
+    "function": {
+      "function_name": "LedgerEngine::ensure_tables",
+      "return_type": "-> Result<(), sqlx::Error>",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 150
+        },
+        "start": {
+          "column": 5,
+          "line": 57
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "core/src/ledger/engine.rs:63:9: replace LedgerEngine::ensure_tables -> Result<(), sqlx::Error> with Ok(())",
+    "package": "flaps_core",
+    "replacement": "Ok(())",
+    "span": {
+      "end": {
+        "column": 15,
+        "line": 149
+      },
+      "start": {
+        "column": 9,
+        "line": 63
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/ledger/engine.rs\n+++ replace LedgerEngine::post_journal_entry -> Result<(), Box<dyn std::error::Error>> with Ok(())\n@@ -154,78 +154,17 @@\n     ///\n     /// Idempotency: callers generate the `transaction_id` (UUID) — replaying\n     /// an identical id fails on the primary key instead of double-posting.\n     pub async fn post_journal_entry(\n         &self,\n         transaction: crate::ledger::transaction::Transaction,\n         items: Vec<crate::ledger::transaction::TransactionItem>,\n     ) -> Result<(), Box<dyn std::error::Error>> {\n-        let pool = &self.pool;\n-\n-        // 1) Domain validation (balance, bounds, dates)\n-        self.validate_journal_entry(&transaction, &items).await?;\n-\n-        // 2) Ensure referenced accounts exist (auto-create on first use)\n-        for item in &items {\n-            self.ensure_account_exists(&item.account_id).await?;\n-        }\n-\n-        // 3) Atomic write\n-        let mut tx = pool.begin().await?;\n-\n-        // Insert transaction header\n-        sqlx::query(\n-            \"INSERT INTO transactions (transaction_id, transaction_code, transaction_date, description, reference_number, status, source_type, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)\"\n-        )\n-        .bind(&transaction.transaction_id)\n-        .bind(&transaction.transaction_code)\n-        .bind(transaction.transaction_date)\n-        .bind(&transaction.description)\n-        .bind(&transaction.reference_number)\n-        .bind(&transaction.status)\n-        .bind(&transaction.source_type)\n-        .bind(&transaction.created_by)\n-        .execute(&mut *tx)\n-        .await?;\n-\n-        // Insert transaction items\n-        for item in &items {\n-            sqlx::query(\n-                \"INSERT INTO transaction_items (item_id, transaction_id, account_id, item_type, amount_minor, currency, exchange_rate, reference, description) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)\"\n-            )\n-            .bind(&item.item_id)\n-            .bind(&item.transaction_id)\n-            .bind(&item.account_id)\n-            .bind(&item.item_type)\n-            .bind(item.amount_minor)\n-            .bind(&item.currency)\n-            .bind(item.exchange_rate_scaled)\n-            .bind(&item.reference)\n-            .bind(&item.description)\n-            .execute(&mut *tx)\n-            .await?;\n-        }\n-\n-        // Log the transaction\n-        let event_data = serde_json::to_string(&transaction).unwrap_or_default();\n-        sqlx::query(\n-            \"INSERT INTO audit_log (log_id, transaction_id, event_type, event_data, performed_by) VALUES (?, ?, ?, ?, ?)\"\n-        )\n-        .bind(uuid::Uuid::new_v4().to_string())\n-        .bind(&transaction.transaction_id)\n-        .bind(\"TRANSACTION_POSTED\")\n-        .bind(event_data)\n-        .bind(&transaction.created_by)\n-        .execute(&mut *tx)\n-        .await?;\n-\n-        tx.commit().await?;\n-\n-        Ok(())\n+        Ok(()) /* ~ changed by cargo-mutants ~ */\n     }\n \n     /// Validate journal entry for accounting rules.\n     ///\n     /// Double-entry core (INV-02 / P1-5): debits must equal credits and the\n     /// total must be positive. Enforced here so NO caller — form, API, or\n     /// future batch importer — can persist a one-sided or zero entry.\n     async fn validate_journal_entry(\n",
+    "file": "core/src/ledger/engine.rs",
+    "function": {
+      "function_name": "LedgerEngine::post_journal_entry",
+      "return_type": "-> Result<(), Box<dyn std::error::Error>>",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 224
+        },
+        "start": {
+          "column": 5,
+          "line": 152
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "core/src/ledger/engine.rs:162:9: replace LedgerEngine::post_journal_entry -> Result<(), Box<dyn std::error::Error>> with Ok(())",
+    "package": "flaps_core",
+    "replacement": "Ok(())",
+    "span": {
+      "end": {
+        "column": 15,
+        "line": 223
+      },
+      "start": {
+        "column": 9,
+        "line": 162
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/ledger/engine.rs\n+++ replace LedgerEngine::validate_journal_entry -> Result<(), Box<dyn std::error::Error>> with Ok(())\n@@ -229,76 +229,17 @@\n     /// total must be positive. Enforced here so NO caller — form, API, or\n     /// future batch importer — can persist a one-sided or zero entry.\n     async fn validate_journal_entry(\n         &self,\n         transaction: &crate::ledger::transaction::Transaction,\n         items: &[crate::ledger::transaction::TransactionItem],\n     ) -> Result<(), Box<dyn std::error::Error>> {\n         // Check required fields\n-        if transaction.transaction_id.is_empty() {\n-            return Err(\"Transaction ID is required\".into());\n-        }\n-\n-        if transaction.transaction_date > chrono::Utc::now().date_naive() {\n-            return Err(\"Transaction date cannot be in the future\".into());\n-        }\n-\n-        if items.is_empty() {\n-            return Err(\"At least one transaction item is required\".into());\n-        }\n-\n-        let mut total_debit: i128 = 0;\n-        let mut total_credit: i128 = 0;\n-\n-        // Validate each item\n-        for item in items {\n-            if item.account_id.is_empty() {\n-                return Err(\"Account ID is required for transaction items\".into());\n-            }\n-\n-            if item.amount_minor <= 0 {\n-                return Err(\"Transaction item amount must be positive\".into());\n-            }\n-\n-            if item.amount_minor > MAX_AMOUNT_MINOR {\n-                return Err(format!(\n-                    \"Transaction item amount exceeds the schema cap DECIMAL(15,2) (max minor units {MAX_AMOUNT_MINOR})\"\n-                )\n-                .into());\n-            }\n-\n-            if item.exchange_rate_scaled <= 0 {\n-                return Err(\"Exchange rate must be positive (scaled by 10^4)\".into());\n-            }\n-\n-            if ![\"DEBIT\", \"CREDIT\"].contains(&item.item_type.as_str()) {\n-                return Err(\"Invalid item type. Must be DEBIT or CREDIT\".into());\n-            }\n-\n-            // i128 accumulation: MAX_AMOUNT_MINOR is 17 digits, i64 could\n-            // overflow on many items; i128 makes the sum total-order safe.\n-            match item.item_type.as_str() {\n-                \"DEBIT\" => total_debit += i128::from(item.amount_minor),\n-                _ => total_credit += i128::from(item.amount_minor),\n-            }\n-        }\n-\n-        if total_debit != total_credit {\n-            return Err(format!(\n-                \"Journal entry is not balanced: debits ({total_debit}) must equal credits ({total_credit})\"\n-            )\n-            .into());\n-        }\n-\n-        if total_debit == 0 {\n-            return Err(\"Journal entry total must be greater than zero\".into());\n-        }\n-\n-        Ok(())\n+        Ok(()) /* ~ changed by cargo-mutants ~ */\n     }\n \n     /// Ensure account exists, create if not\n     async fn ensure_account_exists(&self, account_id: &str) -> Result<(), sqlx::Error> {\n         let exists: (i64,) = sqlx::query_as(\"SELECT COUNT(*) FROM accounts WHERE account_id = ?\")\n             .bind(account_id)\n             .fetch_one(&self.pool)\n             .await?;\n",
+    "file": "core/src/ledger/engine.rs",
+    "function": {
+      "function_name": "LedgerEngine::validate_journal_entry",
+      "return_type": "-> Result<(), Box<dyn std::error::Error>>",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 297
+        },
+        "start": {
+          "column": 5,
+          "line": 226
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "core/src/ledger/engine.rs:237:9: replace LedgerEngine::validate_journal_entry -> Result<(), Box<dyn std::error::Error>> with Ok(())",
+    "package": "flaps_core",
+    "replacement": "Ok(())",
+    "span": {
+      "end": {
+        "column": 15,
+        "line": 296
+      },
+      "start": {
+        "column": 9,
+        "line": 237
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/ledger/engine.rs\n+++ replace > with == in LedgerEngine::validate_journal_entry\n@@ -233,17 +233,17 @@\n         transaction: &crate::ledger::transaction::Transaction,\n         items: &[crate::ledger::transaction::TransactionItem],\n     ) -> Result<(), Box<dyn std::error::Error>> {\n         // Check required fields\n         if transaction.transaction_id.is_empty() {\n             return Err(\"Transaction ID is required\".into());\n         }\n \n-        if transaction.transaction_date > chrono::Utc::now().date_naive() {\n+        if transaction.transaction_date == /* ~ changed by cargo-mutants ~ */ chrono::Utc::now().date_naive() {\n             return Err(\"Transaction date cannot be in the future\".into());\n         }\n \n         if items.is_empty() {\n             return Err(\"At least one transaction item is required\".into());\n         }\n \n         let mut total_debit: i128 = 0;\n",
+    "file": "core/src/ledger/engine.rs",
+    "function": {
+      "function_name": "LedgerEngine::validate_journal_entry",
+      "return_type": "-> Result<(), Box<dyn std::error::Error>>",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 297
+        },
+        "start": {
+          "column": 5,
+          "line": 226
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/ledger/engine.rs:241:41: replace > with == in LedgerEngine::validate_journal_entry",
+    "package": "flaps_core",
+    "replacement": "==",
+    "span": {
+      "end": {
+        "column": 42,
+        "line": 241
+      },
+      "start": {
+        "column": 41,
+        "line": 241
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/ledger/engine.rs\n+++ replace > with < in LedgerEngine::validate_journal_entry\n@@ -233,17 +233,17 @@\n         transaction: &crate::ledger::transaction::Transaction,\n         items: &[crate::ledger::transaction::TransactionItem],\n     ) -> Result<(), Box<dyn std::error::Error>> {\n         // Check required fields\n         if transaction.transaction_id.is_empty() {\n             return Err(\"Transaction ID is required\".into());\n         }\n \n-        if transaction.transaction_date > chrono::Utc::now().date_naive() {\n+        if transaction.transaction_date < /* ~ changed by cargo-mutants ~ */ chrono::Utc::now().date_naive() {\n             return Err(\"Transaction date cannot be in the future\".into());\n         }\n \n         if items.is_empty() {\n             return Err(\"At least one transaction item is required\".into());\n         }\n \n         let mut total_debit: i128 = 0;\n",
+    "file": "core/src/ledger/engine.rs",
+    "function": {
+      "function_name": "LedgerEngine::validate_journal_entry",
+      "return_type": "-> Result<(), Box<dyn std::error::Error>>",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 297
+        },
+        "start": {
+          "column": 5,
+          "line": 226
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/ledger/engine.rs:241:41: replace > with < in LedgerEngine::validate_journal_entry",
+    "package": "flaps_core",
+    "replacement": "<",
+    "span": {
+      "end": {
+        "column": 42,
+        "line": 241
+      },
+      "start": {
+        "column": 41,
+        "line": 241
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/ledger/engine.rs\n+++ replace > with >= in LedgerEngine::validate_journal_entry\n@@ -233,17 +233,17 @@\n         transaction: &crate::ledger::transaction::Transaction,\n         items: &[crate::ledger::transaction::TransactionItem],\n     ) -> Result<(), Box<dyn std::error::Error>> {\n         // Check required fields\n         if transaction.transaction_id.is_empty() {\n             return Err(\"Transaction ID is required\".into());\n         }\n \n-        if transaction.transaction_date > chrono::Utc::now().date_naive() {\n+        if transaction.transaction_date >= /* ~ changed by cargo-mutants ~ */ chrono::Utc::now().date_naive() {\n             return Err(\"Transaction date cannot be in the future\".into());\n         }\n \n         if items.is_empty() {\n             return Err(\"At least one transaction item is required\".into());\n         }\n \n         let mut total_debit: i128 = 0;\n",
+    "file": "core/src/ledger/engine.rs",
+    "function": {
+      "function_name": "LedgerEngine::validate_journal_entry",
+      "return_type": "-> Result<(), Box<dyn std::error::Error>>",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 297
+        },
+        "start": {
+          "column": 5,
+          "line": 226
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/ledger/engine.rs:241:41: replace > with >= in LedgerEngine::validate_journal_entry",
+    "package": "flaps_core",
+    "replacement": ">=",
+    "span": {
+      "end": {
+        "column": 42,
+        "line": 241
+      },
+      "start": {
+        "column": 41,
+        "line": 241
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/ledger/engine.rs\n+++ replace <= with > in LedgerEngine::validate_journal_entry\n@@ -250,17 +250,17 @@\n         let mut total_credit: i128 = 0;\n \n         // Validate each item\n         for item in items {\n             if item.account_id.is_empty() {\n                 return Err(\"Account ID is required for transaction items\".into());\n             }\n \n-            if item.amount_minor <= 0 {\n+            if item.amount_minor > /* ~ changed by cargo-mutants ~ */ 0 {\n                 return Err(\"Transaction item amount must be positive\".into());\n             }\n \n             if item.amount_minor > MAX_AMOUNT_MINOR {\n                 return Err(format!(\n                     \"Transaction item amount exceeds the schema cap DECIMAL(15,2) (max minor units {MAX_AMOUNT_MINOR})\"\n                 )\n                 .into());\n",
+    "file": "core/src/ledger/engine.rs",
+    "function": {
+      "function_name": "LedgerEngine::validate_journal_entry",
+      "return_type": "-> Result<(), Box<dyn std::error::Error>>",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 297
+        },
+        "start": {
+          "column": 5,
+          "line": 226
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/ledger/engine.rs:258:34: replace <= with > in LedgerEngine::validate_journal_entry",
+    "package": "flaps_core",
+    "replacement": ">",
+    "span": {
+      "end": {
+        "column": 36,
+        "line": 258
+      },
+      "start": {
+        "column": 34,
+        "line": 258
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/ledger/engine.rs\n+++ replace > with == in LedgerEngine::validate_journal_entry\n@@ -254,17 +254,17 @@\n             if item.account_id.is_empty() {\n                 return Err(\"Account ID is required for transaction items\".into());\n             }\n \n             if item.amount_minor <= 0 {\n                 return Err(\"Transaction item amount must be positive\".into());\n             }\n \n-            if item.amount_minor > MAX_AMOUNT_MINOR {\n+            if item.amount_minor == /* ~ changed by cargo-mutants ~ */ MAX_AMOUNT_MINOR {\n                 return Err(format!(\n                     \"Transaction item amount exceeds the schema cap DECIMAL(15,2) (max minor units {MAX_AMOUNT_MINOR})\"\n                 )\n                 .into());\n             }\n \n             if item.exchange_rate_scaled <= 0 {\n                 return Err(\"Exchange rate must be positive (scaled by 10^4)\".into());\n",
+    "file": "core/src/ledger/engine.rs",
+    "function": {
+      "function_name": "LedgerEngine::validate_journal_entry",
+      "return_type": "-> Result<(), Box<dyn std::error::Error>>",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 297
+        },
+        "start": {
+          "column": 5,
+          "line": 226
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/ledger/engine.rs:262:34: replace > with == in LedgerEngine::validate_journal_entry",
+    "package": "flaps_core",
+    "replacement": "==",
+    "span": {
+      "end": {
+        "column": 35,
+        "line": 262
+      },
+      "start": {
+        "column": 34,
+        "line": 262
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/ledger/engine.rs\n+++ replace > with < in LedgerEngine::validate_journal_entry\n@@ -254,17 +254,17 @@\n             if item.account_id.is_empty() {\n                 return Err(\"Account ID is required for transaction items\".into());\n             }\n \n             if item.amount_minor <= 0 {\n                 return Err(\"Transaction item amount must be positive\".into());\n             }\n \n-            if item.amount_minor > MAX_AMOUNT_MINOR {\n+            if item.amount_minor < /* ~ changed by cargo-mutants ~ */ MAX_AMOUNT_MINOR {\n                 return Err(format!(\n                     \"Transaction item amount exceeds the schema cap DECIMAL(15,2) (max minor units {MAX_AMOUNT_MINOR})\"\n                 )\n                 .into());\n             }\n \n             if item.exchange_rate_scaled <= 0 {\n                 return Err(\"Exchange rate must be positive (scaled by 10^4)\".into());\n",
+    "file": "core/src/ledger/engine.rs",
+    "function": {
+      "function_name": "LedgerEngine::validate_journal_entry",
+      "return_type": "-> Result<(), Box<dyn std::error::Error>>",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 297
+        },
+        "start": {
+          "column": 5,
+          "line": 226
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/ledger/engine.rs:262:34: replace > with < in LedgerEngine::validate_journal_entry",
+    "package": "flaps_core",
+    "replacement": "<",
+    "span": {
+      "end": {
+        "column": 35,
+        "line": 262
+      },
+      "start": {
+        "column": 34,
+        "line": 262
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/ledger/engine.rs\n+++ replace > with >= in LedgerEngine::validate_journal_entry\n@@ -254,17 +254,17 @@\n             if item.account_id.is_empty() {\n                 return Err(\"Account ID is required for transaction items\".into());\n             }\n \n             if item.amount_minor <= 0 {\n                 return Err(\"Transaction item amount must be positive\".into());\n             }\n \n-            if item.amount_minor > MAX_AMOUNT_MINOR {\n+            if item.amount_minor >= /* ~ changed by cargo-mutants ~ */ MAX_AMOUNT_MINOR {\n                 return Err(format!(\n                     \"Transaction item amount exceeds the schema cap DECIMAL(15,2) (max minor units {MAX_AMOUNT_MINOR})\"\n                 )\n                 .into());\n             }\n \n             if item.exchange_rate_scaled <= 0 {\n                 return Err(\"Exchange rate must be positive (scaled by 10^4)\".into());\n",
+    "file": "core/src/ledger/engine.rs",
+    "function": {
+      "function_name": "LedgerEngine::validate_journal_entry",
+      "return_type": "-> Result<(), Box<dyn std::error::Error>>",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 297
+        },
+        "start": {
+          "column": 5,
+          "line": 226
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/ledger/engine.rs:262:34: replace > with >= in LedgerEngine::validate_journal_entry",
+    "package": "flaps_core",
+    "replacement": ">=",
+    "span": {
+      "end": {
+        "column": 35,
+        "line": 262
+      },
+      "start": {
+        "column": 34,
+        "line": 262
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/ledger/engine.rs\n+++ replace <= with > in LedgerEngine::validate_journal_entry\n@@ -261,17 +261,17 @@\n \n             if item.amount_minor > MAX_AMOUNT_MINOR {\n                 return Err(format!(\n                     \"Transaction item amount exceeds the schema cap DECIMAL(15,2) (max minor units {MAX_AMOUNT_MINOR})\"\n                 )\n                 .into());\n             }\n \n-            if item.exchange_rate_scaled <= 0 {\n+            if item.exchange_rate_scaled > /* ~ changed by cargo-mutants ~ */ 0 {\n                 return Err(\"Exchange rate must be positive (scaled by 10^4)\".into());\n             }\n \n             if ![\"DEBIT\", \"CREDIT\"].contains(&item.item_type.as_str()) {\n                 return Err(\"Invalid item type. Must be DEBIT or CREDIT\".into());\n             }\n \n             // i128 accumulation: MAX_AMOUNT_MINOR is 17 digits, i64 could\n",
+    "file": "core/src/ledger/engine.rs",
+    "function": {
+      "function_name": "LedgerEngine::validate_journal_entry",
+      "return_type": "-> Result<(), Box<dyn std::error::Error>>",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 297
+        },
+        "start": {
+          "column": 5,
+          "line": 226
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/ledger/engine.rs:269:42: replace <= with > in LedgerEngine::validate_journal_entry",
+    "package": "flaps_core",
+    "replacement": ">",
+    "span": {
+      "end": {
+        "column": 44,
+        "line": 269
+      },
+      "start": {
+        "column": 42,
+        "line": 269
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/ledger/engine.rs\n+++ delete ! in LedgerEngine::validate_journal_entry\n@@ -265,17 +265,17 @@\n                 )\n                 .into());\n             }\n \n             if item.exchange_rate_scaled <= 0 {\n                 return Err(\"Exchange rate must be positive (scaled by 10^4)\".into());\n             }\n \n-            if ![\"DEBIT\", \"CREDIT\"].contains(&item.item_type.as_str()) {\n+            if  /* ~ changed by cargo-mutants ~ */[\"DEBIT\", \"CREDIT\"].contains(&item.item_type.as_str()) {\n                 return Err(\"Invalid item type. Must be DEBIT or CREDIT\".into());\n             }\n \n             // i128 accumulation: MAX_AMOUNT_MINOR is 17 digits, i64 could\n             // overflow on many items; i128 makes the sum total-order safe.\n             match item.item_type.as_str() {\n                 \"DEBIT\" => total_debit += i128::from(item.amount_minor),\n                 _ => total_credit += i128::from(item.amount_minor),\n",
+    "file": "core/src/ledger/engine.rs",
+    "function": {
+      "function_name": "LedgerEngine::validate_journal_entry",
+      "return_type": "-> Result<(), Box<dyn std::error::Error>>",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 297
+        },
+        "start": {
+          "column": 5,
+          "line": 226
+        }
+      }
+    },
+    "genre": "UnaryOperator",
+    "name": "core/src/ledger/engine.rs:273:16: delete ! in LedgerEngine::validate_journal_entry",
+    "package": "flaps_core",
+    "replacement": "",
+    "span": {
+      "end": {
+        "column": 17,
+        "line": 273
+      },
+      "start": {
+        "column": 16,
+        "line": 273
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/ledger/engine.rs\n+++ delete match arm \"DEBIT\" in LedgerEngine::validate_journal_entry\n@@ -272,17 +272,17 @@\n \n             if ![\"DEBIT\", \"CREDIT\"].contains(&item.item_type.as_str()) {\n                 return Err(\"Invalid item type. Must be DEBIT or CREDIT\".into());\n             }\n \n             // i128 accumulation: MAX_AMOUNT_MINOR is 17 digits, i64 could\n             // overflow on many items; i128 makes the sum total-order safe.\n             match item.item_type.as_str() {\n-                \"DEBIT\" => total_debit += i128::from(item.amount_minor),\n+                 /* ~ changed by cargo-mutants ~ */\n                 _ => total_credit += i128::from(item.amount_minor),\n             }\n         }\n \n         if total_debit != total_credit {\n             return Err(format!(\n                 \"Journal entry is not balanced: debits ({total_debit}) must equal credits ({total_credit})\"\n             )\n",
+    "file": "core/src/ledger/engine.rs",
+    "function": {
+      "function_name": "LedgerEngine::validate_journal_entry",
+      "return_type": "-> Result<(), Box<dyn std::error::Error>>",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 297
+        },
+        "start": {
+          "column": 5,
+          "line": 226
+        }
+      }
+    },
+    "genre": "MatchArm",
+    "name": "core/src/ledger/engine.rs:280:17: delete match arm \"DEBIT\" in LedgerEngine::validate_journal_entry",
+    "package": "flaps_core",
+    "replacement": "",
+    "span": {
+      "end": {
+        "column": 73,
+        "line": 280
+      },
+      "start": {
+        "column": 17,
+        "line": 280
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/ledger/engine.rs\n+++ replace += with -= in LedgerEngine::validate_journal_entry\n@@ -272,17 +272,17 @@\n \n             if ![\"DEBIT\", \"CREDIT\"].contains(&item.item_type.as_str()) {\n                 return Err(\"Invalid item type. Must be DEBIT or CREDIT\".into());\n             }\n \n             // i128 accumulation: MAX_AMOUNT_MINOR is 17 digits, i64 could\n             // overflow on many items; i128 makes the sum total-order safe.\n             match item.item_type.as_str() {\n-                \"DEBIT\" => total_debit += i128::from(item.amount_minor),\n+                \"DEBIT\" => total_debit -= /* ~ changed by cargo-mutants ~ */ i128::from(item.amount_minor),\n                 _ => total_credit += i128::from(item.amount_minor),\n             }\n         }\n \n         if total_debit != total_credit {\n             return Err(format!(\n                 \"Journal entry is not balanced: debits ({total_debit}) must equal credits ({total_credit})\"\n             )\n",
+    "file": "core/src/ledger/engine.rs",
+    "function": {
+      "function_name": "LedgerEngine::validate_journal_entry",
+      "return_type": "-> Result<(), Box<dyn std::error::Error>>",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 297
+        },
+        "start": {
+          "column": 5,
+          "line": 226
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/ledger/engine.rs:280:40: replace += with -= in LedgerEngine::validate_journal_entry",
+    "package": "flaps_core",
+    "replacement": "-=",
+    "span": {
+      "end": {
+        "column": 42,
+        "line": 280
+      },
+      "start": {
+        "column": 40,
+        "line": 280
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/ledger/engine.rs\n+++ replace += with *= in LedgerEngine::validate_journal_entry\n@@ -272,17 +272,17 @@\n \n             if ![\"DEBIT\", \"CREDIT\"].contains(&item.item_type.as_str()) {\n                 return Err(\"Invalid item type. Must be DEBIT or CREDIT\".into());\n             }\n \n             // i128 accumulation: MAX_AMOUNT_MINOR is 17 digits, i64 could\n             // overflow on many items; i128 makes the sum total-order safe.\n             match item.item_type.as_str() {\n-                \"DEBIT\" => total_debit += i128::from(item.amount_minor),\n+                \"DEBIT\" => total_debit *= /* ~ changed by cargo-mutants ~ */ i128::from(item.amount_minor),\n                 _ => total_credit += i128::from(item.amount_minor),\n             }\n         }\n \n         if total_debit != total_credit {\n             return Err(format!(\n                 \"Journal entry is not balanced: debits ({total_debit}) must equal credits ({total_credit})\"\n             )\n",
+    "file": "core/src/ledger/engine.rs",
+    "function": {
+      "function_name": "LedgerEngine::validate_journal_entry",
+      "return_type": "-> Result<(), Box<dyn std::error::Error>>",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 297
+        },
+        "start": {
+          "column": 5,
+          "line": 226
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/ledger/engine.rs:280:40: replace += with *= in LedgerEngine::validate_journal_entry",
+    "package": "flaps_core",
+    "replacement": "*=",
+    "span": {
+      "end": {
+        "column": 42,
+        "line": 280
+      },
+      "start": {
+        "column": 40,
+        "line": 280
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/ledger/engine.rs\n+++ replace += with -= in LedgerEngine::validate_journal_entry\n@@ -273,17 +273,17 @@\n             if ![\"DEBIT\", \"CREDIT\"].contains(&item.item_type.as_str()) {\n                 return Err(\"Invalid item type. Must be DEBIT or CREDIT\".into());\n             }\n \n             // i128 accumulation: MAX_AMOUNT_MINOR is 17 digits, i64 could\n             // overflow on many items; i128 makes the sum total-order safe.\n             match item.item_type.as_str() {\n                 \"DEBIT\" => total_debit += i128::from(item.amount_minor),\n-                _ => total_credit += i128::from(item.amount_minor),\n+                _ => total_credit -= /* ~ changed by cargo-mutants ~ */ i128::from(item.amount_minor),\n             }\n         }\n \n         if total_debit != total_credit {\n             return Err(format!(\n                 \"Journal entry is not balanced: debits ({total_debit}) must equal credits ({total_credit})\"\n             )\n             .into());\n",
+    "file": "core/src/ledger/engine.rs",
+    "function": {
+      "function_name": "LedgerEngine::validate_journal_entry",
+      "return_type": "-> Result<(), Box<dyn std::error::Error>>",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 297
+        },
+        "start": {
+          "column": 5,
+          "line": 226
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/ledger/engine.rs:281:35: replace += with -= in LedgerEngine::validate_journal_entry",
+    "package": "flaps_core",
+    "replacement": "-=",
+    "span": {
+      "end": {
+        "column": 37,
+        "line": 281
+      },
+      "start": {
+        "column": 35,
+        "line": 281
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/ledger/engine.rs\n+++ replace += with *= in LedgerEngine::validate_journal_entry\n@@ -273,17 +273,17 @@\n             if ![\"DEBIT\", \"CREDIT\"].contains(&item.item_type.as_str()) {\n                 return Err(\"Invalid item type. Must be DEBIT or CREDIT\".into());\n             }\n \n             // i128 accumulation: MAX_AMOUNT_MINOR is 17 digits, i64 could\n             // overflow on many items; i128 makes the sum total-order safe.\n             match item.item_type.as_str() {\n                 \"DEBIT\" => total_debit += i128::from(item.amount_minor),\n-                _ => total_credit += i128::from(item.amount_minor),\n+                _ => total_credit *= /* ~ changed by cargo-mutants ~ */ i128::from(item.amount_minor),\n             }\n         }\n \n         if total_debit != total_credit {\n             return Err(format!(\n                 \"Journal entry is not balanced: debits ({total_debit}) must equal credits ({total_credit})\"\n             )\n             .into());\n",
+    "file": "core/src/ledger/engine.rs",
+    "function": {
+      "function_name": "LedgerEngine::validate_journal_entry",
+      "return_type": "-> Result<(), Box<dyn std::error::Error>>",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 297
+        },
+        "start": {
+          "column": 5,
+          "line": 226
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/ledger/engine.rs:281:35: replace += with *= in LedgerEngine::validate_journal_entry",
+    "package": "flaps_core",
+    "replacement": "*=",
+    "span": {
+      "end": {
+        "column": 37,
+        "line": 281
+      },
+      "start": {
+        "column": 35,
+        "line": 281
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/ledger/engine.rs\n+++ replace != with == in LedgerEngine::validate_journal_entry\n@@ -277,17 +277,17 @@\n             // i128 accumulation: MAX_AMOUNT_MINOR is 17 digits, i64 could\n             // overflow on many items; i128 makes the sum total-order safe.\n             match item.item_type.as_str() {\n                 \"DEBIT\" => total_debit += i128::from(item.amount_minor),\n                 _ => total_credit += i128::from(item.amount_minor),\n             }\n         }\n \n-        if total_debit != total_credit {\n+        if total_debit == /* ~ changed by cargo-mutants ~ */ total_credit {\n             return Err(format!(\n                 \"Journal entry is not balanced: debits ({total_debit}) must equal credits ({total_credit})\"\n             )\n             .into());\n         }\n \n         if total_debit == 0 {\n             return Err(\"Journal entry total must be greater than zero\".into());\n",
+    "file": "core/src/ledger/engine.rs",
+    "function": {
+      "function_name": "LedgerEngine::validate_journal_entry",
+      "return_type": "-> Result<(), Box<dyn std::error::Error>>",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 297
+        },
+        "start": {
+          "column": 5,
+          "line": 226
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/ledger/engine.rs:285:24: replace != with == in LedgerEngine::validate_journal_entry",
+    "package": "flaps_core",
+    "replacement": "==",
+    "span": {
+      "end": {
+        "column": 26,
+        "line": 285
+      },
+      "start": {
+        "column": 24,
+        "line": 285
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/ledger/engine.rs\n+++ replace == with != in LedgerEngine::validate_journal_entry\n@@ -284,17 +284,17 @@\n \n         if total_debit != total_credit {\n             return Err(format!(\n                 \"Journal entry is not balanced: debits ({total_debit}) must equal credits ({total_credit})\"\n             )\n             .into());\n         }\n \n-        if total_debit == 0 {\n+        if total_debit != /* ~ changed by cargo-mutants ~ */ 0 {\n             return Err(\"Journal entry total must be greater than zero\".into());\n         }\n \n         Ok(())\n     }\n \n     /// Ensure account exists, create if not\n     async fn ensure_account_exists(&self, account_id: &str) -> Result<(), sqlx::Error> {\n",
+    "file": "core/src/ledger/engine.rs",
+    "function": {
+      "function_name": "LedgerEngine::validate_journal_entry",
+      "return_type": "-> Result<(), Box<dyn std::error::Error>>",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 297
+        },
+        "start": {
+          "column": 5,
+          "line": 226
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/ledger/engine.rs:292:24: replace == with != in LedgerEngine::validate_journal_entry",
+    "package": "flaps_core",
+    "replacement": "!=",
+    "span": {
+      "end": {
+        "column": 26,
+        "line": 292
+      },
+      "start": {
+        "column": 24,
+        "line": 292
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/ledger/engine.rs\n+++ replace LedgerEngine::ensure_account_exists -> Result<(), sqlx::Error> with Ok(())\n@@ -293,49 +293,17 @@\n             return Err(\"Journal entry total must be greater than zero\".into());\n         }\n \n         Ok(())\n     }\n \n     /// Ensure account exists, create if not\n     async fn ensure_account_exists(&self, account_id: &str) -> Result<(), sqlx::Error> {\n-        let exists: (i64,) = sqlx::query_as(\"SELECT COUNT(*) FROM accounts WHERE account_id = ?\")\n-            .bind(account_id)\n-            .fetch_one(&self.pool)\n-            .await?;\n-\n-        if exists.0 == 0 {\n-            // Create default account if it doesn't exist\n-            let default_account = crate::ledger::account::Account::new(\n-                account_id.to_string(),\n-                account_id.to_string(),\n-                format!(\"Account {}\", account_id),\n-                \"ASSETS\".to_string(), // Default to asset account\n-                None,\n-                \"TWD\".to_string(),\n-                Some(\"Auto-created account\".to_string()),\n-            );\n-\n-            sqlx::query(\n-                \"INSERT INTO accounts (account_id, account_code, account_name, account_type, parent_account_id, currency, description, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?)\"\n-            )\n-            .bind(&default_account.account_id)\n-            .bind(&default_account.account_code)\n-            .bind(&default_account.account_name)\n-            .bind(&default_account.account_type)\n-            .bind(&default_account.parent_account_id)\n-            .bind(&default_account.currency)\n-            .bind(&default_account.description)\n-            .bind(default_account.is_active)\n-            .execute(&self.pool)\n-            .await?;\n-        }\n-\n-        Ok(())\n+        Ok(()) /* ~ changed by cargo-mutants ~ */\n     }\n \n     /// Query transactions with filters\n     pub async fn query_transactions(\n         &self,\n         start_date: Option<chrono::NaiveDate>,\n         end_date: Option<chrono::NaiveDate>,\n         status: Option<String>,\n",
+    "file": "core/src/ledger/engine.rs",
+    "function": {
+      "function_name": "LedgerEngine::ensure_account_exists",
+      "return_type": "-> Result<(), sqlx::Error>",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 334
+        },
+        "start": {
+          "column": 5,
+          "line": 299
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "core/src/ledger/engine.rs:301:9: replace LedgerEngine::ensure_account_exists -> Result<(), sqlx::Error> with Ok(())",
+    "package": "flaps_core",
+    "replacement": "Ok(())",
+    "span": {
+      "end": {
+        "column": 15,
+        "line": 333
+      },
+      "start": {
+        "column": 9,
+        "line": 301
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/ledger/engine.rs\n+++ replace == with != in LedgerEngine::ensure_account_exists\n@@ -298,17 +298,17 @@\n \n     /// Ensure account exists, create if not\n     async fn ensure_account_exists(&self, account_id: &str) -> Result<(), sqlx::Error> {\n         let exists: (i64,) = sqlx::query_as(\"SELECT COUNT(*) FROM accounts WHERE account_id = ?\")\n             .bind(account_id)\n             .fetch_one(&self.pool)\n             .await?;\n \n-        if exists.0 == 0 {\n+        if exists.0 != /* ~ changed by cargo-mutants ~ */ 0 {\n             // Create default account if it doesn't exist\n             let default_account = crate::ledger::account::Account::new(\n                 account_id.to_string(),\n                 account_id.to_string(),\n                 format!(\"Account {}\", account_id),\n                 \"ASSETS\".to_string(), // Default to asset account\n                 None,\n                 \"TWD\".to_string(),\n",
+    "file": "core/src/ledger/engine.rs",
+    "function": {
+      "function_name": "LedgerEngine::ensure_account_exists",
+      "return_type": "-> Result<(), sqlx::Error>",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 334
+        },
+        "start": {
+          "column": 5,
+          "line": 299
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/ledger/engine.rs:306:21: replace == with != in LedgerEngine::ensure_account_exists",
+    "package": "flaps_core",
+    "replacement": "!=",
+    "span": {
+      "end": {
+        "column": 23,
+        "line": 306
+      },
+      "start": {
+        "column": 21,
+        "line": 306
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/ledger/engine.rs\n+++ replace LedgerEngine::query_transactions -> Result<Vec<crate::ledger::transaction::Transaction>, Box<dyn std::error::Error>> with Ok(vec![])\n@@ -337,47 +337,17 @@\n     pub async fn query_transactions(\n         &self,\n         start_date: Option<chrono::NaiveDate>,\n         end_date: Option<chrono::NaiveDate>,\n         status: Option<String>,\n         limit: i64,\n         offset: i64,\n     ) -> Result<Vec<crate::ledger::transaction::Transaction>, Box<dyn std::error::Error>> {\n-        use sqlx::QueryBuilder;\n-        let mut qb: QueryBuilder<sqlx::Sqlite> = QueryBuilder::new(\n-            \"SELECT transaction_id, transaction_code, transaction_date, description, reference_number, status, source_type, created_by, created_at, updated_at FROM transactions WHERE 1=1\"\n-        );\n-\n-        if let Some(start) = start_date {\n-            qb.push(\" AND transaction_date >= \");\n-            qb.push_bind(start);\n-        }\n-\n-        if let Some(end) = end_date {\n-            qb.push(\" AND transaction_date <= \");\n-            qb.push_bind(end);\n-        }\n-\n-        if let Some(s) = status {\n-            qb.push(\" AND status = \");\n-            qb.push_bind(s);\n-        }\n-\n-        qb.push(\" ORDER BY transaction_date DESC, created_at DESC LIMIT \");\n-        qb.push_bind(limit);\n-        qb.push(\" OFFSET \");\n-        qb.push_bind(offset);\n-\n-        let rows = qb\n-            .build_query_as::<crate::ledger::transaction::Transaction>()\n-            .fetch_all(&self.pool)\n-            .await?;\n-\n-        Ok(rows)\n+        Ok(vec![]) /* ~ changed by cargo-mutants ~ */\n     }\n }\n \n /// A transaction header joined with its posting amount (for list views).\n #[derive(Debug, Clone, sqlx::FromRow)]\n pub struct TransactionSummary {\n     #[sqlx(flatten)]\n     pub transaction: crate::ledger::transaction::Transaction,\n",
+    "file": "core/src/ledger/engine.rs",
+    "function": {
+      "function_name": "LedgerEngine::query_transactions",
+      "return_type": "-> Result<Vec<crate::ledger::transaction::Transaction>, Box<dyn std::error::Error>>",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 376
+        },
+        "start": {
+          "column": 5,
+          "line": 336
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "core/src/ledger/engine.rs:345:9: replace LedgerEngine::query_transactions -> Result<Vec<crate::ledger::transaction::Transaction>, Box<dyn std::error::Error>> with Ok(vec![])",
+    "package": "flaps_core",
+    "replacement": "Ok(vec![])",
+    "span": {
+      "end": {
+        "column": 17,
+        "line": 375
+      },
+      "start": {
+        "column": 9,
+        "line": 345
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/ledger/engine.rs\n+++ replace LedgerEngine::query_transactions -> Result<Vec<crate::ledger::transaction::Transaction>, Box<dyn std::error::Error>> with Ok(vec![Default::default()])\n@@ -337,47 +337,17 @@\n     pub async fn query_transactions(\n         &self,\n         start_date: Option<chrono::NaiveDate>,\n         end_date: Option<chrono::NaiveDate>,\n         status: Option<String>,\n         limit: i64,\n         offset: i64,\n     ) -> Result<Vec<crate::ledger::transaction::Transaction>, Box<dyn std::error::Error>> {\n-        use sqlx::QueryBuilder;\n-        let mut qb: QueryBuilder<sqlx::Sqlite> = QueryBuilder::new(\n-            \"SELECT transaction_id, transaction_code, transaction_date, description, reference_number, status, source_type, created_by, created_at, updated_at FROM transactions WHERE 1=1\"\n-        );\n-\n-        if let Some(start) = start_date {\n-            qb.push(\" AND transaction_date >= \");\n-            qb.push_bind(start);\n-        }\n-\n-        if let Some(end) = end_date {\n-            qb.push(\" AND transaction_date <= \");\n-            qb.push_bind(end);\n-        }\n-\n-        if let Some(s) = status {\n-            qb.push(\" AND status = \");\n-            qb.push_bind(s);\n-        }\n-\n-        qb.push(\" ORDER BY transaction_date DESC, created_at DESC LIMIT \");\n-        qb.push_bind(limit);\n-        qb.push(\" OFFSET \");\n-        qb.push_bind(offset);\n-\n-        let rows = qb\n-            .build_query_as::<crate::ledger::transaction::Transaction>()\n-            .fetch_all(&self.pool)\n-            .await?;\n-\n-        Ok(rows)\n+        Ok(vec![Default::default()]) /* ~ changed by cargo-mutants ~ */\n     }\n }\n \n /// A transaction header joined with its posting amount (for list views).\n #[derive(Debug, Clone, sqlx::FromRow)]\n pub struct TransactionSummary {\n     #[sqlx(flatten)]\n     pub transaction: crate::ledger::transaction::Transaction,\n",
+    "file": "core/src/ledger/engine.rs",
+    "function": {
+      "function_name": "LedgerEngine::query_transactions",
+      "return_type": "-> Result<Vec<crate::ledger::transaction::Transaction>, Box<dyn std::error::Error>>",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 376
+        },
+        "start": {
+          "column": 5,
+          "line": 336
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "core/src/ledger/engine.rs:345:9: replace LedgerEngine::query_transactions -> Result<Vec<crate::ledger::transaction::Transaction>, Box<dyn std::error::Error>> with Ok(vec![Default::default()])",
+    "package": "flaps_core",
+    "replacement": "Ok(vec![Default::default()])",
+    "span": {
+      "end": {
+        "column": 17,
+        "line": 375
+      },
+      "start": {
+        "column": 9,
+        "line": 345
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/ledger/engine.rs\n+++ replace LedgerEngine::query_recent_transaction_summaries -> Result<Vec<TransactionSummary>, Box<dyn std::error::Error>> with Ok(vec![])\n@@ -390,30 +390,17 @@\n \n impl LedgerEngine {\n     /// Most recent transactions with their summed minor amounts, newest first.\n     /// Read-only (GET path); parameterized limit.\n     pub async fn query_recent_transaction_summaries(\n         &self,\n         limit: i64,\n     ) -> Result<Vec<TransactionSummary>, Box<dyn std::error::Error>> {\n-        let rows = sqlx::query_as::<_, TransactionSummary>(\n-            \"SELECT t.transaction_id, t.transaction_code, t.transaction_date, t.description, \\\n-             t.reference_number, t.status, t.source_type, t.created_by, t.created_at, t.updated_at, \\\n-             COALESCE(SUM(CASE WHEN i.item_type = 'DEBIT' THEN i.amount_minor ELSE 0 END), 0) AS total_amount_minor, \\\n-             COALESCE(MIN(i.currency), 'TWD') AS currency \\\n-             FROM transactions t LEFT JOIN transaction_items i ON i.transaction_id = t.transaction_id \\\n-             GROUP BY t.transaction_id \\\n-             ORDER BY t.transaction_date DESC, t.created_at DESC LIMIT ?\",\n-        )\n-        .bind(limit)\n-        .fetch_all(&self.pool)\n-        .await?;\n-\n-        Ok(rows)\n+        Ok(vec![]) /* ~ changed by cargo-mutants ~ */\n     }\n \n     /// Paged variant of `query_recent_transaction_summaries`. `limit` and\n     /// `offset` are bound parameters — the page number never reaches SQL as\n     /// concatenated text. Callers validate/clamp the page number.\n     pub async fn query_transaction_summaries_paged(\n         &self,\n         limit: i64,\n",
+    "file": "core/src/ledger/engine.rs",
+    "function": {
+      "function_name": "LedgerEngine::query_recent_transaction_summaries",
+      "return_type": "-> Result<Vec<TransactionSummary>, Box<dyn std::error::Error>>",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 412
+        },
+        "start": {
+          "column": 5,
+          "line": 392
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "core/src/ledger/engine.rs:398:9: replace LedgerEngine::query_recent_transaction_summaries -> Result<Vec<TransactionSummary>, Box<dyn std::error::Error>> with Ok(vec![])",
+    "package": "flaps_core",
+    "replacement": "Ok(vec![])",
+    "span": {
+      "end": {
+        "column": 17,
+        "line": 411
+      },
+      "start": {
+        "column": 9,
+        "line": 398
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/ledger/engine.rs\n+++ replace LedgerEngine::query_recent_transaction_summaries -> Result<Vec<TransactionSummary>, Box<dyn std::error::Error>> with Ok(vec![Default::default()])\n@@ -390,30 +390,17 @@\n \n impl LedgerEngine {\n     /// Most recent transactions with their summed minor amounts, newest first.\n     /// Read-only (GET path); parameterized limit.\n     pub async fn query_recent_transaction_summaries(\n         &self,\n         limit: i64,\n     ) -> Result<Vec<TransactionSummary>, Box<dyn std::error::Error>> {\n-        let rows = sqlx::query_as::<_, TransactionSummary>(\n-            \"SELECT t.transaction_id, t.transaction_code, t.transaction_date, t.description, \\\n-             t.reference_number, t.status, t.source_type, t.created_by, t.created_at, t.updated_at, \\\n-             COALESCE(SUM(CASE WHEN i.item_type = 'DEBIT' THEN i.amount_minor ELSE 0 END), 0) AS total_amount_minor, \\\n-             COALESCE(MIN(i.currency), 'TWD') AS currency \\\n-             FROM transactions t LEFT JOIN transaction_items i ON i.transaction_id = t.transaction_id \\\n-             GROUP BY t.transaction_id \\\n-             ORDER BY t.transaction_date DESC, t.created_at DESC LIMIT ?\",\n-        )\n-        .bind(limit)\n-        .fetch_all(&self.pool)\n-        .await?;\n-\n-        Ok(rows)\n+        Ok(vec![Default::default()]) /* ~ changed by cargo-mutants ~ */\n     }\n \n     /// Paged variant of `query_recent_transaction_summaries`. `limit` and\n     /// `offset` are bound parameters — the page number never reaches SQL as\n     /// concatenated text. Callers validate/clamp the page number.\n     pub async fn query_transaction_summaries_paged(\n         &self,\n         limit: i64,\n",
+    "file": "core/src/ledger/engine.rs",
+    "function": {
+      "function_name": "LedgerEngine::query_recent_transaction_summaries",
+      "return_type": "-> Result<Vec<TransactionSummary>, Box<dyn std::error::Error>>",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 412
+        },
+        "start": {
+          "column": 5,
+          "line": 392
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "core/src/ledger/engine.rs:398:9: replace LedgerEngine::query_recent_transaction_summaries -> Result<Vec<TransactionSummary>, Box<dyn std::error::Error>> with Ok(vec![Default::default()])",
+    "package": "flaps_core",
+    "replacement": "Ok(vec![Default::default()])",
+    "span": {
+      "end": {
+        "column": 17,
+        "line": 411
+      },
+      "start": {
+        "column": 9,
+        "line": 398
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/ledger/engine.rs\n+++ replace LedgerEngine::query_transaction_summaries_paged -> Result<Vec<TransactionSummary>, Box<dyn std::error::Error>> with Ok(vec![])\n@@ -414,31 +414,17 @@\n     /// Paged variant of `query_recent_transaction_summaries`. `limit` and\n     /// `offset` are bound parameters — the page number never reaches SQL as\n     /// concatenated text. Callers validate/clamp the page number.\n     pub async fn query_transaction_summaries_paged(\n         &self,\n         limit: i64,\n         offset: i64,\n     ) -> Result<Vec<TransactionSummary>, Box<dyn std::error::Error>> {\n-        let rows = sqlx::query_as::<_, TransactionSummary>(\n-            \"SELECT t.transaction_id, t.transaction_code, t.transaction_date, t.description, \\\n-             t.reference_number, t.status, t.source_type, t.created_by, t.created_at, t.updated_at, \\\n-             COALESCE(SUM(CASE WHEN i.item_type = 'DEBIT' THEN i.amount_minor ELSE 0 END), 0) AS total_amount_minor, \\\n-             COALESCE(MIN(i.currency), 'TWD') AS currency \\\n-             FROM transactions t LEFT JOIN transaction_items i ON i.transaction_id = t.transaction_id \\\n-             GROUP BY t.transaction_id \\\n-             ORDER BY t.transaction_date DESC, t.created_at DESC LIMIT ? OFFSET ?\",\n-        )\n-        .bind(limit)\n-        .bind(offset)\n-        .fetch_all(&self.pool)\n-        .await?;\n-\n-        Ok(rows)\n+        Ok(vec![]) /* ~ changed by cargo-mutants ~ */\n     }\n }\n \n /// One month's debit/credit totals (dashboard chart, Slice 8 Layer D).\n #[derive(Debug, Clone, sqlx::FromRow)]\n pub struct MonthlyTotal {\n     /// Year-month, e.g. `2026-11`.\n     pub ym: String,\n",
+    "file": "core/src/ledger/engine.rs",
+    "function": {
+      "function_name": "LedgerEngine::query_transaction_summaries_paged",
+      "return_type": "-> Result<Vec<TransactionSummary>, Box<dyn std::error::Error>>",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 437
+        },
+        "start": {
+          "column": 5,
+          "line": 414
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "core/src/ledger/engine.rs:422:9: replace LedgerEngine::query_transaction_summaries_paged -> Result<Vec<TransactionSummary>, Box<dyn std::error::Error>> with Ok(vec![])",
+    "package": "flaps_core",
+    "replacement": "Ok(vec![])",
+    "span": {
+      "end": {
+        "column": 17,
+        "line": 436
+      },
+      "start": {
+        "column": 9,
+        "line": 422
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/ledger/engine.rs\n+++ replace LedgerEngine::query_transaction_summaries_paged -> Result<Vec<TransactionSummary>, Box<dyn std::error::Error>> with Ok(vec![Default::default()])\n@@ -414,31 +414,17 @@\n     /// Paged variant of `query_recent_transaction_summaries`. `limit` and\n     /// `offset` are bound parameters — the page number never reaches SQL as\n     /// concatenated text. Callers validate/clamp the page number.\n     pub async fn query_transaction_summaries_paged(\n         &self,\n         limit: i64,\n         offset: i64,\n     ) -> Result<Vec<TransactionSummary>, Box<dyn std::error::Error>> {\n-        let rows = sqlx::query_as::<_, TransactionSummary>(\n-            \"SELECT t.transaction_id, t.transaction_code, t.transaction_date, t.description, \\\n-             t.reference_number, t.status, t.source_type, t.created_by, t.created_at, t.updated_at, \\\n-             COALESCE(SUM(CASE WHEN i.item_type = 'DEBIT' THEN i.amount_minor ELSE 0 END), 0) AS total_amount_minor, \\\n-             COALESCE(MIN(i.currency), 'TWD') AS currency \\\n-             FROM transactions t LEFT JOIN transaction_items i ON i.transaction_id = t.transaction_id \\\n-             GROUP BY t.transaction_id \\\n-             ORDER BY t.transaction_date DESC, t.created_at DESC LIMIT ? OFFSET ?\",\n-        )\n-        .bind(limit)\n-        .bind(offset)\n-        .fetch_all(&self.pool)\n-        .await?;\n-\n-        Ok(rows)\n+        Ok(vec![Default::default()]) /* ~ changed by cargo-mutants ~ */\n     }\n }\n \n /// One month's debit/credit totals (dashboard chart, Slice 8 Layer D).\n #[derive(Debug, Clone, sqlx::FromRow)]\n pub struct MonthlyTotal {\n     /// Year-month, e.g. `2026-11`.\n     pub ym: String,\n",
+    "file": "core/src/ledger/engine.rs",
+    "function": {
+      "function_name": "LedgerEngine::query_transaction_summaries_paged",
+      "return_type": "-> Result<Vec<TransactionSummary>, Box<dyn std::error::Error>>",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 437
+        },
+        "start": {
+          "column": 5,
+          "line": 414
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "core/src/ledger/engine.rs:422:9: replace LedgerEngine::query_transaction_summaries_paged -> Result<Vec<TransactionSummary>, Box<dyn std::error::Error>> with Ok(vec![Default::default()])",
+    "package": "flaps_core",
+    "replacement": "Ok(vec![Default::default()])",
+    "span": {
+      "end": {
+        "column": 17,
+        "line": 436
+      },
+      "start": {
+        "column": 9,
+        "line": 422
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/ledger/engine.rs\n+++ replace LedgerEngine::monthly_totals -> Result<Vec<MonthlyTotal>, Box<dyn std::error::Error>> with Ok(vec![])\n@@ -455,27 +455,17 @@\n }\n \n impl LedgerEngine {\n     /// Last `months` months of debit/credit totals, oldest first.\n     pub async fn monthly_totals(\n         &self,\n         months: i64,\n     ) -> Result<Vec<MonthlyTotal>, Box<dyn std::error::Error>> {\n-        let rows = sqlx::query_as::<_, MonthlyTotal>(\n-            \"SELECT strftime('%Y-%m', t.transaction_date) AS ym, \\\n-             COALESCE(SUM(CASE WHEN i.item_type = 'DEBIT' THEN i.amount_minor ELSE 0 END), 0) AS debit_minor, \\\n-             COALESCE(SUM(CASE WHEN i.item_type = 'CREDIT' THEN i.amount_minor ELSE 0 END), 0) AS credit_minor \\\n-             FROM transactions t JOIN transaction_items i ON i.transaction_id = t.transaction_id \\\n-             GROUP BY ym ORDER BY ym DESC LIMIT ?\",\n-        )\n-        .bind(months)\n-        .fetch_all(&self.pool)\n-        .await?;\n-        Ok(rows.into_iter().rev().collect())\n+        Ok(vec![]) /* ~ changed by cargo-mutants ~ */\n     }\n \n     /// Per-account debit/credit totals for one `YYYY-MM` month.\n     pub async fn monthly_by_account(\n         &self,\n         ym: &str,\n     ) -> Result<Vec<AccountMonthTotal>, Box<dyn std::error::Error>> {\n         let rows = sqlx::query_as::<_, AccountMonthTotal>(\n",
+    "file": "core/src/ledger/engine.rs",
+    "function": {
+      "function_name": "LedgerEngine::monthly_totals",
+      "return_type": "-> Result<Vec<MonthlyTotal>, Box<dyn std::error::Error>>",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 474
+        },
+        "start": {
+          "column": 5,
+          "line": 458
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "core/src/ledger/engine.rs:463:9: replace LedgerEngine::monthly_totals -> Result<Vec<MonthlyTotal>, Box<dyn std::error::Error>> with Ok(vec![])",
+    "package": "flaps_core",
+    "replacement": "Ok(vec![])",
+    "span": {
+      "end": {
+        "column": 45,
+        "line": 473
+      },
+      "start": {
+        "column": 9,
+        "line": 463
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/ledger/engine.rs\n+++ replace LedgerEngine::monthly_totals -> Result<Vec<MonthlyTotal>, Box<dyn std::error::Error>> with Ok(vec![Default::default()])\n@@ -455,27 +455,17 @@\n }\n \n impl LedgerEngine {\n     /// Last `months` months of debit/credit totals, oldest first.\n     pub async fn monthly_totals(\n         &self,\n         months: i64,\n     ) -> Result<Vec<MonthlyTotal>, Box<dyn std::error::Error>> {\n-        let rows = sqlx::query_as::<_, MonthlyTotal>(\n-            \"SELECT strftime('%Y-%m', t.transaction_date) AS ym, \\\n-             COALESCE(SUM(CASE WHEN i.item_type = 'DEBIT' THEN i.amount_minor ELSE 0 END), 0) AS debit_minor, \\\n-             COALESCE(SUM(CASE WHEN i.item_type = 'CREDIT' THEN i.amount_minor ELSE 0 END), 0) AS credit_minor \\\n-             FROM transactions t JOIN transaction_items i ON i.transaction_id = t.transaction_id \\\n-             GROUP BY ym ORDER BY ym DESC LIMIT ?\",\n-        )\n-        .bind(months)\n-        .fetch_all(&self.pool)\n-        .await?;\n-        Ok(rows.into_iter().rev().collect())\n+        Ok(vec![Default::default()]) /* ~ changed by cargo-mutants ~ */\n     }\n \n     /// Per-account debit/credit totals for one `YYYY-MM` month.\n     pub async fn monthly_by_account(\n         &self,\n         ym: &str,\n     ) -> Result<Vec<AccountMonthTotal>, Box<dyn std::error::Error>> {\n         let rows = sqlx::query_as::<_, AccountMonthTotal>(\n",
+    "file": "core/src/ledger/engine.rs",
+    "function": {
+      "function_name": "LedgerEngine::monthly_totals",
+      "return_type": "-> Result<Vec<MonthlyTotal>, Box<dyn std::error::Error>>",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 474
+        },
+        "start": {
+          "column": 5,
+          "line": 458
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "core/src/ledger/engine.rs:463:9: replace LedgerEngine::monthly_totals -> Result<Vec<MonthlyTotal>, Box<dyn std::error::Error>> with Ok(vec![Default::default()])",
+    "package": "flaps_core",
+    "replacement": "Ok(vec![Default::default()])",
+    "span": {
+      "end": {
+        "column": 45,
+        "line": 473
+      },
+      "start": {
+        "column": 9,
+        "line": 463
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/ledger/engine.rs\n+++ replace LedgerEngine::monthly_by_account -> Result<Vec<AccountMonthTotal>, Box<dyn std::error::Error>> with Ok(vec![])\n@@ -473,28 +473,17 @@\n         Ok(rows.into_iter().rev().collect())\n     }\n \n     /// Per-account debit/credit totals for one `YYYY-MM` month.\n     pub async fn monthly_by_account(\n         &self,\n         ym: &str,\n     ) -> Result<Vec<AccountMonthTotal>, Box<dyn std::error::Error>> {\n-        let rows = sqlx::query_as::<_, AccountMonthTotal>(\n-            \"SELECT i.account_id, \\\n-             COALESCE(SUM(CASE WHEN i.item_type = 'DEBIT' THEN i.amount_minor ELSE 0 END), 0) AS debit_minor, \\\n-             COALESCE(SUM(CASE WHEN i.item_type = 'CREDIT' THEN i.amount_minor ELSE 0 END), 0) AS credit_minor \\\n-             FROM transaction_items i JOIN transactions t ON i.transaction_id = t.transaction_id \\\n-             WHERE strftime('%Y-%m', t.transaction_date) = ? \\\n-             GROUP BY i.account_id ORDER BY i.account_id\",\n-        )\n-        .bind(ym)\n-        .fetch_all(&self.pool)\n-        .await?;\n-        Ok(rows)\n+        Ok(vec![]) /* ~ changed by cargo-mutants ~ */\n     }\n }\n \n #[cfg(test)]\n mod tests {\n     use super::*;\n     use crate::ledger::transaction::TransactionItem;\n     use sqlx::sqlite::SqlitePoolOptions;\n",
+    "file": "core/src/ledger/engine.rs",
+    "function": {
+      "function_name": "LedgerEngine::monthly_by_account",
+      "return_type": "-> Result<Vec<AccountMonthTotal>, Box<dyn std::error::Error>>",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 493
+        },
+        "start": {
+          "column": 5,
+          "line": 476
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "core/src/ledger/engine.rs:481:9: replace LedgerEngine::monthly_by_account -> Result<Vec<AccountMonthTotal>, Box<dyn std::error::Error>> with Ok(vec![])",
+    "package": "flaps_core",
+    "replacement": "Ok(vec![])",
+    "span": {
+      "end": {
+        "column": 17,
+        "line": 492
+      },
+      "start": {
+        "column": 9,
+        "line": 481
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/ledger/engine.rs\n+++ replace LedgerEngine::monthly_by_account -> Result<Vec<AccountMonthTotal>, Box<dyn std::error::Error>> with Ok(vec![Default::default()])\n@@ -473,28 +473,17 @@\n         Ok(rows.into_iter().rev().collect())\n     }\n \n     /// Per-account debit/credit totals for one `YYYY-MM` month.\n     pub async fn monthly_by_account(\n         &self,\n         ym: &str,\n     ) -> Result<Vec<AccountMonthTotal>, Box<dyn std::error::Error>> {\n-        let rows = sqlx::query_as::<_, AccountMonthTotal>(\n-            \"SELECT i.account_id, \\\n-             COALESCE(SUM(CASE WHEN i.item_type = 'DEBIT' THEN i.amount_minor ELSE 0 END), 0) AS debit_minor, \\\n-             COALESCE(SUM(CASE WHEN i.item_type = 'CREDIT' THEN i.amount_minor ELSE 0 END), 0) AS credit_minor \\\n-             FROM transaction_items i JOIN transactions t ON i.transaction_id = t.transaction_id \\\n-             WHERE strftime('%Y-%m', t.transaction_date) = ? \\\n-             GROUP BY i.account_id ORDER BY i.account_id\",\n-        )\n-        .bind(ym)\n-        .fetch_all(&self.pool)\n-        .await?;\n-        Ok(rows)\n+        Ok(vec![Default::default()]) /* ~ changed by cargo-mutants ~ */\n     }\n }\n \n #[cfg(test)]\n mod tests {\n     use super::*;\n     use crate::ledger::transaction::TransactionItem;\n     use sqlx::sqlite::SqlitePoolOptions;\n",
+    "file": "core/src/ledger/engine.rs",
+    "function": {
+      "function_name": "LedgerEngine::monthly_by_account",
+      "return_type": "-> Result<Vec<AccountMonthTotal>, Box<dyn std::error::Error>>",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 493
+        },
+        "start": {
+          "column": 5,
+          "line": 476
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "core/src/ledger/engine.rs:481:9: replace LedgerEngine::monthly_by_account -> Result<Vec<AccountMonthTotal>, Box<dyn std::error::Error>> with Ok(vec![Default::default()])",
+    "package": "flaps_core",
+    "replacement": "Ok(vec![Default::default()])",
+    "span": {
+      "end": {
+        "column": 17,
+        "line": 492
+      },
+      "start": {
+        "column": 9,
+        "line": 481
+      }
+    }
+  }
+]

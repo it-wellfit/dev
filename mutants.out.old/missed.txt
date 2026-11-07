@@ -1,0 +1,13 @@
+core/src/money.rs:33:9: replace <impl fmt::Display for MoneyError>::fmt -> fmt::Result with Ok(Default::default())
+core/src/money.rs:317:60: replace || with && in parse_decimal_to_minor_i128
+core/src/money.rs:317:86: replace > with < in parse_decimal_to_minor_i128
+core/src/money.rs:325:25: replace > with < in parse_decimal_to_minor_i128
+core/src/money.rs:333:49: replace > with == in parse_decimal_to_minor_i128
+core/src/money.rs:333:49: replace > with >= in parse_decimal_to_minor_i128
+core/src/money.rs:333:30: replace + with - in parse_decimal_to_minor_i128
+core/src/money.rs:333:30: replace + with * in parse_decimal_to_minor_i128
+core/src/money.rs:356:26: replace < with == in format_minor_i128
+core/src/money.rs:356:26: replace < with <= in format_minor_i128
+core/src/money.rs:365:20: replace && with || in format_minor_i128
+core/src/money.rs:365:16: replace > with == in format_minor_i128
+core/src/money.rs:365:16: replace > with < in format_minor_i128

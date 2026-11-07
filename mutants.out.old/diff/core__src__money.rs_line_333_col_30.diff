@@ -1,0 +1,21 @@
+--- core/src/money.rs
++++ replace + with - in parse_decimal_to_minor_i128
+@@ -325,17 +325,17 @@
+     if fractional.len() > dp as usize {
+         return Err(MoneyError::TooManyDecimalPlaces {
+             max: dp,
+             got: fractional.len(),
+         });
+     }
+ 
+     let integral_digits = integral.trim_start_matches('0');
+-    if integral_digits.len() + fractional.len() > MAX_TOTAL_DIGITS_I128 {
++    if integral_digits.len() - /* ~ changed by cargo-mutants ~ */ fractional.len() > MAX_TOTAL_DIGITS_I128 {
+         return Err(MoneyError::Overflow {
+             max_total_digits: MAX_TOTAL_DIGITS_I128,
+         });
+     }
+ 
+     let mut digits = String::with_capacity(integral_digits.len() + dp as usize);
+     digits.push_str(integral_digits);
+     digits.push_str(fractional);
