@@ -1,7 +1,7 @@
 #![forbid(unsafe_code)]
-//! M7 — Governance: lint, doctor, status, review-queue dispositions.
+//! M7 ??Governance: lint, doctor, status, review-queue dispositions.
 //!
-//! Lint rules (KEM doc §8 V-tests feed here):
+//! Lint rules (KEM doc 禮8 V-tests feed here):
 //! - L1 published claim without retrievable evidence file (grounding broken)
 //! - L2 supersedes reference pointing at unknown/retired successor mismatch
 //! - L3 confidence below the stale threshold on a published claim
@@ -15,13 +15,13 @@ use std::path::Path;
 use crate::schema::{Claim, ClaimStatus, KemError};
 use crate::vetting::token_overlap;
 
-/// Confidence below this on a published claim = stale (KEM doc §4.5 floor).
+/// Confidence below this on a published claim = stale (KEM doc 禮4.5 floor).
 pub const STALE_THRESHOLD: f64 = 0.45;
 /// Title near-collision overlap for L4.
 pub const TITLE_OVERLAP: f64 = 0.9;
 
 /// One lint finding, machine-checkable and actionable.
-#[derive(Debug Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Finding {
     pub rule: &'static str,
     pub claim_id: String,
@@ -36,7 +36,7 @@ pub fn lint(claims: &[Claim], now: DateTime<Utc>) -> Vec<Finding> {
 
     for c in claims {
         // L1: grounding of published claims re-checked here is cheap; the
-        // authoritative check lives in sync — lint flags the structural gap.
+        // authoritative check lives in sync ??lint flags the structural gap.
         if c.status == ClaimStatus::Published && c.evidence.is_empty() {
             out.push(Finding {
                 rule: "L1",
@@ -87,8 +87,8 @@ pub fn lint(claims: &[Claim], now: DateTime<Utc>) -> Vec<Finding> {
     out
 }
 
-/// Doctor: deep health check — ledger chain + store coherence.
-#[derive(Debug Clone, Serialize, Deserialize)]
+/// Doctor: deep health check ??ledger chain + store coherence.
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Health {
     pub ledger_entries: usize,
     pub ledger_ok: bool,
@@ -128,7 +128,7 @@ pub fn doctor(root: &Path, ledger_path: &Path, queue_path: &Path) -> Result<Heal
 }
 
 /// Review-queue disposition (KEM doc M7: accept/reject/supersede/defer).
-#[derive(Debug Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Disposition {
     Accept,

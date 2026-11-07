@@ -1,13 +1,13 @@
 #![forbid(unsafe_code)]
-//! M6 — Evolution: sync (re-verify evidence), decay (confidence half-life),
+//! M6 ??Evolution: sync (re-verify evidence), decay (confidence half-life),
 //! supersede (structural replacement, Track A), and T2 self-consistency.
 //!
-//! Rules from KEM doc §4.4/§4.5:
+//! Rules from KEM doc 禮4.4/禮4.5:
 //! - sync never silently deprecates: broken evidence becomes a review item
 //! - decay only demotes; retired/deleted never happens implicitly
 //! - supersede links both directions and keeps the old claim retrievable
-//! - T2 (SCS) calls local Ollama only; unreachable → honest Review, never
-//!   a fabricated score (UNKNOWN ≠ PASS rule)
+//! - T2 (SCS) calls local Ollama only; unreachable ??honest Review, never
+//!   a fabricated score (UNKNOWN ??PASS rule)
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -16,7 +16,7 @@ use std::path::Path;
 use crate::ledger::LedgerAction;
 use crate::schema::{Claim, ClaimStatus, ClaimType, KemError, Track, validate_claim, known_ids_of};
 
-/// Per-type confidence half-life in days (KEM doc §4.5: architecture
+/// Per-type confidence half-life in days (KEM doc 禮4.5: architecture
 /// decisions fade slowly, transient facts fast; concepts/glossary no decay).
 pub fn half_life_days(claim_type: ClaimType) -> Option<f64> {
     match claim_type {
@@ -35,7 +35,7 @@ pub fn recompute_confidence(
     last_affirmed: Option<DateTime<Utc>>,
     now: DateTime<Utc>,
 ) -> f64 {
-    let base = match claim.evidence.len() {
+    let base: f64 = match claim.evidence.len() {
         0 => 0.0,
         1 => 0.8,
         2 => 0.9,
@@ -47,7 +47,7 @@ pub fn recompute_confidence(
         None => base.max(claim.confidence.min(base)),
         Some(hl) => {
             let decayed = base * 0.5f64.powf(age_days / hl);
-            // Floor: demote but never zero — claims fade to "needs reaffirm".
+            // Floor: demote but never zero ??claims fade to "needs reaffirm".
             decayed.clamp(0.30, 1.0)
         }
     }
@@ -58,7 +58,7 @@ fn claim_type_of(c: &Claim) -> ClaimType {
 }
 
 /// Sync outcome for one claim.
-#[derive(Debug Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SyncResult {
     pub claim_id: String,
     pub evidence_ok: usize,
@@ -128,7 +128,7 @@ where
         let new_conf = recompute_confidence(claim, if healthy { last_affirmed } else { None }, now);
         claim.confidence = new_conf;
         if !healthy {
-            // Review item, never a silent deprecation (KEM doc §4.4).
+            // Review item, never a silent deprecation (KEM doc 禮4.4).
             queue(&SyncResult {
                 claim_id: claim.id.clone(),
                 evidence_ok,
@@ -224,20 +224,20 @@ pub fn supersede(
 }
 
 /// One T2 vote (parsed from a local LLM response).
-#[derive(Debug Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ScsVote {
     pub score: u8,
     pub rationale: String,
 }
 
-/// T2 SCS verdict: k votes, majority fraction = agreement (KEM doc §4.3.2).
-#[derive(Debug Clone, Serialize, Deserialize)]
+/// T2 SCS verdict: k votes, majority fraction = agreement (KEM doc 禮4.3.2).
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ScsVerdict {
     pub k: usize,
     pub votes: Vec<ScsVote>,
     pub agreement: f64,
     pub top_score: Option<u8>,
-    /// true when no LLM endpoint was reachable — honest UNKNOWN, never a score.
+    /// true when no LLM endpoint was reachable ??honest UNKNOWN, never a score.
     pub llm_unreachable: bool,
     /// Endpoint actually used (provenance for R1/R4 routing decisions).
     pub endpoint: String,
@@ -263,12 +263,15 @@ pub fn majority<T: PartialEq + Clone>(items: &[Option<T>]) -> (Option<T>, f64) {
             best = Some((candidate, count));
         }
     }
-    let (value, count) = best?;
+    let (value, count) = match best {
+        Some((v, c)) => (v, c),
+        None => return (None, 0.0),
+    };
     (Some(value.clone()), f64::from(count as u32) / f64::from(valid.len() as u32))
 }
 
 /// Run the SCS voting loop against one OpenAI-compatible chat endpoint.
-/// Tries endpoints in order (T2a local first); ALL unreachable → honest
+/// Tries endpoints in order (T2a local first); ALL unreachable ??honest
 /// `llm_unreachable` verdict (never a fabricated score).
 pub async fn scs_vote(
     endpoints: &[(&str, &str)], // (label, base_url)
@@ -314,7 +317,7 @@ pub async fn scs_vote(
                 Ok(r) => {
                     if !r.status().is_success() {
                         if i == 0 {
-                            continue 'outer; // rate-limited/unauthorized → next pool
+                            continue 'outer; // rate-limited/unauthorized ??next pool
                         }
                         votes.push(None);
                         continue;
@@ -390,6 +393,11 @@ mod tests {
     }
 }
 
+mod evolve_tests {
+    use super::*;
+    use crate::schema::Evidence;
+    use chrono::TimeZone;
+
     fn claim(kind: ClaimType, days_old: i64) -> Claim {
         Claim {
             id: "claim-20261107-001".into(),
@@ -425,7 +433,7 @@ mod tests {
     fn fact_decays_with_90d_half_life() {
         let old = claim(ClaimType::Fact, 90);
         let c = recompute_confidence(&old, None, Utc::now());
-        // base 0.8 after one half-life → 0.4
+        // base 0.8 after one half-life ??0.4
         assert!((c - 0.4).abs() < 1e-9, "got {c}");
     }
 
