@@ -134,7 +134,11 @@ impl Index {
             })
             .filter(|h| h.score > 0.0)
             .collect();
-        scored.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal));
+        scored.sort_by(|a, b| {
+            b.score
+                .partial_cmp(&a.score)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
         scored.truncate(top);
         scored
     }
@@ -148,9 +152,7 @@ pub fn visible_at(claims: &[Claim], at: Option<chrono::NaiveDate>) -> Vec<Claim>
     claims
         .iter()
         .filter(|c| {
-            c.status.retrievable()
-                && c.valid_from <= at
-                && c.valid_to.is_none_or(|v| at <= v)
+            c.status.retrievable() && c.valid_from <= at && c.valid_to.is_none_or(|v| at <= v)
         })
         .cloned()
         .collect()
@@ -165,7 +167,11 @@ pub struct GoldenCase {
 }
 
 /// Run a golden set: top-1 accuracy. Refusal cases pass only with 0 hits.
-pub fn run_golden(index: &Index, all: &[Claim], cases: &[GoldenCase]) -> Result<(usize, usize, Vec<String>), KemError> {
+pub fn run_golden(
+    index: &Index,
+    all: &[Claim],
+    cases: &[GoldenCase],
+) -> Result<(usize, usize, Vec<String>), KemError> {
     let mut pass = 0usize;
     let mut failures = Vec::new();
     for case in cases {
@@ -199,9 +205,10 @@ pub fn load_golden(path: &Path) -> Result<Vec<GoldenCase>, KemError> {
         if line.trim().is_empty() {
             continue;
         }
-        out.push(serde_json::from_str(line).map_err(|e| {
-            KemError::InvalidInput(format!("{path:?} line {}: {e}", i + 1))
-        })?);
+        out.push(
+            serde_json::from_str(line)
+                .map_err(|e| KemError::InvalidInput(format!("{path:?} line {}: {e}", i + 1)))?,
+        );
     }
     Ok(out)
 }
@@ -254,14 +261,27 @@ mod tests {
         ];
         let idx = Index::build(&claims);
         let hits = idx.search(&claims, "phase gate approved blocked", 2);
-        assert_eq!(hits.first().map(|h| h.id.as_str()), Some("claim-20261107-001"));
+        assert_eq!(
+            hits.first().map(|h| h.id.as_str()),
+            Some("claim-20261107-001")
+        );
     }
 
     #[test]
     fn drafts_and_retired_are_invisible() {
         let claims = vec![
-            claim("claim-20261107-001", "Phase gates", "phase gate blocked", ClaimStatus::Draft),
-            claim("claim-20261107-002", "Phase gates two", "phase gate blocked", ClaimStatus::Retired),
+            claim(
+                "claim-20261107-001",
+                "Phase gates",
+                "phase gate blocked",
+                ClaimStatus::Draft,
+            ),
+            claim(
+                "claim-20261107-002",
+                "Phase gates two",
+                "phase gate blocked",
+                ClaimStatus::Retired,
+            ),
         ];
         let filtered = visible_at(&claims, None);
         assert!(filtered.is_empty());
@@ -271,7 +291,12 @@ mod tests {
 
     #[test]
     fn expired_claims_are_invisible_but_history_queries_can_ask_past_dates() {
-        let mut c = claim("claim-20261107-001", "Old rule", "color tokens policy", ClaimStatus::Deprecated);
+        let mut c = claim(
+            "claim-20261107-001",
+            "Old rule",
+            "color tokens policy",
+            ClaimStatus::Deprecated,
+        );
         c.valid_to = Some(chrono::NaiveDate::from_ymd_opt(2026, 10, 1).unwrap());
         assert!(visible_at(&[c.clone()], None).is_empty()); // current query hides it
         let past = chrono::NaiveDate::from_ymd_opt(2026, 9, 15).unwrap();
@@ -288,8 +313,14 @@ mod tests {
         )];
         let idx = Index::build(&claims);
         let cases = vec![
-            GoldenCase { query: "phase gate".into(), expect: "claim-20261107-001".into() },
-            GoldenCase { query: "kubernetes autoscaling cluster".into(), expect: "none".into() },
+            GoldenCase {
+                query: "phase gate".into(),
+                expect: "claim-20261107-001".into(),
+            },
+            GoldenCase {
+                query: "kubernetes autoscaling cluster".into(),
+                expect: "none".into(),
+            },
         ];
         let (pass, total, fails) = run_golden(&idx, &claims, &cases).unwrap();
         assert_eq!((pass, total), (2, 2));

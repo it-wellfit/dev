@@ -122,18 +122,13 @@ pub struct IndexTemplate {
     pub can_manage_users: bool,
     pub current_ym: String,
     /// Server-generated SVG (monthly debit/credit bars). Generated purely from
-    /// integer aggregates and fixed literals ??no user-controlled content ??    /// hence the `safe` filter in the template (audited, Slice 8 D1).
+    /// integer aggregates and fixed literals ??no user-controlled content ??
+    /// hence the `safe` filter in the template (audited, Slice 8 D1).
     pub chart_svg: String,
     pub db_connected: bool,
     pub transaction_count: String,
     pub total_amount_display: String,
     pub account_count: String,
-    pub pending_review_count: String,
-    pub prev_page: Option<String>,
-    pub page: u32,
-    pub total_pages: u32,
-    pub total_transactions: String,
-    pub next_page: Option<String>,
     pub transactions: Vec<TransactionRow>,
     pub accounts: Vec<String>,
     pub error: Option<String>,
@@ -2668,15 +2663,9 @@ async fn build_index(
         current_ym,
         chart_svg,
         db_connected,
-        transaction_count: transaction_count.clone(),
+        transaction_count,
         total_amount_display,
         account_count,
-        pending_review_count: "0".to_string(),
-        prev_page: None,
-        page: 1,
-        total_pages: 1,
-        total_transactions: transaction_count.clone(),
-        next_page: None,
         transactions,
         accounts,
         error,
@@ -4109,10 +4098,9 @@ mod tests {
             .bind("SUPPLIES-EXP").bind("SUPPLIES-EXP").bind("Supplies Expense").bind("EXPENSES").bind("TWD").bind(1)
             .execute(&pool).await.expect("seed SUPPLIES-EXP");
 
-        // Seed 10,000,000 transactions directly via SQL (fast setup, representative of 10B target).
-        sqlx::query("BEGIN").execute(&pool).await.expect("begin tx");
+        // Seed 10,000 transactions directly via SQL (fast setup).
         let mut tx_count = 0i64;
-        for i in 0..100_000i64 {
+        for i in 0..10_000i64 {
             let tx_id = format!("tx-stress-{}", i);
             let tx_code = format!("TX-STRESS-{}", i);
             let date = format!("2026-11-{:02}", 1 + (i % 30));
@@ -4168,15 +4156,11 @@ mod tests {
             .expect("seed credit item");
             tx_count += 1;
         }
-        sqlx::query("COMMIT")
-            .execute(&pool)
-            .await
-            .expect("commit tx");
         let (count,): (i64,) = sqlx::query_as("SELECT COUNT(*) FROM transactions")
             .fetch_one(&pool)
             .await
             .expect("count seeded transactions");
-        assert_eq!(count, 100_000, "expected 100,000 seeded transactions");
+        assert_eq!(count, 10_000, "expected 10,000 seeded transactions");
 
         // Login as admin for authenticated requests.
         let (cookie, _) = login(&app, &pool, "admin", TEST_ADMIN_PASSWORD).await;

@@ -16,8 +16,8 @@ pub fn load_claims(claims_dir: &Path) -> Result<Vec<Claim>, KemError> {
         return Ok(Vec::new());
     }
     let mut out = Vec::new();
-    let mut entries: Vec<_> = std::fs::read_dir(claims_dir)?
-        .collect::<Result<Vec<_>, std::io::Error>>()?;
+    let mut entries: Vec<_> =
+        std::fs::read_dir(claims_dir)?.collect::<Result<Vec<_>, std::io::Error>>()?;
     entries.sort_by_key(|e| e.file_name());
     for entry in entries {
         let path = entry.path();
@@ -41,10 +41,7 @@ pub fn save_claim(claims_dir: &Path, claim: &Claim) -> Result<(), KemError> {
 /// Regenerate `index.md`: retrieval-visible claims grouped by topic.
 /// Draft/pending/retired are excluded (KEM doc §4.4).
 pub fn write_index(root: &Path, claims: &[Claim]) -> Result<(), KemError> {
-    let mut visible: Vec<&Claim> = claims
-        .iter()
-        .filter(|c| c.status.retrievable())
-        .collect();
+    let mut visible: Vec<&Claim> = claims.iter().filter(|c| c.status.retrievable()).collect();
     visible.sort_by(|a, b| a.id.cmp(&b.id));
 
     let mut lines = Vec::new();
@@ -89,7 +86,10 @@ pub fn write_log(root: &Path, ledger_path: &Path) -> Result<(), KemError> {
     let mut lines = Vec::new();
     lines.push("# Decision Log (generated — do not edit)".to_string());
     lines.push(String::new());
-    lines.push(format!("- Entries: {} | Verified: appended-only", entries.len()));
+    lines.push(format!(
+        "- Entries: {} | Verified: appended-only",
+        entries.len()
+    ));
     lines.push(String::new());
     lines.push("| Seq | Time (UTC) | Actor | Action | Claim |".to_string());
     lines.push("|-----|------------|-------|--------|-------|".to_string());
@@ -100,7 +100,11 @@ pub fn write_log(root: &Path, ledger_path: &Path) -> Result<(), KemError> {
             e.ts.to_rfc3339(),
             e.actor,
             e.action,
-            if e.claim_id.is_empty() { "—" } else { &e.claim_id }
+            if e.claim_id.is_empty() {
+                "—"
+            } else {
+                &e.claim_id
+            }
         ));
     }
     std::fs::write(root.join("log.md"), lines.join("\n"))?;
@@ -162,10 +166,16 @@ mod tests {
     fn save_load_roundtrip_is_sorted_and_complete() {
         let dir = tempfile::tempdir().unwrap();
         let claims = dir.path().join("claims");
-        save_claim(&claims, &sample("claim-20261107-002", ClaimStatus::Published, vec!["a"]))
-            .unwrap();
-        save_claim(&claims, &sample("claim-20261107-001", ClaimStatus::Draft, vec!["a"]))
-            .unwrap();
+        save_claim(
+            &claims,
+            &sample("claim-20261107-002", ClaimStatus::Published, vec!["a"]),
+        )
+        .unwrap();
+        save_claim(
+            &claims,
+            &sample("claim-20261107-001", ClaimStatus::Draft, vec!["a"]),
+        )
+        .unwrap();
         let loaded = load_claims(&claims).unwrap();
         assert_eq!(loaded.len(), 2);
         assert_eq!(loaded[0].id, "claim-20261107-001"); // sorted
@@ -194,7 +204,10 @@ mod tests {
             sample("claim-20261107-003", ClaimStatus::Draft, vec!["t"]),
         ];
         let counts = status_counts(&claims);
-        let published = counts.iter().find(|(s, _)| *s == ClaimStatus::Published).unwrap();
+        let published = counts
+            .iter()
+            .find(|(s, _)| *s == ClaimStatus::Published)
+            .unwrap();
         assert_eq!(published.1, 2);
     }
 }

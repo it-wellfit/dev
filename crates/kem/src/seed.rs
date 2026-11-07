@@ -286,7 +286,9 @@ pub fn seed_raw_sources() -> Vec<(&'static str, String)> {
         .map(|(topic, specs)| {
             let mut md = String::new();
             md.push_str(&format!("# KEM seed sources — {topic} (2026-11-07)\n\n"));
-            md.push_str("Verbatim quotes vetted at seed time; files are immutable once captured.\n\n");
+            md.push_str(
+                "Verbatim quotes vetted at seed time; files are immutable once captured.\n\n",
+            );
             for s in specs {
                 md.push_str(&format!("## {}\n\n", s.title));
                 md.push_str(&format!("- evidence: `{}` @ {}\n", s.path, s.rev));

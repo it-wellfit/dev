@@ -1,4 +1,4 @@
-﻿#![forbid(unsafe_code)]
+#![forbid(unsafe_code)]
 //! M3 ??T1 deterministic vetting (KEM doc 禮4.3).
 //!
 //! T1 owns every structural judgment with zero LLM calls:
@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 
-use crate::schema::{Claim, ClaimStatus, Track, KemError, validate_claim, known_ids_of};
+use crate::schema::{known_ids_of, validate_claim, Claim, ClaimStatus, KemError, Track};
 
 /// Verdict outcome of T1 vetting.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -46,14 +46,8 @@ pub struct Verdict {
 /// Accept thresholds ??code owns every number (pi-jev-wiki philosophy).
 pub const DUP_OVERLAP: f64 = 0.9;
 /// Secret patterns that hard-reject a claim (never stored).
-pub const SECRET_PATTERNS: [&str; 6] = [
-    "-----BEGIN",
-    "AKIA",
-    "sk-",
-    "ghp_",
-    "password=",
-    "api_key=",
-];
+pub const SECRET_PATTERNS: [&str; 6] =
+    ["-----BEGIN", "AKIA", "sk-", "ghp_", "password=", "api_key="];
 /// Topic substrings that hard-reject regardless of content.
 pub const SENSITIVE_TOPICS: [&str; 3] = ["secret", "credential", "private-key"];
 
@@ -226,16 +220,12 @@ pub fn token_overlap(a: &str, b: &str) -> f64 {
     if union == 0 {
         return 1.0;
     }
-    f64::from(u32::try_from(inter).unwrap_or(0))
-        / f64::from(u32::try_from(union).unwrap_or(1))
+    f64::from(u32::try_from(inter).unwrap_or(0)) / f64::from(u32::try_from(union).unwrap_or(1))
 }
 
 /// Apply an accepted/reviewed verdict: write the claim file (SSOT) and record
 /// the ledger entries. Structural ops (supersede) on Track A go to review.
-pub fn stage_claim(
-    claims_dir: &Path,
-    claim: &Claim,
-) -> Result<PathBuf, KemError> {
+pub fn stage_claim(claims_dir: &Path, claim: &Claim) -> Result<PathBuf, KemError> {
     std::fs::create_dir_all(claims_dir)?;
     // Status at staging: Track A goes to pending_review (gated), B published.
     let mut staged = claim.clone();
@@ -308,12 +298,23 @@ mod tests {
     #[test]
     fn accepts_grounded_unique_safe_claim() {
         let dir = tempfile::tempdir().unwrap();
-        std::fs::write(dir.path().join("evidence.txt"), "prefix the canonical sentence suffix")
-            .unwrap();
+        std::fs::write(
+            dir.path().join("evidence.txt"),
+            "prefix the canonical sentence suffix",
+        )
+        .unwrap();
         let c = claim_with_body("The canonical sentence holds for testing.");
         let v = vet_t1(&c, &ctx(dir.path(), vec![]));
         assert_eq!(v.outcome, Outcome::Accept, "{:?}", v.reasons);
-        assert_eq!(v.scores, Scores { groundedness: 1.0, duplication: 1.0, sensitivity: 1.0, completeness: 1.0 });
+        assert_eq!(
+            v.scores,
+            Scores {
+                groundedness: 1.0,
+                duplication: 1.0,
+                sensitivity: 1.0,
+                completeness: 1.0
+            }
+        );
     }
 
     #[test]
@@ -371,7 +372,12 @@ mod tests {
         let ledger = dir.path().join("ledger.jsonl");
         let v = Verdict {
             outcome: Outcome::Accept,
-            scores: Scores { groundedness: 1.0, duplication: 1.0, sensitivity: 1.0, completeness: 1.0 },
+            scores: Scores {
+                groundedness: 1.0,
+                duplication: 1.0,
+                sensitivity: 1.0,
+                completeness: 1.0,
+            },
             reasons: vec![],
         };
         record_verdict(&ledger, "kem-t1", "claim-20261107-042", &v, now()).unwrap();

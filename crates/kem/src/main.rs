@@ -1,4 +1,4 @@
-﻿#![forbid(unsafe_code)]
+#![forbid(unsafe_code)]
 //! KEM CLI ??subcommands over the knowledge root (default `knowledge/`).
 //!
 //! P0: seed, validate 繚 P1: capture, ingest, finalize 繚 P2: ask 繚
@@ -11,9 +11,9 @@ use std::process::ExitCode;
 
 use kem::filing::{load_claims, write_index, write_log};
 use kem::ledger::LedgerAction;
-use kem::schema::{Claim, KemError, ValidationContext, known_ids_of, validate_claim};
+use kem::schema::{known_ids_of, validate_claim, Claim, KemError, ValidationContext};
 use kem::seed::{seed_claims, seed_raw_sources};
-use kem::vetting::{Outcome, VetContext, record_verdict, stage_claim, vet_t1};
+use kem::vetting::{record_verdict, stage_claim, vet_t1, Outcome, VetContext};
 
 struct Args {
     root: PathBuf,
@@ -81,9 +81,7 @@ fn run() -> Result<(), KemError> {
         "finalize" => cmd_finalize(&root, &ledger),
         "ask" => cmd_ask(&root, &args.flags),
         "eval" => cmd_eval(&root, &args.flags),
-        other => Err(KemError::InvalidInput(format!(
-            "unknown command {other:?}"
-        ))),
+        other => Err(KemError::InvalidInput(format!("unknown command {other:?}"))),
     }
 }
 
@@ -148,7 +146,9 @@ fn cmd_seed(root: &Path, ledger: &Path, force: bool) -> Result<(), KemError> {
         if verdict.outcome != Outcome::Accept {
             return Err(KemError::SchemaViolation(format!(
                 "seed claim {} not accepted: {:?} ??{}",
-                claim.id, verdict.outcome, verdict.reasons.join("; ")
+                claim.id,
+                verdict.outcome,
+                verdict.reasons.join("; ")
             )));
         }
         record_verdict(ledger, "kem-seed", &claim.id, &verdict, now)?;
@@ -195,7 +195,11 @@ fn cmd_validate(root: &Path) -> Result<(), KemError> {
 }
 
 /// P1 M1: stage an immutable raw source.
-fn cmd_capture(root: &Path, ledger: &Path, flags: &std::collections::HashMap<String, String>) -> Result<(), KemError> {
+fn cmd_capture(
+    root: &Path,
+    ledger: &Path,
+    flags: &std::collections::HashMap<String, String>,
+) -> Result<(), KemError> {
     let topic = flag(flags, "topic")?;
     let name = flag(flags, "name")?;
     let file = flag(flags, "file")?;
@@ -239,8 +243,14 @@ fn cmd_ingest(root: &Path, ledger: &Path, batch_file: String) -> Result<(), KemE
         match verdict.outcome {
             Outcome::Accept => {
                 stage_claim(&root.join("claims"), &claim)?;
-                kem::ledger::append(ledger, "kem-t1", LedgerAction::File, &claim.id,
-                    serde_json::json!({"status": format!("{:?}", claim.status).to_lowercase()}), now)?;
+                kem::ledger::append(
+                    ledger,
+                    "kem-t1",
+                    LedgerAction::File,
+                    &claim.id,
+                    serde_json::json!({"status": format!("{:?}", claim.status).to_lowercase()}),
+                    now,
+                )?;
                 acc += 1;
             }
             Outcome::Review => {
@@ -270,17 +280,17 @@ fn cmd_finalize(root: &Path, ledger: &Path) -> Result<(), KemError> {
     let claims = load_claims(&root.join("claims"))?;
     write_index(root, &claims)?;
     write_log(root, ledger)?;
-    println!("finalize: index.md + log.md regenerated ({} claims)", claims.len());
+    println!(
+        "finalize: index.md + log.md regenerated ({} claims)",
+        claims.len()
+    );
     Ok(())
 }
 
 /// P2 M5: BM25 ask — lifecycle filter BEFORE ranking, top-N with scores.
 fn cmd_ask(root: &Path, flags: &std::collections::HashMap<String, String>) -> Result<(), KemError> {
     let query = flag(flags, "query")?;
-    let top: usize = flags
-        .get("top")
-        .and_then(|v| v.parse().ok())
-        .unwrap_or(5);
+    let top: usize = flags.get("top").and_then(|v| v.parse().ok()).unwrap_or(5);
     let claims = load_claims(&root.join("claims"))?;
     let visible = kem::search::visible_at(&claims, None);
     let index = kem::search::Index::build(&visible);
@@ -292,14 +302,21 @@ fn cmd_ask(root: &Path, flags: &std::collections::HashMap<String, String>) -> Re
     for h in &hits {
         println!(
             "{:.4}  {}  [{}] conf={:.2}  {}",
-            h.score, h.id, format!("{:?}", h.status).to_lowercase(), h.confidence, h.title
+            h.score,
+            h.id,
+            format!("{:?}", h.status).to_lowercase(),
+            h.confidence,
+            h.title
         );
     }
     Ok(())
 }
 
 /// P2 V1: golden-set evaluation — top-1 accuracy with refusal cases.
-fn cmd_eval(root: &Path, flags: &std::collections::HashMap<String, String>) -> Result<(), KemError> {
+fn cmd_eval(
+    root: &Path,
+    flags: &std::collections::HashMap<String, String>,
+) -> Result<(), KemError> {
     let set = flags
         .get("set")
         .cloned()
@@ -322,7 +339,10 @@ fn cmd_eval(root: &Path, flags: &std::collections::HashMap<String, String>) -> R
     }
 }
 
-fn next_id(existing: &[Claim], known: &std::collections::BTreeSet<String>) -> Result<String, KemError> {
+fn next_id(
+    existing: &[Claim],
+    known: &std::collections::BTreeSet<String>,
+) -> Result<String, KemError> {
     let today = Utc::now().date_naive().format("%Y%m%d");
     let prefix = format!("claim-{today}-");
     let mut max = 0u32;
@@ -341,7 +361,10 @@ fn append_jsonl(path: &Path, value: &serde_json::Value) -> Result<(), KemError> 
         std::fs::create_dir_all(parent)?;
     }
     use std::io::Write;
-    let mut f = std::fs::OpenOptions::new().create(true).append(true).open(path)?;
+    let mut f = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(path)?;
     f.write_all(serde_json::to_string(value)?.as_bytes())?;
     f.write_all(b"\n")?;
     Ok(())
