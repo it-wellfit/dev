@@ -190,10 +190,20 @@ pub fn run_golden(index: &Index, all: &[Claim], cases: &[GoldenCase]) -> Result<
     Ok((pass, cases.len(), failures))
 }
 
-/// Load a golden set file (JSON array of {query, expect}).
+/// Load a golden set file (JSONL: one {query, expect} case per line;
+/// blank lines ignored). JSONL keeps the set append-only and diff-friendly.
 pub fn load_golden(path: &Path) -> Result<Vec<GoldenCase>, KemError> {
     let text = std::fs::read_to_string(path)?;
-    Ok(serde_json::from_str(&text)?)
+    let mut out = Vec::new();
+    for (i, line) in text.lines().enumerate() {
+        if line.trim().is_empty() {
+            continue;
+        }
+        out.push(serde_json::from_str(line).map_err(|e| {
+            KemError::InvalidInput(format!("{path:?} line {}: {e}", i + 1))
+        })?);
+    }
+    Ok(out)
 }
 
 #[cfg(test)]
