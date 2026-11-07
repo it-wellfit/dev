@@ -229,6 +229,25 @@ mod tests {
     use super::*;
 
     #[test]
+    fn money_error_display_is_not_empty() {
+        // Kills mutant `Display::fmt -> Ok(Default::default())`:
+        // Display must render non-empty strings for every variant.
+        assert!(!MoneyError::Empty.to_string().is_empty());
+        assert!(!MoneyError::InvalidFormat.to_string().is_empty());
+        assert!(!MoneyError::Negative.to_string().is_empty());
+        assert!(!MoneyError::Overflow {
+            max_total_digits: 17
+        }
+        .to_string()
+        .is_empty());
+        assert!(!MoneyError::TooManyDecimalPlaces { max: 2, got: 5 }
+            .to_string()
+            .is_empty());
+        assert!(MoneyError::Empty.to_string().contains("金額"));
+        assert!(MoneyError::Negative.to_string().contains("負數"));
+    }
+
+    #[test]
     fn parse_exact_values() {
         assert_eq!(parse_decimal_to_minor("123.45", 2), Ok(12_345));
         assert_eq!(parse_decimal_to_minor("0.5", 2), Ok(50));

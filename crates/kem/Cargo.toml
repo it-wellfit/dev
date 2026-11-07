@@ -1,0 +1,16 @@
+[package]
+name = "kem"
+version = "0.1.0"
+edition = "2021"
+description = "Knowledge Evolution Module: immutable capture, atomic claims, rule vetting, hash-chained ledger, BM25 retrieval, evolution and governance"
+license = "UNLICENSED"
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+chrono = { version = "0.4", features = ["serde"] }
+sha2 = "0.10"
+
+[dev-dependencies]
+tempfile = "3"

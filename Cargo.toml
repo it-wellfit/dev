@@ -5,6 +5,7 @@ members = [
     "platform",
     "web",
     "crates/flaps_bridge",
+    "crates/kem",
 ]
 
 

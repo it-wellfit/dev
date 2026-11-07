@@ -1,0 +1,39 @@
+--- core/src/money.rs
++++ replace <impl fmt::Display for MoneyError>::fmt -> fmt::Result with Ok(Default::default())
+@@ -25,35 +25,17 @@
+     InvalidFormat,
+     TooManyDecimalPlaces { max: u32, got: usize },
+     Negative,
+     Overflow { max_total_digits: usize },
+ }
+ 
+ impl fmt::Display for MoneyError {
+     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+-        match self {
+-            Self::Empty => write!(f, "金額為必填欄位，請輸入大於 0 的數字"),
+-            Self::InvalidFormat => write!(
+-                f,
+-                "金額格式不正確（可能原因：含非法字元或多次小數點）；請輸入純數字，例如 1234.50"
+-            ),
+-            Self::TooManyDecimalPlaces { max, got } => write!(
+-                f,
+-                "小數位數過多（最多 {max} 位，輸入 {got} 位）；請修正後重新送出"
+-            ),
+-            Self::Negative => write!(
+-                f,
+-                "金額不得為負數；借貸方向請使用借方（DEBIT）或貸方（CREDIT）選項表達"
+-            ),
+-            Self::Overflow { max_total_digits } => write!(
+-                f,
+-                "金額位數過多（上限 {max_total_digits} 位數字）；請拆分交易或聯絡管理員"
+-            ),
+-        }
++        Ok(Default::default()) /* ~ changed by cargo-mutants ~ */
+     }
+ }
+ 
+ impl std::error::Error for MoneyError {}
+ 
+ /// Parse an exact decimal string into minor units with `dp` fractional digits.
+ ///
+ /// Rules (deterministic, fail-closed):

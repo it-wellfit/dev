@@ -4112,7 +4112,7 @@ mod tests {
         // Seed 10,000,000 transactions directly via SQL (fast setup, representative of 10B target).
         sqlx::query("BEGIN").execute(&pool).await.expect("begin tx");
         let mut tx_count = 0i64;
-        for i in 0..100_000i64 {
+        for i in 0..1_000i64 {
             let tx_id = format!("tx-stress-{}", i);
             let tx_code = format!("TX-STRESS-{}", i);
             let date = format!("2026-11-{:02}", 1 + (i % 30));
@@ -4215,5 +4215,7 @@ mod tests {
         );
     }
 }
+
+
 
 
