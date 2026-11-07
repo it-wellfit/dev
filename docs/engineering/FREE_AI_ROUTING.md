@@ -1,10 +1,11 @@
 # Free AI Routing — Providers, Limits, and Fallback Chain
 
 **Document:** `docs/engineering/FREE_AI_ROUTING.md`
-**Status:** Active (draft v1)
+**Status:** Active (v2.0 — hybrid dynamic architecture)
 **Owner:** Autonomous Engineering Coordinator
-**Last reviewed:** 2026-11-06
+**Last reviewed:** 2026-11-07
 **Session:** `20261106-autonomous-evolution-init`
+**v2.0 變更**: 新增 §8 混合動態架構（本地 Ollama ＋ 免費雲端四層池）、2026-11-07 全量重查的免費模型/工具目錄、配額感知路由規則與狀態追蹤；§2–§7 保留為 2026-11-06 實測記錄。
 
 ---
 
@@ -134,3 +135,70 @@ These providers offer free tiers but require account creation and API key. They 
 - `.kilo/plans/1793966971740-autonomous-engineering-evolution-workflow.md` — master plan
 - `.kilo/plans/1793959524-methodology-adoption.md` — methodology adoption (2 open questions)
 - `.kilo/plans/1793033512795-flaps-erp-workbench-completion.md` — Flaps ERP workbench completion
+
+---
+
+## 8. 混合動態架構 v2（本地 Ollama ＋ 免費雲端池；2026-11-07 全量重查）
+
+### 8.1 四層資源池（全部零付費；§2.2/§7 保留為 2026-11-06 實測記錄）
+
+| 層 | 池 | 端點/來源 | 限額 | 驗證狀態 |
+|----|----|-----------|------|----------|
+| **L0 本地** | Ollama（qwen3.5:4b 現役；升級候選見 §8.3） | `http://localhost:11434` | 無限（受硬體限制） | ✅ 2026-11-06 實測 |
+| **L1 無金鑰雲** | OVHcloud AI Endpoints（EU/GDPR，40+ 開源模型） | `https://oai.endpoints.kepler.ai.cloud.ovh.net/v1` | 2/min/IP | ⏳ 未實測 |
+| | Pollinations | OpenAI 相容 | 匿名 IP 限流 | ⏳ 未實測 |
+| | LLM7.io | `https://api.llm7.io/v1` | 匿名 30–60/hr（可選 key 提升至 120 RPM） | ⏳ 未實測 |
+| | Kilo Gateway | keyless（13 條啟用路由） | ~200 req/hr per IP | ⚠️ 需重測：2026-11-06 對 `gateway.kilo.ai` 實測失敗，端點可能已遷移 |
+| | **OpenCode Zen** | keyless 目錄（預設停用、需 opt-in） | 未知 | ⏳ 未實測；**含 Jev 1.13 Free** |
+| **L2 免費註冊雲** | Groq | `https://api.groq.com/openai/v1` | 30 RPM、1K RPD、8K TPM、200K TPD（gpt-oss-120b / qwen3.8-27b / llama-3.3-70b） | ⏳ 未實測（需免費註冊） |
+| | OpenRouter :free | `https://openrouter.ai/api/v1` | 20 RPM、50/day（一次性 $10 儲值後 1,000/day）；17–25+ 個 :free 模型（nemotron-3-ultra-550b 1M ctx 等） | ⚠️ 2026-11-06 實測 401（無金鑰） |
+| | Google Gemini API | `https://generativelanguage.googleapis.com/v1beta/openai/` | Flash 家族免費、1M ctx；**免費層資料用於訓練**（敏感資料禁用） | ⏳ 未實測 |
+| | Cloudflare Workers AI | `https://api.cloudflare.com/client/v4/accounts/{id}/ai/v1` | 10,000 neurons/day、300 RPM | ⚠️ 2026-11-06 實測 403（需帳戶） |
+| | SambaNova | `https://api.sambanova.ai/v1` | 20 RPM、20 RPD、200K TPD（每模型） | ⏳ 未實測 |
+| | Ollama Cloud | 雲端原生權重（GLM-5.2 1M ctx、Kimi K2.7 Code、DeepSeek V4 Pro） | 免費層 1 並發 | ⏳ 未實測 |
+| **L3 無 AI** | 規則引擎（T1） | — | — | ✅ kem crate 已實作 |
+
+### 8.2 動態路由規則（決策矩陣）
+
+路由＝ f(任務型別, 資料敏感度, 配額狀態, 延遲需求)，規則：
+
+| # | 規則 |
+|---|------|
+| R1 | **敏感資料（claims、憑證相關、未公開計畫）→ 僅 L0**（本地），永不外送 |
+| R2 | **結構性可判定 → L3**（T1 規則，零呼叫優先） |
+| R3 | L0 可服務且配額未耗盡 → L0 優先（無限額、零延遲風險） |
+| R4 | L0 不可用（服務未啟動/模型過大）→ L1（keyless）→ L2（免費註冊）逐層降級，帶指數退避＋抖動 |
+| R5 | **429/限流 → 記錄配額狀態、跳下一池**；同池退避重試上限 2 次 |
+| R6 | 大上下文（>100K tokens）→ L2 的 1M-ctx 模型（nemotron-3-ultra / Gemini flash / Kilo nemotron-3.5-super-vl） |
+| R7 | SCS k=5 投票 → L0 為主；L0 過載時分散到 L1（不同供應商投票可提升多樣性，但需記錄模型版本） |
+| R8 | 每次呼叫記錄：池、供應商、模型、延遲、結果 → `.kem/ai-ledger.jsonl`（配額與健康追蹤） |
+
+### 8.3 本地模型升級候選（Ollama；全部開源可本地）
+
+| 模型 | 授權 | 規模 | 顯示卡/記憶體 | 亮點 |
+|------|------|------|----------------|------|
+| **qwen3.8-27b**（現役 qwen3.5:4b 的後繼） | Apache-2.0 | 27B dense | 24GB GPU / 18GB q4 | Terminal-Bench 73.0、SWE-bench Pro 61.7、原生視覺 |
+| **qwen3.6-35b-a3b** | Apache-2.0 | 35B/3B 活化 | 低算力 | 73.4% SWE-bench Verified、3B 活化最省算力 |
+| **glm-4.7-flash** | MIT | 31B/3B 活化 | 18–33GB q | MIT、59.2% SWE-V |
+| **qwen3-coder-next** | Apache-2.0 | 80B/3B 活化 | 46GB（2-bit 30GB） | 70.6% SWE-V、單機最強開源編碼 |
+| **gpt-oss-20b** | Apache-2.0 | 21B | 16GB | 單卡單用戶最清晰選擇 |
+
+**升級路徑**: 現役 qwen3.5:4b 供 SCS 與輕量裁決；待硬體確認後以 qwen3.8-27b（或 qwen3.6-35b-a3b）升級 T2 主力——升級需重跑金標集（§8.2 R8 記錄）對比，不盲升。
+
+### 8.4 免費強大模型目錄亮點（2026-11-07 查證）
+
+| 類別 | 模型 | 取得管道 | 備註 |
+|------|------|----------|------|
+| 頂級開源編碼 | DeepSeek V4 Pro（MIT, 1.6T/49B, 80.6% SWE-V） | DeepSeek 網頁免費 / Ollama Cloud | 最強免費編碼 |
+| | Kimi K2.6（Mod-MIT, 80.2% SWE-V, 300 子代理） | kimi.com 免費 / Groq | 代理式最強 |
+| | GLM-5.2（MIT, 1M ctx） | Z.ai / Ollama Cloud | 長程代理首選 |
+| 免費 API 編碼 | gpt-oss-120b / qwen3.8-27b | Groq 免費層 | 30 RPM/1K RPD |
+| 1M 上下文 | nemotron-3-ultra-550b-a55b:free | OpenRouter :free | 1M ctx |
+| **決策模型** | **Jev 1.13 Free** | **OpenCode Zen（keyless，需 opt-in）** | JEV 免費版存在→零付費約束下仍可用；採用前需驗證目錄啟用狀態 |
+| 嵌入 | BGE 系列 / Ollama local embed | Cloudflare（neurons）/ Ollama | 向量檢索用 |
+
+### 8.5 配額狀態追蹤（實作契約）
+
+`.ai-state/quota.json`（gitignored）：每供應商 `{rpm_used, day_used, day_reset_utc, last_error, cooldown_until}`；`ai-ledger.jsonl` 記錄每次呼叫。路由器讀狀態決定 R4/R5。狀態檔可隨時刪除重建（衍生性）。
+
+**誠實聲明**（`[LIMIT]`）: §8 表中「⏳ 未實測」項目為 2026-11-07 文件查證（來源：freeinference.dev 2026-11-07 快照、freellmpool、apidog 2026-10-22、requesty 2026-11-01），非本機實測；採用前依 V-冒煙程序驗證。免費層無契約保障，隨時可能變動——架構必須容忍任何一層消失（R4 降級鏈存在即是為此）。

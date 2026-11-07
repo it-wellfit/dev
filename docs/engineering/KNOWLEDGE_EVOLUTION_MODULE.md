@@ -159,7 +159,7 @@ knowledge/
 | 級 | 引擎 | 適用 | 門檻所有權 |
 |----|------|------|------------|
 | T1 規則（預設） | Rust 確定性檢查：證據存在、引證逐字匹配、重複偵測（hash＋相似度）、機密掃描、有效連結 | 結構性可判定項 | 程式碼（常數＋測試鎖定） |
-| T2 本地 LLM | qwen3.5:4b，結構化輸出 7 維評分：groundedness/derivability/durability/importance/duplication/sensitivity/placement | 語義判斷（如「這是決策還是事實？」） | 程式碼把分數映射為決策；信心 0.30–0.70 → 審查佇列（JEV cookbook 不確定帶模式 `[FACT:DOC]`） |
+| T2 混合 LLM（本地優先） | **T2a** 本地 qwen3.5:4b（升級候選 qwen3.8-27b / qwen3.6-35b-a3b，FREE_AI_ROUTING §8.3）；**T2b** keyless 雲（OVH/LLM7/OpenCode Zen）；**T2c** 免費註冊雲（Groq 等）。7 維評分：groundedness/derivability/durability/importance/duplication/sensitivity/placement；信心 0.30–0.70 → 審查佇列（JEV cookbook 不確定帶 `[FACT:DOC]`）。敏感資料僅 T2a（R1）；配額感知降級 R4/R5 | 語義判斷（如「這是決策還是事實？」） | 程式碼把分數映射為決策；投票後仍不確定 → 審查佇列 |
 | T3 自研蒸餾 | 帳本（人工複核過的处置）累積為訓練集 → 特徵化 → 小型分類器（CatBoost/邏輯迴歸起步，0.8B 級蒸餾為遠期） | T2 人工複核量成長後，把重複判斷固化為零呼叫模型 | 程式碼擁有門檻；Decision4Rec 實證：訓練後 0.8B 開源決策模型在 11/15 情境勝商用 Jev `[FACT:DOC]`——免費路線長期可超越付費 |
 
 規則: 每個裁決決策（接受/審查/拒絕＋分數＋理由）寫入 `ledger.jsonl`；覆寫（override）允許但必須記帳 `[FACT:DOC]` pi-jev-wiki 模式。
@@ -175,7 +175,7 @@ knowledge/
 | Score（有序量表） | 5 級量表提示＋分布讀取 | 可複製 |
 | 校準機率（calibration） | 帳本回饋 → 溫度縮放/特徵分類器校準（T3） | 需累積複核資料（Phase P5） |
 | 低延遲（~111ms） | T1 規則（微秒級，零 LLM）；T2 本地推理（秒級） | T1 更快；T2 較慢但完全離線 |
-| 現成開源決策模型 | **Kev 開源決策模型**（Decision4Rec 實證：訓練後 0.8B 開源模型在 11/15 情境勝商用 Jev、其餘不劣 `[FACT:DOC]` arXiv 2610.26035） | 存在；P5 評估下載/自訓 |
+| 現成開源決策模型 | **Kev 開源決策模型**（Decision4Rec 實證：訓練後 0.8B 開源模型在 11/15 情境勝商用 Jev、其餘不劣 `[FACT:DOC]` arXiv 2610.26035）；**Jev 1.13 Free 已出現於 OpenCode Zen keyless 目錄**（2026-11-07 查證，預設停用需 opt-in，採用前依 FREE_AI_ROUTING §8 冒煙驗證） | 存在；P5 評估下載/自訓 |
 
 **自研元件（kem crate, Rust）**: `JudgmentEngine` trait 統一介面 → 實作 T1 `RuleEngine`（零呼叫）＋ T2 `OllamaScorer`（typed prompts＋投票）＋ T3 `DistilledClassifier`（帳本訓練）。**免費依賴清單**: Ollama、qwen3.5:4b、tantivy（BM25）、SQLite、serde——全部開源本地。`[PROP]`
 

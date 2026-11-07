@@ -13,7 +13,9 @@
 //! - supersede, never delete: `retired` is the only terminal state
 
 pub mod capture;
+pub mod evolve;
 pub mod filing;
+pub mod gov;
 pub mod ledger;
 pub mod schema;
 pub mod search;
