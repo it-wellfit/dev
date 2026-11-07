@@ -22,6 +22,7 @@ struct Args {
 }
 
 fn parse_args() -> Result<Args, String> {
+    const VALUE_FLAGS: [&str; 5] = ["root", "topic", "name", "file", "ext"];
     let mut argv = std::env::args().skip(1);
     let mut root = PathBuf::from("knowledge");
     let mut cmd = String::new();
@@ -32,11 +33,10 @@ fn parse_args() -> Result<Args, String> {
             if let Some(p) = pending_flag.take() {
                 return Err(format!("flag --{p} missing value"));
             }
-            if name == "root" {
+            if VALUE_FLAGS.contains(&name) {
                 pending_flag = Some(name.to_string());
             } else {
-                flags.insert(name.to_string(), String::new());
-                pending_flag = Some(name.to_string());
+                flags.insert(name.to_string(), "1".to_string()); // boolean flag
             }
         } else if let Some(p) = pending_flag.take() {
             if p == "root" {
