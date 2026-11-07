@@ -603,6 +603,22 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn amount_at_cap_posts_successfully() {
+        // Kills mutant `> -> >=` on amount cap: amount == MAX must PASS.
+        let engine = test_engine().await;
+        let today = chrono::Utc::now().date_naive();
+        let tx = header("tx-cap-eq", today);
+        let result = engine
+            .post_journal_entry(tx, balanced_pair("tx-cap-eq", MAX_AMOUNT_MINOR))
+            .await;
+        assert!(
+            result.is_ok(),
+            "amount == MAX_AMOUNT_MINOR must be accepted: {:?}",
+            result.err()
+        );
+    }
+
+    #[tokio::test]
     async fn nonpositive_exchange_rate_is_rejected() {
         let engine = test_engine().await;
         let today = chrono::Utc::now().date_naive();

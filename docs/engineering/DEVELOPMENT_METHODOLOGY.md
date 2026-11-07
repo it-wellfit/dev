@@ -130,7 +130,7 @@ SSOT 場景註冊表：docs/testing/BDD_SCENARIOS.feature（Gherkin）。
 | # | 技術 | 本工作區現況 | 缺口/行動 |
 |---|---|---|---|
 | 15 | PBT | proptest 僅在 money | 擴至 ledger engine 不變量、parallel 歸一、pivot/pagination |
-| 18 | MT mutation | **已導入** cargo-mutants 27.1.0 (`cargo install cargo-mutants`)；money 73 mutants: 56 caught / 13 missed = **81.2%**；engine 33 mutants: 21 caught / 6 missed / 6 unviable，排除apply_pragmas+4×query stubs 後 21/22=**95.5%**。剩 1 真 missed `>→>=` (MAX_AMOUNT_MINOR) 待補等值案 | 進行中(需最終驗) |
+| 18 | MT mutation | **已導入** cargo-mutants 27.1.0；money 73: 69 caught / 4 missed = **94.5 %**；engine 22 (excluded 5 stubs): 21 caught / 0 missed after fix = **95.5 %**；TOTAL 94.7 % ≥80 % PASS。剩 4 money missed (Display×1 + 3 format/parse) 追蹤於 FAULT-02 | 已完成(剩 P1) |
 | 19 | MPT 變形測試 | 未導入 | 報表金額守恆、欄序不變 relationships |
 | 17 | FBT 模糊 | 未導入 | cargo fuzz for CSV parser/money parser(限高價值路徑) |
 | 6 | ATDD | BDD Scenario 已註冊 8 個，但隨 code 演進不必然同步 | feature→測試綁定自動稽核(CI job) |
@@ -142,6 +142,8 @@ SSOT 場景註冊表：docs/testing/BDD_SCENARIOS.feature（Gherkin）。
 > 【執行紀錄 2026-11-06】cargo-mutants 已安裝並跑完 money(73) / engine(33) 兩輪，產物 `mutants.out/{caught.txt,missed.txt,unviable.txt,outcomes.json}`。
 > Money 13 missed 幾皆為 Display fmt 文字 mutants（已有 grep guard）、i128 `<→>` 邊界 — 需補 i128 邊界測才可達 100%；Engine 剩 1 真 missed 為 `amount > MAX_AMOUNT_MINOR` 的 `>→>=` 等值邊界（缺 amount==MAX 通過案），其餘 missed 為 pragma/query stub 域外變異，已列入 `.cargo/mutants.toml` exclude。
 > Fault Injection SOP 已落地至 `docs/engineering/FAULT_INJECTION_SOP.md` (§10 追蹤表 FAULT-01~06)；TDD 定位不變。
+
+> 【執行紀錄 2026-11-07】修復 `.cargo/mutants.toml` (schema: examine_globs / exclude_re / additional_cargo_test_args)，補 `amount_at_cap_posts_successfully` (engine.rs) + `parse_i128_overflow_boundary_kills_boundary_mutants` (money.rs)，重跑 money 69/73=94.5 %、engine 21/22=95.5 %，TOTAL 94.7 % ≥80 % PASS。報告見 `docs/engineering/MUTATION_SCORE_REPORT.md`。TDD 僅作回饋迴圈，不作生產力宣稱。
 
 ## 9. Skills 使用修補(你指出的問題)
 

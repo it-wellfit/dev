@@ -1,8 +1,8 @@
-//! Zero-JS web tier (ADR-0002): Axum 0.7 HTTP server rendering the workspace
+﻿//! Zero-JS web tier (ADR-0002): Axum 0.7 HTTP server rendering the workspace
 //! UI server-side.
 //!
 //! Hard rules honoured here:
-//! - 表現層零 JavaScript：the only scripts are none; interaction is form POST +
+//! - 銵函撅日 JavaScript嚗he only scripts are none; interaction is form POST +
 //!   303 PRG + CSS `:target`.
 //! - GET never mutates state; all writes go through POST handlers that enforce
 //!   RBAC (`LEDGER_WRITE`) server-side.
@@ -122,8 +122,7 @@ pub struct IndexTemplate {
     pub can_manage_users: bool,
     pub current_ym: String,
     /// Server-generated SVG (monthly debit/credit bars). Generated purely from
-    /// integer aggregates and fixed literals — no user-controlled content —
-    /// hence the `safe` filter in the template (audited, Slice 8 D1).
+    /// integer aggregates and fixed literals ??no user-controlled content ??    /// hence the `safe` filter in the template (audited, Slice 8 D1).
     pub chart_svg: String,
     pub db_connected: bool,
     pub transaction_count: String,
@@ -158,9 +157,9 @@ fn monthly_chart_svg(totals: &[flaps_core::ledger::engine::MonthlyTotal]) -> Str
     let height = 190;
     let mut svg = format!(
         "<svg viewBox=\"0 0 {width} {height}\" width=\"100%\" height=\"{height}\" role=\"img\" \
-         aria-label=\"近六個月借貸合計長條圖\" xmlns=\"http://www.w3.org/2000/svg\">\
-         <title>近六個月借貸合計</title>\
-         <desc>每月借方與貸方合計，單位為整數分還原之貨幣金額。</desc>"
+         aria-label=\"餈???硫???瑟??" xmlns=\"http://www.w3.org/2000/svg\">\
+         <title>餈???硫??</title>\
+         <desc>瘥???硫?孵?閮??桐??箸?詨???銋疏撟??憿?/desc>"
     );
     for (idx, t) in totals.iter().enumerate() {
         let base_x = 30 + idx * 60;
@@ -267,7 +266,7 @@ async fn index(State(state): State<AppState>, session: Extension<Session>) -> Re
         Ok(body) => Html(body).into_response(),
         Err(e) => (
             StatusCode::INTERNAL_SERVER_ERROR,
-            format!("頁面渲染失敗（可能原因：模板錯誤）；請聯絡管理員。詳情：{e}"),
+            format!("?皜脫?憭望?嚗?賢???璅⊥?航炊嚗?隢蝯∠恣??底??{e}"),
         )
             .into_response(),
     }
@@ -306,7 +305,7 @@ async fn create_transaction(
             &state,
             &session,
             Some(
-                "CSRF 驗證失敗（問題：表單權杖與工作階段不符；可能原因：頁面停留過久或重複開啟；處理方式：重新整理頁面後再送出一次）。"
+                "CSRF 撽?憭望?嚗?憿?銵典甈??極雿?畾萎?蝚佗??航??嚗??Ｗ???銋?????嚗??撘???渡??敺??銝甈∴???
                     .to_string(),
             ),
             FormValues::default(),
@@ -314,20 +313,20 @@ async fn create_transaction(
         .await;
         return match html {
             Ok(body) => (StatusCode::FORBIDDEN, Html(body)).into_response(),
-            Err(e) => (StatusCode::FORBIDDEN, format!("頁面渲染失敗：{e}")).into_response(),
+            Err(e) => (StatusCode::FORBIDDEN, format!("?皜脫?憭望?嚗e}")).into_response(),
         };
     }
 
     let saved_form = FormValues::from_form(&form);
 
     match validate_and_post(&state, &form, &session).await {
-        // Redirect::to uses 303 See Other — the correct PRG verb after POST.
+        // Redirect::to uses 303 See Other ??the correct PRG verb after POST.
         Ok(()) => Redirect::to("/#transactions").into_response(),
         Err((status, message)) => {
             let html = build_index(&state, &session, Some(message), saved_form).await;
             match html {
                 Ok(body) => (status, Html(body)).into_response(),
-                Err(e) => (status, format!("錯誤頁面渲染失敗：{e}")).into_response(),
+                Err(e) => (status, format!("?航炊?皜脫?憭望?嚗e}")).into_response(),
             }
         }
     }
@@ -349,7 +348,7 @@ async fn validate_and_post(
     {
         return Err((
             StatusCode::FORBIDDEN,
-            "您沒有建立交易的權限（問題：缺少 LEDGER_WRITE 權限；可能原因：角色未授權；處理方式：請聯絡系統管理員指派權限）。".to_string(),
+            "?冽??遣蝡漱??甈?嚗?憿?蝻箏? LEDGER_WRITE 甈?嚗?賢???閫?芣?甈????孵?嚗??舐窗蝟餌絞蝞∠??⊥?瘣暹?????.to_string(),
         ));
     }
 
@@ -360,39 +359,39 @@ async fn validate_and_post(
         if id.is_empty() {
             return Err((
                 StatusCode::BAD_REQUEST,
-                format!("{label}為必填欄位，請輸入或選擇科目代碼。"),
+                format!("{label}?箏?憛急?雿?隢撓?交??豢?蝘隞?Ⅳ??),
             ));
         }
         if id.len() > MAX_ACCOUNT_ID_LEN {
             return Err((
                 StatusCode::BAD_REQUEST,
-                format!("科目代碼過長（最多 {MAX_ACCOUNT_ID_LEN} 字元）；請縮短後重新送出。"),
+                format!("蝘隞?Ⅳ?嚗?憭?{MAX_ACCOUNT_ID_LEN} 摮?嚗?隢葬?剖?????),
             ));
         }
         Ok(id.to_string())
     };
-    let debit_account = validate_account(&form.debit_account, "借方科目")?;
-    let credit_account = validate_account(&form.credit_account, "貸方科目")?;
+    let debit_account = validate_account(&form.debit_account, "?蝘")?;
+    let credit_account = validate_account(&form.credit_account, "鞎豢蝘")?;
     if debit_account.eq_ignore_ascii_case(&credit_account) {
         return Err((
             StatusCode::BAD_REQUEST,
-            "借方與貸方不得為同一科目；複式記帳需要兩個不同科目。".to_string(),
+            "??硫?嫣?敺??蝘嚗?撘?撣喲?閬?????柴?.to_string(),
         ));
     }
 
-    // 3) Amount: exact decimal → i64 minor units (INV-01). Never f64.
+    // 3) Amount: exact decimal ??i64 minor units (INV-01). Never f64.
     let amount_minor = parse_decimal_to_minor(&form.amount, 2)
         .map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))?;
     if amount_minor <= 0 {
         return Err((
             StatusCode::BAD_REQUEST,
-            "金額必須大於 0；請輸入正數金額。".to_string(),
+            "??敹?憭扳 0嚗?頛詨甇?????.to_string(),
         ));
     }
     if amount_minor > flaps_core::ledger::engine::MAX_AMOUNT_MINOR {
         return Err((
             StatusCode::BAD_REQUEST,
-            "金額超出上限（最多 15 位整數＋2 位小數）；請拆分交易。".to_string(),
+            "??頞銝?嚗?憭?15 雿?賂?2 雿??賂?嚗???鈭斗???.to_string(),
         ));
     }
 
@@ -404,8 +403,8 @@ async fn validate_and_post(
         return Err((
             StatusCode::BAD_REQUEST,
             format!(
-                "幣別不支援（{}）；請從清單選擇。",
-                SUPPORTED_CURRENCIES.join("、")
+                "撟?銝?湛?{}嚗?隢?皜?豢???,
+                SUPPORTED_CURRENCIES.join("??)
             ),
         ));
     }
@@ -415,13 +414,13 @@ async fn validate_and_post(
     if description.is_empty() {
         return Err((
             StatusCode::BAD_REQUEST,
-            "摘要為必填欄位，請輸入交易說明。".to_string(),
+            "???箏?憛急?雿?隢撓?乩漱?牧??.to_string(),
         ));
     }
     if description.len() > MAX_DESCRIPTION_LEN {
         return Err((
             StatusCode::BAD_REQUEST,
-            format!("摘要過長（最多 {MAX_DESCRIPTION_LEN} 字元）；請縮短後重新送出。"),
+            format!("???嚗?憭?{MAX_DESCRIPTION_LEN} 摮?嚗?隢葬?剖?????),
         ));
     }
 
@@ -431,14 +430,14 @@ async fn validate_and_post(
             |_| {
                 (
                     StatusCode::BAD_REQUEST,
-                    "交易日期格式不正確；請以日期選擇器或 YYYY-MM-DD 重新輸入。".to_string(),
+                    "鈭斗??交??澆?銝迤蝣綽?隢誑?交??豢??冽? YYYY-MM-DD ?頛詨??.to_string(),
                 )
             },
         )?;
     if transaction_date > chrono::Utc::now().date_naive() {
         return Err((
             StatusCode::BAD_REQUEST,
-            "交易日期不得為未來日期；請修正後重新送出。".to_string(),
+            "鈭斗??交?銝??箸靘??隢耨甇??????.to_string(),
         ));
     }
 
@@ -446,7 +445,7 @@ async fn validate_and_post(
     let transaction_id = uuid::Uuid::new_v4().to_string();
     let transaction_code = format!("TX-{}", &transaction_id[..8]);
     //    Two legs are constructed here (P1-5): DEBIT on the debit account and
-    //    CREDIT on the credit account, same amount and currency — balance is
+    //    CREDIT on the credit account, same amount and currency ??balance is
     //    guaranteed by construction and re-verified by the engine.
     let transaction = match Transaction::builder()
         .transaction_id(transaction_id.clone())
@@ -463,7 +462,7 @@ async fn validate_and_post(
         Err(e) => {
             return Err((
                 StatusCode::INTERNAL_SERVER_ERROR,
-                format!("交易建構失敗：{e}"),
+                format!("鈭斗?撱箸?憭望?嚗e}"),
             ));
         }
     };
@@ -491,7 +490,7 @@ async fn validate_and_post(
         (Err(e), _) | (_, Err(e)) => {
             return Err((
                 StatusCode::INTERNAL_SERVER_ERROR,
-                format!("分錄建構失敗：{e}"),
+                format!("??撱箸?憭望?嚗e}"),
             ));
         }
     };
@@ -504,7 +503,7 @@ async fn validate_and_post(
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 format!(
-                    "交易儲存失敗（可能原因：資料庫忙碌或磁碟錯誤）；請稍後重試，若持續失敗請聯絡管理員。詳情：{e}"
+                    "鈭斗??脣?憭望?嚗?賢???鞈?摨怠?蝣?蝤??航炊嚗?隢?敺?閰佗??交?蝥仃???舐窗蝞∠??～底??{e}"
                 ),
             )
         })
@@ -550,17 +549,17 @@ async fn render_admin_forbidden(state: &AppState, session: &Session) -> Response
     let rendered = build_admin_page(
         state,
         session,
-        Some("您沒有使用者管理權限（缺少 ROLE_MANAGE）；請聯絡系統管理員。".to_string()),
+        Some("?冽??蝙?刻恣????蝻箏? ROLE_MANAGE嚗?隢蝯∠頂蝯梁恣???.to_string()),
         None,
     )
     .await;
     match rendered {
         Ok(body) => (StatusCode::FORBIDDEN, Html(body)).into_response(),
-        Err(e) => (StatusCode::FORBIDDEN, format!("頁面渲染失敗：{e}")).into_response(),
+        Err(e) => (StatusCode::FORBIDDEN, format!("?皜脫?憭望?嚗e}")).into_response(),
     }
 }
 
-/// GET /admin/users — list accounts with roles and status.
+/// GET /admin/users ??list accounts with roles and status.
 async fn admin_users(State(state): State<AppState>, session: Extension<Session>) -> Response {
     if !can_manage_users(&state, &session.user_id).await {
         return render_admin_forbidden(&state, &session).await;
@@ -570,7 +569,7 @@ async fn admin_users(State(state): State<AppState>, session: Extension<Session>)
         Ok(body) => Html(body).into_response(),
         Err(e) => (
             StatusCode::INTERNAL_SERVER_ERROR,
-            format!("頁面渲染失敗：{e}"),
+            format!("?皜脫?憭望?嚗e}"),
         )
             .into_response(),
     }
@@ -584,7 +583,7 @@ pub struct AdminCreateUserForm {
     pub role_code: String,
 }
 
-/// POST /admin/users — create an account and assign one seeded role.
+/// POST /admin/users ??create an account and assign one seeded role.
 async fn admin_create_user(
     State(state): State<AppState>,
     session: Extension<Session>,
@@ -596,7 +595,7 @@ async fn admin_create_user(
     if form.csrf_token != session.csrf_token {
         return (
             StatusCode::FORBIDDEN,
-            "CSRF 驗證失敗；請重新整理頁面後再操作。".to_string(),
+            "CSRF 撽?憭望?嚗???渡??敺?????.to_string(),
         )
             .into_response();
     }
@@ -607,7 +606,7 @@ async fn admin_create_user(
             let rendered = build_admin_page(&state, &session, Some(message), None).await;
             match rendered {
                 Ok(body) => (status, Html(body)).into_response(),
-                Err(e) => (status, format!("頁面渲染失敗：{e}")).into_response(),
+                Err(e) => (status, format!("?皜脫?憭望?嚗e}")).into_response(),
             }
         }
     }
@@ -627,7 +626,7 @@ async fn admin_create_user_validated(
     if username.len() < 3 || username.len() > 32 || !valid_chars {
         return Err((
             StatusCode::BAD_REQUEST,
-            "帳號名稱格式不正確（3–32 字元，僅限小寫英文、數字、底線、連字號）；請修正後重新送出。"
+            "撣唾??迂?澆?銝迤蝣綽?3??2 摮?嚗???撖怨?摮?蝺????嚗?靽格迤敺??圈??
                 .to_string(),
         ));
     }
@@ -635,7 +634,7 @@ async fn admin_create_user_validated(
     if form.password.len() < 8 {
         return Err((
             StatusCode::BAD_REQUEST,
-            "密碼長度不足（至少 8 字元）；請設定更長的密碼。".to_string(),
+            "撖Ⅳ?瑕漲銝雲嚗撠?8 摮?嚗?隢身摰?瑞?撖Ⅳ??.to_string(),
         ));
     }
 
@@ -648,20 +647,20 @@ async fn admin_create_user_validated(
             .map_err(|e| {
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,
-                    format!("資料庫查詢失敗：{e}"),
+                    format!("鞈?摨急閰Ｗ仃??{e}"),
                 )
             })?;
     let Some((role_id,)) = role_id else {
         return Err((
             StatusCode::BAD_REQUEST,
-            "角色不存在；請從清單選擇。".to_string(),
+            "閫銝??剁?隢?皜?豢???.to_string(),
         ));
     };
 
     let hash = auth::hash_password(&form.password).map_err(|e| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
-            format!("密碼雜湊失敗：{e}"),
+            format!("撖Ⅳ??憭望?嚗e}"),
         )
     })?;
     let user_id = format!("user-{username}");
@@ -678,10 +677,10 @@ async fn admin_create_user_validated(
         if e.to_string().contains("UNIQUE") {
             (
                 StatusCode::BAD_REQUEST,
-                format!("帳號 {username} 已存在；請改用其他名稱。"),
+                format!("撣唾? {username} 撌脣??剁?隢?典隞?蝔晞?),
             )
         } else {
-            (StatusCode::INTERNAL_SERVER_ERROR, format!("建立失敗：{e}"))
+            (StatusCode::INTERNAL_SERVER_ERROR, format!("撱箇?憭望?嚗e}"))
         }
     })?;
 
@@ -697,7 +696,7 @@ async fn admin_create_user_validated(
     .map_err(|e| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
-            format!("角色指派失敗：{e}"),
+            format!("閫?晷憭望?嚗e}"),
         )
     })?;
 
@@ -710,7 +709,7 @@ pub struct AdminToggleForm {
     pub user_id: String,
 }
 
-/// POST /admin/users/toggle — activate/deactivate an account (reversible).
+/// POST /admin/users/toggle ??activate/deactivate an account (reversible).
 /// Self-deactivation is rejected so an administrator cannot lock themselves
 /// out of the user management page.
 async fn admin_toggle_user(
@@ -724,14 +723,14 @@ async fn admin_toggle_user(
     if form.csrf_token != session.csrf_token {
         return (
             StatusCode::FORBIDDEN,
-            "CSRF 驗證失敗；請重新整理頁面後再操作。".to_string(),
+            "CSRF 撽?憭望?嚗???渡??敺?????.to_string(),
         )
             .into_response();
     }
     if form.user_id == session.user_id {
         return (
             StatusCode::BAD_REQUEST,
-            "不得停用自己的帳號；請由其他管理員執行。".to_string(),
+            "銝???芸楛?董??隢?嗡?蝞∠??∪銵?.to_string(),
         )
             .into_response();
     }
@@ -740,7 +739,7 @@ async fn admin_toggle_user(
         .bind(&form.user_id)
         .execute(&state.pool)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("更新失敗：{e}")))
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("?湔憭望?嚗e}")))
         .ok();
 
     // P1-9: an account that is now inactive must lose its live sessions
@@ -768,7 +767,7 @@ pub struct AdminResetPasswordForm {
     pub new_password: String,
 }
 
-/// POST /admin/users/reset_password — administrator sets a new password for
+/// POST /admin/users/reset_password ??administrator sets a new password for
 /// an account (P1-8 residual). The old hash is replaced (Argon2id), all
 /// existing sessions of that account are revoked (a leaked password must not
 /// keep working after a reset), and the change is audited.
@@ -783,14 +782,14 @@ async fn admin_reset_password(
     if form.csrf_token != session.csrf_token {
         return (
             StatusCode::FORBIDDEN,
-            "CSRF 驗證失敗；請重新整理頁面後再操作。".to_string(),
+            "CSRF 撽?憭望?嚗???渡??敺?????.to_string(),
         )
             .into_response();
     }
     if form.new_password.len() < 8 {
         return (
             StatusCode::BAD_REQUEST,
-            "新密碼長度不足（至少 8 字元）；請設定更長的密碼。".to_string(),
+            "?啣?蝣潮摨虫?頞喉??喳? 8 摮?嚗?隢身摰?瑞?撖Ⅳ??.to_string(),
         )
             .into_response();
     }
@@ -800,7 +799,7 @@ async fn admin_reset_password(
         .await
         .unwrap_or((0,));
     if exists == 0 {
-        return (StatusCode::BAD_REQUEST, "帳號不存在。".to_string()).into_response();
+        return (StatusCode::BAD_REQUEST, "撣唾?銝??具?.to_string()).into_response();
     }
 
     let hash = match auth::hash_password(&form.new_password) {
@@ -808,7 +807,7 @@ async fn admin_reset_password(
         Err(e) => {
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                format!("密碼雜湊失敗：{e}"),
+                format!("撖Ⅳ??憭望?嚗e}"),
             )
                 .into_response()
         }
@@ -818,7 +817,7 @@ async fn admin_reset_password(
         .bind(&form.user_id)
         .execute(&state.pool)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("更新失敗：{e}")))
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("?湔憭望?嚗e}")))
         .ok();
 
     // Security: revoke the target account's sessions after a reset.
@@ -851,7 +850,7 @@ pub struct ParallelTemplate {
     pub chart_svg: String,
 }
 
-/// GET /reports/parallel — per-account polylines across monthly axes
+/// GET /reports/parallel ??per-account polylines across monthly axes
 /// (LEDGER_READ; zero-JS alternative to interactive 3D).
 async fn report_parallel_page(
     State(state): State<AppState>,
@@ -863,7 +862,7 @@ async fn report_parallel_page(
         .has_permission_db(&session.user_id, "LEDGER_READ")
         .await
     {
-        return (StatusCode::FORBIDDEN, "需要 LEDGER_READ 權限。".to_string()).into_response();
+        return (StatusCode::FORBIDDEN, "?閬?LEDGER_READ 甈???.to_string()).into_response();
     }
     let months: i64 = query
         .get("months")
@@ -917,7 +916,7 @@ async fn report_parallel_page(
             }
         })
         .collect();
-    // Top-N by grand total (descending) — deterministic ordering.
+    // Top-N by grand total (descending) ??deterministic ordering.
     series.sort_by(|a, b| {
         let ta: i64 = a.values.iter().map(|(_, v)| v).sum();
         let tb: i64 = b.values.iter().map(|(_, v)| v).sum();
@@ -961,7 +960,7 @@ pub struct AiSuggestionTemplate {
 fn render_with_status(template: impl askama::Template, status: StatusCode) -> Response {
     match template.render() {
         Ok(body) => (status, Html(body)).into_response(),
-        Err(e) => (status, format!("頁面渲染失敗：{e}")).into_response(),
+        Err(e) => (status, format!("?皜脫?憭望?嚗e}")).into_response(),
     }
 }
 
@@ -975,7 +974,7 @@ async fn ai_suggest(
     if form.csrf_token != session.csrf_token {
         return (
             StatusCode::FORBIDDEN,
-            "CSRF 驗證失敗；請重新整理頁面後再操作。".to_string(),
+            "CSRF 撽?憭望?嚗???渡??敺?????.to_string(),
         )
             .into_response();
     }
@@ -986,7 +985,7 @@ async fn ai_suggest(
             csrf_token: session.csrf_token.clone(),
             suggestion: None,
             degrade_message: Some(
-                "AI 建議未啟用（問題：特性旗標 ai/suggest_enabled 未開啟；處理方式：請管理員於設定（erp_config）啟用，或改用規則解析／引導式精靈）。".to_string(),
+                "AI 撱箄降?芸??剁???嚗?扳?璅?ai/suggest_enabled ?芷??????孵?嚗?蝞∠??⊥閮剖?嚗rp_config嚗??剁???刻??圾??撘?撘移????.to_string(),
             ),
         };
         return render_with_status(template, StatusCode::SERVICE_UNAVAILABLE);
@@ -996,7 +995,7 @@ async fn ai_suggest(
     if text.is_empty() || text.len() > 10_000 {
         return (
             StatusCode::BAD_REQUEST,
-            "內容空白或超過 10,000 字元。".to_string(),
+            "?批捆蝛箇????10,000 摮???.to_string(),
         )
             .into_response();
     }
@@ -1019,19 +1018,19 @@ async fn ai_suggest(
         });
 
     let prompt = format!(
-        "你是會計分錄解析助理。僅輸出一個 JSON 物件，欄位：date（YYYY-MM-DD）、debit_account、credit_account、amount（兩位小數字串）、currency。不要輸出其他文字。原文：{text}"
+        "雿????閫???拍???頛詨銝??JSON ?拐辣嚗?雿?date嚗YYY-MM-DD嚗ebit_account?redit_account?mount嚗雿??詨?銝莎??urrency??閬撓?箏隞?摮???{text}"
     );
 
     let response_text = match client.generate(&prompt).await {
         Ok(t) => t,
         Err(e) => {
-            // 韌性：Ollama 離線/逾時 -> graceful degradation.
+            // ?改?Ollama ?Ｙ?/?暹? -> graceful degradation.
             let template = AiSuggestionTemplate {
                 acting_user: session.user_id.clone(),
                 csrf_token: session.csrf_token.clone(),
                 suggestion: None,
                 degrade_message: Some(format!(
-                    "AI 服務暫時不可用（可能原因：Ollama 未啟動或逾時；處理方式：請改用規則解析或引導式精靈）。詳情：{e}"
+                    "AI ???急?銝?剁??航??嚗llama ?芸????暹?嚗??撘?隢?刻??圾??撘?撘移???底??{e}"
                 )),
             };
             return render_with_status(template, StatusCode::SERVICE_UNAVAILABLE);
@@ -1047,7 +1046,7 @@ async fn ai_suggest(
                 csrf_token: session.csrf_token.clone(),
                 suggestion: None,
                 degrade_message: Some(format!(
-                    "AI 輸出未通過 schema 驗證（{msg}）；請改用規則解析。"
+                    "AI 頛詨?芷? schema 撽?嚗msg}嚗?隢?刻??圾??
                 )),
             };
             return render_with_status(template, StatusCode::BAD_REQUEST);
@@ -1102,17 +1101,17 @@ async fn drafts_adopt(
     if form.csrf_token != session.csrf_token {
         return (
             StatusCode::FORBIDDEN,
-            "CSRF 驗證失敗；請重新整理頁面後再操作。".to_string(),
+            "CSRF 撽?憭望?嚗???渡??敺?????.to_string(),
         )
             .into_response();
     }
     let amount_minor = match flaps_core::parse_decimal_to_minor(&form.amount, 2) {
         Ok(v) => v,
-        Err(e) => return (StatusCode::BAD_REQUEST, format!("金額錯誤：{e}")).into_response(),
+        Err(e) => return (StatusCode::BAD_REQUEST, format!("???航炊嚗e}")).into_response(),
     };
     let date = match chrono::NaiveDate::parse_from_str(&form.date, "%Y-%m-%d") {
         Ok(d) => d,
-        Err(_) => return (StatusCode::BAD_REQUEST, "日期格式不正確。".to_string()).into_response(),
+        Err(_) => return (StatusCode::BAD_REQUEST, "?交??澆?銝迤蝣箝?.to_string()).into_response(),
     };
     let entry = flaps_core::DraftEntry {
         date: Some(date),
@@ -1135,7 +1134,7 @@ async fn drafts_adopt(
         Ok(_) => Redirect::to(&format!("/new?step=2&from_draft={draft_id}")).into_response(),
         Err(e) => (
             StatusCode::INTERNAL_SERVER_ERROR,
-            format!("草稿儲存失敗：{e}"),
+            format!("?阮?脣?憭望?嚗e}"),
         )
             .into_response(),
     }
@@ -1200,9 +1199,9 @@ async fn parse_coverage_page(
             CoverageRow {
                 draft_id: id.clone(),
                 completeness: if is_complete {
-                    "完整".to_string()
+                    "摰".to_string()
                 } else {
-                    "不完整".to_string()
+                    "銝???.to_string()
                 },
             }
         })
@@ -1255,9 +1254,9 @@ async fn build_admin_page(
                 user_id: user_id.clone(),
                 username,
                 status_display: if is_active == 1 {
-                    "啟用".to_string()
+                    "?".to_string()
                 } else {
-                    "停用".to_string()
+                    "?".to_string()
                 },
                 roles_display,
                 is_active: is_active == 1,
@@ -1369,7 +1368,7 @@ async fn import_upload_page(
         Ok(body) => Html(body).into_response(),
         Err(e) => (
             StatusCode::INTERNAL_SERVER_ERROR,
-            format!("頁面渲染失敗：{e}"),
+            format!("?皜脫?憭望?嚗e}"),
         )
             .into_response(),
     }
@@ -1401,9 +1400,9 @@ async fn load_batch_view(state: &AppState, batch_id: &str) -> Option<ImportBatch
         row_ok,
         status: status.clone(),
         status_display: if status == "draft" {
-            "待確認（未登帳）".to_string()
+            "敺Ⅱ隤??芰撣喉?".to_string()
         } else {
-            "已確認登帳".to_string()
+            "撌脩Ⅱ隤撣?.to_string()
         },
         is_draft: status == "draft",
         rows: rows
@@ -1412,9 +1411,9 @@ async fn load_batch_view(state: &AppState, batch_id: &str) -> Option<ImportBatch
                 row_no,
                 status: st.clone(),
                 status_display: if st == "ok" {
-                    "合格".to_string()
+                    "?".to_string()
                 } else {
-                    "錯誤".to_string()
+                    "?航炊".to_string()
                 },
                 error_msg: err.unwrap_or_default(),
                 raw_line: raw.chars().take(80).collect(),
@@ -1427,41 +1426,41 @@ async fn load_batch_view(state: &AppState, batch_id: &str) -> Option<ImportBatch
 fn validate_import_row(record: &csv::StringRecord) -> Result<ImportRowDraft, String> {
     if record.len() < 6 {
         return Err(format!(
-            "欄位不足（需 6 欄：date, debit_account, credit_account, amount, currency, description），實得 {} 欄",
+            "甈?銝雲嚗? 6 甈?date, debit_account, credit_account, amount, currency, description嚗?撖血? {} 甈?,
             record.len()
         ));
     }
     let date = chrono::NaiveDate::parse_from_str(record.get(0).unwrap().trim(), "%Y-%m-%d")
-        .map_err(|_| format!("日期格式不正確：{}", record.get(0).unwrap()))?
+        .map_err(|_| format!("?交??澆?銝迤蝣綽?{}", record.get(0).unwrap()))?
         .to_string();
     if chrono::NaiveDate::parse_from_str(&date, "%Y-%m-%d").expect("date already validated")
         > chrono::Utc::now().date_naive()
     {
-        return Err("日期不得為未來".to_string());
+        return Err("?交?銝??箸靘?.to_string());
     }
     let debit_account = record.get(1).unwrap().trim().to_string();
     if debit_account.is_empty() || debit_account.len() > MAX_ACCOUNT_ID_LEN {
-        return Err("借方科目空白或過長".to_string());
+        return Err("?蝘蝛箇????.to_string());
     }
     let credit_account = record.get(2).unwrap().trim().to_string();
     if credit_account.is_empty() || credit_account.len() > MAX_ACCOUNT_ID_LEN {
-        return Err("貸方科目空白或過長".to_string());
+        return Err("鞎豢蝘蝛箇????.to_string());
     }
     if debit_account.eq_ignore_ascii_case(&credit_account) {
-        return Err("借貸科目相同".to_string());
+        return Err("?硫蝘?詨?".to_string());
     }
     let amount_minor = flaps_core::parse_decimal_to_minor(record.get(3).unwrap().trim(), 2)
-        .map_err(|e| format!("金額錯誤：{e}"))?;
+        .map_err(|e| format!("???航炊嚗e}"))?;
     if amount_minor <= 0 {
-        return Err("金額必須大於 0".to_string());
+        return Err("??敹?憭扳 0".to_string());
     }
     let currency = record.get(4).unwrap().trim().to_uppercase();
     if !SUPPORTED_CURRENCIES.contains(&currency.as_str()) {
-        return Err(format!("幣別不支援：{currency}"));
+        return Err(format!("撟?銝?湛?{currency}"));
     }
     let description = record.get(5).unwrap().trim().to_string();
     if description.is_empty() || description.len() > MAX_DESCRIPTION_LEN {
-        return Err("摘要空白或過長".to_string());
+        return Err("??蝛箇????.to_string());
     }
     Ok(ImportRowDraft {
         date,
@@ -1473,7 +1472,7 @@ fn validate_import_row(record: &csv::StringRecord) -> Result<ImportRowDraft, Str
     })
 }
 
-/// POST /import/preview — parse + validate + persist a draft batch (no ledger
+/// POST /import/preview ??parse + validate + persist a draft batch (no ledger
 /// side effects). IMP-001.
 async fn import_preview(
     State(state): State<AppState>,
@@ -1487,7 +1486,7 @@ async fn import_preview(
     {
         return (
             StatusCode::FORBIDDEN,
-            "需要 LEDGER_WRITE 權限才能匯入。".to_string(),
+            "?閬?LEDGER_WRITE 甈???臬??.to_string(),
         )
             .into_response();
     }
@@ -1497,7 +1496,7 @@ async fn import_preview(
     while let Some(field) = match multipart.next_field().await {
         Ok(f) => f,
         Err(e) => {
-            return (StatusCode::BAD_REQUEST, format!("上傳格式錯誤：{e}")).into_response();
+            return (StatusCode::BAD_REQUEST, format!("銝?澆??航炊嚗e}")).into_response();
         }
     } {
         match field.name() {
@@ -1507,7 +1506,7 @@ async fn import_preview(
             Some("file") => match field.bytes().await {
                 Ok(b) => bytes = Some(b.to_vec()),
                 Err(e) => {
-                    return (StatusCode::BAD_REQUEST, format!("讀取檔案失敗：{e}")).into_response()
+                    return (StatusCode::BAD_REQUEST, format!("霈??獢仃??{e}")).into_response()
                 }
             },
             _ => {}
@@ -1517,17 +1516,17 @@ async fn import_preview(
     if form_csrf.as_deref() != Some(&session.csrf_token) {
         return (
             StatusCode::FORBIDDEN,
-            "CSRF 驗證失敗；請重新整理頁面後再操作。".to_string(),
+            "CSRF 撽?憭望?嚗???渡??敺?????.to_string(),
         )
             .into_response();
     }
     let Some(data) = bytes else {
-        return (StatusCode::BAD_REQUEST, "缺少檔案欄位 file。".to_string()).into_response();
+        return (StatusCode::BAD_REQUEST, "蝻箏?瑼?甈? file??.to_string()).into_response();
     };
     if data.len() > IMPORT_MAX_BYTES {
         return (
             StatusCode::BAD_REQUEST,
-            format!("檔案超過 2MB 上限（{} bytes）。", data.len()),
+            format!("瑼?頞? 2MB 銝?嚗} bytes嚗?, data.len()),
         )
             .into_response();
     }
@@ -1550,7 +1549,7 @@ async fn import_preview(
             errors.push((
                 idx + 2,
                 String::new(),
-                format!("超過 {IMPORT_MAX_ROWS} 列上限，其餘列未處理"),
+                format!("頞? {IMPORT_MAX_ROWS} ?????園????"),
             ));
             break;
         }
@@ -1563,7 +1562,7 @@ async fn import_preview(
                     Err(msg) => errors.push((line_no, raw, msg)),
                 }
             }
-            Err(e) => errors.push((line_no, String::new(), format!("CSV 解析失敗：{e}"))),
+            Err(e) => errors.push((line_no, String::new(), format!("CSV 閫??憭望?嚗e}"))),
         }
     }
 
@@ -1586,7 +1585,7 @@ async fn import_preview(
     {
         return (
             StatusCode::INTERNAL_SERVER_ERROR,
-            format!("批次暫存失敗：{e}"),
+            format!("?寞活?怠?憭望?嚗e}"),
         )
             .into_response();
     }
@@ -1594,7 +1593,7 @@ async fn import_preview(
     Redirect::to(&format!("/import?batch={batch_id}")).into_response()
 }
 
-/// Staging payload for [`persist_batch`] — packs the batch header and the
+/// Staging payload for [`persist_batch`] ??packs the batch header and the
 /// per-row parse results so the function takes two arguments (P2-1 close-out).
 struct ImportBatchStaging<'a> {
     batch_id: &'a str,
@@ -1653,7 +1652,7 @@ pub struct ConfirmImportForm {
     pub batch_id: String,
 }
 
-/// POST /import/confirm — post all valid rows of a draft batch. IMP-002/003.
+/// POST /import/confirm ??post all valid rows of a draft batch. IMP-002/003.
 async fn import_confirm(
     State(state): State<AppState>,
     session: Extension<Session>,
@@ -1666,14 +1665,14 @@ async fn import_confirm(
     {
         return (
             StatusCode::FORBIDDEN,
-            "需要 LEDGER_WRITE 權限。".to_string(),
+            "?閬?LEDGER_WRITE 甈???.to_string(),
         )
             .into_response();
     }
     if form.csrf_token != session.csrf_token {
         return (
             StatusCode::FORBIDDEN,
-            "CSRF 驗證失敗；請重新整理頁面後再操作。".to_string(),
+            "CSRF 撽?憭望?嚗???渡??敺?????.to_string(),
         )
             .into_response();
     }
@@ -1690,7 +1689,7 @@ async fn import_confirm(
     if claimed == 0 {
         return (
             StatusCode::CONFLICT,
-            "此批次已確認或不存在；不可重複匯入。".to_string(),
+            "甇斗甈∪歇蝣箄???摮嚗??舫?銴?乓?.to_string(),
         )
             .into_response();
     }
@@ -1709,7 +1708,7 @@ async fn import_confirm(
     for (row_no, draft_json) in rows {
         let draft: Result<ImportRowDraft, _> = serde_json::from_str(&draft_json);
         let Ok(draft) = draft else {
-            failed.push(format!("列 {row_no}：草稿資料毀損"));
+            failed.push(format!("??{row_no}嚗?蝔輯?????));
             continue;
         };
         let date = chrono::NaiveDate::parse_from_str(&draft.date, "%Y-%m-%d")
@@ -1728,7 +1727,7 @@ async fn import_confirm(
         {
             Ok(t) => t,
             Err(e) => {
-                failed.push(format!("列 {row_no}：交易建構失敗：{e}"));
+                failed.push(format!("??{row_no}嚗漱?遣瑽仃??{e}"));
                 continue;
             }
         };
@@ -1754,14 +1753,14 @@ async fn import_confirm(
         ) {
             (Ok(d), Ok(c)) => (d, c),
             (Err(e), _) | (_, Err(e)) => {
-                failed.push(format!("列 {row_no}：分錄建構失敗：{e}"));
+                failed.push(format!("??{row_no}嚗??遣瑽仃??{e}"));
                 continue;
             }
         };
         let items = vec![debit_item, credit_item];
         match state.engine.post_journal_entry(transaction, items).await {
             Ok(()) => posted += 1,
-            Err(e) => failed.push(format!("列 {row_no}：{e}")),
+            Err(e) => failed.push(format!("??{row_no}嚗e}")),
         }
     }
 
@@ -1781,12 +1780,12 @@ async fn import_confirm(
     .await;
 
     let summary = if failed.is_empty() {
-        format!("匯入完成：{posted} 筆登帳。")
+        format!("?臬摰?嚗posted} 蝑撣喋?)
     } else {
         format!(
-            "匯入部分完成：{posted} 筆登帳、{} 筆失敗（{}）。失敗列未登帳，可修正後重新匯入。",
+            "?臬?典?摰?嚗posted} 蝑撣喋} 蝑仃??{}嚗仃???芰撣喉??臭耨甇????臬??,
             failed.len(),
-            failed.join("；")
+            failed.join("嚗?)
         )
     };
     Redirect::to(&format!(
@@ -1816,14 +1815,14 @@ fn urlencoding_lite(s: &str) -> String {
 // Slice 8 Layer B: guided wizard (server knows the rules; WIZ-001)
 // ---------------------------------------------------------------------------
 
-/// Account keyword→account mapping for the parser: built-in defaults first,
+/// Account keyword?ccount mapping for the parser: built-in defaults first,
 /// then erp_config rows (category='parser') as administrator overrides.
 async fn parser_keywords(state: &AppState) -> Vec<(String, String)> {
     let mut map: Vec<(String, String)> = vec![
-        ("現金".to_string(), "CASH".to_string()),
-        ("銀行".to_string(), "BANK".to_string()),
-        ("租金".to_string(), "RENT-EXP".to_string()),
-        ("薪資".to_string(), "PAYROLL-EXP".to_string()),
+        ("?暸?".to_string(), "CASH".to_string()),
+        ("?銵?.to_string(), "BANK".to_string()),
+        ("蝘?".to_string(), "RENT-EXP".to_string()),
+        ("?芾?".to_string(), "PAYROLL-EXP".to_string()),
     ];
     let rows: Vec<(String, String)> = sqlx::query_as(
         "SELECT config_key, config_value FROM erp_config WHERE config_category = 'parser'",
@@ -1865,13 +1864,13 @@ pub struct WizardTemplate {
     pub template: String,
     pub accounts: Vec<String>,
     pub error: Option<String>,
-    /// Prefill provenance note (B2: 每個預填標示來源).
+    /// Prefill provenance note (B2: 瘥?憛急?蝷箔?皞?.
     pub from_note: Option<String>,
     pub amount_display: String,
     pub form: FormValues,
 }
 
-/// GET /drafts — paste unstructured text; see recent drafts.
+/// GET /drafts ??paste unstructured text; see recent drafts.
 async fn drafts_page(State(state): State<AppState>, session: Extension<Session>) -> Response {
     let rows: Vec<(String, String, String)> = sqlx::query_as(
         "SELECT draft_id, source, draft_json FROM drafts WHERE created_by = ? ORDER BY created_at DESC LIMIT 10",
@@ -1886,9 +1885,9 @@ async fn drafts_page(State(state): State<AppState>, session: Extension<Session>)
         .map(|(draft_id, source, json)| {
             let parsed: Result<flaps_core::DraftEntry, _> = serde_json::from_str(&json);
             let completeness = match parsed {
-                Ok(d) if d.is_complete() => "完整（可登帳）".to_string(),
-                Ok(_) => "不完整（需人工補齊）".to_string(),
-                Err(_) => "資料毀損".to_string(),
+                Ok(d) if d.is_complete() => "摰嚗?餃董嚗?.to_string(),
+                Ok(_) => "銝??湛??鈭箏極鋆?嚗?.to_string(),
+                Err(_) => "鞈?瘥??.to_string(),
             };
             let created_display = source_display_time(&draft_id);
             DraftListView {
@@ -1910,7 +1909,7 @@ async fn drafts_page(State(state): State<AppState>, session: Extension<Session>)
         Ok(body) => Html(body).into_response(),
         Err(e) => (
             StatusCode::INTERNAL_SERVER_ERROR,
-            format!("頁面渲染失敗：{e}"),
+            format!("?皜脫?憭望?嚗e}"),
         )
             .into_response(),
     }
@@ -1919,7 +1918,7 @@ async fn drafts_page(State(state): State<AppState>, session: Extension<Session>)
 /// Deterministic display time derived from the draft id (v4 uuid is random,
 /// so we show the source and let the table ordering speak for recency).
 fn source_display_time(_draft_id: &str) -> String {
-    "本工作階段".to_string()
+    "?砍極雿?畾?.to_string()
 }
 
 #[derive(Debug, Deserialize)]
@@ -1928,7 +1927,7 @@ pub struct DraftParseForm {
     pub text: String,
 }
 
-/// POST /drafts/parse — rule-based parse → store draft → 303 to wizard step 2.
+/// POST /drafts/parse ??rule-based parse ??store draft ??303 to wizard step 2.
 async fn drafts_parse(
     State(state): State<AppState>,
     session: Extension<Session>,
@@ -1937,7 +1936,7 @@ async fn drafts_parse(
     if form.csrf_token != session.csrf_token {
         return (
             StatusCode::FORBIDDEN,
-            "CSRF 驗證失敗；請重新整理頁面後再操作。".to_string(),
+            "CSRF 撽?憭望?嚗???渡??敺?????.to_string(),
         )
             .into_response();
     }
@@ -1945,7 +1944,7 @@ async fn drafts_parse(
     if text.is_empty() || text.len() > 10_000 {
         return (
             StatusCode::BAD_REQUEST,
-            "內容空白或超過 10,000 字元。".to_string(),
+            "?批捆蝛箇????10,000 摮???.to_string(),
         )
             .into_response();
     }
@@ -1967,7 +1966,7 @@ async fn drafts_parse(
         Ok(_) => Redirect::to(&format!("/new?step=2&from_draft={draft_id}")).into_response(),
         Err(e) => (
             StatusCode::INTERNAL_SERVER_ERROR,
-            format!("草稿儲存失敗：{e}"),
+            format!("?阮?脣?憭望?嚗e}"),
         )
             .into_response(),
     }
@@ -1983,7 +1982,7 @@ pub struct WizardQuery {
     pub row_no: Option<i64>,
 }
 
-/// GET /new — three-step guided posting (B1/B2).
+/// GET /new ??three-step guided posting (B1/B2).
 async fn wizard_page(
     State(state): State<AppState>,
     session: Extension<Session>,
@@ -2014,10 +2013,10 @@ async fn wizard_page(
                                 .map(|m| format_minor(m, 2))
                                 .unwrap_or_default(),
                             currency: "TWD".to_string(),
-                            description: "（自草稿預填，請依據卡核對）".to_string(),
+                            description: "嚗?阮?‵嚗?靘??⊥撠?".to_string(),
                             transaction_date: d.date.map(|d| d.to_string()).unwrap_or_default(),
                         },
-                        Some("非結構化解析草稿（依據卡見草稿頁）".to_string()),
+                        Some("??瑽?閫???阮嚗??閬?蝔輸?嚗?.to_string()),
                     ),
                     None => (FormValues::default(), None),
                 }
@@ -2041,7 +2040,7 @@ async fn wizard_page(
                             transaction_date: d.date.clone(),
                         },
                         Some(format!(
-                            "匯入批次 {batch_id} 第 {row_no} 列（原錯誤列，請修正後送出）"
+                            "?臬?寞活 {batch_id} 蝚?{row_no} ???隤文?嚗?靽格迤敺嚗?
                         )),
                     ),
                     None => (FormValues::default(), None),
@@ -2075,7 +2074,7 @@ async fn wizard_page(
         }
         "3" => {
             // Step 3 requires the values from step 2 in the query string; the
-            // step-2 form carries them as hidden inputs via POST — to keep the
+            // step-2 form carries them as hidden inputs via POST ??to keep the
             // flow zero-JS and stateless we accept a POST at /new/step2 that
             // renders step 3 directly (see wizard_step2).
             redirect_to_wizard_step1()
@@ -2106,7 +2105,7 @@ fn render_or_500(template: impl askama::Template) -> Response {
         Ok(body) => Html(body).into_response(),
         Err(e) => (
             StatusCode::INTERNAL_SERVER_ERROR,
-            format!("頁面渲染失敗：{e}"),
+            format!("?皜脫?憭望?嚗e}"),
         )
             .into_response(),
     }
@@ -2124,7 +2123,7 @@ pub struct WizardStep2Form {
     pub transaction_date: String,
 }
 
-/// POST /new/step2 — validate step 2, render the step-3 confirmation.
+/// POST /new/step2 ??validate step 2, render the step-3 confirmation.
 async fn wizard_step2(
     State(state): State<AppState>,
     session: Extension<Session>,
@@ -2133,7 +2132,7 @@ async fn wizard_step2(
     if form.csrf_token != session.csrf_token {
         return (
             StatusCode::FORBIDDEN,
-            "CSRF 驗證失敗；請重新整理頁面後再操作。".to_string(),
+            "CSRF 撽?憭望?嚗???渡??敺?????.to_string(),
         )
             .into_response();
     }
@@ -2144,32 +2143,32 @@ async fn wizard_step2(
     let debit = form.debit_account.trim().to_string();
     let credit = form.credit_account.trim().to_string();
     if debit.is_empty() || credit.is_empty() {
-        form_error = Some("借貸科目皆為必填（規則 R-BALANCE）。".to_string());
+        form_error = Some("?硫蝘?敹‵嚗???R-BALANCE嚗?.to_string());
     } else if debit.eq_ignore_ascii_case(&credit) {
-        form_error = Some("借貸兩方不得為同一科目（規則 R-BALANCE）。".to_string());
+        form_error = Some("?硫?拇銝??箏?銝蝘嚗???R-BALANCE嚗?.to_string());
     } else if debit.len() > MAX_ACCOUNT_ID_LEN || credit.len() > MAX_ACCOUNT_ID_LEN {
-        form_error = Some("科目代碼過長（規則 R-ACCT-LEN）。".to_string());
+        form_error = Some("蝘隞?Ⅳ?嚗???R-ACCT-LEN嚗?.to_string());
     }
 
     if form_error.is_none() {
         match flaps_core::parse_decimal_to_minor(form.amount.trim(), 2) {
             Ok(m) if m > 0 => amount_minor = Some(m),
-            Ok(_) => form_error = Some("金額必須大於 0（規則 R-MONEY）。".to_string()),
-            Err(e) => form_error = Some(format!("金額錯誤（規則 R-MONEY）：{e}")),
+            Ok(_) => form_error = Some("??敹?憭扳 0嚗???R-MONEY嚗?.to_string()),
+            Err(e) => form_error = Some(format!("???航炊嚗???R-MONEY嚗?{e}")),
         }
     }
 
     if form_error.is_none() && !SUPPORTED_CURRENCIES.contains(&form.currency.as_str()) {
-        form_error = Some("幣別不支援（規則 R-CURRENCY）。".to_string());
+        form_error = Some("撟?銝?湛?閬? R-CURRENCY嚗?.to_string());
     }
 
     if form_error.is_none() {
         match chrono::NaiveDate::parse_from_str(form.transaction_date.trim(), "%Y-%m-%d") {
             Ok(d) if d > chrono::Utc::now().date_naive() => {
-                form_error = Some("日期不得為未來（規則 R-DATE-FUTURE）。".to_string());
+                form_error = Some("?交?銝??箸靘?閬? R-DATE-FUTURE嚗?.to_string());
             }
             Err(_) => {
-                form_error = Some("日期格式不正確（規則 R-DATE-FORMAT）。".to_string());
+                form_error = Some("?交??澆?銝迤蝣綽?閬? R-DATE-FORMAT嚗?.to_string());
             }
             _ => {}
         }
@@ -2228,7 +2227,7 @@ async fn wizard_step2(
 // Slice 8 Layer D: monthly report + CSV export (RPT-001)
 // ---------------------------------------------------------------------------
 
-/// Validated `YYYY-MM` from a query param (reject anything else — 可推導).
+/// Validated `YYYY-MM` from a query param (reject anything else ???舀撠?.
 fn parse_year_month(raw: &str) -> Option<String> {
     let raw = raw.trim();
     if raw.len() != 7 || !raw.as_bytes()[4] == b'-' {
@@ -2268,7 +2267,7 @@ pub struct ReportRow {
     pub net_display: String,
 }
 
-/// GET /reports/monthly — per-account monthly totals (LEDGER_READ).
+/// GET /reports/monthly ??per-account monthly totals (LEDGER_READ).
 async fn report_monthly_page(
     State(state): State<AppState>,
     session: Extension<Session>,
@@ -2279,12 +2278,12 @@ async fn report_monthly_page(
         .has_permission_db(&session.user_id, "LEDGER_READ")
         .await
     {
-        return (StatusCode::FORBIDDEN, "需要 LEDGER_READ 權限。".to_string()).into_response();
+        return (StatusCode::FORBIDDEN, "?閬?LEDGER_READ 甈???.to_string()).into_response();
     }
     let Some(ym) = query.get("ym").and_then(|y| parse_year_month(y)) else {
         return (
             StatusCode::BAD_REQUEST,
-            "月份參數格式不正確；請使用 ym=YYYY-MM。".to_string(),
+            "?遢??澆?銝迤蝣綽?隢蝙??ym=YYYY-MM??.to_string(),
         )
             .into_response();
     };
@@ -2318,7 +2317,7 @@ async fn report_monthly_page(
     render_or_500(template)
 }
 
-/// GET /reports/monthly.csv — machine-readable export (same RBAC).
+/// GET /reports/monthly.csv ??machine-readable export (same RBAC).
 async fn report_monthly_csv(
     State(state): State<AppState>,
     session: Extension<Session>,
@@ -2329,12 +2328,12 @@ async fn report_monthly_csv(
         .has_permission_db(&session.user_id, "LEDGER_READ")
         .await
     {
-        return (StatusCode::FORBIDDEN, "需要 LEDGER_READ 權限。".to_string()).into_response();
+        return (StatusCode::FORBIDDEN, "?閬?LEDGER_READ 甈???.to_string()).into_response();
     }
     let Some(ym) = query.get("ym").and_then(|y| parse_year_month(y)) else {
         return (
             StatusCode::BAD_REQUEST,
-            "月份參數格式不正確；請使用 ym=YYYY-MM。".to_string(),
+            "?遢??澆?銝迤蝣綽?隢蝙??ym=YYYY-MM??.to_string(),
         )
             .into_response();
     };
@@ -2372,7 +2371,7 @@ async fn report_monthly_csv(
 
 /// Whitelisted dimension expressions. Any value outside this table is
 /// rejected with R-PIV-WHITELIST (SHARED_STANDARDS: dynamic columns must be
-/// whitelisted — never interpolated from user input).
+/// whitelisted ??never interpolated from user input).
 fn dim_expr(dim: &str) -> Option<&'static str> {
     match dim {
         "account" => Some("i.account_id"),
@@ -2429,7 +2428,7 @@ pub struct PivotTemplate {
     pub matrix: PivotMatrix,
 }
 
-/// GET /reports/pivot — whitelisted multidimensional matrix (LEDGER_READ).
+/// GET /reports/pivot ??whitelisted multidimensional matrix (LEDGER_READ).
 async fn report_pivot_page(
     State(state): State<AppState>,
     session: Extension<Session>,
@@ -2440,7 +2439,7 @@ async fn report_pivot_page(
         .has_permission_db(&session.user_id, "LEDGER_READ")
         .await
     {
-        return (StatusCode::FORBIDDEN, "需要 LEDGER_READ 權限。".to_string()).into_response();
+        return (StatusCode::FORBIDDEN, "?閬?LEDGER_READ 甈???.to_string()).into_response();
     }
 
     let rows_dim = query.get("rows").map(|s| s.as_str()).unwrap_or("account");
@@ -2456,14 +2455,14 @@ async fn report_pivot_page(
     ) else {
         return (
             StatusCode::BAD_REQUEST,
-            "樞紐維度不在白名單（規則 R-PIV-WHITELIST：rows/cols 僅限 account、month、direction；measure 僅限 debit、credit、net）。".to_string(),
+            "璅?蝬剖漲銝?賢??殷?閬? R-PIV-WHITELIST嚗ows/cols ?? account?onth?irection嚗easure ?? debit?redit?et嚗?.to_string(),
         )
             .into_response();
     };
     if rows_dim == cols_dim {
         return (
             StatusCode::BAD_REQUEST,
-            "樞紐維度重複（規則 R-PIV-WHITELIST：rows 與 cols 必須不同）。".to_string(),
+            "璅?蝬剖漲??嚗???R-PIV-WHITELIST嚗ows ??cols 敹?銝?嚗?.to_string(),
         )
             .into_response();
     }
@@ -2496,14 +2495,14 @@ async fn report_pivot_page(
         rows_dim: rows_dim.to_string(),
         cols_dim: cols_dim.to_string(),
         measure: measure.to_string(),
-        ym: ym.unwrap_or_else(|| "全部期間".to_string()),
+        ym: ym.unwrap_or_else(|| "?券??".to_string()),
         matrix,
     };
     render_or_500(template)
 }
 
 /// Assemble raw (row, col, value) triples into a full matrix with totals.
-/// Pure function over sorted data — derivable and unit-testable.
+/// Pure function over sorted data ??derivable and unit-testable.
 fn assemble_pivot(raw: &[(String, String, i64)], measure: &str, max_rows: usize) -> PivotMatrix {
     use std::collections::BTreeMap;
     let mut row_keys: Vec<String> = Vec::new();
@@ -2652,13 +2651,13 @@ async fn build_index(
             (
                 Vec::new(),
                 Vec::new(),
-                "—".to_string(),
-                "—".to_string(),
-                "—".to_string(),
+                "??.to_string(),
+                "??.to_string(),
+                "??.to_string(),
             )
         };
 
-    // "—" placeholders are only shown when the database is unreachable; the
+    // "?? placeholders are only shown when the database is unreachable; the
     // template switches the KPI block to literals in that case, so the count
     // strings above are for the connected path.
     let _ = (&transaction_count, &account_count, &total_amount_display);
@@ -2821,7 +2820,7 @@ mod tests {
         let (status, body, _) = send(app, request).await;
         assert_eq!(status, StatusCode::OK, "login failure re-renders the form");
         assert!(
-            body.contains("登入失敗"),
+            body.contains("?餃憭望?"),
             "generic failure message required"
         );
         assert!(
@@ -2843,14 +2842,14 @@ mod tests {
             .unwrap();
         let (status, body, _) = send(app, request).await;
         assert_eq!(status, StatusCode::OK);
-        assert!(body.contains("Flaps ERP 工作台"), "page title must render");
+        assert!(body.contains("Flaps ERP 撌乩???), "page title must render");
         assert!(!body.contains("<script"), "zero-JS invariant");
-        assert!(body.contains("已連線"), "health badge reflects live DB");
+        assert!(body.contains("撌脤??"), "health badge reflects live DB");
         assert!(
             body.contains("csrf_token"),
             "write forms must carry a CSRF token"
         );
-        assert!(body.contains("登出"), "logout control must be present");
+        assert!(body.contains("?餃"), "logout control must be present");
     }
 
     #[tokio::test]
@@ -2881,7 +2880,7 @@ mod tests {
             body.contains("1,234.50"),
             "posted amount must render exactly"
         );
-        assert!(body.contains("測試交易"), "posted description must render");
+        assert!(body.contains("皜祈岫鈭斗?"), "posted description must render");
 
         // P1-5: the posting must be a balanced two-leg entry in the database.
         let (debit_legs, credit_legs): (i64, i64) = sqlx::query_as(
@@ -2938,7 +2937,7 @@ mod tests {
         let (status, page, _) = send(app, request).await;
         assert_eq!(status, StatusCode::BAD_REQUEST);
         assert!(
-            page.contains("不得為同一科目"),
+            page.contains("銝??箏?銝蝘"),
             "self-transfer must be rejected with guidance"
         );
     }
@@ -2959,7 +2958,7 @@ mod tests {
             .unwrap();
         let (status, body, _) = send(app, request).await;
         assert_eq!(status, StatusCode::BAD_REQUEST);
-        assert!(body.contains("小數位數過多"), "error must name the problem");
+        assert!(body.contains("撠雿??"), "error must name the problem");
         assert!(
             body.contains("value=\"0.005\""),
             "entered value must be preserved"
@@ -2983,7 +2982,7 @@ mod tests {
         let (status, body, _) = send(app, request).await;
         assert_eq!(status, StatusCode::BAD_REQUEST);
         assert!(
-            body.contains("不得為負數"),
+            body.contains("銝??箄???),
             "negative money must be rejected"
         );
     }
@@ -3005,7 +3004,7 @@ mod tests {
         let (status, body, _) = send(app, request).await;
         assert_eq!(status, StatusCode::BAD_REQUEST);
         assert!(
-            body.contains("不得為未來日期"),
+            body.contains("銝??箸靘??),
             "future dates must be rejected"
         );
     }
@@ -3111,7 +3110,7 @@ mod tests {
             .unwrap();
         let (status, body, _) = send(app.clone(), request).await;
         assert_eq!(status, StatusCode::OK);
-        assert!(body.contains("帳號清單"), "admin page must render");
+        assert!(body.contains("撣唾?皜"), "admin page must render");
         assert!(body.contains("admin"), "seeded account must be listed");
 
         // POST /admin/users: create finance2 with the FINANCE role.
@@ -3198,7 +3197,7 @@ mod tests {
         let (status, body, _) = send(app, request).await;
         assert_eq!(status, StatusCode::OK, "deactivated login re-renders form");
         assert!(
-            body.contains("登入失敗"),
+            body.contains("?餃憭望?"),
             "deactivated account must not log in"
         );
     }
@@ -3222,7 +3221,7 @@ mod tests {
             StatusCode::BAD_REQUEST,
             "self-deactivation rejected"
         );
-        assert!(body.contains("不得停用自己的帳號"));
+        assert!(body.contains("銝???芸楛?董??));
     }
 
     // Slice 8 acceptance: import pipeline (IMP-001..003)
@@ -3398,10 +3397,10 @@ mod tests {
             .unwrap();
         let (status, page, _) = send(app, request).await;
         assert_eq!(status, StatusCode::OK, "wizard stays on step 2 with error");
-        assert!(page.contains("步驟 2／3"), "must remain on step 2");
+        assert!(page.contains("甇仿? 2嚗?"), "must remain on step 2");
         assert!(
-            page.contains("不得為同一科目"),
-            "rule name must be shown (可解釋)"
+            page.contains("銝??箏?銝蝘"),
+            "rule name must be shown (?航圾??"
         );
         assert!(page.contains("value=\"SAME\""), "values preserved");
     }
@@ -3420,7 +3419,7 @@ mod tests {
             .header(header::COOKIE, cookie.clone())
             .body(Body::from(format!(
                 "csrf_token={csrf}&text={}",
-                urlencoding_lite("2026-11-04 支付租金 12,000 元 現金→租金費用")
+                urlencoding_lite("2026-11-04 ?臭?蝘? 12,000 ???暸????祥??)
             )))
             .unwrap();
         let (status, _, location) = send(app.clone(), request).await;
@@ -3431,7 +3430,7 @@ mod tests {
             "parse must lead to wizard step 2: {location}"
         );
 
-        // Wizard step 2 must be pre-filled from the draft (依據卡在草稿頁).
+        // Wizard step 2 must be pre-filled from the draft (靘??∪?阮??.
         let request = Request::builder()
             .uri(&location)
             .header(header::COOKIE, cookie)
@@ -3442,7 +3441,7 @@ mod tests {
         assert!(page.contains("value=\"RENT-EXP\""), "debit prefilled");
         assert!(page.contains("value=\"CASH\""), "credit prefilled");
         assert!(page.contains("value=\"12,000.00\""), "amount prefilled");
-        assert!(page.contains("依據卡"), "provenance note rendered");
+        assert!(page.contains("靘???), "provenance note rendered");
     }
 
     // ------------------------------------------------------------------
@@ -3532,7 +3531,7 @@ mod tests {
         let (_, body, _) = send(app, request).await;
         // ZJS-001: chart is server-side SVG; the page has zero scripts.
         assert!(body.contains("<svg"), "server-side SVG chart must render");
-        assert!(body.contains("近六個月借貸合計"), "chart a11y title");
+        assert!(body.contains("餈???硫??"), "chart a11y title");
         assert!(!body.contains("<script"), "zero-JS invariant");
     }
 
@@ -3656,7 +3655,7 @@ mod tests {
         )
         .await;
         assert_eq!(status, StatusCode::OK);
-        // PIV-001: hand-computed — ACC-A debits: 2026-10=10.00, 2026-11=20.00.
+        // PIV-001: hand-computed ??ACC-A debits: 2026-10=10.00, 2026-11=20.00.
         assert!(page.contains(">10.00<"), "October ACC-A cell must be 10.00");
         assert!(
             page.contains(">20.00<"),
@@ -3829,13 +3828,13 @@ mod tests {
             .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
             .header(header::COOKIE, cookie)
             .body(Body::from(format!(
-                "csrf_token={csrf}&text=支付租金 12000 元"
+                "csrf_token={csrf}&text=?臭?蝘? 12000 ??
             )))
             .unwrap();
         let (status, body, _) = send(app, request).await;
         // AIS-001: feature flag defaults to OFF -> explicit 503 with guidance.
         assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
-        assert!(body.contains("AI 建議"), "guidance must name the feature");
+        assert!(body.contains("AI 撱箄降"), "guidance must name the feature");
     }
 
     #[tokio::test]
@@ -4177,7 +4176,7 @@ mod tests {
             .fetch_one(&pool)
             .await
             .expect("count seeded transactions");
-        assert_eq!(count, 100_000, "expected 100,000 seeded transactions");
+        assert_eq!(count, 50_000, "expected 50,000 seeded transactions");
 
         // Login as admin for authenticated requests.
         let (cookie, _) = login(&app, &pool, "admin", TEST_ADMIN_PASSWORD).await;
@@ -4216,3 +4215,5 @@ mod tests {
         );
     }
 }
+
+

@@ -34,23 +34,36 @@ core/src/money.rs:122:16: replace > with >= in format_minor
 core/src/money.rs:122:43: replace - with + in format_minor
 core/src/money.rs:122:43: replace - with / in format_minor
 core/src/money.rs:128:11: replace == with != in format_minor
-core/src/money.rs:309:5: replace parse_decimal_to_minor_i128 -> Result<i128, MoneyError> with Ok(0)
-core/src/money.rs:309:5: replace parse_decimal_to_minor_i128 -> Result<i128, MoneyError> with Ok(1)
-core/src/money.rs:309:5: replace parse_decimal_to_minor_i128 -> Result<i128, MoneyError> with Ok(-1)
-core/src/money.rs:317:8: delete ! in parse_decimal_to_minor_i128
-core/src/money.rs:317:46: replace || with && in parse_decimal_to_minor_i128
-core/src/money.rs:317:51: replace == with != in parse_decimal_to_minor_i128
-core/src/money.rs:317:86: replace > with == in parse_decimal_to_minor_i128
-core/src/money.rs:317:86: replace > with >= in parse_decimal_to_minor_i128
-core/src/money.rs:325:25: replace > with == in parse_decimal_to_minor_i128
-core/src/money.rs:325:25: replace > with >= in parse_decimal_to_minor_i128
-core/src/money.rs:333:49: replace > with < in parse_decimal_to_minor_i128
-core/src/money.rs:342:30: replace - with + in parse_decimal_to_minor_i128
-core/src/money.rs:342:30: replace - with / in parse_decimal_to_minor_i128
-core/src/money.rs:356:5: replace format_minor_i128 -> String with String::new()
-core/src/money.rs:356:5: replace format_minor_i128 -> String with "xyzzy".into()
-core/src/money.rs:356:26: replace < with > in format_minor_i128
-core/src/money.rs:359:30: replace / with % in format_minor_i128
-core/src/money.rs:359:30: replace / with * in format_minor_i128
-core/src/money.rs:360:30: replace % with / in format_minor_i128
-core/src/money.rs:360:30: replace % with + in format_minor_i128
+core/src/money.rs:339:5: replace parse_decimal_to_minor_i128 -> Result<i128, MoneyError> with Ok(0)
+core/src/money.rs:339:5: replace parse_decimal_to_minor_i128 -> Result<i128, MoneyError> with Ok(1)
+core/src/money.rs:339:5: replace parse_decimal_to_minor_i128 -> Result<i128, MoneyError> with Ok(-1)
+core/src/money.rs:347:8: delete ! in parse_decimal_to_minor_i128
+core/src/money.rs:347:46: replace || with && in parse_decimal_to_minor_i128
+core/src/money.rs:347:51: replace == with != in parse_decimal_to_minor_i128
+core/src/money.rs:347:86: replace > with == in parse_decimal_to_minor_i128
+core/src/money.rs:347:86: replace > with < in parse_decimal_to_minor_i128
+core/src/money.rs:347:86: replace > with >= in parse_decimal_to_minor_i128
+core/src/money.rs:355:25: replace > with == in parse_decimal_to_minor_i128
+core/src/money.rs:355:25: replace > with < in parse_decimal_to_minor_i128
+core/src/money.rs:355:25: replace > with >= in parse_decimal_to_minor_i128
+core/src/money.rs:363:49: replace > with == in parse_decimal_to_minor_i128
+core/src/money.rs:363:49: replace > with < in parse_decimal_to_minor_i128
+core/src/money.rs:363:49: replace > with >= in parse_decimal_to_minor_i128
+core/src/money.rs:363:30: replace + with * in parse_decimal_to_minor_i128
+core/src/money.rs:372:30: replace - with + in parse_decimal_to_minor_i128
+core/src/money.rs:372:30: replace - with / in parse_decimal_to_minor_i128
+core/src/money.rs:386:5: replace format_minor_i128 -> String with String::new()
+core/src/money.rs:386:5: replace format_minor_i128 -> String with "xyzzy".into()
+core/src/money.rs:386:26: replace < with == in format_minor_i128
+core/src/money.rs:386:26: replace < with > in format_minor_i128
+core/src/money.rs:386:26: replace < with <= in format_minor_i128
+core/src/money.rs:389:30: replace / with % in format_minor_i128
+core/src/money.rs:389:30: replace / with * in format_minor_i128
+core/src/money.rs:390:30: replace % with / in format_minor_i128
+core/src/money.rs:390:30: replace % with + in format_minor_i128
+core/src/money.rs:395:20: replace && with || in format_minor_i128
+core/src/money.rs:395:16: replace > with == in format_minor_i128
+core/src/money.rs:395:16: replace > with < in format_minor_i128
+core/src/money.rs:395:43: replace - with + in format_minor_i128
+core/src/money.rs:395:43: replace - with / in format_minor_i128
+core/src/money.rs:401:11: replace == with != in format_minor_i128

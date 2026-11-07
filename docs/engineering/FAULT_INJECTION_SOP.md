@@ -74,10 +74,11 @@
 
 | ID | 事項 | 狀態 | 參照 |
 |----|------|------|------|
-| FAULT-01 | engine 上限等值補測殺死 `>→>=` | TODO（P0） | money/engine mutant |
-| FAULT-02 | PBT 擴至 ledger/parallel/pivot | TODO（P1） | §8 PBT |
-| FAULT-03 | FBT 模糊：CSV/money parser | TODO（P1） | §8 FBT |
-| FAULT-04 | ATDD feature→test 自動稽核 | TODO（P1） | §8 ATDD |
-| FAULT-05 | FMEA/STPA→BDD 綁定 | TODO（P2） | §8 FMEA |
-| FAULT-06 | Chaos/DevSecOps/SRE 導入 | TODO（P2） | §8 25-32 |
+| FAULT-01 | engine 上限等值補測殺死 `>→>=` | **DONE** (2026-11-07 `amount_at_cap_posts_successfully`) | money/engine mutant |
+| FAULT-02 | money 剩餘 3 missed (||→&&, +→-, >→>= in format) | TODO (P1) — format/parse 附加測試 | MUTATION_SCORE_REPORT |
+| FAULT-03 | PBT 擴至 ledger/parallel/pivot | TODO (P1) | §8 PBT |
+| FAULT-04 | FBT 模糊：CSV/money parser | TODO (P1) | §8 FBT |
+| FAULT-05 | ATDD feature→test 自動稽核 | TODO (P1) | §8 ATDD |
+| FAULT-06 | FMEA/STPA→BDD 綁定 | TODO (P2) | §8 FMEA |
+| FAULT-07 | Chaos/DevSecOps/SRE 導入 | TODO (P2) | §8 25-32 |
 

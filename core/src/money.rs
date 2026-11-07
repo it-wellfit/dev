@@ -283,6 +283,36 @@ mod tests {
     }
 
     #[test]
+    fn parse_i128_overflow_boundary_kills_boundary_mutants() {
+        // Kills mutants `> -> ==`, `> -> <`, `> -> >=` on i128 digit cap:
+        // exactly 38 digits must PASS, 39 digits must REJECT.
+        let exact = format!("{}.99", "9".repeat(36)); // 36+2 = 38
+        assert!(
+            parse_decimal_to_minor_i128(&exact, 2).is_ok(),
+            "38 digits must be accepted"
+        );
+        let over = "9".repeat(39);
+        assert_eq!(
+            parse_decimal_to_minor_i128(&over, 2),
+            Err(MoneyError::Overflow {
+                max_total_digits: MAX_TOTAL_DIGITS_I128
+            }),
+            "39 digits must overflow"
+        );
+        // i128 parse/format round-trip on high-precision value
+        let v: i128 = 1_234_567_890_123_456_789;
+        let s = format_minor_i128(v, 2);
+        assert_eq!(parse_decimal_to_minor_i128(&s.replace(',', ""), 2), Ok(v));
+        // Negative/zero boundaries for format
+        assert_eq!(format_minor_i128(0, 2), "0.00");
+        assert_eq!(format_minor_i128(-50, 2), "-0.50");
+        assert_eq!(format_minor_i128(5, 0), "5");
+        assert_eq!(format_minor_i128(-5, 0), "-5");
+        // Grouping: 1,234,567.89 — kills arithmetic mutants in format
+        assert_eq!(format_minor_i128(123_456_789, 2), "1,234,567.89");
+    }
+
+    #[test]
     fn format_round_trips() {
         assert_eq!(format_minor(12_345, 2), "123.45");
         assert_eq!(format_minor(50, 2), "0.50");

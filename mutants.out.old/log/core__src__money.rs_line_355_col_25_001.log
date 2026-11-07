@@ -1,0 +1,376 @@
+
+*** core/src/money.rs:355:25: replace > with < in parse_decimal_to_minor_i128
+
+*** mutation diff:
+--- core/src/money.rs
++++ replace > with < in parse_decimal_to_minor_i128
+@@ -347,17 +347,17 @@
+     if !s.bytes().all(|b| b.is_ascii_digit() || b == b'.') || s.matches('.').count() > 1 {
+         return Err(MoneyError::InvalidFormat);
+     }
+ 
+     let (integral, fractional) = match s.split_once('.') {
+         Some((i, f)) => (i, f),
+         None => (s, ""),
+     };
+-    if fractional.len() > dp as usize {
++    if fractional.len() < /* ~ changed by cargo-mutants ~ */ dp as usize {
+         return Err(MoneyError::TooManyDecimalPlaces {
+             max: dp,
+             got: fractional.len(),
+         });
+     }
+ 
+     let integral_digits = integral.trim_start_matches('0');
+     if integral_digits.len() + fractional.len() > MAX_TOTAL_DIGITS_I128 {
+
+
+*** C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe test --no-run --verbose --package=flaps_core@0.0.1
+       Fresh unicode-ident v1.0.27
+       Fresh windows-link v0.2.1
+       Fresh cfg-if v1.0.5
+       Fresh stable_deref_trait v1.2.1
+       Fresh smallvec v1.16.4
+       Fresh version_check v0.9.5
+       Fresh pin-project-lite v0.2.17
+       Fresh scopeguard v1.2.0
+       Fresh typenum v1.20.1
+       Fresh futures-core v0.3.34
+       Fresh writeable v0.6.4
+       Fresh autocfg v1.5.1
+       Fresh litemap v0.8.3
+       Fresh proc-macro2 v1.0.107
+       Fresh lock_api v0.4.14
+       Fresh utf8_iter v1.0.4
+       Fresh once_cell v1.21.4
+       Fresh bytes v1.12.1
+       Fresh futures-sink v0.3.34
+       Fresh equivalent v1.0.3
+       Fresh quote v1.0.47
+       Fresh serde_core v1.0.229
+       Fresh parking_lot_core v0.9.12
+       Fresh memchr v2.8.3
+       Fresh percent-encoding v2.3.2
+       Fresh windows-sys v0.61.2
+       Fresh foldhash v0.1.5
+       Fresh futures-io v0.3.34
+       Fresh shlex v2.0.1
+       Fresh syn v3.0.9
+       Fresh generic-array v0.14.7
+       Fresh icu_properties_data v2.4.0
+       Fresh num-traits v0.2.19
+       Fresh parking_lot v0.12.5
+       Fresh icu_normalizer_data v2.4.0
+       Fresh form_urlencoded v1.2.2
+       Fresh syn v2.0.119
+       Fresh itoa v1.0.18
+       Fresh find-msvc-tools v0.1.15
+       Fresh allocator-api2 v0.2.21
+       Fresh slab v0.4.12
+       Fresh futures-task v0.3.34
+       Fresh cpufeatures v0.2.17
+       Fresh synstructure v0.14.0
+       Fresh zerovec-derive v0.11.7
+       Fresh displaydoc v0.2.7
+       Fresh serde_derive v1.0.229
+       Fresh block-buffer v0.10.4
+       Fresh zmij v1.0.23
+       Fresh tracing-attributes v0.1.31
+       Fresh hashbrown v0.15.5
+       Fresh thiserror-impl v2.0.21
+       Fresh futures-util v0.3.34
+       Fresh cc v1.10.0
+       Fresh crossbeam-utils v0.8.23
+       Fresh tracing-core v0.1.36
+       Fresh log v0.4.34
+       Fresh vcpkg v0.2.15
+       Fresh parking v2.2.1
+       Fresh zerofrom-derive v0.1.8
+       Fresh yoke-derive v0.8.4
+       Fresh serde v1.0.229
+       Fresh hashbrown v0.17.1
+       Fresh pkg-config v0.3.34
+       Fresh rand_core v0.10.1
+       Fresh crc-catalog v2.5.0
+       Fresh crossbeam-queue v0.3.14
+       Fresh thiserror v2.0.21
+       Fresh event-listener v5.4.2
+       Fresh serde_json v1.0.154
+       Fresh hashlink v0.10.0
+       Fresh tracing v0.1.44
+       Fresh futures-intrusive v0.5.0
+       Fresh zerofrom v0.1.8
+       Fresh crc v3.4.0
+       Fresh indexmap v2.14.2
+       Fresh either v1.19.0
+       Fresh base64 v0.22.1
+       Fresh tokio-macros v2.7.2
+       Fresh spin v0.9.9
+       Fresh socket2 v0.6.5
+       Fresh mio v1.2.4
+       Fresh ryu v1.0.23
+       Fresh futures-executor v0.3.34
+       Fresh crypto-common v0.1.7
+       Fresh yoke v0.8.4
+       Fresh flume v0.11.1
+       Fresh serde_urlencoded v0.7.1
+       Fresh tokio v1.54.1
+       Fresh atoi v2.0.0
+       Fresh futures-channel v0.3.34
+       Fresh digest v0.10.7
+       Fresh chrono v0.4.45
+       Fresh heck v0.5.0
+       Fresh dotenvy v0.15.7
+       Fresh hex v0.4.3
+       Fresh fastrand v2.5.0
+       Fresh cpufeatures v0.3.1
+       Fresh zerovec v0.11.9
+       Fresh zerotrie v0.2.5
+       Fresh libsqlite3-sys v0.30.1
+       Fresh getrandom v0.4.3
+       Fresh tokio-stream v0.1.19
+       Fresh sha2 v0.10.9
+       Fresh fnv v1.0.7
+       Fresh quick-error v1.2.3
+       Fresh wait-timeout v0.2.1
+       Fresh bit-vec v0.10.1
+       Fresh chacha20 v0.10.2
+       Fresh rand_xorshift v0.5.0
+       Fresh core_detect v1.0.0
+       Fresh unarray v0.1.4
+       Fresh bitflags v2.13.2
+       Fresh regex-syntax v0.8.11
+       Fresh tinystr v0.8.5
+       Fresh potential_utf v0.1.6
+       Fresh tempfile v3.27.0
+       Fresh rand v0.10.3
+       Fresh uuid v1.29.0
+       Fresh bit-set v0.11.1
+       Fresh tokio-test v0.4.6
+       Fresh icu_locale_core v2.4.0
+       Fresh icu_collections v2.4.0
+       Fresh rusty-fork v0.3.1
+       Fresh icu_provider v2.4.0
+       Fresh proptest v1.12.0
+       Fresh icu_normalizer v2.4.0
+       Fresh icu_properties v2.4.0
+       Fresh idna_adapter v1.2.2
+       Fresh idna v1.1.0
+       Fresh url v2.5.8
+       Fresh sqlx-core v0.8.6
+       Fresh sqlx-sqlite v0.8.6
+       Fresh sqlx-macros-core v0.8.6
+       Fresh sqlx-macros v0.8.6
+       Fresh sqlx v0.8.6
+       Dirty flaps_core v0.0.1 (C:\Users\STEPHA~1.HUA\AppData\Local\Temp\cargo-mutants-Dev-BYqqxI.tmp\core): the file `core\src\money.rs` has changed (13438519595.375766200s, 5s after last build at 13438519590.844287400s)
+   Compiling flaps_core v0.0.1 (C:\Users\STEPHA~1.HUA\AppData\Local\Temp\cargo-mutants-Dev-BYqqxI.tmp\core)
+     Running `C:\Users\stephanie.huang\.rustup\toolchains\stable-x86_64-pc-windows-msvc\bin\rustc.exe --crate-name flaps_core --edition=2021 core\src\lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --emit=dep-info,link -C embed-bitcode=no -C debuginfo=2 --test --check-cfg cfg(docsrs,test) --check-cfg "cfg(feature, values())" -C metadata=39b5cbc312888cbe -C extra-filename=-9af60e6bbcf1890e --out-dir C:\Users\STEPHA~1.HUA\AppData\Local\Temp\cargo-mutants-Dev-BYqqxI.tmp\target\debug\deps -C incremental=C:\Users\STEPHA~1.HUA\AppData\Local\Temp\cargo-mutants-Dev-BYqqxI.tmp\target\debug\incremental -L dependency=C:\Users\STEPHA~1.HUA\AppData\Local\Temp\cargo-mutants-Dev-BYqqxI.tmp\target\debug\deps --extern chrono=C:\Users\STEPHA~1.HUA\AppData\Local\Temp\cargo-mutants-Dev-BYqqxI.tmp\target\debug\deps\libchrono-21e70fef58ffcf4c.rlib --extern proptest=C:\Users\STEPHA~1.HUA\AppData\Local\Temp\cargo-mutants-Dev-BYqqxI.tmp\target\debug\deps\libproptest-8a133f5612f96ae2.rlib --extern serde=C:\Users\STEPHA~1.HUA\AppData\Local\Temp\cargo-mutants-Dev-BYqqxI.tmp\target\debug\deps\libserde-4722a76f05536fb8.rlib --extern serde_json=C:\Users\STEPHA~1.HUA\AppData\Local\Temp\cargo-mutants-Dev-BYqqxI.tmp\target\debug\deps\libserde_json-1489648592bb7539.rlib --extern sqlx=C:\Users\STEPHA~1.HUA\AppData\Local\Temp\cargo-mutants-Dev-BYqqxI.tmp\target\debug\deps\libsqlx-99bc7cebf3010394.rlib --extern tokio=C:\Users\STEPHA~1.HUA\AppData\Local\Temp\cargo-mutants-Dev-BYqqxI.tmp\target\debug\deps\libtokio-6077745740ebd8ab.rlib --extern tokio_test=C:\Users\STEPHA~1.HUA\AppData\Local\Temp\cargo-mutants-Dev-BYqqxI.tmp\target\debug\deps\libtokio_test-4fc28c1d9801e1ab.rlib --extern tracing=C:\Users\STEPHA~1.HUA\AppData\Local\Temp\cargo-mutants-Dev-BYqqxI.tmp\target\debug\deps\libtracing-cf8235d502f47e35.rlib --extern uuid=C:\Users\STEPHA~1.HUA\AppData\Local\Temp\cargo-mutants-Dev-BYqqxI.tmp\target\debug\deps\libuuid-cfe6493643bc7683.rlib -L native=C:\Users\STEPHA~1.HUA\AppData\Local\Temp\cargo-mutants-Dev-BYqqxI.tmp\target\debug\build\libsqlite3-sys-5586d9590fe5ccf2\out`
+     Running `C:\Users\stephanie.huang\.rustup\toolchains\stable-x86_64-pc-windows-msvc\bin\rustc.exe --crate-name flaps_core --edition=2021 core\src\lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no -C debuginfo=2 --check-cfg cfg(docsrs,test) --check-cfg "cfg(feature, values())" -C metadata=8b832b09020478a9 -C extra-filename=-96eb01c9255efe8b --out-dir C:\Users\STEPHA~1.HUA\AppData\Local\Temp\cargo-mutants-Dev-BYqqxI.tmp\target\debug\deps -C incremental=C:\Users\STEPHA~1.HUA\AppData\Local\Temp\cargo-mutants-Dev-BYqqxI.tmp\target\debug\incremental -L dependency=C:\Users\STEPHA~1.HUA\AppData\Local\Temp\cargo-mutants-Dev-BYqqxI.tmp\target\debug\deps --extern chrono=C:\Users\STEPHA~1.HUA\AppData\Local\Temp\cargo-mutants-Dev-BYqqxI.tmp\target\debug\deps\libchrono-21e70fef58ffcf4c.rmeta --extern serde=C:\Users\STEPHA~1.HUA\AppData\Local\Temp\cargo-mutants-Dev-BYqqxI.tmp\target\debug\deps\libserde-4722a76f05536fb8.rmeta --extern serde_json=C:\Users\STEPHA~1.HUA\AppData\Local\Temp\cargo-mutants-Dev-BYqqxI.tmp\target\debug\deps\libserde_json-1489648592bb7539.rmeta --extern sqlx=C:\Users\STEPHA~1.HUA\AppData\Local\Temp\cargo-mutants-Dev-BYqqxI.tmp\target\debug\deps\libsqlx-99bc7cebf3010394.rmeta --extern tokio=C:\Users\STEPHA~1.HUA\AppData\Local\Temp\cargo-mutants-Dev-BYqqxI.tmp\target\debug\deps\libtokio-6077745740ebd8ab.rmeta --extern tracing=C:\Users\STEPHA~1.HUA\AppData\Local\Temp\cargo-mutants-Dev-BYqqxI.tmp\target\debug\deps\libtracing-cf8235d502f47e35.rmeta --extern uuid=C:\Users\STEPHA~1.HUA\AppData\Local\Temp\cargo-mutants-Dev-BYqqxI.tmp\target\debug\deps\libuuid-cfe6493643bc7683.rmeta -L native=C:\Users\STEPHA~1.HUA\AppData\Local\Temp\cargo-mutants-Dev-BYqqxI.tmp\target\debug\build\libsqlite3-sys-5586d9590fe5ccf2\out`
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 3.07s
+  Executable `C:\Users\STEPHA~1.HUA\AppData\Local\Temp\cargo-mutants-Dev-BYqqxI.tmp\target\debug\deps\flaps_core-9af60e6bbcf1890e.exe`
+
+*** result: Success
+
+*** C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe test --verbose --package=flaps_core@0.0.1 -p flaps_core --lib
+       Fresh unicode-ident v1.0.27
+       Fresh windows-link v0.2.1
+       Fresh cfg-if v1.0.5
+       Fresh stable_deref_trait v1.2.1
+       Fresh smallvec v1.16.4
+       Fresh version_check v0.9.5
+       Fresh pin-project-lite v0.2.17
+       Fresh futures-core v0.3.34
+       Fresh typenum v1.20.1
+       Fresh scopeguard v1.2.0
+       Fresh writeable v0.6.4
+       Fresh litemap v0.8.3
+       Fresh autocfg v1.5.1
+       Fresh proc-macro2 v1.0.107
+       Fresh lock_api v0.4.14
+       Fresh utf8_iter v1.0.4
+       Fresh once_cell v1.21.4
+       Fresh bytes v1.12.1
+       Fresh futures-sink v0.3.34
+       Fresh equivalent v1.0.3
+       Fresh percent-encoding v2.3.2
+       Fresh quote v1.0.47
+       Fresh serde_core v1.0.229
+       Fresh parking_lot_core v0.9.12
+       Fresh memchr v2.8.3
+       Fresh form_urlencoded v1.2.2
+       Fresh windows-sys v0.61.2
+       Fresh futures-io v0.3.34
+       Fresh find-msvc-tools v0.1.15
+       Fresh allocator-api2 v0.2.21
+       Fresh shlex v2.0.1
+       Fresh syn v3.0.9
+       Fresh generic-array v0.14.7
+       Fresh num-traits v0.2.19
+       Fresh parking_lot v0.12.5
+       Fresh icu_normalizer_data v2.4.0
+       Fresh icu_properties_data v2.4.0
+       Fresh syn v2.0.119
+       Fresh slab v0.4.12
+       Fresh cpufeatures v0.2.17
+       Fresh futures-task v0.3.34
+       Fresh foldhash v0.1.5
+       Fresh itoa v1.0.18
+       Fresh cc v1.10.0
+       Fresh synstructure v0.14.0
+       Fresh zerovec-derive v0.11.7
+       Fresh displaydoc v0.2.7
+       Fresh block-buffer v0.10.4
+       Fresh serde_derive v1.0.229
+       Fresh hashbrown v0.15.5
+       Fresh zmij v1.0.23
+       Fresh thiserror-impl v2.0.21
+       Fresh crossbeam-utils v0.8.23
+       Fresh futures-util v0.3.34
+       Fresh tracing-attributes v0.1.31
+       Fresh tracing-core v0.1.36
+       Fresh hashbrown v0.17.1
+       Fresh rand_core v0.10.1
+       Fresh crc-catalog v2.5.0
+       Fresh zerofrom-derive v0.1.8
+       Fresh yoke-derive v0.8.4
+       Fresh serde v1.0.229
+       Fresh vcpkg v0.2.15
+       Fresh pkg-config v0.3.34
+       Fresh log v0.4.34
+       Fresh parking v2.2.1
+       Fresh thiserror v2.0.21
+       Fresh hashlink v0.10.0
+       Fresh crc v3.4.0
+       Fresh serde_json v1.0.154
+       Fresh crossbeam-queue v0.3.14
+       Fresh indexmap v2.14.2
+       Fresh futures-intrusive v0.5.0
+       Fresh zerofrom v0.1.8
+       Fresh either v1.19.0
+       Fresh event-listener v5.4.2
+       Fresh tracing v0.1.44
+       Fresh base64 v0.22.1
+       Fresh tokio-macros v2.7.2
+       Fresh socket2 v0.6.5
+       Fresh mio v1.2.4
+       Fresh spin v0.9.9
+       Fresh ryu v1.0.23
+       Fresh futures-executor v0.3.34
+       Fresh crypto-common v0.1.7
+       Fresh atoi v2.0.0
+       Fresh yoke v0.8.4
+       Fresh tokio v1.54.1
+       Fresh flume v0.11.1
+       Fresh serde_urlencoded v0.7.1
+       Fresh futures-channel v0.3.34
+       Fresh digest v0.10.7
+       Fresh chrono v0.4.45
+       Fresh heck v0.5.0
+       Fresh dotenvy v0.15.7
+       Fresh fastrand v2.5.0
+       Fresh hex v0.4.3
+       Fresh cpufeatures v0.3.1
+       Fresh zerovec v0.11.9
+       Fresh zerotrie v0.2.5
+       Fresh getrandom v0.4.3
+       Fresh libsqlite3-sys v0.30.1
+       Fresh tokio-stream v0.1.19
+       Fresh sha2 v0.10.9
+       Fresh wait-timeout v0.2.1
+       Fresh quick-error v1.2.3
+       Fresh bit-vec v0.10.1
+       Fresh fnv v1.0.7
+       Fresh chacha20 v0.10.2
+       Fresh rand_xorshift v0.5.0
+       Fresh core_detect v1.0.0
+       Fresh bitflags v2.13.2
+       Fresh unarray v0.1.4
+       Fresh regex-syntax v0.8.11
+       Fresh tinystr v0.8.5
+       Fresh potential_utf v0.1.6
+       Fresh tempfile v3.27.0
+       Fresh rand v0.10.3
+       Fresh bit-set v0.11.1
+       Fresh uuid v1.29.0
+       Fresh tokio-test v0.4.6
+       Fresh icu_locale_core v2.4.0
+       Fresh icu_collections v2.4.0
+       Fresh rusty-fork v0.3.1
+       Fresh icu_provider v2.4.0
+       Fresh proptest v1.12.0
+       Fresh icu_normalizer v2.4.0
+       Fresh icu_properties v2.4.0
+       Fresh idna_adapter v1.2.2
+       Fresh idna v1.1.0
+       Fresh url v2.5.8
+       Fresh sqlx-core v0.8.6
+       Fresh sqlx-sqlite v0.8.6
+       Fresh sqlx-macros-core v0.8.6
+       Fresh sqlx-macros v0.8.6
+       Fresh sqlx v0.8.6
+       Fresh flaps_core v0.0.1 (C:\Users\STEPHA~1.HUA\AppData\Local\Temp\cargo-mutants-Dev-BYqqxI.tmp\core)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.65s
+     Running `C:\Users\STEPHA~1.HUA\AppData\Local\Temp\cargo-mutants-Dev-BYqqxI.tmp\target\debug\deps\flaps_core-9af60e6bbcf1890e.exe`
+
+running 41 tests
+test ledger::engine::tests::status_transition_posted_to_pending_review ... ok
+test money::proptest_money::empty_input_always_empty ... ok
+test money::proptest_money::negative_input_always_rejected ... ok
+test money::proptest_money::format_minor_has_correct_decimal_places ... ok
+test ledger::engine::tests::zero_amount_item_is_rejected ... ok
+test ledger::engine::tests::future_date_is_rejected ... ok
+test ledger::engine::tests::one_sided_entry_is_rejected ... ok
+test ledger::engine::tests::amount_over_cap_is_rejected ... ok
+test money::tests::format_round_trips ... ok
+test money::tests::parse_exact_values ... ok
+test ledger::engine::tests::empty_items_are_rejected ... ok
+test money::tests::parse_rejects_overflow ... ok
+test ledger::engine::tests::invalid_item_type_is_rejected ... ok
+test ledger::engine::tests::unbalanced_entry_is_rejected ... ok
+test money::tests::parse_rejects_non_representable_input ... ok
+test ledger::engine::tests::auto_creates_missing_accounts ... ok
+test money::tests::parse_i128_overflow_boundary_kills_boundary_mutants ... FAILED
+test ledger::engine::tests::negative_amount_is_rejected ... ok
+test parallel::tests::axes_are_drawn_with_labels ... ok
+test parallel::tests::degenerate_axis_places_points_at_midline ... ok
+test money::proptest_money::overflow_rejected_for_too_many_digits ... ok
+test parallel::tests::empty_series_renders_empty_string ... ok
+test parallel::tests::each_account_gets_one_polyline_with_accessible_title ... ok
+test parallel::tests::integer_normalization_places_extremes_on_axis_bounds ... ok
+test ledger::engine::tests::amount_at_cap_posts_successfully ... ok
+test parser::tests::parse_garbage_yields_empty_draft ... ok
+test parser::tests::parse_rejects_overprecise_amounts_silently ... ok
+test parser::tests::parse_without_arrow_leaves_legs_empty_but_dates_amounts_filled ... ok
+test parser::tests::parse_worked_example_from_plan ... ok
+test parser::tests::parse_zh_date_and_arrow_ascii ... ok
+test permission::tests::get_user_permissions_returns_codes_deduped ... ok
+test permission::tests::has_permission_matches_code_not_id ... ok
+test ledger::engine::tests::balanced_entry_posts_and_roundtrips ... ok
+test value_objects::tests::account_id_trims_and_enforces_bounds ... ok
+test ledger::engine::tests::nonpositive_exchange_rate_is_rejected ... ok
+test value_objects::tests::money_accepts_positive_amount_with_valid_currency ... ok
+test value_objects::tests::money_rejects_zero_negative_and_bad_currency ... ok
+test money::proptest_money::parse_format_parse_roundtrip ... ok
+test money::proptest_money::too_many_decimal_places_rejected ... ok
+test money::proptest_money::parse_format_parse_roundtrip_i128 ... ok
+test money::proptest_money::parse_never_negative ... ok
+
+failures:
+
+---- money::tests::parse_i128_overflow_boundary_kills_boundary_mutants stdout ----
+
+thread 'money::tests::parse_i128_overflow_boundary_kills_boundary_mutants' (16416) panicked at core\src\money.rs:295:9:
+assertion `left == right` failed: 39 digits must overflow
+  left: Err(TooManyDecimalPlaces { max: 2, got: 0 })
+ right: Err(Overflow { max_total_digits: 38 })
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    money::tests::parse_i128_overflow_boundary_kills_boundary_mutants
+
+test result: FAILED. 40 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s
+
+error: test failed, to rerun pass `-p flaps_core --lib`
+
+*** result: Failure(101)

@@ -8,7 +8,7 @@
       "phase_results": [
         {
           "phase": "Build",
-          "duration": 57.3612995,
+          "duration": 58.4259764,
           "process_status": "Success",
           "argv": [
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
@@ -20,13 +20,16 @@
         },
         {
           "phase": "Test",
-          "duration": 1.564314,
+          "duration": 1.5670638000000001,
           "process_status": "Success",
           "argv": [
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
             "test",
             "--verbose",
-            "--package=flaps_core@0.0.1"
+            "--package=flaps_core@0.0.1",
+            "-p",
+            "flaps_core",
+            "--lib"
           ]
         }
       ]
@@ -71,7 +74,7 @@
       "phase_results": [
         {
           "phase": "Build",
-          "duration": 3.2223744,
+          "duration": 3.0738746,
           "process_status": "Success",
           "argv": [
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
@@ -83,13 +86,16 @@
         },
         {
           "phase": "Test",
-          "duration": 1.161616,
+          "duration": 1.1111485,
           "process_status": "Success",
           "argv": [
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
             "test",
             "--verbose",
-            "--package=flaps_core@0.0.1"
+            "--package=flaps_core@0.0.1",
+            "-p",
+            "flaps_core",
+            "--lib"
           ]
         }
       ]
@@ -134,7 +140,7 @@
       "phase_results": [
         {
           "phase": "Build",
-          "duration": 3.1744367000000002,
+          "duration": 2.8234122,
           "process_status": "Success",
           "argv": [
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
@@ -146,7 +152,7 @@
         },
         {
           "phase": "Test",
-          "duration": 1.1108245,
+          "duration": 1.0607886,
           "process_status": {
             "Failure": 101
           },
@@ -154,7 +160,10 @@
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
             "test",
             "--verbose",
-            "--package=flaps_core@0.0.1"
+            "--package=flaps_core@0.0.1",
+            "-p",
+            "flaps_core",
+            "--lib"
           ]
         }
       ]
@@ -199,7 +208,7 @@
       "phase_results": [
         {
           "phase": "Build",
-          "duration": 3.0214962,
+          "duration": 2.769271,
           "process_status": "Success",
           "argv": [
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
@@ -211,7 +220,7 @@
         },
         {
           "phase": "Test",
-          "duration": 1.162151,
+          "duration": 1.1120889,
           "process_status": {
             "Failure": 101
           },
@@ -219,7 +228,10 @@
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
             "test",
             "--verbose",
-            "--package=flaps_core@0.0.1"
+            "--package=flaps_core@0.0.1",
+            "-p",
+            "flaps_core",
+            "--lib"
           ]
         }
       ]
@@ -264,7 +276,7 @@
       "phase_results": [
         {
           "phase": "Build",
-          "duration": 3.4773338,
+          "duration": 3.4250103,
           "process_status": "Success",
           "argv": [
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
@@ -276,7 +288,7 @@
         },
         {
           "phase": "Test",
-          "duration": 1.1116963,
+          "duration": 1.2613563,
           "process_status": {
             "Failure": 101
           },
@@ -284,7 +296,10 @@
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
             "test",
             "--verbose",
-            "--package=flaps_core@0.0.1"
+            "--package=flaps_core@0.0.1",
+            "-p",
+            "flaps_core",
+            "--lib"
           ]
         }
       ]
@@ -329,7 +344,7 @@
       "phase_results": [
         {
           "phase": "Build",
-          "duration": 3.4752242,
+          "duration": 5.2874982,
           "process_status": "Success",
           "argv": [
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
@@ -341,7 +356,7 @@
         },
         {
           "phase": "Test",
-          "duration": 1.0095537,
+          "duration": 3.7202866,
           "process_status": {
             "Failure": 101
           },
@@ -349,7 +364,10 @@
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
             "test",
             "--verbose",
-            "--package=flaps_core@0.0.1"
+            "--package=flaps_core@0.0.1",
+            "-p",
+            "flaps_core",
+            "--lib"
           ]
         }
       ]
@@ -394,7 +412,7 @@
       "phase_results": [
         {
           "phase": "Build",
-          "duration": 3.2244879,
+          "duration": 16.6719883,
           "process_status": "Success",
           "argv": [
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
@@ -406,7 +424,7 @@
         },
         {
           "phase": "Test",
-          "duration": 1.1096129,
+          "duration": 1.1647046,
           "process_status": {
             "Failure": 101
           },
@@ -414,7 +432,10 @@
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
             "test",
             "--verbose",
-            "--package=flaps_core@0.0.1"
+            "--package=flaps_core@0.0.1",
+            "-p",
+            "flaps_core",
+            "--lib"
           ]
         }
       ]
@@ -459,7 +480,7 @@
       "phase_results": [
         {
           "phase": "Build",
-          "duration": 2.7204306000000003,
+          "duration": 3.0727576,
           "process_status": "Success",
           "argv": [
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
@@ -471,7 +492,7 @@
         },
         {
           "phase": "Test",
-          "duration": 1.3175785,
+          "duration": 1.2127080000000001,
           "process_status": {
             "Failure": 101
           },
@@ -479,7 +500,10 @@
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
             "test",
             "--verbose",
-            "--package=flaps_core@0.0.1"
+            "--package=flaps_core@0.0.1",
+            "-p",
+            "flaps_core",
+            "--lib"
           ]
         }
       ]
@@ -524,7 +548,7 @@
       "phase_results": [
         {
           "phase": "Build",
-          "duration": 3.1737831,
+          "duration": 3.0221284,
           "process_status": "Success",
           "argv": [
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
@@ -536,7 +560,7 @@
         },
         {
           "phase": "Test",
-          "duration": 1.0611368,
+          "duration": 1.2113004,
           "process_status": {
             "Failure": 101
           },
@@ -544,7 +568,10 @@
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
             "test",
             "--verbose",
-            "--package=flaps_core@0.0.1"
+            "--package=flaps_core@0.0.1",
+            "-p",
+            "flaps_core",
+            "--lib"
           ]
         }
       ]
@@ -589,7 +616,7 @@
       "phase_results": [
         {
           "phase": "Build",
-          "duration": 2.76945,
+          "duration": 3.2772927,
           "process_status": "Success",
           "argv": [
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
@@ -601,7 +628,7 @@
         },
         {
           "phase": "Test",
-          "duration": 1.1611327,
+          "duration": 1.3118897,
           "process_status": {
             "Failure": 101
           },
@@ -609,7 +636,10 @@
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
             "test",
             "--verbose",
-            "--package=flaps_core@0.0.1"
+            "--package=flaps_core@0.0.1",
+            "-p",
+            "flaps_core",
+            "--lib"
           ]
         }
       ]
@@ -654,7 +684,7 @@
       "phase_results": [
         {
           "phase": "Build",
-          "duration": 3.0219094,
+          "duration": 3.2763003,
           "process_status": "Success",
           "argv": [
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
@@ -666,7 +696,7 @@
         },
         {
           "phase": "Test",
-          "duration": 1.1606364,
+          "duration": 1.3624426,
           "process_status": {
             "Failure": 101
           },
@@ -674,7 +704,10 @@
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
             "test",
             "--verbose",
-            "--package=flaps_core@0.0.1"
+            "--package=flaps_core@0.0.1",
+            "-p",
+            "flaps_core",
+            "--lib"
           ]
         }
       ]
@@ -719,7 +752,7 @@
       "phase_results": [
         {
           "phase": "Build",
-          "duration": 3.7757487,
+          "duration": 3.0228196,
           "process_status": "Success",
           "argv": [
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
@@ -731,7 +764,7 @@
         },
         {
           "phase": "Test",
-          "duration": 0.9591537,
+          "duration": 1.1598064,
           "process_status": {
             "Failure": 101
           },
@@ -739,7 +772,10 @@
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
             "test",
             "--verbose",
-            "--package=flaps_core@0.0.1"
+            "--package=flaps_core@0.0.1",
+            "-p",
+            "flaps_core",
+            "--lib"
           ]
         }
       ]
@@ -784,7 +820,7 @@
       "phase_results": [
         {
           "phase": "Build",
-          "duration": 3.1217479,
+          "duration": 2.7709871,
           "process_status": "Success",
           "argv": [
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
@@ -796,7 +832,7 @@
         },
         {
           "phase": "Test",
-          "duration": 1.3630874,
+          "duration": 1.2648381,
           "process_status": {
             "Failure": 101
           },
@@ -804,7 +840,10 @@
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
             "test",
             "--verbose",
-            "--package=flaps_core@0.0.1"
+            "--package=flaps_core@0.0.1",
+            "-p",
+            "flaps_core",
+            "--lib"
           ]
         }
       ]
@@ -849,7 +888,7 @@
       "phase_results": [
         {
           "phase": "Build",
-          "duration": 3.0732908,
+          "duration": 2.9203487,
           "process_status": "Success",
           "argv": [
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
@@ -861,7 +900,7 @@
         },
         {
           "phase": "Test",
-          "duration": 1.0106893,
+          "duration": 1.2100362,
           "process_status": {
             "Failure": 101
           },
@@ -869,7 +908,10 @@
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
             "test",
             "--verbose",
-            "--package=flaps_core@0.0.1"
+            "--package=flaps_core@0.0.1",
+            "-p",
+            "flaps_core",
+            "--lib"
           ]
         }
       ]
@@ -914,7 +956,7 @@
       "phase_results": [
         {
           "phase": "Build",
-          "duration": 3.1252064,
+          "duration": 2.9739762,
           "process_status": "Success",
           "argv": [
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
@@ -926,7 +968,7 @@
         },
         {
           "phase": "Test",
-          "duration": 1.2107272,
+          "duration": 1.2621532,
           "process_status": {
             "Failure": 101
           },
@@ -934,7 +976,10 @@
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
             "test",
             "--verbose",
-            "--package=flaps_core@0.0.1"
+            "--package=flaps_core@0.0.1",
+            "-p",
+            "flaps_core",
+            "--lib"
           ]
         }
       ]
@@ -979,7 +1024,7 @@
       "phase_results": [
         {
           "phase": "Build",
-          "duration": 3.4741972,
+          "duration": 2.7713187,
           "process_status": "Success",
           "argv": [
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
@@ -991,7 +1036,7 @@
         },
         {
           "phase": "Test",
-          "duration": 0.9098978,
+          "duration": 1.0096377,
           "process_status": {
             "Failure": 101
           },
@@ -999,7 +1044,10 @@
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
             "test",
             "--verbose",
-            "--package=flaps_core@0.0.1"
+            "--package=flaps_core@0.0.1",
+            "-p",
+            "flaps_core",
+            "--lib"
           ]
         }
       ]
@@ -1044,7 +1092,7 @@
       "phase_results": [
         {
           "phase": "Build",
-          "duration": 2.667336,
+          "duration": 3.2728308,
           "process_status": "Success",
           "argv": [
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
@@ -1056,7 +1104,7 @@
         },
         {
           "phase": "Test",
-          "duration": 1.2130309,
+          "duration": 1.1109625,
           "process_status": {
             "Failure": 101
           },
@@ -1064,7 +1112,10 @@
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
             "test",
             "--verbose",
-            "--package=flaps_core@0.0.1"
+            "--package=flaps_core@0.0.1",
+            "-p",
+            "flaps_core",
+            "--lib"
           ]
         }
       ]
@@ -1109,7 +1160,7 @@
       "phase_results": [
         {
           "phase": "Build",
-          "duration": 3.1727859,
+          "duration": 3.0194444,
           "process_status": "Success",
           "argv": [
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
@@ -1121,7 +1172,7 @@
         },
         {
           "phase": "Test",
-          "duration": 1.0615214,
+          "duration": 1.0120518,
           "process_status": {
             "Failure": 101
           },
@@ -1129,7 +1180,10 @@
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
             "test",
             "--verbose",
-            "--package=flaps_core@0.0.1"
+            "--package=flaps_core@0.0.1",
+            "-p",
+            "flaps_core",
+            "--lib"
           ]
         }
       ]
@@ -1174,7 +1228,7 @@
       "phase_results": [
         {
           "phase": "Build",
-          "duration": 2.768897,
+          "duration": 2.7703324,
           "process_status": "Success",
           "argv": [
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
@@ -1186,7 +1240,7 @@
         },
         {
           "phase": "Test",
-          "duration": 0.9100289,
+          "duration": 0.9597848,
           "process_status": {
             "Failure": 101
           },
@@ -1194,7 +1248,10 @@
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
             "test",
             "--verbose",
-            "--package=flaps_core@0.0.1"
+            "--package=flaps_core@0.0.1",
+            "-p",
+            "flaps_core",
+            "--lib"
           ]
         }
       ]
@@ -1239,7 +1296,7 @@
       "phase_results": [
         {
           "phase": "Build",
-          "duration": 2.9204609,
+          "duration": 2.9224525,
           "process_status": "Success",
           "argv": [
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
@@ -1251,7 +1308,7 @@
         },
         {
           "phase": "Test",
-          "duration": 1.2629848,
+          "duration": 1.111177,
           "process_status": {
             "Failure": 101
           },
@@ -1259,7 +1316,10 @@
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
             "test",
             "--verbose",
-            "--package=flaps_core@0.0.1"
+            "--package=flaps_core@0.0.1",
+            "-p",
+            "flaps_core",
+            "--lib"
           ]
         }
       ]
@@ -1304,7 +1364,7 @@
       "phase_results": [
         {
           "phase": "Build",
-          "duration": 2.9224349,
+          "duration": 3.0234786,
           "process_status": "Success",
           "argv": [
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
@@ -1316,7 +1376,7 @@
         },
         {
           "phase": "Test",
-          "duration": 1.0117077,
+          "duration": 1.0625512,
           "process_status": {
             "Failure": 101
           },
@@ -1324,7 +1384,10 @@
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
             "test",
             "--verbose",
-            "--package=flaps_core@0.0.1"
+            "--package=flaps_core@0.0.1",
+            "-p",
+            "flaps_core",
+            "--lib"
           ]
         }
       ]
@@ -1369,7 +1432,7 @@
       "phase_results": [
         {
           "phase": "Build",
-          "duration": 2.9220298,
+          "duration": 2.8209648,
           "process_status": "Success",
           "argv": [
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
@@ -1381,7 +1444,7 @@
         },
         {
           "phase": "Test",
-          "duration": 1.2101615,
+          "duration": 1.1623452,
           "process_status": {
             "Failure": 101
           },
@@ -1389,7 +1452,10 @@
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
             "test",
             "--verbose",
-            "--package=flaps_core@0.0.1"
+            "--package=flaps_core@0.0.1",
+            "-p",
+            "flaps_core",
+            "--lib"
           ]
         }
       ]
@@ -1434,7 +1500,7 @@
       "phase_results": [
         {
           "phase": "Build",
-          "duration": 3.2241718,
+          "duration": 3.4811974,
           "process_status": "Success",
           "argv": [
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
@@ -1446,7 +1512,7 @@
         },
         {
           "phase": "Test",
-          "duration": 1.0116842,
+          "duration": 1.2622404999999999,
           "process_status": {
             "Failure": 101
           },
@@ -1454,7 +1520,10 @@
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
             "test",
             "--verbose",
-            "--package=flaps_core@0.0.1"
+            "--package=flaps_core@0.0.1",
+            "-p",
+            "flaps_core",
+            "--lib"
           ]
         }
       ]
@@ -1499,7 +1568,7 @@
       "phase_results": [
         {
           "phase": "Build",
-          "duration": 2.7729893,
+          "duration": 2.9752636,
           "process_status": "Success",
           "argv": [
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
@@ -1511,7 +1580,7 @@
         },
         {
           "phase": "Test",
-          "duration": 1.2618493,
+          "duration": 1.2163553,
           "process_status": {
             "Failure": 101
           },
@@ -1519,7 +1588,10 @@
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
             "test",
             "--verbose",
-            "--package=flaps_core@0.0.1"
+            "--package=flaps_core@0.0.1",
+            "-p",
+            "flaps_core",
+            "--lib"
           ]
         }
       ]
@@ -1564,7 +1636,7 @@
       "phase_results": [
         {
           "phase": "Build",
-          "duration": 3.4242654,
+          "duration": 3.173826,
           "process_status": "Success",
           "argv": [
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
@@ -1576,7 +1648,7 @@
         },
         {
           "phase": "Test",
-          "duration": 1.0107861,
+          "duration": 1.061174,
           "process_status": {
             "Failure": 101
           },
@@ -1584,7 +1656,10 @@
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
             "test",
             "--verbose",
-            "--package=flaps_core@0.0.1"
+            "--package=flaps_core@0.0.1",
+            "-p",
+            "flaps_core",
+            "--lib"
           ]
         }
       ]
@@ -1629,7 +1704,7 @@
       "phase_results": [
         {
           "phase": "Build",
-          "duration": 2.7191694,
+          "duration": 3.0198447,
           "process_status": "Success",
           "argv": [
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
@@ -1641,7 +1716,7 @@
         },
         {
           "phase": "Test",
-          "duration": 1.1608837,
+          "duration": 1.2117774,
           "process_status": {
             "Failure": 101
           },
@@ -1649,7 +1724,10 @@
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
             "test",
             "--verbose",
-            "--package=flaps_core@0.0.1"
+            "--package=flaps_core@0.0.1",
+            "-p",
+            "flaps_core",
+            "--lib"
           ]
         }
       ]
@@ -1694,7 +1772,7 @@
       "phase_results": [
         {
           "phase": "Build",
-          "duration": 3.1708625,
+          "duration": 3.4229602,
           "process_status": "Success",
           "argv": [
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
@@ -1706,7 +1784,7 @@
         },
         {
           "phase": "Test",
-          "duration": 1.0095428,
+          "duration": 1.2611859,
           "process_status": {
             "Failure": 101
           },
@@ -1714,7 +1792,10 @@
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
             "test",
             "--verbose",
-            "--package=flaps_core@0.0.1"
+            "--package=flaps_core@0.0.1",
+            "-p",
+            "flaps_core",
+            "--lib"
           ]
         }
       ]
@@ -1759,7 +1840,7 @@
       "phase_results": [
         {
           "phase": "Build",
-          "duration": 3.0225138,
+          "duration": 4.1301149,
           "process_status": "Success",
           "argv": [
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
@@ -1771,7 +1852,7 @@
         },
         {
           "phase": "Test",
-          "duration": 1.2626914,
+          "duration": 1.1133144,
           "process_status": {
             "Failure": 101
           },
@@ -1779,7 +1860,10 @@
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
             "test",
             "--verbose",
-            "--package=flaps_core@0.0.1"
+            "--package=flaps_core@0.0.1",
+            "-p",
+            "flaps_core",
+            "--lib"
           ]
         }
       ]
@@ -1824,7 +1908,7 @@
       "phase_results": [
         {
           "phase": "Build",
-          "duration": 3.2736565,
+          "duration": 4.4258243,
           "process_status": "Success",
           "argv": [
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
@@ -1836,7 +1920,7 @@
         },
         {
           "phase": "Test",
-          "duration": 1.0104648,
+          "duration": 1.934339,
           "process_status": {
             "Failure": 101
           },
@@ -1844,7 +1928,10 @@
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
             "test",
             "--verbose",
-            "--package=flaps_core@0.0.1"
+            "--package=flaps_core@0.0.1",
+            "-p",
+            "flaps_core",
+            "--lib"
           ]
         }
       ]
@@ -1889,7 +1976,7 @@
       "phase_results": [
         {
           "phase": "Build",
-          "duration": 3.175234,
+          "duration": 3.3266339,
           "process_status": "Success",
           "argv": [
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
@@ -1901,7 +1988,7 @@
         },
         {
           "phase": "Test",
-          "duration": 1.0601158,
+          "duration": 1.1116485,
           "process_status": {
             "Failure": 101
           },
@@ -1909,7 +1996,10 @@
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
             "test",
             "--verbose",
-            "--package=flaps_core@0.0.1"
+            "--package=flaps_core@0.0.1",
+            "-p",
+            "flaps_core",
+            "--lib"
           ]
         }
       ]
@@ -1954,7 +2044,7 @@
       "phase_results": [
         {
           "phase": "Build",
-          "duration": 3.1849867,
+          "duration": 2.9224243,
           "process_status": "Success",
           "argv": [
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
@@ -1966,7 +2056,7 @@
         },
         {
           "phase": "Test",
-          "duration": 1.0595001,
+          "duration": 0.9594485,
           "process_status": {
             "Failure": 101
           },
@@ -1974,7 +2064,10 @@
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
             "test",
             "--verbose",
-            "--package=flaps_core@0.0.1"
+            "--package=flaps_core@0.0.1",
+            "-p",
+            "flaps_core",
+            "--lib"
           ]
         }
       ]
@@ -2019,7 +2112,7 @@
       "phase_results": [
         {
           "phase": "Build",
-          "duration": 3.9297508,
+          "duration": 2.6194256,
           "process_status": "Success",
           "argv": [
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
@@ -2031,7 +2124,7 @@
         },
         {
           "phase": "Test",
-          "duration": 1.1627214,
+          "duration": 2.0683389,
           "process_status": {
             "Failure": 101
           },
@@ -2039,7 +2132,10 @@
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
             "test",
             "--verbose",
-            "--package=flaps_core@0.0.1"
+            "--package=flaps_core@0.0.1",
+            "-p",
+            "flaps_core",
+            "--lib"
           ]
         }
       ]
@@ -2084,7 +2180,7 @@
       "phase_results": [
         {
           "phase": "Build",
-          "duration": 3.9271773,
+          "duration": 5.3998371,
           "process_status": "Success",
           "argv": [
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
@@ -2096,7 +2192,7 @@
         },
         {
           "phase": "Test",
-          "duration": 1.3129095,
+          "duration": 1.5705251,
           "process_status": {
             "Failure": 101
           },
@@ -2104,7 +2200,10 @@
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
             "test",
             "--verbose",
-            "--package=flaps_core@0.0.1"
+            "--package=flaps_core@0.0.1",
+            "-p",
+            "flaps_core",
+            "--lib"
           ]
         }
       ]
@@ -2149,7 +2248,7 @@
       "phase_results": [
         {
           "phase": "Build",
-          "duration": 3.174429,
+          "duration": 3.778466,
           "process_status": "Success",
           "argv": [
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
@@ -2161,7 +2260,7 @@
         },
         {
           "phase": "Test",
-          "duration": 1.4721069,
+          "duration": 1.1129739,
           "process_status": {
             "Failure": 101
           },
@@ -2169,7 +2268,10 @@
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
             "test",
             "--verbose",
-            "--package=flaps_core@0.0.1"
+            "--package=flaps_core@0.0.1",
+            "-p",
+            "flaps_core",
+            "--lib"
           ]
         }
       ]
@@ -2214,7 +2316,7 @@
       "phase_results": [
         {
           "phase": "Build",
-          "duration": 2.9213943,
+          "duration": 2.9215701,
           "process_status": "Success",
           "argv": [
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
@@ -2226,7 +2328,7 @@
         },
         {
           "phase": "Test",
-          "duration": 0.9098824,
+          "duration": 1.1123906,
           "process_status": {
             "Failure": 101
           },
@@ -2234,7 +2336,10 @@
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
             "test",
             "--verbose",
-            "--package=flaps_core@0.0.1"
+            "--package=flaps_core@0.0.1",
+            "-p",
+            "flaps_core",
+            "--lib"
           ]
         }
       ]
@@ -2279,7 +2384,7 @@
       "phase_results": [
         {
           "phase": "Build",
-          "duration": 3.0270141,
+          "duration": 3.1229511,
           "process_status": "Success",
           "argv": [
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
@@ -2291,7 +2396,7 @@
         },
         {
           "phase": "Test",
-          "duration": 1.2120819,
+          "duration": 1.1610197,
           "process_status": {
             "Failure": 101
           },
@@ -2299,7 +2404,10 @@
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
             "test",
             "--verbose",
-            "--package=flaps_core@0.0.1"
+            "--package=flaps_core@0.0.1",
+            "-p",
+            "flaps_core",
+            "--lib"
           ]
         }
       ]
@@ -2344,7 +2452,7 @@
       "phase_results": [
         {
           "phase": "Build",
-          "duration": 2.9204631,
+          "duration": 2.8210452999999998,
           "process_status": "Success",
           "argv": [
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
@@ -2356,7 +2464,7 @@
         },
         {
           "phase": "Test",
-          "duration": 1.0101885,
+          "duration": 1.1114032,
           "process_status": {
             "Failure": 101
           },
@@ -2364,7 +2472,10 @@
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
             "test",
             "--verbose",
-            "--package=flaps_core@0.0.1"
+            "--package=flaps_core@0.0.1",
+            "-p",
+            "flaps_core",
+            "--lib"
           ]
         }
       ]
@@ -2409,7 +2520,7 @@
       "phase_results": [
         {
           "phase": "Build",
-          "duration": 3.0217868,
+          "duration": 2.8221715,
           "process_status": "Success",
           "argv": [
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
@@ -2421,7 +2532,7 @@
         },
         {
           "phase": "Test",
-          "duration": 1.2638209,
+          "duration": 1.1117527,
           "process_status": {
             "Failure": 101
           },
@@ -2429,7 +2540,10 @@
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
             "test",
             "--verbose",
-            "--package=flaps_core@0.0.1"
+            "--package=flaps_core@0.0.1",
+            "-p",
+            "flaps_core",
+            "--lib"
           ]
         }
       ]
@@ -2437,7 +2551,7 @@
     {
       "scenario": {
         "Mutant": {
-          "name": "core/src/money.rs:309:5: replace parse_decimal_to_minor_i128 -> Result<i128, MoneyError> with Ok(0)",
+          "name": "core/src/money.rs:339:5: replace parse_decimal_to_minor_i128 -> Result<i128, MoneyError> with Ok(0)",
           "package": "flaps_core",
           "file": "core/src/money.rs",
           "function": {
@@ -2445,22 +2559,22 @@
             "return_type": "-> Result<i128, MoneyError>",
             "span": {
               "start": {
-                "line": 305,
+                "line": 335,
                 "column": 1
               },
               "end": {
-                "line": 352,
+                "line": 382,
                 "column": 2
               }
             }
           },
           "span": {
             "start": {
-              "line": 309,
+              "line": 339,
               "column": 5
             },
             "end": {
-              "line": 351,
+              "line": 381,
               "column": 7
             }
           },
@@ -2469,12 +2583,12 @@
         }
       },
       "summary": "CaughtMutant",
-      "log_path": "log/core__src__money.rs_line_309_col_5.log",
-      "diff_path": "diff/core__src__money.rs_line_309_col_5.diff",
+      "log_path": "log/core__src__money.rs_line_339_col_5.log",
+      "diff_path": "diff/core__src__money.rs_line_339_col_5.diff",
       "phase_results": [
         {
           "phase": "Build",
-          "duration": 5.2983399,
+          "duration": 3.0244447,
           "process_status": "Success",
           "argv": [
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
@@ -2486,7 +2600,7 @@
         },
         {
           "phase": "Test",
-          "duration": 2.0703095,
+          "duration": 1.1629113,
           "process_status": {
             "Failure": 101
           },
@@ -2494,7 +2608,10 @@
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
             "test",
             "--verbose",
-            "--package=flaps_core@0.0.1"
+            "--package=flaps_core@0.0.1",
+            "-p",
+            "flaps_core",
+            "--lib"
           ]
         }
       ]
@@ -2502,7 +2619,7 @@
     {
       "scenario": {
         "Mutant": {
-          "name": "core/src/money.rs:309:5: replace parse_decimal_to_minor_i128 -> Result<i128, MoneyError> with Ok(1)",
+          "name": "core/src/money.rs:339:5: replace parse_decimal_to_minor_i128 -> Result<i128, MoneyError> with Ok(1)",
           "package": "flaps_core",
           "file": "core/src/money.rs",
           "function": {
@@ -2510,22 +2627,22 @@
             "return_type": "-> Result<i128, MoneyError>",
             "span": {
               "start": {
-                "line": 305,
+                "line": 335,
                 "column": 1
               },
               "end": {
-                "line": 352,
+                "line": 382,
                 "column": 2
               }
             }
           },
           "span": {
             "start": {
-              "line": 309,
+              "line": 339,
               "column": 5
             },
             "end": {
-              "line": 351,
+              "line": 381,
               "column": 7
             }
           },
@@ -2534,12 +2651,12 @@
         }
       },
       "summary": "CaughtMutant",
-      "log_path": "log/core__src__money.rs_line_309_col_5_001.log",
-      "diff_path": "diff/core__src__money.rs_line_309_col_5_001.diff",
+      "log_path": "log/core__src__money.rs_line_339_col_5_001.log",
+      "diff_path": "diff/core__src__money.rs_line_339_col_5_001.diff",
       "phase_results": [
         {
           "phase": "Build",
-          "duration": 4.139391,
+          "duration": 2.8715607,
           "process_status": "Success",
           "argv": [
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
@@ -2551,7 +2668,7 @@
         },
         {
           "phase": "Test",
-          "duration": 1.0609334,
+          "duration": 1.1111548,
           "process_status": {
             "Failure": 101
           },
@@ -2559,7 +2676,10 @@
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
             "test",
             "--verbose",
-            "--package=flaps_core@0.0.1"
+            "--package=flaps_core@0.0.1",
+            "-p",
+            "flaps_core",
+            "--lib"
           ]
         }
       ]
@@ -2567,7 +2687,7 @@
     {
       "scenario": {
         "Mutant": {
-          "name": "core/src/money.rs:309:5: replace parse_decimal_to_minor_i128 -> Result<i128, MoneyError> with Ok(-1)",
+          "name": "core/src/money.rs:339:5: replace parse_decimal_to_minor_i128 -> Result<i128, MoneyError> with Ok(-1)",
           "package": "flaps_core",
           "file": "core/src/money.rs",
           "function": {
@@ -2575,22 +2695,22 @@
             "return_type": "-> Result<i128, MoneyError>",
             "span": {
               "start": {
-                "line": 305,
+                "line": 335,
                 "column": 1
               },
               "end": {
-                "line": 352,
+                "line": 382,
                 "column": 2
               }
             }
           },
           "span": {
             "start": {
-              "line": 309,
+              "line": 339,
               "column": 5
             },
             "end": {
-              "line": 351,
+              "line": 381,
               "column": 7
             }
           },
@@ -2599,12 +2719,12 @@
         }
       },
       "summary": "CaughtMutant",
-      "log_path": "log/core__src__money.rs_line_309_col_5_002.log",
-      "diff_path": "diff/core__src__money.rs_line_309_col_5_002.diff",
+      "log_path": "log/core__src__money.rs_line_339_col_5_002.log",
+      "diff_path": "diff/core__src__money.rs_line_339_col_5_002.diff",
       "phase_results": [
         {
           "phase": "Build",
-          "duration": 3.3739063,
+          "duration": 2.9234847,
           "process_status": "Success",
           "argv": [
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
@@ -2616,7 +2736,7 @@
         },
         {
           "phase": "Test",
-          "duration": 1.1608937,
+          "duration": 1.1111739,
           "process_status": {
             "Failure": 101
           },
@@ -2624,7 +2744,10 @@
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
             "test",
             "--verbose",
-            "--package=flaps_core@0.0.1"
+            "--package=flaps_core@0.0.1",
+            "-p",
+            "flaps_core",
+            "--lib"
           ]
         }
       ]
@@ -2632,7 +2755,7 @@
     {
       "scenario": {
         "Mutant": {
-          "name": "core/src/money.rs:317:60: replace || with && in parse_decimal_to_minor_i128",
+          "name": "core/src/money.rs:347:60: replace || with && in parse_decimal_to_minor_i128",
           "package": "flaps_core",
           "file": "core/src/money.rs",
           "function": {
@@ -2640,22 +2763,22 @@
             "return_type": "-> Result<i128, MoneyError>",
             "span": {
               "start": {
-                "line": 305,
+                "line": 335,
                 "column": 1
               },
               "end": {
-                "line": 352,
+                "line": 382,
                 "column": 2
               }
             }
           },
           "span": {
             "start": {
-              "line": 317,
+              "line": 347,
               "column": 60
             },
             "end": {
-              "line": 317,
+              "line": 347,
               "column": 62
             }
           },
@@ -2664,12 +2787,12 @@
         }
       },
       "summary": "MissedMutant",
-      "log_path": "log/core__src__money.rs_line_317_col_60.log",
-      "diff_path": "diff/core__src__money.rs_line_317_col_60.diff",
+      "log_path": "log/core__src__money.rs_line_347_col_60.log",
+      "diff_path": "diff/core__src__money.rs_line_347_col_60.diff",
       "phase_results": [
         {
           "phase": "Build",
-          "duration": 3.1744975,
+          "duration": 2.9731716,
           "process_status": "Success",
           "argv": [
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
@@ -2681,13 +2804,16 @@
         },
         {
           "phase": "Test",
-          "duration": 1.3626456,
+          "duration": 1.2112955,
           "process_status": "Success",
           "argv": [
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
             "test",
             "--verbose",
-            "--package=flaps_core@0.0.1"
+            "--package=flaps_core@0.0.1",
+            "-p",
+            "flaps_core",
+            "--lib"
           ]
         }
       ]
@@ -2695,7 +2821,7 @@
     {
       "scenario": {
         "Mutant": {
-          "name": "core/src/money.rs:317:8: delete ! in parse_decimal_to_minor_i128",
+          "name": "core/src/money.rs:347:8: delete ! in parse_decimal_to_minor_i128",
           "package": "flaps_core",
           "file": "core/src/money.rs",
           "function": {
@@ -2703,22 +2829,22 @@
             "return_type": "-> Result<i128, MoneyError>",
             "span": {
               "start": {
-                "line": 305,
+                "line": 335,
                 "column": 1
               },
               "end": {
-                "line": 352,
+                "line": 382,
                 "column": 2
               }
             }
           },
           "span": {
             "start": {
-              "line": 317,
+              "line": 347,
               "column": 8
             },
             "end": {
-              "line": 317,
+              "line": 347,
               "column": 9
             }
           },
@@ -2727,12 +2853,12 @@
         }
       },
       "summary": "CaughtMutant",
-      "log_path": "log/core__src__money.rs_line_317_col_8.log",
-      "diff_path": "diff/core__src__money.rs_line_317_col_8.diff",
+      "log_path": "log/core__src__money.rs_line_347_col_8.log",
+      "diff_path": "diff/core__src__money.rs_line_347_col_8.diff",
       "phase_results": [
         {
           "phase": "Build",
-          "duration": 3.3742447,
+          "duration": 3.9319041,
           "process_status": "Success",
           "argv": [
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
@@ -2744,7 +2870,7 @@
         },
         {
           "phase": "Test",
-          "duration": 1.1098772,
+          "duration": 1.3621376,
           "process_status": {
             "Failure": 101
           },
@@ -2752,7 +2878,10 @@
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
             "test",
             "--verbose",
-            "--package=flaps_core@0.0.1"
+            "--package=flaps_core@0.0.1",
+            "-p",
+            "flaps_core",
+            "--lib"
           ]
         }
       ]
@@ -2760,7 +2889,7 @@
     {
       "scenario": {
         "Mutant": {
-          "name": "core/src/money.rs:317:46: replace || with && in parse_decimal_to_minor_i128",
+          "name": "core/src/money.rs:347:46: replace || with && in parse_decimal_to_minor_i128",
           "package": "flaps_core",
           "file": "core/src/money.rs",
           "function": {
@@ -2768,22 +2897,22 @@
             "return_type": "-> Result<i128, MoneyError>",
             "span": {
               "start": {
-                "line": 305,
+                "line": 335,
                 "column": 1
               },
               "end": {
-                "line": 352,
+                "line": 382,
                 "column": 2
               }
             }
           },
           "span": {
             "start": {
-              "line": 317,
+              "line": 347,
               "column": 46
             },
             "end": {
-              "line": 317,
+              "line": 347,
               "column": 48
             }
           },
@@ -2792,12 +2921,12 @@
         }
       },
       "summary": "CaughtMutant",
-      "log_path": "log/core__src__money.rs_line_317_col_46.log",
-      "diff_path": "diff/core__src__money.rs_line_317_col_46.diff",
+      "log_path": "log/core__src__money.rs_line_347_col_46.log",
+      "diff_path": "diff/core__src__money.rs_line_347_col_46.diff",
       "phase_results": [
         {
           "phase": "Build",
-          "duration": 3.0216734,
+          "duration": 2.9738591,
           "process_status": "Success",
           "argv": [
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
@@ -2809,7 +2938,7 @@
         },
         {
           "phase": "Test",
-          "duration": 1.1633004,
+          "duration": 1.1622025,
           "process_status": {
             "Failure": 101
           },
@@ -2817,7 +2946,10 @@
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
             "test",
             "--verbose",
-            "--package=flaps_core@0.0.1"
+            "--package=flaps_core@0.0.1",
+            "-p",
+            "flaps_core",
+            "--lib"
           ]
         }
       ]
@@ -2825,7 +2957,7 @@
     {
       "scenario": {
         "Mutant": {
-          "name": "core/src/money.rs:317:51: replace == with != in parse_decimal_to_minor_i128",
+          "name": "core/src/money.rs:347:51: replace == with != in parse_decimal_to_minor_i128",
           "package": "flaps_core",
           "file": "core/src/money.rs",
           "function": {
@@ -2833,22 +2965,22 @@
             "return_type": "-> Result<i128, MoneyError>",
             "span": {
               "start": {
-                "line": 305,
+                "line": 335,
                 "column": 1
               },
               "end": {
-                "line": 352,
+                "line": 382,
                 "column": 2
               }
             }
           },
           "span": {
             "start": {
-              "line": 317,
+              "line": 347,
               "column": 51
             },
             "end": {
-              "line": 317,
+              "line": 347,
               "column": 53
             }
           },
@@ -2857,12 +2989,12 @@
         }
       },
       "summary": "CaughtMutant",
-      "log_path": "log/core__src__money.rs_line_317_col_51.log",
-      "diff_path": "diff/core__src__money.rs_line_317_col_51.diff",
+      "log_path": "log/core__src__money.rs_line_347_col_51.log",
+      "diff_path": "diff/core__src__money.rs_line_347_col_51.diff",
       "phase_results": [
         {
           "phase": "Build",
-          "duration": 3.4264048,
+          "duration": 3.0210387,
           "process_status": "Success",
           "argv": [
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
@@ -2874,7 +3006,7 @@
         },
         {
           "phase": "Test",
-          "duration": 1.4695741,
+          "duration": 1.1609569,
           "process_status": {
             "Failure": 101
           },
@@ -2882,7 +3014,10 @@
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
             "test",
             "--verbose",
-            "--package=flaps_core@0.0.1"
+            "--package=flaps_core@0.0.1",
+            "-p",
+            "flaps_core",
+            "--lib"
           ]
         }
       ]
@@ -2890,7 +3025,7 @@
     {
       "scenario": {
         "Mutant": {
-          "name": "core/src/money.rs:317:86: replace > with == in parse_decimal_to_minor_i128",
+          "name": "core/src/money.rs:347:86: replace > with == in parse_decimal_to_minor_i128",
           "package": "flaps_core",
           "file": "core/src/money.rs",
           "function": {
@@ -2898,22 +3033,22 @@
             "return_type": "-> Result<i128, MoneyError>",
             "span": {
               "start": {
-                "line": 305,
+                "line": 335,
                 "column": 1
               },
               "end": {
-                "line": 352,
+                "line": 382,
                 "column": 2
               }
             }
           },
           "span": {
             "start": {
-              "line": 317,
+              "line": 347,
               "column": 86
             },
             "end": {
-              "line": 317,
+              "line": 347,
               "column": 87
             }
           },
@@ -2922,12 +3057,12 @@
         }
       },
       "summary": "CaughtMutant",
-      "log_path": "log/core__src__money.rs_line_317_col_86.log",
-      "diff_path": "diff/core__src__money.rs_line_317_col_86.diff",
+      "log_path": "log/core__src__money.rs_line_347_col_86.log",
+      "diff_path": "diff/core__src__money.rs_line_347_col_86.diff",
       "phase_results": [
         {
           "phase": "Build",
-          "duration": 3.3761669,
+          "duration": 3.2239433,
           "process_status": "Success",
           "argv": [
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
@@ -2939,7 +3074,7 @@
         },
         {
           "phase": "Test",
-          "duration": 1.4144894,
+          "duration": 1.160489,
           "process_status": {
             "Failure": 101
           },
@@ -2947,7 +3082,10 @@
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
             "test",
             "--verbose",
-            "--package=flaps_core@0.0.1"
+            "--package=flaps_core@0.0.1",
+            "-p",
+            "flaps_core",
+            "--lib"
           ]
         }
       ]
@@ -2955,7 +3093,7 @@
     {
       "scenario": {
         "Mutant": {
-          "name": "core/src/money.rs:317:86: replace > with < in parse_decimal_to_minor_i128",
+          "name": "core/src/money.rs:347:86: replace > with < in parse_decimal_to_minor_i128",
           "package": "flaps_core",
           "file": "core/src/money.rs",
           "function": {
@@ -2963,22 +3101,22 @@
             "return_type": "-> Result<i128, MoneyError>",
             "span": {
               "start": {
-                "line": 305,
+                "line": 335,
                 "column": 1
               },
               "end": {
-                "line": 352,
+                "line": 382,
                 "column": 2
               }
             }
           },
           "span": {
             "start": {
-              "line": 317,
+              "line": 347,
               "column": 86
             },
             "end": {
-              "line": 317,
+              "line": 347,
               "column": 87
             }
           },
@@ -2986,13 +3124,13 @@
           "genre": "BinaryOperator"
         }
       },
-      "summary": "MissedMutant",
-      "log_path": "log/core__src__money.rs_line_317_col_86_001.log",
-      "diff_path": "diff/core__src__money.rs_line_317_col_86_001.diff",
+      "summary": "CaughtMutant",
+      "log_path": "log/core__src__money.rs_line_347_col_86_001.log",
+      "diff_path": "diff/core__src__money.rs_line_347_col_86_001.diff",
       "phase_results": [
         {
           "phase": "Build",
-          "duration": 3.1709708,
+          "duration": 3.0240497,
           "process_status": "Success",
           "argv": [
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
@@ -3004,13 +3142,18 @@
         },
         {
           "phase": "Test",
-          "duration": 1.4115212,
-          "process_status": "Success",
+          "duration": 1.0081316,
+          "process_status": {
+            "Failure": 101
+          },
           "argv": [
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
             "test",
             "--verbose",
-            "--package=flaps_core@0.0.1"
+            "--package=flaps_core@0.0.1",
+            "-p",
+            "flaps_core",
+            "--lib"
           ]
         }
       ]
@@ -3018,7 +3161,7 @@
     {
       "scenario": {
         "Mutant": {
-          "name": "core/src/money.rs:317:86: replace > with >= in parse_decimal_to_minor_i128",
+          "name": "core/src/money.rs:347:86: replace > with >= in parse_decimal_to_minor_i128",
           "package": "flaps_core",
           "file": "core/src/money.rs",
           "function": {
@@ -3026,22 +3169,22 @@
             "return_type": "-> Result<i128, MoneyError>",
             "span": {
               "start": {
-                "line": 305,
+                "line": 335,
                 "column": 1
               },
               "end": {
-                "line": 352,
+                "line": 382,
                 "column": 2
               }
             }
           },
           "span": {
             "start": {
-              "line": 317,
+              "line": 347,
               "column": 86
             },
             "end": {
-              "line": 317,
+              "line": 347,
               "column": 87
             }
           },
@@ -3050,12 +3193,12 @@
         }
       },
       "summary": "CaughtMutant",
-      "log_path": "log/core__src__money.rs_line_317_col_86_002.log",
-      "diff_path": "diff/core__src__money.rs_line_317_col_86_002.diff",
+      "log_path": "log/core__src__money.rs_line_347_col_86_002.log",
+      "diff_path": "diff/core__src__money.rs_line_347_col_86_002.diff",
       "phase_results": [
         {
           "phase": "Build",
-          "duration": 3.3244327,
+          "duration": 3.3247184,
           "process_status": "Success",
           "argv": [
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
@@ -3067,7 +3210,7 @@
         },
         {
           "phase": "Test",
-          "duration": 1.0601762,
+          "duration": 1.3138653,
           "process_status": {
             "Failure": 101
           },
@@ -3075,7 +3218,10 @@
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
             "test",
             "--verbose",
-            "--package=flaps_core@0.0.1"
+            "--package=flaps_core@0.0.1",
+            "-p",
+            "flaps_core",
+            "--lib"
           ]
         }
       ]
@@ -3083,7 +3229,7 @@
     {
       "scenario": {
         "Mutant": {
-          "name": "core/src/money.rs:325:25: replace > with == in parse_decimal_to_minor_i128",
+          "name": "core/src/money.rs:355:25: replace > with == in parse_decimal_to_minor_i128",
           "package": "flaps_core",
           "file": "core/src/money.rs",
           "function": {
@@ -3091,22 +3237,22 @@
             "return_type": "-> Result<i128, MoneyError>",
             "span": {
               "start": {
-                "line": 305,
+                "line": 335,
                 "column": 1
               },
               "end": {
-                "line": 352,
+                "line": 382,
                 "column": 2
               }
             }
           },
           "span": {
             "start": {
-              "line": 325,
+              "line": 355,
               "column": 25
             },
             "end": {
-              "line": 325,
+              "line": 355,
               "column": 26
             }
           },
@@ -3115,12 +3261,12 @@
         }
       },
       "summary": "CaughtMutant",
-      "log_path": "log/core__src__money.rs_line_325_col_25.log",
-      "diff_path": "diff/core__src__money.rs_line_325_col_25.diff",
+      "log_path": "log/core__src__money.rs_line_355_col_25.log",
+      "diff_path": "diff/core__src__money.rs_line_355_col_25.diff",
       "phase_results": [
         {
           "phase": "Build",
-          "duration": 3.3720258,
+          "duration": 3.7344265,
           "process_status": "Success",
           "argv": [
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
@@ -3132,7 +3278,7 @@
         },
         {
           "phase": "Test",
-          "duration": 1.2121775,
+          "duration": 1.2136714,
           "process_status": {
             "Failure": 101
           },
@@ -3140,7 +3286,10 @@
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
             "test",
             "--verbose",
-            "--package=flaps_core@0.0.1"
+            "--package=flaps_core@0.0.1",
+            "-p",
+            "flaps_core",
+            "--lib"
           ]
         }
       ]
@@ -3148,7 +3297,7 @@
     {
       "scenario": {
         "Mutant": {
-          "name": "core/src/money.rs:325:25: replace > with < in parse_decimal_to_minor_i128",
+          "name": "core/src/money.rs:355:25: replace > with < in parse_decimal_to_minor_i128",
           "package": "flaps_core",
           "file": "core/src/money.rs",
           "function": {
@@ -3156,22 +3305,22 @@
             "return_type": "-> Result<i128, MoneyError>",
             "span": {
               "start": {
-                "line": 305,
+                "line": 335,
                 "column": 1
               },
               "end": {
-                "line": 352,
+                "line": 382,
                 "column": 2
               }
             }
           },
           "span": {
             "start": {
-              "line": 325,
+              "line": 355,
               "column": 25
             },
             "end": {
-              "line": 325,
+              "line": 355,
               "column": 26
             }
           },
@@ -3179,13 +3328,13 @@
           "genre": "BinaryOperator"
         }
       },
-      "summary": "MissedMutant",
-      "log_path": "log/core__src__money.rs_line_325_col_25_001.log",
-      "diff_path": "diff/core__src__money.rs_line_325_col_25_001.diff",
+      "summary": "CaughtMutant",
+      "log_path": "log/core__src__money.rs_line_355_col_25_001.log",
+      "diff_path": "diff/core__src__money.rs_line_355_col_25_001.diff",
       "phase_results": [
         {
           "phase": "Build",
-          "duration": 3.9275417,
+          "duration": 3.1719279,
           "process_status": "Success",
           "argv": [
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
@@ -3197,13 +3346,18 @@
         },
         {
           "phase": "Test",
-          "duration": 1.7140134,
-          "process_status": "Success",
+          "duration": 1.2618961,
+          "process_status": {
+            "Failure": 101
+          },
           "argv": [
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
             "test",
             "--verbose",
-            "--package=flaps_core@0.0.1"
+            "--package=flaps_core@0.0.1",
+            "-p",
+            "flaps_core",
+            "--lib"
           ]
         }
       ]
@@ -3211,7 +3365,7 @@
     {
       "scenario": {
         "Mutant": {
-          "name": "core/src/money.rs:325:25: replace > with >= in parse_decimal_to_minor_i128",
+          "name": "core/src/money.rs:355:25: replace > with >= in parse_decimal_to_minor_i128",
           "package": "flaps_core",
           "file": "core/src/money.rs",
           "function": {
@@ -3219,22 +3373,22 @@
             "return_type": "-> Result<i128, MoneyError>",
             "span": {
               "start": {
-                "line": 305,
+                "line": 335,
                 "column": 1
               },
               "end": {
-                "line": 352,
+                "line": 382,
                 "column": 2
               }
             }
           },
           "span": {
             "start": {
-              "line": 325,
+              "line": 355,
               "column": 25
             },
             "end": {
-              "line": 325,
+              "line": 355,
               "column": 26
             }
           },
@@ -3243,12 +3397,12 @@
         }
       },
       "summary": "CaughtMutant",
-      "log_path": "log/core__src__money.rs_line_325_col_25_002.log",
-      "diff_path": "diff/core__src__money.rs_line_325_col_25_002.diff",
+      "log_path": "log/core__src__money.rs_line_355_col_25_002.log",
+      "diff_path": "diff/core__src__money.rs_line_355_col_25_002.diff",
       "phase_results": [
         {
           "phase": "Build",
-          "duration": 3.2764995,
+          "duration": 2.9180653,
           "process_status": "Success",
           "argv": [
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
@@ -3260,7 +3414,7 @@
         },
         {
           "phase": "Test",
-          "duration": 1.1107983,
+          "duration": 1.0087361,
           "process_status": {
             "Failure": 101
           },
@@ -3268,7 +3422,10 @@
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
             "test",
             "--verbose",
-            "--package=flaps_core@0.0.1"
+            "--package=flaps_core@0.0.1",
+            "-p",
+            "flaps_core",
+            "--lib"
           ]
         }
       ]
@@ -3276,7 +3433,7 @@
     {
       "scenario": {
         "Mutant": {
-          "name": "core/src/money.rs:333:49: replace > with == in parse_decimal_to_minor_i128",
+          "name": "core/src/money.rs:363:49: replace > with == in parse_decimal_to_minor_i128",
           "package": "flaps_core",
           "file": "core/src/money.rs",
           "function": {
@@ -3284,22 +3441,22 @@
             "return_type": "-> Result<i128, MoneyError>",
             "span": {
               "start": {
-                "line": 305,
+                "line": 335,
                 "column": 1
               },
               "end": {
-                "line": 352,
+                "line": 382,
                 "column": 2
               }
             }
           },
           "span": {
             "start": {
-              "line": 333,
+              "line": 363,
               "column": 49
             },
             "end": {
-              "line": 333,
+              "line": 363,
               "column": 50
             }
           },
@@ -3307,13 +3464,13 @@
           "genre": "BinaryOperator"
         }
       },
-      "summary": "MissedMutant",
-      "log_path": "log/core__src__money.rs_line_333_col_49.log",
-      "diff_path": "diff/core__src__money.rs_line_333_col_49.diff",
+      "summary": "CaughtMutant",
+      "log_path": "log/core__src__money.rs_line_363_col_49.log",
+      "diff_path": "diff/core__src__money.rs_line_363_col_49.diff",
       "phase_results": [
         {
           "phase": "Build",
-          "duration": 2.9706235,
+          "duration": 3.0205259,
           "process_status": "Success",
           "argv": [
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
@@ -3325,13 +3482,18 @@
         },
         {
           "phase": "Test",
-          "duration": 1.5112257,
-          "process_status": "Success",
+          "duration": 0.9611631,
+          "process_status": {
+            "Failure": 101
+          },
           "argv": [
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
             "test",
             "--verbose",
-            "--package=flaps_core@0.0.1"
+            "--package=flaps_core@0.0.1",
+            "-p",
+            "flaps_core",
+            "--lib"
           ]
         }
       ]
@@ -3339,7 +3501,7 @@
     {
       "scenario": {
         "Mutant": {
-          "name": "core/src/money.rs:333:49: replace > with < in parse_decimal_to_minor_i128",
+          "name": "core/src/money.rs:363:49: replace > with < in parse_decimal_to_minor_i128",
           "package": "flaps_core",
           "file": "core/src/money.rs",
           "function": {
@@ -3347,22 +3509,22 @@
             "return_type": "-> Result<i128, MoneyError>",
             "span": {
               "start": {
-                "line": 305,
+                "line": 335,
                 "column": 1
               },
               "end": {
-                "line": 352,
+                "line": 382,
                 "column": 2
               }
             }
           },
           "span": {
             "start": {
-              "line": 333,
+              "line": 363,
               "column": 49
             },
             "end": {
-              "line": 333,
+              "line": 363,
               "column": 50
             }
           },
@@ -3371,12 +3533,12 @@
         }
       },
       "summary": "CaughtMutant",
-      "log_path": "log/core__src__money.rs_line_333_col_49_001.log",
-      "diff_path": "diff/core__src__money.rs_line_333_col_49_001.diff",
+      "log_path": "log/core__src__money.rs_line_363_col_49_001.log",
+      "diff_path": "diff/core__src__money.rs_line_363_col_49_001.diff",
       "phase_results": [
         {
           "phase": "Build",
-          "duration": 3.2230015,
+          "duration": 2.8712232,
           "process_status": "Success",
           "argv": [
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
@@ -3388,7 +3550,7 @@
         },
         {
           "phase": "Test",
-          "duration": 1.1096669,
+          "duration": 0.9595539,
           "process_status": {
             "Failure": 101
           },
@@ -3396,7 +3558,10 @@
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
             "test",
             "--verbose",
-            "--package=flaps_core@0.0.1"
+            "--package=flaps_core@0.0.1",
+            "-p",
+            "flaps_core",
+            "--lib"
           ]
         }
       ]
@@ -3404,7 +3569,7 @@
     {
       "scenario": {
         "Mutant": {
-          "name": "core/src/money.rs:333:49: replace > with >= in parse_decimal_to_minor_i128",
+          "name": "core/src/money.rs:363:49: replace > with >= in parse_decimal_to_minor_i128",
           "package": "flaps_core",
           "file": "core/src/money.rs",
           "function": {
@@ -3412,22 +3577,22 @@
             "return_type": "-> Result<i128, MoneyError>",
             "span": {
               "start": {
-                "line": 305,
+                "line": 335,
                 "column": 1
               },
               "end": {
-                "line": 352,
+                "line": 382,
                 "column": 2
               }
             }
           },
           "span": {
             "start": {
-              "line": 333,
+              "line": 363,
               "column": 49
             },
             "end": {
-              "line": 333,
+              "line": 363,
               "column": 50
             }
           },
@@ -3435,13 +3600,13 @@
           "genre": "BinaryOperator"
         }
       },
-      "summary": "MissedMutant",
-      "log_path": "log/core__src__money.rs_line_333_col_49_002.log",
-      "diff_path": "diff/core__src__money.rs_line_333_col_49_002.diff",
+      "summary": "CaughtMutant",
+      "log_path": "log/core__src__money.rs_line_363_col_49_002.log",
+      "diff_path": "diff/core__src__money.rs_line_363_col_49_002.diff",
       "phase_results": [
         {
           "phase": "Build",
-          "duration": 3.1725178,
+          "duration": 2.5210798,
           "process_status": "Success",
           "argv": [
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
@@ -3453,13 +3618,18 @@
         },
         {
           "phase": "Test",
-          "duration": 1.3116586,
-          "process_status": "Success",
+          "duration": 0.911641,
+          "process_status": {
+            "Failure": 101
+          },
           "argv": [
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
             "test",
             "--verbose",
-            "--package=flaps_core@0.0.1"
+            "--package=flaps_core@0.0.1",
+            "-p",
+            "flaps_core",
+            "--lib"
           ]
         }
       ]
@@ -3467,7 +3637,7 @@
     {
       "scenario": {
         "Mutant": {
-          "name": "core/src/money.rs:333:30: replace + with - in parse_decimal_to_minor_i128",
+          "name": "core/src/money.rs:363:30: replace + with - in parse_decimal_to_minor_i128",
           "package": "flaps_core",
           "file": "core/src/money.rs",
           "function": {
@@ -3475,22 +3645,22 @@
             "return_type": "-> Result<i128, MoneyError>",
             "span": {
               "start": {
-                "line": 305,
+                "line": 335,
                 "column": 1
               },
               "end": {
-                "line": 352,
+                "line": 382,
                 "column": 2
               }
             }
           },
           "span": {
             "start": {
-              "line": 333,
+              "line": 363,
               "column": 30
             },
             "end": {
-              "line": 333,
+              "line": 363,
               "column": 31
             }
           },
@@ -3499,12 +3669,12 @@
         }
       },
       "summary": "MissedMutant",
-      "log_path": "log/core__src__money.rs_line_333_col_30.log",
-      "diff_path": "diff/core__src__money.rs_line_333_col_30.diff",
+      "log_path": "log/core__src__money.rs_line_363_col_30.log",
+      "diff_path": "diff/core__src__money.rs_line_363_col_30.diff",
       "phase_results": [
         {
           "phase": "Build",
-          "duration": 3.2222029,
+          "duration": 2.5192289,
           "process_status": "Success",
           "argv": [
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
@@ -3516,13 +3686,16 @@
         },
         {
           "phase": "Test",
-          "duration": 1.3623779,
+          "duration": 0.9096488,
           "process_status": "Success",
           "argv": [
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
             "test",
             "--verbose",
-            "--package=flaps_core@0.0.1"
+            "--package=flaps_core@0.0.1",
+            "-p",
+            "flaps_core",
+            "--lib"
           ]
         }
       ]
@@ -3530,7 +3703,7 @@
     {
       "scenario": {
         "Mutant": {
-          "name": "core/src/money.rs:333:30: replace + with * in parse_decimal_to_minor_i128",
+          "name": "core/src/money.rs:363:30: replace + with * in parse_decimal_to_minor_i128",
           "package": "flaps_core",
           "file": "core/src/money.rs",
           "function": {
@@ -3538,22 +3711,22 @@
             "return_type": "-> Result<i128, MoneyError>",
             "span": {
               "start": {
-                "line": 305,
+                "line": 335,
                 "column": 1
               },
               "end": {
-                "line": 352,
+                "line": 382,
                 "column": 2
               }
             }
           },
           "span": {
             "start": {
-              "line": 333,
+              "line": 363,
               "column": 30
             },
             "end": {
-              "line": 333,
+              "line": 363,
               "column": 31
             }
           },
@@ -3561,13 +3734,13 @@
           "genre": "BinaryOperator"
         }
       },
-      "summary": "MissedMutant",
-      "log_path": "log/core__src__money.rs_line_333_col_30_001.log",
-      "diff_path": "diff/core__src__money.rs_line_333_col_30_001.diff",
+      "summary": "CaughtMutant",
+      "log_path": "log/core__src__money.rs_line_363_col_30_001.log",
+      "diff_path": "diff/core__src__money.rs_line_363_col_30_001.diff",
       "phase_results": [
         {
           "phase": "Build",
-          "duration": 3.1727644,
+          "duration": 2.5688331,
           "process_status": "Success",
           "argv": [
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
@@ -3579,13 +3752,18 @@
         },
         {
           "phase": "Test",
-          "duration": 1.3123358999999999,
-          "process_status": "Success",
+          "duration": 0.9589075,
+          "process_status": {
+            "Failure": 101
+          },
           "argv": [
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
             "test",
             "--verbose",
-            "--package=flaps_core@0.0.1"
+            "--package=flaps_core@0.0.1",
+            "-p",
+            "flaps_core",
+            "--lib"
           ]
         }
       ]
@@ -3593,7 +3771,7 @@
     {
       "scenario": {
         "Mutant": {
-          "name": "core/src/money.rs:342:30: replace - with + in parse_decimal_to_minor_i128",
+          "name": "core/src/money.rs:372:30: replace - with + in parse_decimal_to_minor_i128",
           "package": "flaps_core",
           "file": "core/src/money.rs",
           "function": {
@@ -3601,22 +3779,22 @@
             "return_type": "-> Result<i128, MoneyError>",
             "span": {
               "start": {
-                "line": 305,
+                "line": 335,
                 "column": 1
               },
               "end": {
-                "line": 352,
+                "line": 382,
                 "column": 2
               }
             }
           },
           "span": {
             "start": {
-              "line": 342,
+              "line": 372,
               "column": 30
             },
             "end": {
-              "line": 342,
+              "line": 372,
               "column": 31
             }
           },
@@ -3625,12 +3803,12 @@
         }
       },
       "summary": "CaughtMutant",
-      "log_path": "log/core__src__money.rs_line_342_col_30.log",
-      "diff_path": "diff/core__src__money.rs_line_342_col_30.diff",
+      "log_path": "log/core__src__money.rs_line_372_col_30.log",
+      "diff_path": "diff/core__src__money.rs_line_372_col_30.diff",
       "phase_results": [
         {
           "phase": "Build",
-          "duration": 3.1236727,
+          "duration": 2.9208223,
           "process_status": "Success",
           "argv": [
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
@@ -3642,7 +3820,7 @@
         },
         {
           "phase": "Test",
-          "duration": 1.161364,
+          "duration": 0.9591005,
           "process_status": {
             "Failure": 101
           },
@@ -3650,7 +3828,10 @@
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
             "test",
             "--verbose",
-            "--package=flaps_core@0.0.1"
+            "--package=flaps_core@0.0.1",
+            "-p",
+            "flaps_core",
+            "--lib"
           ]
         }
       ]
@@ -3658,7 +3839,7 @@
     {
       "scenario": {
         "Mutant": {
-          "name": "core/src/money.rs:342:30: replace - with / in parse_decimal_to_minor_i128",
+          "name": "core/src/money.rs:372:30: replace - with / in parse_decimal_to_minor_i128",
           "package": "flaps_core",
           "file": "core/src/money.rs",
           "function": {
@@ -3666,22 +3847,22 @@
             "return_type": "-> Result<i128, MoneyError>",
             "span": {
               "start": {
-                "line": 305,
+                "line": 335,
                 "column": 1
               },
               "end": {
-                "line": 352,
+                "line": 382,
                 "column": 2
               }
             }
           },
           "span": {
             "start": {
-              "line": 342,
+              "line": 372,
               "column": 30
             },
             "end": {
-              "line": 342,
+              "line": 372,
               "column": 31
             }
           },
@@ -3690,12 +3871,12 @@
         }
       },
       "summary": "CaughtMutant",
-      "log_path": "log/core__src__money.rs_line_342_col_30_001.log",
-      "diff_path": "diff/core__src__money.rs_line_342_col_30_001.diff",
+      "log_path": "log/core__src__money.rs_line_372_col_30_001.log",
+      "diff_path": "diff/core__src__money.rs_line_372_col_30_001.diff",
       "phase_results": [
         {
           "phase": "Build",
-          "duration": 3.0225874,
+          "duration": 2.5709966,
           "process_status": "Success",
           "argv": [
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
@@ -3707,7 +3888,7 @@
         },
         {
           "phase": "Test",
-          "duration": 1.1616298,
+          "duration": 1.0097303,
           "process_status": {
             "Failure": 101
           },
@@ -3715,7 +3896,10 @@
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
             "test",
             "--verbose",
-            "--package=flaps_core@0.0.1"
+            "--package=flaps_core@0.0.1",
+            "-p",
+            "flaps_core",
+            "--lib"
           ]
         }
       ]
@@ -3723,7 +3907,7 @@
     {
       "scenario": {
         "Mutant": {
-          "name": "core/src/money.rs:356:5: replace format_minor_i128 -> String with String::new()",
+          "name": "core/src/money.rs:386:5: replace format_minor_i128 -> String with String::new()",
           "package": "flaps_core",
           "file": "core/src/money.rs",
           "function": {
@@ -3731,22 +3915,22 @@
             "return_type": "-> String",
             "span": {
               "start": {
-                "line": 354,
+                "line": 384,
                 "column": 1
               },
               "end": {
-                "line": 378,
+                "line": 408,
                 "column": 2
               }
             }
           },
           "span": {
             "start": {
-              "line": 356,
+              "line": 386,
               "column": 5
             },
             "end": {
-              "line": 377,
+              "line": 407,
               "column": 46
             }
           },
@@ -3755,12 +3939,12 @@
         }
       },
       "summary": "CaughtMutant",
-      "log_path": "log/core__src__money.rs_line_356_col_5.log",
-      "diff_path": "diff/core__src__money.rs_line_356_col_5.diff",
+      "log_path": "log/core__src__money.rs_line_386_col_5.log",
+      "diff_path": "diff/core__src__money.rs_line_386_col_5.diff",
       "phase_results": [
         {
           "phase": "Build",
-          "duration": 3.4263097,
+          "duration": 2.8710296,
           "process_status": "Success",
           "argv": [
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
@@ -3772,7 +3956,7 @@
         },
         {
           "phase": "Test",
-          "duration": 1.1097672,
+          "duration": 1.0096672,
           "process_status": {
             "Failure": 101
           },
@@ -3780,7 +3964,10 @@
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
             "test",
             "--verbose",
-            "--package=flaps_core@0.0.1"
+            "--package=flaps_core@0.0.1",
+            "-p",
+            "flaps_core",
+            "--lib"
           ]
         }
       ]
@@ -3788,7 +3975,7 @@
     {
       "scenario": {
         "Mutant": {
-          "name": "core/src/money.rs:356:5: replace format_minor_i128 -> String with \"xyzzy\".into()",
+          "name": "core/src/money.rs:386:5: replace format_minor_i128 -> String with \"xyzzy\".into()",
           "package": "flaps_core",
           "file": "core/src/money.rs",
           "function": {
@@ -3796,22 +3983,22 @@
             "return_type": "-> String",
             "span": {
               "start": {
-                "line": 354,
+                "line": 384,
                 "column": 1
               },
               "end": {
-                "line": 378,
+                "line": 408,
                 "column": 2
               }
             }
           },
           "span": {
             "start": {
-              "line": 356,
+              "line": 386,
               "column": 5
             },
             "end": {
-              "line": 377,
+              "line": 407,
               "column": 46
             }
           },
@@ -3820,12 +4007,12 @@
         }
       },
       "summary": "CaughtMutant",
-      "log_path": "log/core__src__money.rs_line_356_col_5_001.log",
-      "diff_path": "diff/core__src__money.rs_line_356_col_5_001.diff",
+      "log_path": "log/core__src__money.rs_line_386_col_5_001.log",
+      "diff_path": "diff/core__src__money.rs_line_386_col_5_001.diff",
       "phase_results": [
         {
           "phase": "Build",
-          "duration": 3.6762094,
+          "duration": 2.7700369,
           "process_status": "Success",
           "argv": [
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
@@ -3837,7 +4024,7 @@
         },
         {
           "phase": "Test",
-          "duration": 1.0601014,
+          "duration": 0.909399,
           "process_status": {
             "Failure": 101
           },
@@ -3845,7 +4032,10 @@
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
             "test",
             "--verbose",
-            "--package=flaps_core@0.0.1"
+            "--package=flaps_core@0.0.1",
+            "-p",
+            "flaps_core",
+            "--lib"
           ]
         }
       ]
@@ -3853,7 +4043,7 @@
     {
       "scenario": {
         "Mutant": {
-          "name": "core/src/money.rs:356:26: replace < with == in format_minor_i128",
+          "name": "core/src/money.rs:386:26: replace < with == in format_minor_i128",
           "package": "flaps_core",
           "file": "core/src/money.rs",
           "function": {
@@ -3861,22 +4051,22 @@
             "return_type": "-> String",
             "span": {
               "start": {
-                "line": 354,
+                "line": 384,
                 "column": 1
               },
               "end": {
-                "line": 378,
+                "line": 408,
                 "column": 2
               }
             }
           },
           "span": {
             "start": {
-              "line": 356,
+              "line": 386,
               "column": 26
             },
             "end": {
-              "line": 356,
+              "line": 386,
               "column": 27
             }
           },
@@ -3884,13 +4074,13 @@
           "genre": "BinaryOperator"
         }
       },
-      "summary": "MissedMutant",
-      "log_path": "log/core__src__money.rs_line_356_col_26.log",
-      "diff_path": "diff/core__src__money.rs_line_356_col_26.diff",
+      "summary": "CaughtMutant",
+      "log_path": "log/core__src__money.rs_line_386_col_26.log",
+      "diff_path": "diff/core__src__money.rs_line_386_col_26.diff",
       "phase_results": [
         {
           "phase": "Build",
-          "duration": 3.27361,
+          "duration": 2.8726636,
           "process_status": "Success",
           "argv": [
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
@@ -3902,13 +4092,18 @@
         },
         {
           "phase": "Test",
-          "duration": 1.3611445,
-          "process_status": "Success",
+          "duration": 0.9591434,
+          "process_status": {
+            "Failure": 101
+          },
           "argv": [
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
             "test",
             "--verbose",
-            "--package=flaps_core@0.0.1"
+            "--package=flaps_core@0.0.1",
+            "-p",
+            "flaps_core",
+            "--lib"
           ]
         }
       ]
@@ -3916,7 +4111,7 @@
     {
       "scenario": {
         "Mutant": {
-          "name": "core/src/money.rs:356:26: replace < with > in format_minor_i128",
+          "name": "core/src/money.rs:386:26: replace < with > in format_minor_i128",
           "package": "flaps_core",
           "file": "core/src/money.rs",
           "function": {
@@ -3924,22 +4119,22 @@
             "return_type": "-> String",
             "span": {
               "start": {
-                "line": 354,
+                "line": 384,
                 "column": 1
               },
               "end": {
-                "line": 378,
+                "line": 408,
                 "column": 2
               }
             }
           },
           "span": {
             "start": {
-              "line": 356,
+              "line": 386,
               "column": 26
             },
             "end": {
-              "line": 356,
+              "line": 386,
               "column": 27
             }
           },
@@ -3948,12 +4143,12 @@
         }
       },
       "summary": "CaughtMutant",
-      "log_path": "log/core__src__money.rs_line_356_col_26_001.log",
-      "diff_path": "diff/core__src__money.rs_line_356_col_26_001.diff",
+      "log_path": "log/core__src__money.rs_line_386_col_26_001.log",
+      "diff_path": "diff/core__src__money.rs_line_386_col_26_001.diff",
       "phase_results": [
         {
           "phase": "Build",
-          "duration": 3.423164,
+          "duration": 2.8192664,
           "process_status": "Success",
           "argv": [
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
@@ -3965,7 +4160,7 @@
         },
         {
           "phase": "Test",
-          "duration": 1.2115569,
+          "duration": 1.0596114,
           "process_status": {
             "Failure": 101
           },
@@ -3973,7 +4168,10 @@
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
             "test",
             "--verbose",
-            "--package=flaps_core@0.0.1"
+            "--package=flaps_core@0.0.1",
+            "-p",
+            "flaps_core",
+            "--lib"
           ]
         }
       ]
@@ -3981,7 +4179,7 @@
     {
       "scenario": {
         "Mutant": {
-          "name": "core/src/money.rs:356:26: replace < with <= in format_minor_i128",
+          "name": "core/src/money.rs:386:26: replace < with <= in format_minor_i128",
           "package": "flaps_core",
           "file": "core/src/money.rs",
           "function": {
@@ -3989,22 +4187,22 @@
             "return_type": "-> String",
             "span": {
               "start": {
-                "line": 354,
+                "line": 384,
                 "column": 1
               },
               "end": {
-                "line": 378,
+                "line": 408,
                 "column": 2
               }
             }
           },
           "span": {
             "start": {
-              "line": 356,
+              "line": 386,
               "column": 26
             },
             "end": {
-              "line": 356,
+              "line": 386,
               "column": 27
             }
           },
@@ -4012,13 +4210,13 @@
           "genre": "BinaryOperator"
         }
       },
-      "summary": "MissedMutant",
-      "log_path": "log/core__src__money.rs_line_356_col_26_002.log",
-      "diff_path": "diff/core__src__money.rs_line_356_col_26_002.diff",
+      "summary": "CaughtMutant",
+      "log_path": "log/core__src__money.rs_line_386_col_26_002.log",
+      "diff_path": "diff/core__src__money.rs_line_386_col_26_002.diff",
       "phase_results": [
         {
           "phase": "Build",
-          "duration": 3.0229058,
+          "duration": 2.7194777,
           "process_status": "Success",
           "argv": [
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
@@ -4030,13 +4228,18 @@
         },
         {
           "phase": "Test",
-          "duration": 1.3610931,
-          "process_status": "Success",
+          "duration": 0.9600104,
+          "process_status": {
+            "Failure": 101
+          },
           "argv": [
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
             "test",
             "--verbose",
-            "--package=flaps_core@0.0.1"
+            "--package=flaps_core@0.0.1",
+            "-p",
+            "flaps_core",
+            "--lib"
           ]
         }
       ]
@@ -4044,7 +4247,7 @@
     {
       "scenario": {
         "Mutant": {
-          "name": "core/src/money.rs:359:30: replace / with % in format_minor_i128",
+          "name": "core/src/money.rs:389:30: replace / with % in format_minor_i128",
           "package": "flaps_core",
           "file": "core/src/money.rs",
           "function": {
@@ -4052,22 +4255,22 @@
             "return_type": "-> String",
             "span": {
               "start": {
-                "line": 354,
+                "line": 384,
                 "column": 1
               },
               "end": {
-                "line": 378,
+                "line": 408,
                 "column": 2
               }
             }
           },
           "span": {
             "start": {
-              "line": 359,
+              "line": 389,
               "column": 30
             },
             "end": {
-              "line": 359,
+              "line": 389,
               "column": 31
             }
           },
@@ -4076,12 +4279,12 @@
         }
       },
       "summary": "CaughtMutant",
-      "log_path": "log/core__src__money.rs_line_359_col_30.log",
-      "diff_path": "diff/core__src__money.rs_line_359_col_30.diff",
+      "log_path": "log/core__src__money.rs_line_389_col_30.log",
+      "diff_path": "diff/core__src__money.rs_line_389_col_30.diff",
       "phase_results": [
         {
           "phase": "Build",
-          "duration": 3.22457,
+          "duration": 2.6687543,
           "process_status": "Success",
           "argv": [
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
@@ -4093,7 +4296,7 @@
         },
         {
           "phase": "Test",
-          "duration": 1.0605262,
+          "duration": 1.0098973,
           "process_status": {
             "Failure": 101
           },
@@ -4101,7 +4304,10 @@
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
             "test",
             "--verbose",
-            "--package=flaps_core@0.0.1"
+            "--package=flaps_core@0.0.1",
+            "-p",
+            "flaps_core",
+            "--lib"
           ]
         }
       ]
@@ -4109,7 +4315,7 @@
     {
       "scenario": {
         "Mutant": {
-          "name": "core/src/money.rs:359:30: replace / with * in format_minor_i128",
+          "name": "core/src/money.rs:389:30: replace / with * in format_minor_i128",
           "package": "flaps_core",
           "file": "core/src/money.rs",
           "function": {
@@ -4117,22 +4323,22 @@
             "return_type": "-> String",
             "span": {
               "start": {
-                "line": 354,
+                "line": 384,
                 "column": 1
               },
               "end": {
-                "line": 378,
+                "line": 408,
                 "column": 2
               }
             }
           },
           "span": {
             "start": {
-              "line": 359,
+              "line": 389,
               "column": 30
             },
             "end": {
-              "line": 359,
+              "line": 389,
               "column": 31
             }
           },
@@ -4141,12 +4347,12 @@
         }
       },
       "summary": "CaughtMutant",
-      "log_path": "log/core__src__money.rs_line_359_col_30_001.log",
-      "diff_path": "diff/core__src__money.rs_line_359_col_30_001.diff",
+      "log_path": "log/core__src__money.rs_line_389_col_30_001.log",
+      "diff_path": "diff/core__src__money.rs_line_389_col_30_001.diff",
       "phase_results": [
         {
           "phase": "Build",
-          "duration": 3.0722762,
+          "duration": 2.6205615,
           "process_status": "Success",
           "argv": [
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
@@ -4158,7 +4364,7 @@
         },
         {
           "phase": "Test",
-          "duration": 1.1607519,
+          "duration": 0.9590747,
           "process_status": {
             "Failure": 101
           },
@@ -4166,7 +4372,10 @@
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
             "test",
             "--verbose",
-            "--package=flaps_core@0.0.1"
+            "--package=flaps_core@0.0.1",
+            "-p",
+            "flaps_core",
+            "--lib"
           ]
         }
       ]
@@ -4174,7 +4383,7 @@
     {
       "scenario": {
         "Mutant": {
-          "name": "core/src/money.rs:360:30: replace % with / in format_minor_i128",
+          "name": "core/src/money.rs:390:30: replace % with / in format_minor_i128",
           "package": "flaps_core",
           "file": "core/src/money.rs",
           "function": {
@@ -4182,22 +4391,22 @@
             "return_type": "-> String",
             "span": {
               "start": {
-                "line": 354,
+                "line": 384,
                 "column": 1
               },
               "end": {
-                "line": 378,
+                "line": 408,
                 "column": 2
               }
             }
           },
           "span": {
             "start": {
-              "line": 360,
+              "line": 390,
               "column": 30
             },
             "end": {
-              "line": 360,
+              "line": 390,
               "column": 31
             }
           },
@@ -4206,12 +4415,12 @@
         }
       },
       "summary": "CaughtMutant",
-      "log_path": "log/core__src__money.rs_line_360_col_30.log",
-      "diff_path": "diff/core__src__money.rs_line_360_col_30.diff",
+      "log_path": "log/core__src__money.rs_line_390_col_30.log",
+      "diff_path": "diff/core__src__money.rs_line_390_col_30.diff",
       "phase_results": [
         {
           "phase": "Build",
-          "duration": 3.0724402,
+          "duration": 2.5698226,
           "process_status": "Success",
           "argv": [
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
@@ -4223,7 +4432,7 @@
         },
         {
           "phase": "Test",
-          "duration": 1.1114607,
+          "duration": 1.0090697,
           "process_status": {
             "Failure": 101
           },
@@ -4231,7 +4440,10 @@
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
             "test",
             "--verbose",
-            "--package=flaps_core@0.0.1"
+            "--package=flaps_core@0.0.1",
+            "-p",
+            "flaps_core",
+            "--lib"
           ]
         }
       ]
@@ -4239,7 +4451,7 @@
     {
       "scenario": {
         "Mutant": {
-          "name": "core/src/money.rs:360:30: replace % with + in format_minor_i128",
+          "name": "core/src/money.rs:390:30: replace % with + in format_minor_i128",
           "package": "flaps_core",
           "file": "core/src/money.rs",
           "function": {
@@ -4247,22 +4459,22 @@
             "return_type": "-> String",
             "span": {
               "start": {
-                "line": 354,
+                "line": 384,
                 "column": 1
               },
               "end": {
-                "line": 378,
+                "line": 408,
                 "column": 2
               }
             }
           },
           "span": {
             "start": {
-              "line": 360,
+              "line": 390,
               "column": 30
             },
             "end": {
-              "line": 360,
+              "line": 390,
               "column": 31
             }
           },
@@ -4271,12 +4483,12 @@
         }
       },
       "summary": "CaughtMutant",
-      "log_path": "log/core__src__money.rs_line_360_col_30_001.log",
-      "diff_path": "diff/core__src__money.rs_line_360_col_30_001.diff",
+      "log_path": "log/core__src__money.rs_line_390_col_30_001.log",
+      "diff_path": "diff/core__src__money.rs_line_390_col_30_001.diff",
       "phase_results": [
         {
           "phase": "Build",
-          "duration": 3.223419,
+          "duration": 2.7738906,
           "process_status": "Success",
           "argv": [
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
@@ -4288,7 +4500,7 @@
         },
         {
           "phase": "Test",
-          "duration": 1.3124637,
+          "duration": 1.011137,
           "process_status": {
             "Failure": 101
           },
@@ -4296,7 +4508,10 @@
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
             "test",
             "--verbose",
-            "--package=flaps_core@0.0.1"
+            "--package=flaps_core@0.0.1",
+            "-p",
+            "flaps_core",
+            "--lib"
           ]
         }
       ]
@@ -4304,7 +4519,7 @@
     {
       "scenario": {
         "Mutant": {
-          "name": "core/src/money.rs:365:20: replace && with || in format_minor_i128",
+          "name": "core/src/money.rs:395:20: replace && with || in format_minor_i128",
           "package": "flaps_core",
           "file": "core/src/money.rs",
           "function": {
@@ -4312,22 +4527,22 @@
             "return_type": "-> String",
             "span": {
               "start": {
-                "line": 354,
+                "line": 384,
                 "column": 1
               },
               "end": {
-                "line": 378,
+                "line": 408,
                 "column": 2
               }
             }
           },
           "span": {
             "start": {
-              "line": 365,
+              "line": 395,
               "column": 20
             },
             "end": {
-              "line": 365,
+              "line": 395,
               "column": 22
             }
           },
@@ -4335,13 +4550,13 @@
           "genre": "BinaryOperator"
         }
       },
-      "summary": "MissedMutant",
-      "log_path": "log/core__src__money.rs_line_365_col_20.log",
-      "diff_path": "diff/core__src__money.rs_line_365_col_20.diff",
+      "summary": "CaughtMutant",
+      "log_path": "log/core__src__money.rs_line_395_col_20.log",
+      "diff_path": "diff/core__src__money.rs_line_395_col_20.diff",
       "phase_results": [
         {
           "phase": "Build",
-          "duration": 3.1742152,
+          "duration": 2.7216665,
           "process_status": "Success",
           "argv": [
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
@@ -4353,13 +4568,18 @@
         },
         {
           "phase": "Test",
-          "duration": 1.5135401000000002,
-          "process_status": "Success",
+          "duration": 1.0097943,
+          "process_status": {
+            "Failure": 101
+          },
           "argv": [
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
             "test",
             "--verbose",
-            "--package=flaps_core@0.0.1"
+            "--package=flaps_core@0.0.1",
+            "-p",
+            "flaps_core",
+            "--lib"
           ]
         }
       ]
@@ -4367,7 +4587,7 @@
     {
       "scenario": {
         "Mutant": {
-          "name": "core/src/money.rs:365:16: replace > with == in format_minor_i128",
+          "name": "core/src/money.rs:395:16: replace > with == in format_minor_i128",
           "package": "flaps_core",
           "file": "core/src/money.rs",
           "function": {
@@ -4375,22 +4595,22 @@
             "return_type": "-> String",
             "span": {
               "start": {
-                "line": 354,
+                "line": 384,
                 "column": 1
               },
               "end": {
-                "line": 378,
+                "line": 408,
                 "column": 2
               }
             }
           },
           "span": {
             "start": {
-              "line": 365,
+              "line": 395,
               "column": 16
             },
             "end": {
-              "line": 365,
+              "line": 395,
               "column": 17
             }
           },
@@ -4398,13 +4618,13 @@
           "genre": "BinaryOperator"
         }
       },
-      "summary": "MissedMutant",
-      "log_path": "log/core__src__money.rs_line_365_col_16.log",
-      "diff_path": "diff/core__src__money.rs_line_365_col_16.diff",
+      "summary": "CaughtMutant",
+      "log_path": "log/core__src__money.rs_line_395_col_16.log",
+      "diff_path": "diff/core__src__money.rs_line_395_col_16.diff",
       "phase_results": [
         {
           "phase": "Build",
-          "duration": 3.726656,
+          "duration": 2.7695987,
           "process_status": "Success",
           "argv": [
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
@@ -4416,13 +4636,18 @@
         },
         {
           "phase": "Test",
-          "duration": 1.3613167,
-          "process_status": "Success",
+          "duration": 1.1120764,
+          "process_status": {
+            "Failure": 101
+          },
           "argv": [
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
             "test",
             "--verbose",
-            "--package=flaps_core@0.0.1"
+            "--package=flaps_core@0.0.1",
+            "-p",
+            "flaps_core",
+            "--lib"
           ]
         }
       ]
@@ -4430,7 +4655,7 @@
     {
       "scenario": {
         "Mutant": {
-          "name": "core/src/money.rs:365:16: replace > with < in format_minor_i128",
+          "name": "core/src/money.rs:395:16: replace > with < in format_minor_i128",
           "package": "flaps_core",
           "file": "core/src/money.rs",
           "function": {
@@ -4438,22 +4663,22 @@
             "return_type": "-> String",
             "span": {
               "start": {
-                "line": 354,
+                "line": 384,
                 "column": 1
               },
               "end": {
-                "line": 378,
+                "line": 408,
                 "column": 2
               }
             }
           },
           "span": {
             "start": {
-              "line": 365,
+              "line": 395,
               "column": 16
             },
             "end": {
-              "line": 365,
+              "line": 395,
               "column": 17
             }
           },
@@ -4461,13 +4686,13 @@
           "genre": "BinaryOperator"
         }
       },
-      "summary": "MissedMutant",
-      "log_path": "log/core__src__money.rs_line_365_col_16_001.log",
-      "diff_path": "diff/core__src__money.rs_line_365_col_16_001.diff",
+      "summary": "CaughtMutant",
+      "log_path": "log/core__src__money.rs_line_395_col_16_001.log",
+      "diff_path": "diff/core__src__money.rs_line_395_col_16_001.diff",
       "phase_results": [
         {
           "phase": "Build",
-          "duration": 3.4761197,
+          "duration": 2.9206612,
           "process_status": "Success",
           "argv": [
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
@@ -4479,25 +4704,300 @@
         },
         {
           "phase": "Test",
-          "duration": 1.4616205,
+          "duration": 1.00974,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
+            "test",
+            "--verbose",
+            "--package=flaps_core@0.0.1",
+            "-p",
+            "flaps_core",
+            "--lib"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "core/src/money.rs:395:16: replace > with >= in format_minor_i128",
+          "package": "flaps_core",
+          "file": "core/src/money.rs",
+          "function": {
+            "function_name": "format_minor_i128",
+            "return_type": "-> String",
+            "span": {
+              "start": {
+                "line": 384,
+                "column": 1
+              },
+              "end": {
+                "line": 408,
+                "column": 2
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 395,
+              "column": 16
+            },
+            "end": {
+              "line": 395,
+              "column": 17
+            }
+          },
+          "replacement": ">=",
+          "genre": "BinaryOperator"
+        }
+      },
+      "summary": "MissedMutant",
+      "log_path": "log/core__src__money.rs_line_395_col_16_002.log",
+      "diff_path": "diff/core__src__money.rs_line_395_col_16_002.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 2.9218983,
+          "process_status": "Success",
+          "argv": [
+            "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=flaps_core@0.0.1"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 1.1103113,
           "process_status": "Success",
           "argv": [
             "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
             "test",
             "--verbose",
+            "--package=flaps_core@0.0.1",
+            "-p",
+            "flaps_core",
+            "--lib"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "core/src/money.rs:395:43: replace - with + in format_minor_i128",
+          "package": "flaps_core",
+          "file": "core/src/money.rs",
+          "function": {
+            "function_name": "format_minor_i128",
+            "return_type": "-> String",
+            "span": {
+              "start": {
+                "line": 384,
+                "column": 1
+              },
+              "end": {
+                "line": 408,
+                "column": 2
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 395,
+              "column": 43
+            },
+            "end": {
+              "line": 395,
+              "column": 44
+            }
+          },
+          "replacement": "+",
+          "genre": "BinaryOperator"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/core__src__money.rs_line_395_col_43.log",
+      "diff_path": "diff/core__src__money.rs_line_395_col_43.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 3.4785045,
+          "process_status": "Success",
+          "argv": [
+            "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
+            "test",
+            "--no-run",
+            "--verbose",
             "--package=flaps_core@0.0.1"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 1.0602836,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
+            "test",
+            "--verbose",
+            "--package=flaps_core@0.0.1",
+            "-p",
+            "flaps_core",
+            "--lib"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "core/src/money.rs:395:43: replace - with / in format_minor_i128",
+          "package": "flaps_core",
+          "file": "core/src/money.rs",
+          "function": {
+            "function_name": "format_minor_i128",
+            "return_type": "-> String",
+            "span": {
+              "start": {
+                "line": 384,
+                "column": 1
+              },
+              "end": {
+                "line": 408,
+                "column": 2
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 395,
+              "column": 43
+            },
+            "end": {
+              "line": 395,
+              "column": 44
+            }
+          },
+          "replacement": "/",
+          "genre": "BinaryOperator"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/core__src__money.rs_line_395_col_43_001.log",
+      "diff_path": "diff/core__src__money.rs_line_395_col_43_001.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 2.9199460999999998,
+          "process_status": "Success",
+          "argv": [
+            "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=flaps_core@0.0.1"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 1.1592178,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
+            "test",
+            "--verbose",
+            "--package=flaps_core@0.0.1",
+            "-p",
+            "flaps_core",
+            "--lib"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "core/src/money.rs:401:11: replace == with != in format_minor_i128",
+          "package": "flaps_core",
+          "file": "core/src/money.rs",
+          "function": {
+            "function_name": "format_minor_i128",
+            "return_type": "-> String",
+            "span": {
+              "start": {
+                "line": 384,
+                "column": 1
+              },
+              "end": {
+                "line": 408,
+                "column": 2
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 401,
+              "column": 11
+            },
+            "end": {
+              "line": 401,
+              "column": 13
+            }
+          },
+          "replacement": "!=",
+          "genre": "BinaryOperator"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/core__src__money.rs_line_401_col_11.log",
+      "diff_path": "diff/core__src__money.rs_line_401_col_11.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 2.6712378,
+          "process_status": "Success",
+          "argv": [
+            "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=flaps_core@0.0.1"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 0.960333,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "C:\\Users\\stephanie.huang\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
+            "test",
+            "--verbose",
+            "--package=flaps_core@0.0.1",
+            "-p",
+            "flaps_core",
+            "--lib"
           ]
         }
       ]
     }
   ],
-  "total_mutants": 69,
-  "missed": 13,
-  "caught": 56,
+  "total_mutants": 73,
+  "missed": 4,
+  "caught": 69,
   "timeout": 0,
   "unviable": 0,
   "success": 0,
-  "start_time": "2026-11-06T12:32:20.0757607Z",
+  "start_time": "2026-11-07T09:58:12.2216432Z",
   "end_time": null,
   "cargo_mutants_version": "27.1.0"
 }

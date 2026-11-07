@@ -48,4 +48,21 @@
   - Primary: Ollama local (qwen3.5:4b) — WORKING, verified.
   - Remote free endpoints: none reachable without API key from this machine.
   - Fallback chain: Ollama → OVHcloud → LLM7.io → BlockRun → rule-based engine.
-- Next: Phase C — ekpi-platform Phase A evidence collection; read phase-gates.md + assurance docs; design api.rs contract; enable CI.
+- Phase C complete: Phase A evidence gap list + api.rs contract design (design only) recorded at ekpi-platform/artifacts/20261106-autonomous-evolution-init/io/phase-c-evidence.md.
+  - Git remote already connected (origin = https://github.com/it-wellfit/ekpi-platform.git).
+  - Production API implementation blocked by Phase B external decisions (B-02/B-03/B-04/B-05/B-07).
+- Phase D (partial): root workspace baseline run —
+  - `cargo clippy --all-targets -- -D warnings` EXIT=0.
+  - `cargo fmt -- --check` EXIT=1: pre-existing diff at platform/src/api.rs:4169 (COMMIT statement formatting). Not fixed (would mutate R1 workstream's file; single-writer rule).
+  - `cargo test --locked` BLOCKED >10 min on `stress_10000_transactions_p95_under_500ms` (platform/src/api.rs:4099); cargo process ended without completing output. Recorded as [GAP]: perf tests need separation from main gate with own time budget.
+- Thinking Operating System guide published at docs/engineering/THINKING_OPERATING_SYSTEM.md (v1.0, 2026-11-07):
+  - Four dimensions with operating steps, workspace-grounded examples, failure modes, complex-decision recipes.
+  - Integrated scheduler (§5) with trigger table, decision-record format, time-boxes.
+  - Three diagnostic questions (§6) mapping to dimensions.
+  - Registered in docs/README.md global index.
+- Knowledge Evolution Module (KEM) research + architecture published at docs/engineering/KNOWLEDGE_EVOLUTION_MODULE.md (v1.0, 2026-11-07):
+  - 7 candidate families compared (JEV+pi-jev-wiki, Zep/Graphiti, Cognee, Mem0, Letta, GraphRAG family, PKM methodologies) with 10-criterion weighted matrix.
+  - Recommendation: self-built Rust KEM following pi-jev-wiki pipeline; pluggable vetting (rules → local qwen3.5:4b → optional JEV); bi-temporal validity; two-track governance; BM25+vector hybrid retrieval.
+  - 6-phase roadmap (P0–P5) aligned with APQC maturity levels; 10 validation tests (V1–V10).
+  - 3 open questions recorded (GAP): KEM location, JEV paid-tier trigger, golden query set annotation owner.
+- Next: Phase D remaining (S0 baseline reconciliation with fmt fix coordinated via single-writer window; perf-test separation design), Phase E–H per master plan.

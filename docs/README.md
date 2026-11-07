@@ -33,6 +33,8 @@
 | :--- | :--- | :--- | :--- |
 | [`docs/ARCHITECTURE.md`](file:///c:/Users/stephanie.huang/Desktop/新人訓練/Projects/2026/Dev/docs/ARCHITECTURE.md) | **系統架構總綱** | 所有工程師 / 架構師 | C4 架構模型、STAMP/STPA 階層控制、Rust 與 Windows COM STA 隔離設計 |
 | [`docs/GAPS_AND_RISKS.md`](file:///c:/Users/stephanie.huang/Desktop/新人訓練/Projects/2026/Dev/docs/GAPS_AND_RISKS.md) | **存證與風險清單** | 專案經理 / 審查者 | `[FACT:CODE]` 實相依據、`[GAP]` 阻塞缺口與技術債演進清單 |
+| [`docs/engineering/THINKING_OPERATING_SYSTEM.md`](file:///c:/Users/stephanie.huang/Desktop/新人訓練/Projects/2026/Dev/docs/engineering/THINKING_OPERATING_SYSTEM.md) | **思考作業系統** | 所有工程師 / 決策者 | 四維決策程序（第一性分解/系統思考/紅隊/量化）、觸發表、決策記錄格式與三個診斷問題 |
+| [`docs/engineering/KNOWLEDGE_EVOLUTION_MODULE.md`](file:///c:/Users/stephanie.huang/Desktop/新人訓練/Projects/2026/Dev/docs/engineering/KNOWLEDGE_EVOLUTION_MODULE.md) | **知識演進模組架構** | 架構師 / 代理工程師 | JEV 與候選方案全面比較、十大判斷準則評分、KEM 分層架構（裁決可插拔/雙時間軸/兩軌治理）、路線圖與 V1–V10 驗證 |
 | [`docs/01-onboarding/quickstart.md`](file:///c:/Users/stephanie.huang/Desktop/新人訓練/Projects/2026/Dev/docs/01-onboarding/quickstart.md) | **五分鐘快速入門** | 新進開發者 | Rust 依賴、Windows SDK 配置、編譯除錯與第一個探針驗證 |
 | [`docs/02-architecture/decisions/`](file:///c:/Users/stephanie.huang/Desktop/新人訓練/Projects/2026/Dev/docs/02-architecture/decisions/) | **ADR 決策專區** | 架構師 / 資深工程師 | 歷史架構決策紀錄（含單向門/雙向門權衡與不可變約束） |
 | [`docs/03-reference/domain-glossary.md`](file:///c:/Users/stephanie.huang/Desktop/新人訓練/Projects/2026/Dev/docs/03-reference/domain-glossary.md) | **領域術語字典** | 全體團隊 | 輔翼 ERP、哈瓦士 MTRIX、蝦皮報表欄位與代碼型別對照表 (SSOT) |
