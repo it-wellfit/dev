@@ -43,7 +43,9 @@ pub fn capture_source(
     now: DateTime<Utc>,
 ) -> Result<CapturedSource, KemError> {
     if topic.trim().is_empty() || name.trim().is_empty() {
-        return Err(KemError::InvalidInput("topic and name must be non-empty".into()));
+        return Err(KemError::InvalidInput(
+            "topic and name must be non-empty".into(),
+        ));
     }
     // Sanitize path components (no traversal, no separators inside parts).
     for part in [topic, name] {
@@ -113,7 +115,11 @@ mod tests {
     fn overwrite_is_refused() {
         let dir = tempfile::tempdir().unwrap();
         capture_source(dir.path(), "t", "n", "md", "a", Utc::now()).unwrap();
-        let err = capture_source(dir.path(), "t", "n", "md", "a", Utc::now()).unwrap_err();
+        // Idempotent: same content → Ok with created=false.
+        let again = capture_source(dir.path(), "t", "n", "md", "a", Utc::now()).unwrap();
+        assert!(!again.created);
+        // Different content → immutability violation.
+        let err = capture_source(dir.path(), "t", "n", "md", "b", Utc::now()).unwrap_err();
         assert!(matches!(err, KemError::InvalidInput(_)));
     }
 
