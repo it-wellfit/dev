@@ -1,0 +1,26 @@
+{
+  "id": "claim-20261107-010",
+  "claim_type": "decision",
+  "status": "published",
+  "track": "b",
+  "confidence": 0.95,
+  "valid_from": "2026-11-07",
+  "valid_to": null,
+  "recorded_at": "2026-11-07T11:03:14.290706Z",
+  "supersedes": [],
+  "superseded_by": null,
+  "evidence": [
+    {
+      "path": "docs/knowledge-index.md",
+      "rev": "working-tree",
+      "quote": "- **Authority:** ADR-0004 (Approved) — single-direction reference (project → KB). KB is read-only for implementers."
+    }
+  ],
+  "topics": [
+    "knowledge-base",
+    "adr-0004"
+  ],
+  "source": "raw/knowledge-base/2026-11-07-seed.md",
+  "title": "KB 單向引用且對實作者唯讀",
+  "body": "ADR-0004 (Approved) defines a single-direction reference (project → KB); the knowledge base is read-only for implementers."
+}

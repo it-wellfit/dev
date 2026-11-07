@@ -124,9 +124,15 @@ mod tests {
     }
 
     #[test]
-    fn traversal_is_refused() {
+    fn identical_recapture_is_idempotent_but_drift_refused() {
         let dir = tempfile::tempdir().unwrap();
-        let err = capture_source(dir.path(), "../evil", "n", "md", "a", Utc::now()).unwrap_err();
+        let first = capture_source(dir.path(), "t", "n", "md", "a", Utc::now()).unwrap();
+        assert!(first.created);
+        // Same content: accepted as already-captured (idempotent), not created.
+        let again = capture_source(dir.path(), "t", "n", "md", "a", Utc::now()).unwrap();
+        assert!(!again.created);
+        // Different content under the same name: immutability violation.
+        let err = capture_source(dir.path(), "t", "n", "md", "b", Utc::now()).unwrap_err();
         assert!(matches!(err, KemError::InvalidInput(_)));
     }
 

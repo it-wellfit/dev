@@ -1,0 +1,26 @@
+{
+  "id": "claim-20261107-005",
+  "claim_type": "fact",
+  "status": "published",
+  "track": "b",
+  "confidence": 0.95,
+  "valid_from": "2026-11-07",
+  "valid_to": null,
+  "recorded_at": "2026-11-07T11:03:14.290692100Z",
+  "supersedes": [],
+  "superseded_by": null,
+  "evidence": [
+    {
+      "path": "ekpi-platform/AGENTS.md",
+      "rev": "a268319",
+      "quote": "`platform/src/api.rs` is an unwired placeholder that returns a fixed `comply`; never expose it or call it a contract."
+    }
+  ],
+  "topics": [
+    "ekpi-platform",
+    "api"
+  ],
+  "source": "raw/ekpi/2026-11-07-seed.md",
+  "title": "ekpi api.rs 為未接線佔位符",
+  "body": "platform/src/api.rs is an unwired placeholder returning a fixed comply verdict; it must never be exposed or called a contract."
+}

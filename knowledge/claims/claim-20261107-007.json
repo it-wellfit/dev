@@ -1,0 +1,26 @@
+{
+  "id": "claim-20261107-007",
+  "claim_type": "invariant",
+  "status": "published",
+  "track": "b",
+  "confidence": 0.95,
+  "valid_from": "2026-11-07",
+  "valid_to": null,
+  "recorded_at": "2026-11-07T11:03:14.290699Z",
+  "supersedes": [],
+  "superseded_by": null,
+  "evidence": [
+    {
+      "path": "AGENTS.md",
+      "rev": "working-tree",
+      "quote": "每個 `.rs` 第一行 `#![forbid(unsafe_code)]`；clippy 零警告"
+    }
+  ],
+  "topics": [
+    "workspace",
+    "rust-standards"
+  ],
+  "source": "raw/workspace/2026-11-07-seed.md",
+  "title": "每個 .rs 首行 forbid(unsafe_code) 且 clippy 零警告",
+  "body": "Every Rust file starts with #![forbid(unsafe_code)] and clippy must pass with zero warnings across the workspace."
+}

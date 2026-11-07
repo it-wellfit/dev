@@ -1,0 +1,26 @@
+{
+  "id": "claim-20261107-003",
+  "claim_type": "invariant",
+  "status": "published",
+  "track": "b",
+  "confidence": 0.95,
+  "valid_from": "2026-11-07",
+  "valid_to": null,
+  "recorded_at": "2026-11-07T11:03:14.290674100Z",
+  "supersedes": [],
+  "superseded_by": null,
+  "evidence": [
+    {
+      "path": "ekpi-platform/AGENTS.md",
+      "rev": "a268319",
+      "quote": "A check is `PASS` only if the exact command ran on the named revision and exited 0. A skipped or blocked check is `Not run`/`Blocked`, never `PASS`."
+    }
+  ],
+  "topics": [
+    "ekpi-platform",
+    "evidence-rule"
+  ],
+  "source": "raw/ekpi/2026-11-07-seed.md",
+  "title": "PASS 僅在指定修訂版上執行並退出 0 時成立",
+  "body": "A check is PASS only if the exact command ran on the named revision and exited 0; skipped or blocked checks are Not run/Blocked, never PASS."
+}

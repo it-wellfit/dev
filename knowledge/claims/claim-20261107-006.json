@@ -1,0 +1,26 @@
+{
+  "id": "claim-20261107-006",
+  "claim_type": "fact",
+  "status": "published",
+  "track": "b",
+  "confidence": 0.95,
+  "valid_from": "2026-11-07",
+  "valid_to": null,
+  "recorded_at": "2026-11-07T11:03:14.290695Z",
+  "supersedes": [],
+  "superseded_by": null,
+  "evidence": [
+    {
+      "path": "ekpi-platform/docs/contracts/README.md",
+      "rev": "a268319",
+      "quote": "It does **not** have an approved production JSON API."
+    }
+  ],
+  "topics": [
+    "ekpi-platform",
+    "contracts"
+  ],
+  "source": "raw/ekpi/2026-11-07-seed.md",
+  "title": "ekpi 無已核准的生產 JSON API",
+  "body": "The ekpi-platform repository has no approved production JSON API; api.rs is not a contract."
+}

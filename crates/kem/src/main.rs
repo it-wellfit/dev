@@ -22,7 +22,7 @@ struct Args {
 }
 
 fn parse_args() -> Result<Args, String> {
-    const VALUE_FLAGS: [&str; 5] = ["root", "topic", "name", "file", "ext"];
+    const VALUE_FLAGS: [&str; 8] = ["root", "topic", "name", "file", "ext", "query", "top", "set"];
     let mut argv = std::env::args().skip(1);
     let mut root = PathBuf::from("knowledge");
     let mut cmd = String::new();

@@ -228,7 +228,7 @@ mod tests {
             confidence: 0.9,
             valid_from: chrono::NaiveDate::from_ymd_opt(2026, 1, 1).unwrap(),
             valid_to: None,
-            recorded_at: chrono::Utc.with_ymd_and_hms(2026, 11, 7, 0, 0, 0).unwrap(),
+            recorded_at: Utc.with_ymd_and_hms(2026, 11, 7, 0, 0, 0).unwrap(),
             supersedes: vec![],
             superseded_by: None,
             evidence: vec![Evidence {

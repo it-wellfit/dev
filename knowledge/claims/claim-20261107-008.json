@@ -1,0 +1,26 @@
+{
+  "id": "claim-20261107-008",
+  "claim_type": "invariant",
+  "status": "published",
+  "track": "b",
+  "confidence": 0.95,
+  "valid_from": "2026-11-07",
+  "valid_to": null,
+  "recorded_at": "2026-11-07T11:03:14.290702200Z",
+  "supersedes": [],
+  "superseded_by": null,
+  "evidence": [
+    {
+      "path": "AGENTS.md",
+      "rev": "working-tree",
+      "quote": "讀取 GET；建立／修改／刪除 POST；成功後 PRG"
+    }
+  ],
+  "topics": [
+    "workspace",
+    "http-rules"
+  ],
+  "source": "raw/workspace/2026-11-07-seed.md",
+  "title": "讀取 GET、寫入 POST、成功後 PRG",
+  "body": "HTTP usage rule: reads use GET; create/modify/delete use POST; successful submissions follow Post/Redirect/Get."
+}

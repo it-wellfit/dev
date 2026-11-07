@@ -1,0 +1,26 @@
+{
+  "id": "claim-20261107-017",
+  "claim_type": "fact",
+  "status": "published",
+  "track": "b",
+  "confidence": 0.95,
+  "valid_from": "2026-11-07",
+  "valid_to": null,
+  "recorded_at": "2026-11-07T11:03:14.290749900Z",
+  "supersedes": [],
+  "superseded_by": null,
+  "evidence": [
+    {
+      "path": "docs/engineering/KNOWLEDGE_EVOLUTION_MODULE.md",
+      "rev": "working-tree",
+      "quote": "JEV cookbook 實測為 **90.8% → 99.2%**（k=15、機率地板 0.60、自動化率 74.2%）"
+    }
+  ],
+  "topics": [
+    "kem",
+    "scs"
+  ],
+  "source": "raw/kem/2026-11-07-seed.md",
+  "title": "自一致性投票實證基線 90.8%→99.2%",
+  "body": "The self-consistency voting evidence baseline is 90.8% to 99.2% agreement (k=15, probability floor 0.60, automation 74.2%) per the JEV cookbook."
+}

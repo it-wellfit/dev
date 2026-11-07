@@ -1,0 +1,26 @@
+{
+  "id": "claim-20261107-016",
+  "claim_type": "decision",
+  "status": "published",
+  "track": "b",
+  "confidence": 0.95,
+  "valid_from": "2026-11-07",
+  "valid_to": null,
+  "recorded_at": "2026-11-07T11:03:14.290744Z",
+  "supersedes": [],
+  "superseded_by": null,
+  "evidence": [
+    {
+      "path": "docs/engineering/KNOWLEDGE_EVOLUTION_MODULE.md",
+      "rev": "working-tree",
+      "quote": "**付費 AI（含 JEV）全面排除**——零成本是硬性約束"
+    }
+  ],
+  "topics": [
+    "kem",
+    "zero-paid-ai"
+  ],
+  "source": "raw/kem/2026-11-07-seed.md",
+  "title": "零付費 AI 為硬性約束",
+  "body": "Paid AI services (including JEV/TypeSafe) are excluded permanently; zero-cost is a hard constraint, and commercial tools serve only as pattern sources."
+}

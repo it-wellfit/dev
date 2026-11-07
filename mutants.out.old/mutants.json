@@ -1,0 +1,3138 @@
+[
+  {
+    "diff": "--- core/src/money.rs\n+++ replace <impl fmt::Display for MoneyError>::fmt -> fmt::Result with Ok(Default::default())\n@@ -25,35 +25,17 @@\n     InvalidFormat,\n     TooManyDecimalPlaces { max: u32, got: usize },\n     Negative,\n     Overflow { max_total_digits: usize },\n }\n \n impl fmt::Display for MoneyError {\n     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {\n-        match self {\n-            Self::Empty => write!(f, \"金額為必填欄位，請輸入大於 0 的數字\"),\n-            Self::InvalidFormat => write!(\n-                f,\n-                \"金額格式不正確（可能原因：含非法字元或多次小數點）；請輸入純數字，例如 1234.50\"\n-            ),\n-            Self::TooManyDecimalPlaces { max, got } => write!(\n-                f,\n-                \"小數位數過多（最多 {max} 位，輸入 {got} 位）；請修正後重新送出\"\n-            ),\n-            Self::Negative => write!(\n-                f,\n-                \"金額不得為負數；借貸方向請使用借方（DEBIT）或貸方（CREDIT）選項表達\"\n-            ),\n-            Self::Overflow { max_total_digits } => write!(\n-                f,\n-                \"金額位數過多（上限 {max_total_digits} 位數字）；請拆分交易或聯絡管理員\"\n-            ),\n-        }\n+        Ok(Default::default()) /* ~ changed by cargo-mutants ~ */\n     }\n }\n \n impl std::error::Error for MoneyError {}\n \n /// Parse an exact decimal string into minor units with `dp` fractional digits.\n ///\n /// Rules (deterministic, fail-closed):\n",
+    "file": "core/src/money.rs",
+    "function": {
+      "function_name": "<impl fmt::Display for MoneyError>::fmt",
+      "return_type": "-> fmt::Result",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 52
+        },
+        "start": {
+          "column": 5,
+          "line": 32
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "core/src/money.rs:33:9: replace <impl fmt::Display for MoneyError>::fmt -> fmt::Result with Ok(Default::default())",
+    "package": "flaps_core",
+    "replacement": "Ok(Default::default())",
+    "span": {
+      "end": {
+        "column": 10,
+        "line": 51
+      },
+      "start": {
+        "column": 9,
+        "line": 33
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/money.rs\n+++ replace parse_decimal_to_minor -> Result<i64, MoneyError> with Ok(0)\n@@ -57,59 +57,17 @@\n /// Parse an exact decimal string into minor units with `dp` fractional digits.\n ///\n /// Rules (deterministic, fail-closed):\n /// - optional leading `+`; leading `-` is rejected (use DEBIT/CREDIT instead)\n /// - digits with at most one decimal point; thousands separators rejected\n /// - more than `dp` fractional digits is rejected (no silent rounding)\n /// - the result must fit within [`MAX_TOTAL_DIGITS`] digits\n pub fn parse_decimal_to_minor(input: &str, dp: u32) -> Result<i64, MoneyError> {\n-    let s = input.trim();\n-    if s.is_empty() {\n-        return Err(MoneyError::Empty);\n-    }\n-    let s = s.strip_prefix('+').unwrap_or(s);\n-    if s.starts_with('-') {\n-        return Err(MoneyError::Negative);\n-    }\n-    if !s.bytes().all(|b| b.is_ascii_digit() || b == b'.') || s.matches('.').count() > 1 {\n-        return Err(MoneyError::InvalidFormat);\n-    }\n-\n-    let (integral, fractional) = match s.split_once('.') {\n-        Some((i, f)) => (i, f),\n-        None => (s, \"\"),\n-    };\n-    if fractional.len() > dp as usize {\n-        return Err(MoneyError::TooManyDecimalPlaces {\n-            max: dp,\n-            got: fractional.len(),\n-        });\n-    }\n-\n-    let integral_digits = integral.trim_start_matches('0');\n-    if integral_digits.len() + fractional.len() > MAX_TOTAL_DIGITS {\n-        return Err(MoneyError::Overflow {\n-            max_total_digits: MAX_TOTAL_DIGITS,\n-        });\n-    }\n-\n-    let mut digits = String::with_capacity(integral_digits.len() + dp as usize);\n-    digits.push_str(integral_digits);\n-    digits.push_str(fractional);\n-    for _ in 0..(dp as usize - fractional.len()) {\n-        digits.push('0');\n-    }\n-\n-    if digits.is_empty() {\n-        return Ok(0);\n-    }\n-    digits.parse::<i64>().map_err(|_| MoneyError::Overflow {\n-        max_total_digits: MAX_TOTAL_DIGITS,\n-    })\n+    Ok(0) /* ~ changed by cargo-mutants ~ */\n }\n \n /// Format minor units as a grouped decimal string, e.g. `12345` with `dp = 2`\n /// becomes `123.45` and `-50` becomes `-0.50`. Pure integer arithmetic.\n pub fn format_minor(minor: i64, dp: u32) -> String {\n     let negative = minor < 0;\n     let magnitude = minor.unsigned_abs();\n     let scale = 10u64.pow(dp);\n",
+    "file": "core/src/money.rs",
+    "function": {
+      "function_name": "parse_decimal_to_minor",
+      "return_type": "-> Result<i64, MoneyError>",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 108
+        },
+        "start": {
+          "column": 1,
+          "line": 57
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "core/src/money.rs:65:5: replace parse_decimal_to_minor -> Result<i64, MoneyError> with Ok(0)",
+    "package": "flaps_core",
+    "replacement": "Ok(0)",
+    "span": {
+      "end": {
+        "column": 7,
+        "line": 107
+      },
+      "start": {
+        "column": 5,
+        "line": 65
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/money.rs\n+++ replace parse_decimal_to_minor -> Result<i64, MoneyError> with Ok(1)\n@@ -57,59 +57,17 @@\n /// Parse an exact decimal string into minor units with `dp` fractional digits.\n ///\n /// Rules (deterministic, fail-closed):\n /// - optional leading `+`; leading `-` is rejected (use DEBIT/CREDIT instead)\n /// - digits with at most one decimal point; thousands separators rejected\n /// - more than `dp` fractional digits is rejected (no silent rounding)\n /// - the result must fit within [`MAX_TOTAL_DIGITS`] digits\n pub fn parse_decimal_to_minor(input: &str, dp: u32) -> Result<i64, MoneyError> {\n-    let s = input.trim();\n-    if s.is_empty() {\n-        return Err(MoneyError::Empty);\n-    }\n-    let s = s.strip_prefix('+').unwrap_or(s);\n-    if s.starts_with('-') {\n-        return Err(MoneyError::Negative);\n-    }\n-    if !s.bytes().all(|b| b.is_ascii_digit() || b == b'.') || s.matches('.').count() > 1 {\n-        return Err(MoneyError::InvalidFormat);\n-    }\n-\n-    let (integral, fractional) = match s.split_once('.') {\n-        Some((i, f)) => (i, f),\n-        None => (s, \"\"),\n-    };\n-    if fractional.len() > dp as usize {\n-        return Err(MoneyError::TooManyDecimalPlaces {\n-            max: dp,\n-            got: fractional.len(),\n-        });\n-    }\n-\n-    let integral_digits = integral.trim_start_matches('0');\n-    if integral_digits.len() + fractional.len() > MAX_TOTAL_DIGITS {\n-        return Err(MoneyError::Overflow {\n-            max_total_digits: MAX_TOTAL_DIGITS,\n-        });\n-    }\n-\n-    let mut digits = String::with_capacity(integral_digits.len() + dp as usize);\n-    digits.push_str(integral_digits);\n-    digits.push_str(fractional);\n-    for _ in 0..(dp as usize - fractional.len()) {\n-        digits.push('0');\n-    }\n-\n-    if digits.is_empty() {\n-        return Ok(0);\n-    }\n-    digits.parse::<i64>().map_err(|_| MoneyError::Overflow {\n-        max_total_digits: MAX_TOTAL_DIGITS,\n-    })\n+    Ok(1) /* ~ changed by cargo-mutants ~ */\n }\n \n /// Format minor units as a grouped decimal string, e.g. `12345` with `dp = 2`\n /// becomes `123.45` and `-50` becomes `-0.50`. Pure integer arithmetic.\n pub fn format_minor(minor: i64, dp: u32) -> String {\n     let negative = minor < 0;\n     let magnitude = minor.unsigned_abs();\n     let scale = 10u64.pow(dp);\n",
+    "file": "core/src/money.rs",
+    "function": {
+      "function_name": "parse_decimal_to_minor",
+      "return_type": "-> Result<i64, MoneyError>",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 108
+        },
+        "start": {
+          "column": 1,
+          "line": 57
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "core/src/money.rs:65:5: replace parse_decimal_to_minor -> Result<i64, MoneyError> with Ok(1)",
+    "package": "flaps_core",
+    "replacement": "Ok(1)",
+    "span": {
+      "end": {
+        "column": 7,
+        "line": 107
+      },
+      "start": {
+        "column": 5,
+        "line": 65
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/money.rs\n+++ replace parse_decimal_to_minor -> Result<i64, MoneyError> with Ok(-1)\n@@ -57,59 +57,17 @@\n /// Parse an exact decimal string into minor units with `dp` fractional digits.\n ///\n /// Rules (deterministic, fail-closed):\n /// - optional leading `+`; leading `-` is rejected (use DEBIT/CREDIT instead)\n /// - digits with at most one decimal point; thousands separators rejected\n /// - more than `dp` fractional digits is rejected (no silent rounding)\n /// - the result must fit within [`MAX_TOTAL_DIGITS`] digits\n pub fn parse_decimal_to_minor(input: &str, dp: u32) -> Result<i64, MoneyError> {\n-    let s = input.trim();\n-    if s.is_empty() {\n-        return Err(MoneyError::Empty);\n-    }\n-    let s = s.strip_prefix('+').unwrap_or(s);\n-    if s.starts_with('-') {\n-        return Err(MoneyError::Negative);\n-    }\n-    if !s.bytes().all(|b| b.is_ascii_digit() || b == b'.') || s.matches('.').count() > 1 {\n-        return Err(MoneyError::InvalidFormat);\n-    }\n-\n-    let (integral, fractional) = match s.split_once('.') {\n-        Some((i, f)) => (i, f),\n-        None => (s, \"\"),\n-    };\n-    if fractional.len() > dp as usize {\n-        return Err(MoneyError::TooManyDecimalPlaces {\n-            max: dp,\n-            got: fractional.len(),\n-        });\n-    }\n-\n-    let integral_digits = integral.trim_start_matches('0');\n-    if integral_digits.len() + fractional.len() > MAX_TOTAL_DIGITS {\n-        return Err(MoneyError::Overflow {\n-            max_total_digits: MAX_TOTAL_DIGITS,\n-        });\n-    }\n-\n-    let mut digits = String::with_capacity(integral_digits.len() + dp as usize);\n-    digits.push_str(integral_digits);\n-    digits.push_str(fractional);\n-    for _ in 0..(dp as usize - fractional.len()) {\n-        digits.push('0');\n-    }\n-\n-    if digits.is_empty() {\n-        return Ok(0);\n-    }\n-    digits.parse::<i64>().map_err(|_| MoneyError::Overflow {\n-        max_total_digits: MAX_TOTAL_DIGITS,\n-    })\n+    Ok(-1) /* ~ changed by cargo-mutants ~ */\n }\n \n /// Format minor units as a grouped decimal string, e.g. `12345` with `dp = 2`\n /// becomes `123.45` and `-50` becomes `-0.50`. Pure integer arithmetic.\n pub fn format_minor(minor: i64, dp: u32) -> String {\n     let negative = minor < 0;\n     let magnitude = minor.unsigned_abs();\n     let scale = 10u64.pow(dp);\n",
+    "file": "core/src/money.rs",
+    "function": {
+      "function_name": "parse_decimal_to_minor",
+      "return_type": "-> Result<i64, MoneyError>",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 108
+        },
+        "start": {
+          "column": 1,
+          "line": 57
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "core/src/money.rs:65:5: replace parse_decimal_to_minor -> Result<i64, MoneyError> with Ok(-1)",
+    "package": "flaps_core",
+    "replacement": "Ok(-1)",
+    "span": {
+      "end": {
+        "column": 7,
+        "line": 107
+      },
+      "start": {
+        "column": 5,
+        "line": 65
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/money.rs\n+++ replace || with && in parse_decimal_to_minor\n@@ -65,17 +65,17 @@\n     let s = input.trim();\n     if s.is_empty() {\n         return Err(MoneyError::Empty);\n     }\n     let s = s.strip_prefix('+').unwrap_or(s);\n     if s.starts_with('-') {\n         return Err(MoneyError::Negative);\n     }\n-    if !s.bytes().all(|b| b.is_ascii_digit() || b == b'.') || s.matches('.').count() > 1 {\n+    if !s.bytes().all(|b| b.is_ascii_digit() || b == b'.') && /* ~ changed by cargo-mutants ~ */ s.matches('.').count() > 1 {\n         return Err(MoneyError::InvalidFormat);\n     }\n \n     let (integral, fractional) = match s.split_once('.') {\n         Some((i, f)) => (i, f),\n         None => (s, \"\"),\n     };\n     if fractional.len() > dp as usize {\n",
+    "file": "core/src/money.rs",
+    "function": {
+      "function_name": "parse_decimal_to_minor",
+      "return_type": "-> Result<i64, MoneyError>",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 108
+        },
+        "start": {
+          "column": 1,
+          "line": 57
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/money.rs:73:60: replace || with && in parse_decimal_to_minor",
+    "package": "flaps_core",
+    "replacement": "&&",
+    "span": {
+      "end": {
+        "column": 62,
+        "line": 73
+      },
+      "start": {
+        "column": 60,
+        "line": 73
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/money.rs\n+++ delete ! in parse_decimal_to_minor\n@@ -65,17 +65,17 @@\n     let s = input.trim();\n     if s.is_empty() {\n         return Err(MoneyError::Empty);\n     }\n     let s = s.strip_prefix('+').unwrap_or(s);\n     if s.starts_with('-') {\n         return Err(MoneyError::Negative);\n     }\n-    if !s.bytes().all(|b| b.is_ascii_digit() || b == b'.') || s.matches('.').count() > 1 {\n+    if  /* ~ changed by cargo-mutants ~ */s.bytes().all(|b| b.is_ascii_digit() || b == b'.') || s.matches('.').count() > 1 {\n         return Err(MoneyError::InvalidFormat);\n     }\n \n     let (integral, fractional) = match s.split_once('.') {\n         Some((i, f)) => (i, f),\n         None => (s, \"\"),\n     };\n     if fractional.len() > dp as usize {\n",
+    "file": "core/src/money.rs",
+    "function": {
+      "function_name": "parse_decimal_to_minor",
+      "return_type": "-> Result<i64, MoneyError>",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 108
+        },
+        "start": {
+          "column": 1,
+          "line": 57
+        }
+      }
+    },
+    "genre": "UnaryOperator",
+    "name": "core/src/money.rs:73:8: delete ! in parse_decimal_to_minor",
+    "package": "flaps_core",
+    "replacement": "",
+    "span": {
+      "end": {
+        "column": 9,
+        "line": 73
+      },
+      "start": {
+        "column": 8,
+        "line": 73
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/money.rs\n+++ replace || with && in parse_decimal_to_minor\n@@ -65,17 +65,17 @@\n     let s = input.trim();\n     if s.is_empty() {\n         return Err(MoneyError::Empty);\n     }\n     let s = s.strip_prefix('+').unwrap_or(s);\n     if s.starts_with('-') {\n         return Err(MoneyError::Negative);\n     }\n-    if !s.bytes().all(|b| b.is_ascii_digit() || b == b'.') || s.matches('.').count() > 1 {\n+    if !s.bytes().all(|b| b.is_ascii_digit() && /* ~ changed by cargo-mutants ~ */ b == b'.') || s.matches('.').count() > 1 {\n         return Err(MoneyError::InvalidFormat);\n     }\n \n     let (integral, fractional) = match s.split_once('.') {\n         Some((i, f)) => (i, f),\n         None => (s, \"\"),\n     };\n     if fractional.len() > dp as usize {\n",
+    "file": "core/src/money.rs",
+    "function": {
+      "function_name": "parse_decimal_to_minor",
+      "return_type": "-> Result<i64, MoneyError>",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 108
+        },
+        "start": {
+          "column": 1,
+          "line": 57
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/money.rs:73:46: replace || with && in parse_decimal_to_minor",
+    "package": "flaps_core",
+    "replacement": "&&",
+    "span": {
+      "end": {
+        "column": 48,
+        "line": 73
+      },
+      "start": {
+        "column": 46,
+        "line": 73
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/money.rs\n+++ replace == with != in parse_decimal_to_minor\n@@ -65,17 +65,17 @@\n     let s = input.trim();\n     if s.is_empty() {\n         return Err(MoneyError::Empty);\n     }\n     let s = s.strip_prefix('+').unwrap_or(s);\n     if s.starts_with('-') {\n         return Err(MoneyError::Negative);\n     }\n-    if !s.bytes().all(|b| b.is_ascii_digit() || b == b'.') || s.matches('.').count() > 1 {\n+    if !s.bytes().all(|b| b.is_ascii_digit() || b != /* ~ changed by cargo-mutants ~ */ b'.') || s.matches('.').count() > 1 {\n         return Err(MoneyError::InvalidFormat);\n     }\n \n     let (integral, fractional) = match s.split_once('.') {\n         Some((i, f)) => (i, f),\n         None => (s, \"\"),\n     };\n     if fractional.len() > dp as usize {\n",
+    "file": "core/src/money.rs",
+    "function": {
+      "function_name": "parse_decimal_to_minor",
+      "return_type": "-> Result<i64, MoneyError>",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 108
+        },
+        "start": {
+          "column": 1,
+          "line": 57
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/money.rs:73:51: replace == with != in parse_decimal_to_minor",
+    "package": "flaps_core",
+    "replacement": "!=",
+    "span": {
+      "end": {
+        "column": 53,
+        "line": 73
+      },
+      "start": {
+        "column": 51,
+        "line": 73
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/money.rs\n+++ replace > with == in parse_decimal_to_minor\n@@ -65,17 +65,17 @@\n     let s = input.trim();\n     if s.is_empty() {\n         return Err(MoneyError::Empty);\n     }\n     let s = s.strip_prefix('+').unwrap_or(s);\n     if s.starts_with('-') {\n         return Err(MoneyError::Negative);\n     }\n-    if !s.bytes().all(|b| b.is_ascii_digit() || b == b'.') || s.matches('.').count() > 1 {\n+    if !s.bytes().all(|b| b.is_ascii_digit() || b == b'.') || s.matches('.').count() == /* ~ changed by cargo-mutants ~ */ 1 {\n         return Err(MoneyError::InvalidFormat);\n     }\n \n     let (integral, fractional) = match s.split_once('.') {\n         Some((i, f)) => (i, f),\n         None => (s, \"\"),\n     };\n     if fractional.len() > dp as usize {\n",
+    "file": "core/src/money.rs",
+    "function": {
+      "function_name": "parse_decimal_to_minor",
+      "return_type": "-> Result<i64, MoneyError>",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 108
+        },
+        "start": {
+          "column": 1,
+          "line": 57
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/money.rs:73:86: replace > with == in parse_decimal_to_minor",
+    "package": "flaps_core",
+    "replacement": "==",
+    "span": {
+      "end": {
+        "column": 87,
+        "line": 73
+      },
+      "start": {
+        "column": 86,
+        "line": 73
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/money.rs\n+++ replace > with < in parse_decimal_to_minor\n@@ -65,17 +65,17 @@\n     let s = input.trim();\n     if s.is_empty() {\n         return Err(MoneyError::Empty);\n     }\n     let s = s.strip_prefix('+').unwrap_or(s);\n     if s.starts_with('-') {\n         return Err(MoneyError::Negative);\n     }\n-    if !s.bytes().all(|b| b.is_ascii_digit() || b == b'.') || s.matches('.').count() > 1 {\n+    if !s.bytes().all(|b| b.is_ascii_digit() || b == b'.') || s.matches('.').count() < /* ~ changed by cargo-mutants ~ */ 1 {\n         return Err(MoneyError::InvalidFormat);\n     }\n \n     let (integral, fractional) = match s.split_once('.') {\n         Some((i, f)) => (i, f),\n         None => (s, \"\"),\n     };\n     if fractional.len() > dp as usize {\n",
+    "file": "core/src/money.rs",
+    "function": {
+      "function_name": "parse_decimal_to_minor",
+      "return_type": "-> Result<i64, MoneyError>",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 108
+        },
+        "start": {
+          "column": 1,
+          "line": 57
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/money.rs:73:86: replace > with < in parse_decimal_to_minor",
+    "package": "flaps_core",
+    "replacement": "<",
+    "span": {
+      "end": {
+        "column": 87,
+        "line": 73
+      },
+      "start": {
+        "column": 86,
+        "line": 73
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/money.rs\n+++ replace > with >= in parse_decimal_to_minor\n@@ -65,17 +65,17 @@\n     let s = input.trim();\n     if s.is_empty() {\n         return Err(MoneyError::Empty);\n     }\n     let s = s.strip_prefix('+').unwrap_or(s);\n     if s.starts_with('-') {\n         return Err(MoneyError::Negative);\n     }\n-    if !s.bytes().all(|b| b.is_ascii_digit() || b == b'.') || s.matches('.').count() > 1 {\n+    if !s.bytes().all(|b| b.is_ascii_digit() || b == b'.') || s.matches('.').count() >= /* ~ changed by cargo-mutants ~ */ 1 {\n         return Err(MoneyError::InvalidFormat);\n     }\n \n     let (integral, fractional) = match s.split_once('.') {\n         Some((i, f)) => (i, f),\n         None => (s, \"\"),\n     };\n     if fractional.len() > dp as usize {\n",
+    "file": "core/src/money.rs",
+    "function": {
+      "function_name": "parse_decimal_to_minor",
+      "return_type": "-> Result<i64, MoneyError>",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 108
+        },
+        "start": {
+          "column": 1,
+          "line": 57
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/money.rs:73:86: replace > with >= in parse_decimal_to_minor",
+    "package": "flaps_core",
+    "replacement": ">=",
+    "span": {
+      "end": {
+        "column": 87,
+        "line": 73
+      },
+      "start": {
+        "column": 86,
+        "line": 73
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/money.rs\n+++ replace > with == in parse_decimal_to_minor\n@@ -73,17 +73,17 @@\n     if !s.bytes().all(|b| b.is_ascii_digit() || b == b'.') || s.matches('.').count() > 1 {\n         return Err(MoneyError::InvalidFormat);\n     }\n \n     let (integral, fractional) = match s.split_once('.') {\n         Some((i, f)) => (i, f),\n         None => (s, \"\"),\n     };\n-    if fractional.len() > dp as usize {\n+    if fractional.len() == /* ~ changed by cargo-mutants ~ */ dp as usize {\n         return Err(MoneyError::TooManyDecimalPlaces {\n             max: dp,\n             got: fractional.len(),\n         });\n     }\n \n     let integral_digits = integral.trim_start_matches('0');\n     if integral_digits.len() + fractional.len() > MAX_TOTAL_DIGITS {\n",
+    "file": "core/src/money.rs",
+    "function": {
+      "function_name": "parse_decimal_to_minor",
+      "return_type": "-> Result<i64, MoneyError>",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 108
+        },
+        "start": {
+          "column": 1,
+          "line": 57
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/money.rs:81:25: replace > with == in parse_decimal_to_minor",
+    "package": "flaps_core",
+    "replacement": "==",
+    "span": {
+      "end": {
+        "column": 26,
+        "line": 81
+      },
+      "start": {
+        "column": 25,
+        "line": 81
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/money.rs\n+++ replace > with < in parse_decimal_to_minor\n@@ -73,17 +73,17 @@\n     if !s.bytes().all(|b| b.is_ascii_digit() || b == b'.') || s.matches('.').count() > 1 {\n         return Err(MoneyError::InvalidFormat);\n     }\n \n     let (integral, fractional) = match s.split_once('.') {\n         Some((i, f)) => (i, f),\n         None => (s, \"\"),\n     };\n-    if fractional.len() > dp as usize {\n+    if fractional.len() < /* ~ changed by cargo-mutants ~ */ dp as usize {\n         return Err(MoneyError::TooManyDecimalPlaces {\n             max: dp,\n             got: fractional.len(),\n         });\n     }\n \n     let integral_digits = integral.trim_start_matches('0');\n     if integral_digits.len() + fractional.len() > MAX_TOTAL_DIGITS {\n",
+    "file": "core/src/money.rs",
+    "function": {
+      "function_name": "parse_decimal_to_minor",
+      "return_type": "-> Result<i64, MoneyError>",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 108
+        },
+        "start": {
+          "column": 1,
+          "line": 57
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/money.rs:81:25: replace > with < in parse_decimal_to_minor",
+    "package": "flaps_core",
+    "replacement": "<",
+    "span": {
+      "end": {
+        "column": 26,
+        "line": 81
+      },
+      "start": {
+        "column": 25,
+        "line": 81
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/money.rs\n+++ replace > with >= in parse_decimal_to_minor\n@@ -73,17 +73,17 @@\n     if !s.bytes().all(|b| b.is_ascii_digit() || b == b'.') || s.matches('.').count() > 1 {\n         return Err(MoneyError::InvalidFormat);\n     }\n \n     let (integral, fractional) = match s.split_once('.') {\n         Some((i, f)) => (i, f),\n         None => (s, \"\"),\n     };\n-    if fractional.len() > dp as usize {\n+    if fractional.len() >= /* ~ changed by cargo-mutants ~ */ dp as usize {\n         return Err(MoneyError::TooManyDecimalPlaces {\n             max: dp,\n             got: fractional.len(),\n         });\n     }\n \n     let integral_digits = integral.trim_start_matches('0');\n     if integral_digits.len() + fractional.len() > MAX_TOTAL_DIGITS {\n",
+    "file": "core/src/money.rs",
+    "function": {
+      "function_name": "parse_decimal_to_minor",
+      "return_type": "-> Result<i64, MoneyError>",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 108
+        },
+        "start": {
+          "column": 1,
+          "line": 57
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/money.rs:81:25: replace > with >= in parse_decimal_to_minor",
+    "package": "flaps_core",
+    "replacement": ">=",
+    "span": {
+      "end": {
+        "column": 26,
+        "line": 81
+      },
+      "start": {
+        "column": 25,
+        "line": 81
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/money.rs\n+++ replace > with == in parse_decimal_to_minor\n@@ -81,17 +81,17 @@\n     if fractional.len() > dp as usize {\n         return Err(MoneyError::TooManyDecimalPlaces {\n             max: dp,\n             got: fractional.len(),\n         });\n     }\n \n     let integral_digits = integral.trim_start_matches('0');\n-    if integral_digits.len() + fractional.len() > MAX_TOTAL_DIGITS {\n+    if integral_digits.len() + fractional.len() == /* ~ changed by cargo-mutants ~ */ MAX_TOTAL_DIGITS {\n         return Err(MoneyError::Overflow {\n             max_total_digits: MAX_TOTAL_DIGITS,\n         });\n     }\n \n     let mut digits = String::with_capacity(integral_digits.len() + dp as usize);\n     digits.push_str(integral_digits);\n     digits.push_str(fractional);\n",
+    "file": "core/src/money.rs",
+    "function": {
+      "function_name": "parse_decimal_to_minor",
+      "return_type": "-> Result<i64, MoneyError>",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 108
+        },
+        "start": {
+          "column": 1,
+          "line": 57
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/money.rs:89:49: replace > with == in parse_decimal_to_minor",
+    "package": "flaps_core",
+    "replacement": "==",
+    "span": {
+      "end": {
+        "column": 50,
+        "line": 89
+      },
+      "start": {
+        "column": 49,
+        "line": 89
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/money.rs\n+++ replace > with < in parse_decimal_to_minor\n@@ -81,17 +81,17 @@\n     if fractional.len() > dp as usize {\n         return Err(MoneyError::TooManyDecimalPlaces {\n             max: dp,\n             got: fractional.len(),\n         });\n     }\n \n     let integral_digits = integral.trim_start_matches('0');\n-    if integral_digits.len() + fractional.len() > MAX_TOTAL_DIGITS {\n+    if integral_digits.len() + fractional.len() < /* ~ changed by cargo-mutants ~ */ MAX_TOTAL_DIGITS {\n         return Err(MoneyError::Overflow {\n             max_total_digits: MAX_TOTAL_DIGITS,\n         });\n     }\n \n     let mut digits = String::with_capacity(integral_digits.len() + dp as usize);\n     digits.push_str(integral_digits);\n     digits.push_str(fractional);\n",
+    "file": "core/src/money.rs",
+    "function": {
+      "function_name": "parse_decimal_to_minor",
+      "return_type": "-> Result<i64, MoneyError>",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 108
+        },
+        "start": {
+          "column": 1,
+          "line": 57
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/money.rs:89:49: replace > with < in parse_decimal_to_minor",
+    "package": "flaps_core",
+    "replacement": "<",
+    "span": {
+      "end": {
+        "column": 50,
+        "line": 89
+      },
+      "start": {
+        "column": 49,
+        "line": 89
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/money.rs\n+++ replace > with >= in parse_decimal_to_minor\n@@ -81,17 +81,17 @@\n     if fractional.len() > dp as usize {\n         return Err(MoneyError::TooManyDecimalPlaces {\n             max: dp,\n             got: fractional.len(),\n         });\n     }\n \n     let integral_digits = integral.trim_start_matches('0');\n-    if integral_digits.len() + fractional.len() > MAX_TOTAL_DIGITS {\n+    if integral_digits.len() + fractional.len() >= /* ~ changed by cargo-mutants ~ */ MAX_TOTAL_DIGITS {\n         return Err(MoneyError::Overflow {\n             max_total_digits: MAX_TOTAL_DIGITS,\n         });\n     }\n \n     let mut digits = String::with_capacity(integral_digits.len() + dp as usize);\n     digits.push_str(integral_digits);\n     digits.push_str(fractional);\n",
+    "file": "core/src/money.rs",
+    "function": {
+      "function_name": "parse_decimal_to_minor",
+      "return_type": "-> Result<i64, MoneyError>",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 108
+        },
+        "start": {
+          "column": 1,
+          "line": 57
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/money.rs:89:49: replace > with >= in parse_decimal_to_minor",
+    "package": "flaps_core",
+    "replacement": ">=",
+    "span": {
+      "end": {
+        "column": 50,
+        "line": 89
+      },
+      "start": {
+        "column": 49,
+        "line": 89
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/money.rs\n+++ replace + with - in parse_decimal_to_minor\n@@ -81,17 +81,17 @@\n     if fractional.len() > dp as usize {\n         return Err(MoneyError::TooManyDecimalPlaces {\n             max: dp,\n             got: fractional.len(),\n         });\n     }\n \n     let integral_digits = integral.trim_start_matches('0');\n-    if integral_digits.len() + fractional.len() > MAX_TOTAL_DIGITS {\n+    if integral_digits.len() - /* ~ changed by cargo-mutants ~ */ fractional.len() > MAX_TOTAL_DIGITS {\n         return Err(MoneyError::Overflow {\n             max_total_digits: MAX_TOTAL_DIGITS,\n         });\n     }\n \n     let mut digits = String::with_capacity(integral_digits.len() + dp as usize);\n     digits.push_str(integral_digits);\n     digits.push_str(fractional);\n",
+    "file": "core/src/money.rs",
+    "function": {
+      "function_name": "parse_decimal_to_minor",
+      "return_type": "-> Result<i64, MoneyError>",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 108
+        },
+        "start": {
+          "column": 1,
+          "line": 57
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/money.rs:89:30: replace + with - in parse_decimal_to_minor",
+    "package": "flaps_core",
+    "replacement": "-",
+    "span": {
+      "end": {
+        "column": 31,
+        "line": 89
+      },
+      "start": {
+        "column": 30,
+        "line": 89
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/money.rs\n+++ replace + with * in parse_decimal_to_minor\n@@ -81,17 +81,17 @@\n     if fractional.len() > dp as usize {\n         return Err(MoneyError::TooManyDecimalPlaces {\n             max: dp,\n             got: fractional.len(),\n         });\n     }\n \n     let integral_digits = integral.trim_start_matches('0');\n-    if integral_digits.len() + fractional.len() > MAX_TOTAL_DIGITS {\n+    if integral_digits.len() * /* ~ changed by cargo-mutants ~ */ fractional.len() > MAX_TOTAL_DIGITS {\n         return Err(MoneyError::Overflow {\n             max_total_digits: MAX_TOTAL_DIGITS,\n         });\n     }\n \n     let mut digits = String::with_capacity(integral_digits.len() + dp as usize);\n     digits.push_str(integral_digits);\n     digits.push_str(fractional);\n",
+    "file": "core/src/money.rs",
+    "function": {
+      "function_name": "parse_decimal_to_minor",
+      "return_type": "-> Result<i64, MoneyError>",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 108
+        },
+        "start": {
+          "column": 1,
+          "line": 57
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/money.rs:89:30: replace + with * in parse_decimal_to_minor",
+    "package": "flaps_core",
+    "replacement": "*",
+    "span": {
+      "end": {
+        "column": 31,
+        "line": 89
+      },
+      "start": {
+        "column": 30,
+        "line": 89
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/money.rs\n+++ replace - with + in parse_decimal_to_minor\n@@ -90,17 +90,17 @@\n         return Err(MoneyError::Overflow {\n             max_total_digits: MAX_TOTAL_DIGITS,\n         });\n     }\n \n     let mut digits = String::with_capacity(integral_digits.len() + dp as usize);\n     digits.push_str(integral_digits);\n     digits.push_str(fractional);\n-    for _ in 0..(dp as usize - fractional.len()) {\n+    for _ in 0..(dp as usize + /* ~ changed by cargo-mutants ~ */ fractional.len()) {\n         digits.push('0');\n     }\n \n     if digits.is_empty() {\n         return Ok(0);\n     }\n     digits.parse::<i64>().map_err(|_| MoneyError::Overflow {\n         max_total_digits: MAX_TOTAL_DIGITS,\n",
+    "file": "core/src/money.rs",
+    "function": {
+      "function_name": "parse_decimal_to_minor",
+      "return_type": "-> Result<i64, MoneyError>",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 108
+        },
+        "start": {
+          "column": 1,
+          "line": 57
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/money.rs:98:30: replace - with + in parse_decimal_to_minor",
+    "package": "flaps_core",
+    "replacement": "+",
+    "span": {
+      "end": {
+        "column": 31,
+        "line": 98
+      },
+      "start": {
+        "column": 30,
+        "line": 98
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/money.rs\n+++ replace - with / in parse_decimal_to_minor\n@@ -90,17 +90,17 @@\n         return Err(MoneyError::Overflow {\n             max_total_digits: MAX_TOTAL_DIGITS,\n         });\n     }\n \n     let mut digits = String::with_capacity(integral_digits.len() + dp as usize);\n     digits.push_str(integral_digits);\n     digits.push_str(fractional);\n-    for _ in 0..(dp as usize - fractional.len()) {\n+    for _ in 0..(dp as usize / /* ~ changed by cargo-mutants ~ */ fractional.len()) {\n         digits.push('0');\n     }\n \n     if digits.is_empty() {\n         return Ok(0);\n     }\n     digits.parse::<i64>().map_err(|_| MoneyError::Overflow {\n         max_total_digits: MAX_TOTAL_DIGITS,\n",
+    "file": "core/src/money.rs",
+    "function": {
+      "function_name": "parse_decimal_to_minor",
+      "return_type": "-> Result<i64, MoneyError>",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 108
+        },
+        "start": {
+          "column": 1,
+          "line": 57
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/money.rs:98:30: replace - with / in parse_decimal_to_minor",
+    "package": "flaps_core",
+    "replacement": "/",
+    "span": {
+      "end": {
+        "column": 31,
+        "line": 98
+      },
+      "start": {
+        "column": 30,
+        "line": 98
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/money.rs\n+++ replace format_minor -> String with String::new()\n@@ -105,42 +105,17 @@\n     digits.parse::<i64>().map_err(|_| MoneyError::Overflow {\n         max_total_digits: MAX_TOTAL_DIGITS,\n     })\n }\n \n /// Format minor units as a grouped decimal string, e.g. `12345` with `dp = 2`\n /// becomes `123.45` and `-50` becomes `-0.50`. Pure integer arithmetic.\n pub fn format_minor(minor: i64, dp: u32) -> String {\n-    let negative = minor < 0;\n-    let magnitude = minor.unsigned_abs();\n-    let scale = 10u64.pow(dp);\n-    let integral = magnitude / scale;\n-    let fraction = magnitude % scale;\n-\n-    let integral_str = integral.to_string();\n-    let mut grouped = String::with_capacity(integral_str.len() + integral_str.len() / 3);\n-    for (idx, ch) in integral_str.chars().enumerate() {\n-        if idx > 0 && (integral_str.len() - idx).is_multiple_of(3) {\n-            grouped.push(',');\n-        }\n-        grouped.push(ch);\n-    }\n-\n-    if dp == 0 {\n-        return format!(\n-            \"{negative_sign}{grouped}\",\n-            negative_sign = if negative { \"-\" } else { \"\" }\n-        );\n-    }\n-    let fraction_str = format!(\"{fraction:0width$}\", width = dp as usize);\n-    format!(\n-        \"{sign}{grouped}.{fraction_str}\",\n-        sign = if negative { \"-\" } else { \"\" }\n-    )\n+    String::new() /* ~ changed by cargo-mutants ~ */\n }\n \n /// Property-based tests (PBT) for money arithmetic invariants.\n ///\n /// proptest generates thousands of random inputs and shrinks counterexamples.\n /// These tests lock the INV-01 \"no floating point\" invariant against regressions.\n #[cfg(test)]\n mod proptest_money {\n",
+    "file": "core/src/money.rs",
+    "function": {
+      "function_name": "format_minor",
+      "return_type": "-> String",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 139
+        },
+        "start": {
+          "column": 1,
+          "line": 110
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "core/src/money.rs:113:5: replace format_minor -> String with String::new()",
+    "package": "flaps_core",
+    "replacement": "String::new()",
+    "span": {
+      "end": {
+        "column": 6,
+        "line": 138
+      },
+      "start": {
+        "column": 5,
+        "line": 113
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/money.rs\n+++ replace format_minor -> String with \"xyzzy\".into()\n@@ -105,42 +105,17 @@\n     digits.parse::<i64>().map_err(|_| MoneyError::Overflow {\n         max_total_digits: MAX_TOTAL_DIGITS,\n     })\n }\n \n /// Format minor units as a grouped decimal string, e.g. `12345` with `dp = 2`\n /// becomes `123.45` and `-50` becomes `-0.50`. Pure integer arithmetic.\n pub fn format_minor(minor: i64, dp: u32) -> String {\n-    let negative = minor < 0;\n-    let magnitude = minor.unsigned_abs();\n-    let scale = 10u64.pow(dp);\n-    let integral = magnitude / scale;\n-    let fraction = magnitude % scale;\n-\n-    let integral_str = integral.to_string();\n-    let mut grouped = String::with_capacity(integral_str.len() + integral_str.len() / 3);\n-    for (idx, ch) in integral_str.chars().enumerate() {\n-        if idx > 0 && (integral_str.len() - idx).is_multiple_of(3) {\n-            grouped.push(',');\n-        }\n-        grouped.push(ch);\n-    }\n-\n-    if dp == 0 {\n-        return format!(\n-            \"{negative_sign}{grouped}\",\n-            negative_sign = if negative { \"-\" } else { \"\" }\n-        );\n-    }\n-    let fraction_str = format!(\"{fraction:0width$}\", width = dp as usize);\n-    format!(\n-        \"{sign}{grouped}.{fraction_str}\",\n-        sign = if negative { \"-\" } else { \"\" }\n-    )\n+    \"xyzzy\".into() /* ~ changed by cargo-mutants ~ */\n }\n \n /// Property-based tests (PBT) for money arithmetic invariants.\n ///\n /// proptest generates thousands of random inputs and shrinks counterexamples.\n /// These tests lock the INV-01 \"no floating point\" invariant against regressions.\n #[cfg(test)]\n mod proptest_money {\n",
+    "file": "core/src/money.rs",
+    "function": {
+      "function_name": "format_minor",
+      "return_type": "-> String",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 139
+        },
+        "start": {
+          "column": 1,
+          "line": 110
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "core/src/money.rs:113:5: replace format_minor -> String with \"xyzzy\".into()",
+    "package": "flaps_core",
+    "replacement": "\"xyzzy\".into()",
+    "span": {
+      "end": {
+        "column": 6,
+        "line": 138
+      },
+      "start": {
+        "column": 5,
+        "line": 113
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/money.rs\n+++ replace < with == in format_minor\n@@ -105,17 +105,17 @@\n     digits.parse::<i64>().map_err(|_| MoneyError::Overflow {\n         max_total_digits: MAX_TOTAL_DIGITS,\n     })\n }\n \n /// Format minor units as a grouped decimal string, e.g. `12345` with `dp = 2`\n /// becomes `123.45` and `-50` becomes `-0.50`. Pure integer arithmetic.\n pub fn format_minor(minor: i64, dp: u32) -> String {\n-    let negative = minor < 0;\n+    let negative = minor == /* ~ changed by cargo-mutants ~ */ 0;\n     let magnitude = minor.unsigned_abs();\n     let scale = 10u64.pow(dp);\n     let integral = magnitude / scale;\n     let fraction = magnitude % scale;\n \n     let integral_str = integral.to_string();\n     let mut grouped = String::with_capacity(integral_str.len() + integral_str.len() / 3);\n     for (idx, ch) in integral_str.chars().enumerate() {\n",
+    "file": "core/src/money.rs",
+    "function": {
+      "function_name": "format_minor",
+      "return_type": "-> String",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 139
+        },
+        "start": {
+          "column": 1,
+          "line": 110
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/money.rs:113:26: replace < with == in format_minor",
+    "package": "flaps_core",
+    "replacement": "==",
+    "span": {
+      "end": {
+        "column": 27,
+        "line": 113
+      },
+      "start": {
+        "column": 26,
+        "line": 113
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/money.rs\n+++ replace < with > in format_minor\n@@ -105,17 +105,17 @@\n     digits.parse::<i64>().map_err(|_| MoneyError::Overflow {\n         max_total_digits: MAX_TOTAL_DIGITS,\n     })\n }\n \n /// Format minor units as a grouped decimal string, e.g. `12345` with `dp = 2`\n /// becomes `123.45` and `-50` becomes `-0.50`. Pure integer arithmetic.\n pub fn format_minor(minor: i64, dp: u32) -> String {\n-    let negative = minor < 0;\n+    let negative = minor > /* ~ changed by cargo-mutants ~ */ 0;\n     let magnitude = minor.unsigned_abs();\n     let scale = 10u64.pow(dp);\n     let integral = magnitude / scale;\n     let fraction = magnitude % scale;\n \n     let integral_str = integral.to_string();\n     let mut grouped = String::with_capacity(integral_str.len() + integral_str.len() / 3);\n     for (idx, ch) in integral_str.chars().enumerate() {\n",
+    "file": "core/src/money.rs",
+    "function": {
+      "function_name": "format_minor",
+      "return_type": "-> String",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 139
+        },
+        "start": {
+          "column": 1,
+          "line": 110
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/money.rs:113:26: replace < with > in format_minor",
+    "package": "flaps_core",
+    "replacement": ">",
+    "span": {
+      "end": {
+        "column": 27,
+        "line": 113
+      },
+      "start": {
+        "column": 26,
+        "line": 113
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/money.rs\n+++ replace < with <= in format_minor\n@@ -105,17 +105,17 @@\n     digits.parse::<i64>().map_err(|_| MoneyError::Overflow {\n         max_total_digits: MAX_TOTAL_DIGITS,\n     })\n }\n \n /// Format minor units as a grouped decimal string, e.g. `12345` with `dp = 2`\n /// becomes `123.45` and `-50` becomes `-0.50`. Pure integer arithmetic.\n pub fn format_minor(minor: i64, dp: u32) -> String {\n-    let negative = minor < 0;\n+    let negative = minor <= /* ~ changed by cargo-mutants ~ */ 0;\n     let magnitude = minor.unsigned_abs();\n     let scale = 10u64.pow(dp);\n     let integral = magnitude / scale;\n     let fraction = magnitude % scale;\n \n     let integral_str = integral.to_string();\n     let mut grouped = String::with_capacity(integral_str.len() + integral_str.len() / 3);\n     for (idx, ch) in integral_str.chars().enumerate() {\n",
+    "file": "core/src/money.rs",
+    "function": {
+      "function_name": "format_minor",
+      "return_type": "-> String",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 139
+        },
+        "start": {
+          "column": 1,
+          "line": 110
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/money.rs:113:26: replace < with <= in format_minor",
+    "package": "flaps_core",
+    "replacement": "<=",
+    "span": {
+      "end": {
+        "column": 27,
+        "line": 113
+      },
+      "start": {
+        "column": 26,
+        "line": 113
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/money.rs\n+++ replace / with % in format_minor\n@@ -108,17 +108,17 @@\n }\n \n /// Format minor units as a grouped decimal string, e.g. `12345` with `dp = 2`\n /// becomes `123.45` and `-50` becomes `-0.50`. Pure integer arithmetic.\n pub fn format_minor(minor: i64, dp: u32) -> String {\n     let negative = minor < 0;\n     let magnitude = minor.unsigned_abs();\n     let scale = 10u64.pow(dp);\n-    let integral = magnitude / scale;\n+    let integral = magnitude % /* ~ changed by cargo-mutants ~ */ scale;\n     let fraction = magnitude % scale;\n \n     let integral_str = integral.to_string();\n     let mut grouped = String::with_capacity(integral_str.len() + integral_str.len() / 3);\n     for (idx, ch) in integral_str.chars().enumerate() {\n         if idx > 0 && (integral_str.len() - idx).is_multiple_of(3) {\n             grouped.push(',');\n         }\n",
+    "file": "core/src/money.rs",
+    "function": {
+      "function_name": "format_minor",
+      "return_type": "-> String",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 139
+        },
+        "start": {
+          "column": 1,
+          "line": 110
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/money.rs:116:30: replace / with % in format_minor",
+    "package": "flaps_core",
+    "replacement": "%",
+    "span": {
+      "end": {
+        "column": 31,
+        "line": 116
+      },
+      "start": {
+        "column": 30,
+        "line": 116
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/money.rs\n+++ replace / with * in format_minor\n@@ -108,17 +108,17 @@\n }\n \n /// Format minor units as a grouped decimal string, e.g. `12345` with `dp = 2`\n /// becomes `123.45` and `-50` becomes `-0.50`. Pure integer arithmetic.\n pub fn format_minor(minor: i64, dp: u32) -> String {\n     let negative = minor < 0;\n     let magnitude = minor.unsigned_abs();\n     let scale = 10u64.pow(dp);\n-    let integral = magnitude / scale;\n+    let integral = magnitude * /* ~ changed by cargo-mutants ~ */ scale;\n     let fraction = magnitude % scale;\n \n     let integral_str = integral.to_string();\n     let mut grouped = String::with_capacity(integral_str.len() + integral_str.len() / 3);\n     for (idx, ch) in integral_str.chars().enumerate() {\n         if idx > 0 && (integral_str.len() - idx).is_multiple_of(3) {\n             grouped.push(',');\n         }\n",
+    "file": "core/src/money.rs",
+    "function": {
+      "function_name": "format_minor",
+      "return_type": "-> String",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 139
+        },
+        "start": {
+          "column": 1,
+          "line": 110
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/money.rs:116:30: replace / with * in format_minor",
+    "package": "flaps_core",
+    "replacement": "*",
+    "span": {
+      "end": {
+        "column": 31,
+        "line": 116
+      },
+      "start": {
+        "column": 30,
+        "line": 116
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/money.rs\n+++ replace % with / in format_minor\n@@ -109,17 +109,17 @@\n \n /// Format minor units as a grouped decimal string, e.g. `12345` with `dp = 2`\n /// becomes `123.45` and `-50` becomes `-0.50`. Pure integer arithmetic.\n pub fn format_minor(minor: i64, dp: u32) -> String {\n     let negative = minor < 0;\n     let magnitude = minor.unsigned_abs();\n     let scale = 10u64.pow(dp);\n     let integral = magnitude / scale;\n-    let fraction = magnitude % scale;\n+    let fraction = magnitude / /* ~ changed by cargo-mutants ~ */ scale;\n \n     let integral_str = integral.to_string();\n     let mut grouped = String::with_capacity(integral_str.len() + integral_str.len() / 3);\n     for (idx, ch) in integral_str.chars().enumerate() {\n         if idx > 0 && (integral_str.len() - idx).is_multiple_of(3) {\n             grouped.push(',');\n         }\n         grouped.push(ch);\n",
+    "file": "core/src/money.rs",
+    "function": {
+      "function_name": "format_minor",
+      "return_type": "-> String",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 139
+        },
+        "start": {
+          "column": 1,
+          "line": 110
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/money.rs:117:30: replace % with / in format_minor",
+    "package": "flaps_core",
+    "replacement": "/",
+    "span": {
+      "end": {
+        "column": 31,
+        "line": 117
+      },
+      "start": {
+        "column": 30,
+        "line": 117
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/money.rs\n+++ replace % with + in format_minor\n@@ -109,17 +109,17 @@\n \n /// Format minor units as a grouped decimal string, e.g. `12345` with `dp = 2`\n /// becomes `123.45` and `-50` becomes `-0.50`. Pure integer arithmetic.\n pub fn format_minor(minor: i64, dp: u32) -> String {\n     let negative = minor < 0;\n     let magnitude = minor.unsigned_abs();\n     let scale = 10u64.pow(dp);\n     let integral = magnitude / scale;\n-    let fraction = magnitude % scale;\n+    let fraction = magnitude + /* ~ changed by cargo-mutants ~ */ scale;\n \n     let integral_str = integral.to_string();\n     let mut grouped = String::with_capacity(integral_str.len() + integral_str.len() / 3);\n     for (idx, ch) in integral_str.chars().enumerate() {\n         if idx > 0 && (integral_str.len() - idx).is_multiple_of(3) {\n             grouped.push(',');\n         }\n         grouped.push(ch);\n",
+    "file": "core/src/money.rs",
+    "function": {
+      "function_name": "format_minor",
+      "return_type": "-> String",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 139
+        },
+        "start": {
+          "column": 1,
+          "line": 110
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/money.rs:117:30: replace % with + in format_minor",
+    "package": "flaps_core",
+    "replacement": "+",
+    "span": {
+      "end": {
+        "column": 31,
+        "line": 117
+      },
+      "start": {
+        "column": 30,
+        "line": 117
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/money.rs\n+++ replace && with || in format_minor\n@@ -114,17 +114,17 @@\n     let magnitude = minor.unsigned_abs();\n     let scale = 10u64.pow(dp);\n     let integral = magnitude / scale;\n     let fraction = magnitude % scale;\n \n     let integral_str = integral.to_string();\n     let mut grouped = String::with_capacity(integral_str.len() + integral_str.len() / 3);\n     for (idx, ch) in integral_str.chars().enumerate() {\n-        if idx > 0 && (integral_str.len() - idx).is_multiple_of(3) {\n+        if idx > 0 || /* ~ changed by cargo-mutants ~ */ (integral_str.len() - idx).is_multiple_of(3) {\n             grouped.push(',');\n         }\n         grouped.push(ch);\n     }\n \n     if dp == 0 {\n         return format!(\n             \"{negative_sign}{grouped}\",\n",
+    "file": "core/src/money.rs",
+    "function": {
+      "function_name": "format_minor",
+      "return_type": "-> String",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 139
+        },
+        "start": {
+          "column": 1,
+          "line": 110
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/money.rs:122:20: replace && with || in format_minor",
+    "package": "flaps_core",
+    "replacement": "||",
+    "span": {
+      "end": {
+        "column": 22,
+        "line": 122
+      },
+      "start": {
+        "column": 20,
+        "line": 122
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/money.rs\n+++ replace > with == in format_minor\n@@ -114,17 +114,17 @@\n     let magnitude = minor.unsigned_abs();\n     let scale = 10u64.pow(dp);\n     let integral = magnitude / scale;\n     let fraction = magnitude % scale;\n \n     let integral_str = integral.to_string();\n     let mut grouped = String::with_capacity(integral_str.len() + integral_str.len() / 3);\n     for (idx, ch) in integral_str.chars().enumerate() {\n-        if idx > 0 && (integral_str.len() - idx).is_multiple_of(3) {\n+        if idx == /* ~ changed by cargo-mutants ~ */ 0 && (integral_str.len() - idx).is_multiple_of(3) {\n             grouped.push(',');\n         }\n         grouped.push(ch);\n     }\n \n     if dp == 0 {\n         return format!(\n             \"{negative_sign}{grouped}\",\n",
+    "file": "core/src/money.rs",
+    "function": {
+      "function_name": "format_minor",
+      "return_type": "-> String",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 139
+        },
+        "start": {
+          "column": 1,
+          "line": 110
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/money.rs:122:16: replace > with == in format_minor",
+    "package": "flaps_core",
+    "replacement": "==",
+    "span": {
+      "end": {
+        "column": 17,
+        "line": 122
+      },
+      "start": {
+        "column": 16,
+        "line": 122
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/money.rs\n+++ replace > with < in format_minor\n@@ -114,17 +114,17 @@\n     let magnitude = minor.unsigned_abs();\n     let scale = 10u64.pow(dp);\n     let integral = magnitude / scale;\n     let fraction = magnitude % scale;\n \n     let integral_str = integral.to_string();\n     let mut grouped = String::with_capacity(integral_str.len() + integral_str.len() / 3);\n     for (idx, ch) in integral_str.chars().enumerate() {\n-        if idx > 0 && (integral_str.len() - idx).is_multiple_of(3) {\n+        if idx < /* ~ changed by cargo-mutants ~ */ 0 && (integral_str.len() - idx).is_multiple_of(3) {\n             grouped.push(',');\n         }\n         grouped.push(ch);\n     }\n \n     if dp == 0 {\n         return format!(\n             \"{negative_sign}{grouped}\",\n",
+    "file": "core/src/money.rs",
+    "function": {
+      "function_name": "format_minor",
+      "return_type": "-> String",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 139
+        },
+        "start": {
+          "column": 1,
+          "line": 110
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/money.rs:122:16: replace > with < in format_minor",
+    "package": "flaps_core",
+    "replacement": "<",
+    "span": {
+      "end": {
+        "column": 17,
+        "line": 122
+      },
+      "start": {
+        "column": 16,
+        "line": 122
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/money.rs\n+++ replace > with >= in format_minor\n@@ -114,17 +114,17 @@\n     let magnitude = minor.unsigned_abs();\n     let scale = 10u64.pow(dp);\n     let integral = magnitude / scale;\n     let fraction = magnitude % scale;\n \n     let integral_str = integral.to_string();\n     let mut grouped = String::with_capacity(integral_str.len() + integral_str.len() / 3);\n     for (idx, ch) in integral_str.chars().enumerate() {\n-        if idx > 0 && (integral_str.len() - idx).is_multiple_of(3) {\n+        if idx >= /* ~ changed by cargo-mutants ~ */ 0 && (integral_str.len() - idx).is_multiple_of(3) {\n             grouped.push(',');\n         }\n         grouped.push(ch);\n     }\n \n     if dp == 0 {\n         return format!(\n             \"{negative_sign}{grouped}\",\n",
+    "file": "core/src/money.rs",
+    "function": {
+      "function_name": "format_minor",
+      "return_type": "-> String",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 139
+        },
+        "start": {
+          "column": 1,
+          "line": 110
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/money.rs:122:16: replace > with >= in format_minor",
+    "package": "flaps_core",
+    "replacement": ">=",
+    "span": {
+      "end": {
+        "column": 17,
+        "line": 122
+      },
+      "start": {
+        "column": 16,
+        "line": 122
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/money.rs\n+++ replace - with + in format_minor\n@@ -114,17 +114,17 @@\n     let magnitude = minor.unsigned_abs();\n     let scale = 10u64.pow(dp);\n     let integral = magnitude / scale;\n     let fraction = magnitude % scale;\n \n     let integral_str = integral.to_string();\n     let mut grouped = String::with_capacity(integral_str.len() + integral_str.len() / 3);\n     for (idx, ch) in integral_str.chars().enumerate() {\n-        if idx > 0 && (integral_str.len() - idx).is_multiple_of(3) {\n+        if idx > 0 && (integral_str.len() + /* ~ changed by cargo-mutants ~ */ idx).is_multiple_of(3) {\n             grouped.push(',');\n         }\n         grouped.push(ch);\n     }\n \n     if dp == 0 {\n         return format!(\n             \"{negative_sign}{grouped}\",\n",
+    "file": "core/src/money.rs",
+    "function": {
+      "function_name": "format_minor",
+      "return_type": "-> String",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 139
+        },
+        "start": {
+          "column": 1,
+          "line": 110
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/money.rs:122:43: replace - with + in format_minor",
+    "package": "flaps_core",
+    "replacement": "+",
+    "span": {
+      "end": {
+        "column": 44,
+        "line": 122
+      },
+      "start": {
+        "column": 43,
+        "line": 122
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/money.rs\n+++ replace - with / in format_minor\n@@ -114,17 +114,17 @@\n     let magnitude = minor.unsigned_abs();\n     let scale = 10u64.pow(dp);\n     let integral = magnitude / scale;\n     let fraction = magnitude % scale;\n \n     let integral_str = integral.to_string();\n     let mut grouped = String::with_capacity(integral_str.len() + integral_str.len() / 3);\n     for (idx, ch) in integral_str.chars().enumerate() {\n-        if idx > 0 && (integral_str.len() - idx).is_multiple_of(3) {\n+        if idx > 0 && (integral_str.len() / /* ~ changed by cargo-mutants ~ */ idx).is_multiple_of(3) {\n             grouped.push(',');\n         }\n         grouped.push(ch);\n     }\n \n     if dp == 0 {\n         return format!(\n             \"{negative_sign}{grouped}\",\n",
+    "file": "core/src/money.rs",
+    "function": {
+      "function_name": "format_minor",
+      "return_type": "-> String",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 139
+        },
+        "start": {
+          "column": 1,
+          "line": 110
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/money.rs:122:43: replace - with / in format_minor",
+    "package": "flaps_core",
+    "replacement": "/",
+    "span": {
+      "end": {
+        "column": 44,
+        "line": 122
+      },
+      "start": {
+        "column": 43,
+        "line": 122
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/money.rs\n+++ replace == with != in format_minor\n@@ -120,17 +120,17 @@\n     let mut grouped = String::with_capacity(integral_str.len() + integral_str.len() / 3);\n     for (idx, ch) in integral_str.chars().enumerate() {\n         if idx > 0 && (integral_str.len() - idx).is_multiple_of(3) {\n             grouped.push(',');\n         }\n         grouped.push(ch);\n     }\n \n-    if dp == 0 {\n+    if dp != /* ~ changed by cargo-mutants ~ */ 0 {\n         return format!(\n             \"{negative_sign}{grouped}\",\n             negative_sign = if negative { \"-\" } else { \"\" }\n         );\n     }\n     let fraction_str = format!(\"{fraction:0width$}\", width = dp as usize);\n     format!(\n         \"{sign}{grouped}.{fraction_str}\",\n",
+    "file": "core/src/money.rs",
+    "function": {
+      "function_name": "format_minor",
+      "return_type": "-> String",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 139
+        },
+        "start": {
+          "column": 1,
+          "line": 110
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/money.rs:128:11: replace == with != in format_minor",
+    "package": "flaps_core",
+    "replacement": "!=",
+    "span": {
+      "end": {
+        "column": 13,
+        "line": 128
+      },
+      "start": {
+        "column": 11,
+        "line": 128
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/money.rs\n+++ replace parse_decimal_to_minor_i128 -> Result<i128, MoneyError> with Ok(0)\n@@ -331,59 +331,17 @@\n         }\n     }\n }\n \n /// Parse an exact decimal string into i128 minor units with `dp` fractional\n /// digits. Supports high-precision assets (cryptocurrencies, exchange rates,\n /// interest rates) that exceed i64 range.\n pub fn parse_decimal_to_minor_i128(input: &str, dp: u32) -> Result<i128, MoneyError> {\n-    let s = input.trim();\n-    if s.is_empty() {\n-        return Err(MoneyError::Empty);\n-    }\n-    let s = s.strip_prefix('+').unwrap_or(s);\n-    if s.starts_with('-') {\n-        return Err(MoneyError::Negative);\n-    }\n-    if !s.bytes().all(|b| b.is_ascii_digit() || b == b'.') || s.matches('.').count() > 1 {\n-        return Err(MoneyError::InvalidFormat);\n-    }\n-\n-    let (integral, fractional) = match s.split_once('.') {\n-        Some((i, f)) => (i, f),\n-        None => (s, \"\"),\n-    };\n-    if fractional.len() > dp as usize {\n-        return Err(MoneyError::TooManyDecimalPlaces {\n-            max: dp,\n-            got: fractional.len(),\n-        });\n-    }\n-\n-    let integral_digits = integral.trim_start_matches('0');\n-    if integral_digits.len() + fractional.len() > MAX_TOTAL_DIGITS_I128 {\n-        return Err(MoneyError::Overflow {\n-            max_total_digits: MAX_TOTAL_DIGITS_I128,\n-        });\n-    }\n-\n-    let mut digits = String::with_capacity(integral_digits.len() + dp as usize);\n-    digits.push_str(integral_digits);\n-    digits.push_str(fractional);\n-    for _ in 0..(dp as usize - fractional.len()) {\n-        digits.push('0');\n-    }\n-\n-    if digits.is_empty() {\n-        return Ok(0);\n-    }\n-    digits.parse::<i128>().map_err(|_| MoneyError::Overflow {\n-        max_total_digits: MAX_TOTAL_DIGITS_I128,\n-    })\n+    Ok(0) /* ~ changed by cargo-mutants ~ */\n }\n \n /// Format i128 minor units as a grouped decimal string.\n pub fn format_minor_i128(minor: i128, dp: u32) -> String {\n     let negative = minor < 0;\n     let magnitude = minor.unsigned_abs();\n     let scale = 10u128.pow(dp);\n     let integral = magnitude / scale;\n",
+    "file": "core/src/money.rs",
+    "function": {
+      "function_name": "parse_decimal_to_minor_i128",
+      "return_type": "-> Result<i128, MoneyError>",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 382
+        },
+        "start": {
+          "column": 1,
+          "line": 335
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "core/src/money.rs:339:5: replace parse_decimal_to_minor_i128 -> Result<i128, MoneyError> with Ok(0)",
+    "package": "flaps_core",
+    "replacement": "Ok(0)",
+    "span": {
+      "end": {
+        "column": 7,
+        "line": 381
+      },
+      "start": {
+        "column": 5,
+        "line": 339
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/money.rs\n+++ replace parse_decimal_to_minor_i128 -> Result<i128, MoneyError> with Ok(1)\n@@ -331,59 +331,17 @@\n         }\n     }\n }\n \n /// Parse an exact decimal string into i128 minor units with `dp` fractional\n /// digits. Supports high-precision assets (cryptocurrencies, exchange rates,\n /// interest rates) that exceed i64 range.\n pub fn parse_decimal_to_minor_i128(input: &str, dp: u32) -> Result<i128, MoneyError> {\n-    let s = input.trim();\n-    if s.is_empty() {\n-        return Err(MoneyError::Empty);\n-    }\n-    let s = s.strip_prefix('+').unwrap_or(s);\n-    if s.starts_with('-') {\n-        return Err(MoneyError::Negative);\n-    }\n-    if !s.bytes().all(|b| b.is_ascii_digit() || b == b'.') || s.matches('.').count() > 1 {\n-        return Err(MoneyError::InvalidFormat);\n-    }\n-\n-    let (integral, fractional) = match s.split_once('.') {\n-        Some((i, f)) => (i, f),\n-        None => (s, \"\"),\n-    };\n-    if fractional.len() > dp as usize {\n-        return Err(MoneyError::TooManyDecimalPlaces {\n-            max: dp,\n-            got: fractional.len(),\n-        });\n-    }\n-\n-    let integral_digits = integral.trim_start_matches('0');\n-    if integral_digits.len() + fractional.len() > MAX_TOTAL_DIGITS_I128 {\n-        return Err(MoneyError::Overflow {\n-            max_total_digits: MAX_TOTAL_DIGITS_I128,\n-        });\n-    }\n-\n-    let mut digits = String::with_capacity(integral_digits.len() + dp as usize);\n-    digits.push_str(integral_digits);\n-    digits.push_str(fractional);\n-    for _ in 0..(dp as usize - fractional.len()) {\n-        digits.push('0');\n-    }\n-\n-    if digits.is_empty() {\n-        return Ok(0);\n-    }\n-    digits.parse::<i128>().map_err(|_| MoneyError::Overflow {\n-        max_total_digits: MAX_TOTAL_DIGITS_I128,\n-    })\n+    Ok(1) /* ~ changed by cargo-mutants ~ */\n }\n \n /// Format i128 minor units as a grouped decimal string.\n pub fn format_minor_i128(minor: i128, dp: u32) -> String {\n     let negative = minor < 0;\n     let magnitude = minor.unsigned_abs();\n     let scale = 10u128.pow(dp);\n     let integral = magnitude / scale;\n",
+    "file": "core/src/money.rs",
+    "function": {
+      "function_name": "parse_decimal_to_minor_i128",
+      "return_type": "-> Result<i128, MoneyError>",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 382
+        },
+        "start": {
+          "column": 1,
+          "line": 335
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "core/src/money.rs:339:5: replace parse_decimal_to_minor_i128 -> Result<i128, MoneyError> with Ok(1)",
+    "package": "flaps_core",
+    "replacement": "Ok(1)",
+    "span": {
+      "end": {
+        "column": 7,
+        "line": 381
+      },
+      "start": {
+        "column": 5,
+        "line": 339
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/money.rs\n+++ replace parse_decimal_to_minor_i128 -> Result<i128, MoneyError> with Ok(-1)\n@@ -331,59 +331,17 @@\n         }\n     }\n }\n \n /// Parse an exact decimal string into i128 minor units with `dp` fractional\n /// digits. Supports high-precision assets (cryptocurrencies, exchange rates,\n /// interest rates) that exceed i64 range.\n pub fn parse_decimal_to_minor_i128(input: &str, dp: u32) -> Result<i128, MoneyError> {\n-    let s = input.trim();\n-    if s.is_empty() {\n-        return Err(MoneyError::Empty);\n-    }\n-    let s = s.strip_prefix('+').unwrap_or(s);\n-    if s.starts_with('-') {\n-        return Err(MoneyError::Negative);\n-    }\n-    if !s.bytes().all(|b| b.is_ascii_digit() || b == b'.') || s.matches('.').count() > 1 {\n-        return Err(MoneyError::InvalidFormat);\n-    }\n-\n-    let (integral, fractional) = match s.split_once('.') {\n-        Some((i, f)) => (i, f),\n-        None => (s, \"\"),\n-    };\n-    if fractional.len() > dp as usize {\n-        return Err(MoneyError::TooManyDecimalPlaces {\n-            max: dp,\n-            got: fractional.len(),\n-        });\n-    }\n-\n-    let integral_digits = integral.trim_start_matches('0');\n-    if integral_digits.len() + fractional.len() > MAX_TOTAL_DIGITS_I128 {\n-        return Err(MoneyError::Overflow {\n-            max_total_digits: MAX_TOTAL_DIGITS_I128,\n-        });\n-    }\n-\n-    let mut digits = String::with_capacity(integral_digits.len() + dp as usize);\n-    digits.push_str(integral_digits);\n-    digits.push_str(fractional);\n-    for _ in 0..(dp as usize - fractional.len()) {\n-        digits.push('0');\n-    }\n-\n-    if digits.is_empty() {\n-        return Ok(0);\n-    }\n-    digits.parse::<i128>().map_err(|_| MoneyError::Overflow {\n-        max_total_digits: MAX_TOTAL_DIGITS_I128,\n-    })\n+    Ok(-1) /* ~ changed by cargo-mutants ~ */\n }\n \n /// Format i128 minor units as a grouped decimal string.\n pub fn format_minor_i128(minor: i128, dp: u32) -> String {\n     let negative = minor < 0;\n     let magnitude = minor.unsigned_abs();\n     let scale = 10u128.pow(dp);\n     let integral = magnitude / scale;\n",
+    "file": "core/src/money.rs",
+    "function": {
+      "function_name": "parse_decimal_to_minor_i128",
+      "return_type": "-> Result<i128, MoneyError>",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 382
+        },
+        "start": {
+          "column": 1,
+          "line": 335
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "core/src/money.rs:339:5: replace parse_decimal_to_minor_i128 -> Result<i128, MoneyError> with Ok(-1)",
+    "package": "flaps_core",
+    "replacement": "Ok(-1)",
+    "span": {
+      "end": {
+        "column": 7,
+        "line": 381
+      },
+      "start": {
+        "column": 5,
+        "line": 339
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/money.rs\n+++ replace || with && in parse_decimal_to_minor_i128\n@@ -339,17 +339,17 @@\n     let s = input.trim();\n     if s.is_empty() {\n         return Err(MoneyError::Empty);\n     }\n     let s = s.strip_prefix('+').unwrap_or(s);\n     if s.starts_with('-') {\n         return Err(MoneyError::Negative);\n     }\n-    if !s.bytes().all(|b| b.is_ascii_digit() || b == b'.') || s.matches('.').count() > 1 {\n+    if !s.bytes().all(|b| b.is_ascii_digit() || b == b'.') && /* ~ changed by cargo-mutants ~ */ s.matches('.').count() > 1 {\n         return Err(MoneyError::InvalidFormat);\n     }\n \n     let (integral, fractional) = match s.split_once('.') {\n         Some((i, f)) => (i, f),\n         None => (s, \"\"),\n     };\n     if fractional.len() > dp as usize {\n",
+    "file": "core/src/money.rs",
+    "function": {
+      "function_name": "parse_decimal_to_minor_i128",
+      "return_type": "-> Result<i128, MoneyError>",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 382
+        },
+        "start": {
+          "column": 1,
+          "line": 335
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/money.rs:347:60: replace || with && in parse_decimal_to_minor_i128",
+    "package": "flaps_core",
+    "replacement": "&&",
+    "span": {
+      "end": {
+        "column": 62,
+        "line": 347
+      },
+      "start": {
+        "column": 60,
+        "line": 347
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/money.rs\n+++ delete ! in parse_decimal_to_minor_i128\n@@ -339,17 +339,17 @@\n     let s = input.trim();\n     if s.is_empty() {\n         return Err(MoneyError::Empty);\n     }\n     let s = s.strip_prefix('+').unwrap_or(s);\n     if s.starts_with('-') {\n         return Err(MoneyError::Negative);\n     }\n-    if !s.bytes().all(|b| b.is_ascii_digit() || b == b'.') || s.matches('.').count() > 1 {\n+    if  /* ~ changed by cargo-mutants ~ */s.bytes().all(|b| b.is_ascii_digit() || b == b'.') || s.matches('.').count() > 1 {\n         return Err(MoneyError::InvalidFormat);\n     }\n \n     let (integral, fractional) = match s.split_once('.') {\n         Some((i, f)) => (i, f),\n         None => (s, \"\"),\n     };\n     if fractional.len() > dp as usize {\n",
+    "file": "core/src/money.rs",
+    "function": {
+      "function_name": "parse_decimal_to_minor_i128",
+      "return_type": "-> Result<i128, MoneyError>",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 382
+        },
+        "start": {
+          "column": 1,
+          "line": 335
+        }
+      }
+    },
+    "genre": "UnaryOperator",
+    "name": "core/src/money.rs:347:8: delete ! in parse_decimal_to_minor_i128",
+    "package": "flaps_core",
+    "replacement": "",
+    "span": {
+      "end": {
+        "column": 9,
+        "line": 347
+      },
+      "start": {
+        "column": 8,
+        "line": 347
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/money.rs\n+++ replace || with && in parse_decimal_to_minor_i128\n@@ -339,17 +339,17 @@\n     let s = input.trim();\n     if s.is_empty() {\n         return Err(MoneyError::Empty);\n     }\n     let s = s.strip_prefix('+').unwrap_or(s);\n     if s.starts_with('-') {\n         return Err(MoneyError::Negative);\n     }\n-    if !s.bytes().all(|b| b.is_ascii_digit() || b == b'.') || s.matches('.').count() > 1 {\n+    if !s.bytes().all(|b| b.is_ascii_digit() && /* ~ changed by cargo-mutants ~ */ b == b'.') || s.matches('.').count() > 1 {\n         return Err(MoneyError::InvalidFormat);\n     }\n \n     let (integral, fractional) = match s.split_once('.') {\n         Some((i, f)) => (i, f),\n         None => (s, \"\"),\n     };\n     if fractional.len() > dp as usize {\n",
+    "file": "core/src/money.rs",
+    "function": {
+      "function_name": "parse_decimal_to_minor_i128",
+      "return_type": "-> Result<i128, MoneyError>",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 382
+        },
+        "start": {
+          "column": 1,
+          "line": 335
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/money.rs:347:46: replace || with && in parse_decimal_to_minor_i128",
+    "package": "flaps_core",
+    "replacement": "&&",
+    "span": {
+      "end": {
+        "column": 48,
+        "line": 347
+      },
+      "start": {
+        "column": 46,
+        "line": 347
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/money.rs\n+++ replace == with != in parse_decimal_to_minor_i128\n@@ -339,17 +339,17 @@\n     let s = input.trim();\n     if s.is_empty() {\n         return Err(MoneyError::Empty);\n     }\n     let s = s.strip_prefix('+').unwrap_or(s);\n     if s.starts_with('-') {\n         return Err(MoneyError::Negative);\n     }\n-    if !s.bytes().all(|b| b.is_ascii_digit() || b == b'.') || s.matches('.').count() > 1 {\n+    if !s.bytes().all(|b| b.is_ascii_digit() || b != /* ~ changed by cargo-mutants ~ */ b'.') || s.matches('.').count() > 1 {\n         return Err(MoneyError::InvalidFormat);\n     }\n \n     let (integral, fractional) = match s.split_once('.') {\n         Some((i, f)) => (i, f),\n         None => (s, \"\"),\n     };\n     if fractional.len() > dp as usize {\n",
+    "file": "core/src/money.rs",
+    "function": {
+      "function_name": "parse_decimal_to_minor_i128",
+      "return_type": "-> Result<i128, MoneyError>",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 382
+        },
+        "start": {
+          "column": 1,
+          "line": 335
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/money.rs:347:51: replace == with != in parse_decimal_to_minor_i128",
+    "package": "flaps_core",
+    "replacement": "!=",
+    "span": {
+      "end": {
+        "column": 53,
+        "line": 347
+      },
+      "start": {
+        "column": 51,
+        "line": 347
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/money.rs\n+++ replace > with == in parse_decimal_to_minor_i128\n@@ -339,17 +339,17 @@\n     let s = input.trim();\n     if s.is_empty() {\n         return Err(MoneyError::Empty);\n     }\n     let s = s.strip_prefix('+').unwrap_or(s);\n     if s.starts_with('-') {\n         return Err(MoneyError::Negative);\n     }\n-    if !s.bytes().all(|b| b.is_ascii_digit() || b == b'.') || s.matches('.').count() > 1 {\n+    if !s.bytes().all(|b| b.is_ascii_digit() || b == b'.') || s.matches('.').count() == /* ~ changed by cargo-mutants ~ */ 1 {\n         return Err(MoneyError::InvalidFormat);\n     }\n \n     let (integral, fractional) = match s.split_once('.') {\n         Some((i, f)) => (i, f),\n         None => (s, \"\"),\n     };\n     if fractional.len() > dp as usize {\n",
+    "file": "core/src/money.rs",
+    "function": {
+      "function_name": "parse_decimal_to_minor_i128",
+      "return_type": "-> Result<i128, MoneyError>",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 382
+        },
+        "start": {
+          "column": 1,
+          "line": 335
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/money.rs:347:86: replace > with == in parse_decimal_to_minor_i128",
+    "package": "flaps_core",
+    "replacement": "==",
+    "span": {
+      "end": {
+        "column": 87,
+        "line": 347
+      },
+      "start": {
+        "column": 86,
+        "line": 347
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/money.rs\n+++ replace > with < in parse_decimal_to_minor_i128\n@@ -339,17 +339,17 @@\n     let s = input.trim();\n     if s.is_empty() {\n         return Err(MoneyError::Empty);\n     }\n     let s = s.strip_prefix('+').unwrap_or(s);\n     if s.starts_with('-') {\n         return Err(MoneyError::Negative);\n     }\n-    if !s.bytes().all(|b| b.is_ascii_digit() || b == b'.') || s.matches('.').count() > 1 {\n+    if !s.bytes().all(|b| b.is_ascii_digit() || b == b'.') || s.matches('.').count() < /* ~ changed by cargo-mutants ~ */ 1 {\n         return Err(MoneyError::InvalidFormat);\n     }\n \n     let (integral, fractional) = match s.split_once('.') {\n         Some((i, f)) => (i, f),\n         None => (s, \"\"),\n     };\n     if fractional.len() > dp as usize {\n",
+    "file": "core/src/money.rs",
+    "function": {
+      "function_name": "parse_decimal_to_minor_i128",
+      "return_type": "-> Result<i128, MoneyError>",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 382
+        },
+        "start": {
+          "column": 1,
+          "line": 335
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/money.rs:347:86: replace > with < in parse_decimal_to_minor_i128",
+    "package": "flaps_core",
+    "replacement": "<",
+    "span": {
+      "end": {
+        "column": 87,
+        "line": 347
+      },
+      "start": {
+        "column": 86,
+        "line": 347
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/money.rs\n+++ replace > with >= in parse_decimal_to_minor_i128\n@@ -339,17 +339,17 @@\n     let s = input.trim();\n     if s.is_empty() {\n         return Err(MoneyError::Empty);\n     }\n     let s = s.strip_prefix('+').unwrap_or(s);\n     if s.starts_with('-') {\n         return Err(MoneyError::Negative);\n     }\n-    if !s.bytes().all(|b| b.is_ascii_digit() || b == b'.') || s.matches('.').count() > 1 {\n+    if !s.bytes().all(|b| b.is_ascii_digit() || b == b'.') || s.matches('.').count() >= /* ~ changed by cargo-mutants ~ */ 1 {\n         return Err(MoneyError::InvalidFormat);\n     }\n \n     let (integral, fractional) = match s.split_once('.') {\n         Some((i, f)) => (i, f),\n         None => (s, \"\"),\n     };\n     if fractional.len() > dp as usize {\n",
+    "file": "core/src/money.rs",
+    "function": {
+      "function_name": "parse_decimal_to_minor_i128",
+      "return_type": "-> Result<i128, MoneyError>",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 382
+        },
+        "start": {
+          "column": 1,
+          "line": 335
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/money.rs:347:86: replace > with >= in parse_decimal_to_minor_i128",
+    "package": "flaps_core",
+    "replacement": ">=",
+    "span": {
+      "end": {
+        "column": 87,
+        "line": 347
+      },
+      "start": {
+        "column": 86,
+        "line": 347
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/money.rs\n+++ replace > with == in parse_decimal_to_minor_i128\n@@ -347,17 +347,17 @@\n     if !s.bytes().all(|b| b.is_ascii_digit() || b == b'.') || s.matches('.').count() > 1 {\n         return Err(MoneyError::InvalidFormat);\n     }\n \n     let (integral, fractional) = match s.split_once('.') {\n         Some((i, f)) => (i, f),\n         None => (s, \"\"),\n     };\n-    if fractional.len() > dp as usize {\n+    if fractional.len() == /* ~ changed by cargo-mutants ~ */ dp as usize {\n         return Err(MoneyError::TooManyDecimalPlaces {\n             max: dp,\n             got: fractional.len(),\n         });\n     }\n \n     let integral_digits = integral.trim_start_matches('0');\n     if integral_digits.len() + fractional.len() > MAX_TOTAL_DIGITS_I128 {\n",
+    "file": "core/src/money.rs",
+    "function": {
+      "function_name": "parse_decimal_to_minor_i128",
+      "return_type": "-> Result<i128, MoneyError>",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 382
+        },
+        "start": {
+          "column": 1,
+          "line": 335
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/money.rs:355:25: replace > with == in parse_decimal_to_minor_i128",
+    "package": "flaps_core",
+    "replacement": "==",
+    "span": {
+      "end": {
+        "column": 26,
+        "line": 355
+      },
+      "start": {
+        "column": 25,
+        "line": 355
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/money.rs\n+++ replace > with < in parse_decimal_to_minor_i128\n@@ -347,17 +347,17 @@\n     if !s.bytes().all(|b| b.is_ascii_digit() || b == b'.') || s.matches('.').count() > 1 {\n         return Err(MoneyError::InvalidFormat);\n     }\n \n     let (integral, fractional) = match s.split_once('.') {\n         Some((i, f)) => (i, f),\n         None => (s, \"\"),\n     };\n-    if fractional.len() > dp as usize {\n+    if fractional.len() < /* ~ changed by cargo-mutants ~ */ dp as usize {\n         return Err(MoneyError::TooManyDecimalPlaces {\n             max: dp,\n             got: fractional.len(),\n         });\n     }\n \n     let integral_digits = integral.trim_start_matches('0');\n     if integral_digits.len() + fractional.len() > MAX_TOTAL_DIGITS_I128 {\n",
+    "file": "core/src/money.rs",
+    "function": {
+      "function_name": "parse_decimal_to_minor_i128",
+      "return_type": "-> Result<i128, MoneyError>",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 382
+        },
+        "start": {
+          "column": 1,
+          "line": 335
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/money.rs:355:25: replace > with < in parse_decimal_to_minor_i128",
+    "package": "flaps_core",
+    "replacement": "<",
+    "span": {
+      "end": {
+        "column": 26,
+        "line": 355
+      },
+      "start": {
+        "column": 25,
+        "line": 355
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/money.rs\n+++ replace > with >= in parse_decimal_to_minor_i128\n@@ -347,17 +347,17 @@\n     if !s.bytes().all(|b| b.is_ascii_digit() || b == b'.') || s.matches('.').count() > 1 {\n         return Err(MoneyError::InvalidFormat);\n     }\n \n     let (integral, fractional) = match s.split_once('.') {\n         Some((i, f)) => (i, f),\n         None => (s, \"\"),\n     };\n-    if fractional.len() > dp as usize {\n+    if fractional.len() >= /* ~ changed by cargo-mutants ~ */ dp as usize {\n         return Err(MoneyError::TooManyDecimalPlaces {\n             max: dp,\n             got: fractional.len(),\n         });\n     }\n \n     let integral_digits = integral.trim_start_matches('0');\n     if integral_digits.len() + fractional.len() > MAX_TOTAL_DIGITS_I128 {\n",
+    "file": "core/src/money.rs",
+    "function": {
+      "function_name": "parse_decimal_to_minor_i128",
+      "return_type": "-> Result<i128, MoneyError>",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 382
+        },
+        "start": {
+          "column": 1,
+          "line": 335
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/money.rs:355:25: replace > with >= in parse_decimal_to_minor_i128",
+    "package": "flaps_core",
+    "replacement": ">=",
+    "span": {
+      "end": {
+        "column": 26,
+        "line": 355
+      },
+      "start": {
+        "column": 25,
+        "line": 355
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/money.rs\n+++ replace > with == in parse_decimal_to_minor_i128\n@@ -355,17 +355,17 @@\n     if fractional.len() > dp as usize {\n         return Err(MoneyError::TooManyDecimalPlaces {\n             max: dp,\n             got: fractional.len(),\n         });\n     }\n \n     let integral_digits = integral.trim_start_matches('0');\n-    if integral_digits.len() + fractional.len() > MAX_TOTAL_DIGITS_I128 {\n+    if integral_digits.len() + fractional.len() == /* ~ changed by cargo-mutants ~ */ MAX_TOTAL_DIGITS_I128 {\n         return Err(MoneyError::Overflow {\n             max_total_digits: MAX_TOTAL_DIGITS_I128,\n         });\n     }\n \n     let mut digits = String::with_capacity(integral_digits.len() + dp as usize);\n     digits.push_str(integral_digits);\n     digits.push_str(fractional);\n",
+    "file": "core/src/money.rs",
+    "function": {
+      "function_name": "parse_decimal_to_minor_i128",
+      "return_type": "-> Result<i128, MoneyError>",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 382
+        },
+        "start": {
+          "column": 1,
+          "line": 335
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/money.rs:363:49: replace > with == in parse_decimal_to_minor_i128",
+    "package": "flaps_core",
+    "replacement": "==",
+    "span": {
+      "end": {
+        "column": 50,
+        "line": 363
+      },
+      "start": {
+        "column": 49,
+        "line": 363
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/money.rs\n+++ replace > with < in parse_decimal_to_minor_i128\n@@ -355,17 +355,17 @@\n     if fractional.len() > dp as usize {\n         return Err(MoneyError::TooManyDecimalPlaces {\n             max: dp,\n             got: fractional.len(),\n         });\n     }\n \n     let integral_digits = integral.trim_start_matches('0');\n-    if integral_digits.len() + fractional.len() > MAX_TOTAL_DIGITS_I128 {\n+    if integral_digits.len() + fractional.len() < /* ~ changed by cargo-mutants ~ */ MAX_TOTAL_DIGITS_I128 {\n         return Err(MoneyError::Overflow {\n             max_total_digits: MAX_TOTAL_DIGITS_I128,\n         });\n     }\n \n     let mut digits = String::with_capacity(integral_digits.len() + dp as usize);\n     digits.push_str(integral_digits);\n     digits.push_str(fractional);\n",
+    "file": "core/src/money.rs",
+    "function": {
+      "function_name": "parse_decimal_to_minor_i128",
+      "return_type": "-> Result<i128, MoneyError>",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 382
+        },
+        "start": {
+          "column": 1,
+          "line": 335
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/money.rs:363:49: replace > with < in parse_decimal_to_minor_i128",
+    "package": "flaps_core",
+    "replacement": "<",
+    "span": {
+      "end": {
+        "column": 50,
+        "line": 363
+      },
+      "start": {
+        "column": 49,
+        "line": 363
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/money.rs\n+++ replace > with >= in parse_decimal_to_minor_i128\n@@ -355,17 +355,17 @@\n     if fractional.len() > dp as usize {\n         return Err(MoneyError::TooManyDecimalPlaces {\n             max: dp,\n             got: fractional.len(),\n         });\n     }\n \n     let integral_digits = integral.trim_start_matches('0');\n-    if integral_digits.len() + fractional.len() > MAX_TOTAL_DIGITS_I128 {\n+    if integral_digits.len() + fractional.len() >= /* ~ changed by cargo-mutants ~ */ MAX_TOTAL_DIGITS_I128 {\n         return Err(MoneyError::Overflow {\n             max_total_digits: MAX_TOTAL_DIGITS_I128,\n         });\n     }\n \n     let mut digits = String::with_capacity(integral_digits.len() + dp as usize);\n     digits.push_str(integral_digits);\n     digits.push_str(fractional);\n",
+    "file": "core/src/money.rs",
+    "function": {
+      "function_name": "parse_decimal_to_minor_i128",
+      "return_type": "-> Result<i128, MoneyError>",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 382
+        },
+        "start": {
+          "column": 1,
+          "line": 335
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/money.rs:363:49: replace > with >= in parse_decimal_to_minor_i128",
+    "package": "flaps_core",
+    "replacement": ">=",
+    "span": {
+      "end": {
+        "column": 50,
+        "line": 363
+      },
+      "start": {
+        "column": 49,
+        "line": 363
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/money.rs\n+++ replace + with - in parse_decimal_to_minor_i128\n@@ -355,17 +355,17 @@\n     if fractional.len() > dp as usize {\n         return Err(MoneyError::TooManyDecimalPlaces {\n             max: dp,\n             got: fractional.len(),\n         });\n     }\n \n     let integral_digits = integral.trim_start_matches('0');\n-    if integral_digits.len() + fractional.len() > MAX_TOTAL_DIGITS_I128 {\n+    if integral_digits.len() - /* ~ changed by cargo-mutants ~ */ fractional.len() > MAX_TOTAL_DIGITS_I128 {\n         return Err(MoneyError::Overflow {\n             max_total_digits: MAX_TOTAL_DIGITS_I128,\n         });\n     }\n \n     let mut digits = String::with_capacity(integral_digits.len() + dp as usize);\n     digits.push_str(integral_digits);\n     digits.push_str(fractional);\n",
+    "file": "core/src/money.rs",
+    "function": {
+      "function_name": "parse_decimal_to_minor_i128",
+      "return_type": "-> Result<i128, MoneyError>",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 382
+        },
+        "start": {
+          "column": 1,
+          "line": 335
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/money.rs:363:30: replace + with - in parse_decimal_to_minor_i128",
+    "package": "flaps_core",
+    "replacement": "-",
+    "span": {
+      "end": {
+        "column": 31,
+        "line": 363
+      },
+      "start": {
+        "column": 30,
+        "line": 363
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/money.rs\n+++ replace + with * in parse_decimal_to_minor_i128\n@@ -355,17 +355,17 @@\n     if fractional.len() > dp as usize {\n         return Err(MoneyError::TooManyDecimalPlaces {\n             max: dp,\n             got: fractional.len(),\n         });\n     }\n \n     let integral_digits = integral.trim_start_matches('0');\n-    if integral_digits.len() + fractional.len() > MAX_TOTAL_DIGITS_I128 {\n+    if integral_digits.len() * /* ~ changed by cargo-mutants ~ */ fractional.len() > MAX_TOTAL_DIGITS_I128 {\n         return Err(MoneyError::Overflow {\n             max_total_digits: MAX_TOTAL_DIGITS_I128,\n         });\n     }\n \n     let mut digits = String::with_capacity(integral_digits.len() + dp as usize);\n     digits.push_str(integral_digits);\n     digits.push_str(fractional);\n",
+    "file": "core/src/money.rs",
+    "function": {
+      "function_name": "parse_decimal_to_minor_i128",
+      "return_type": "-> Result<i128, MoneyError>",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 382
+        },
+        "start": {
+          "column": 1,
+          "line": 335
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/money.rs:363:30: replace + with * in parse_decimal_to_minor_i128",
+    "package": "flaps_core",
+    "replacement": "*",
+    "span": {
+      "end": {
+        "column": 31,
+        "line": 363
+      },
+      "start": {
+        "column": 30,
+        "line": 363
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/money.rs\n+++ replace - with + in parse_decimal_to_minor_i128\n@@ -364,17 +364,17 @@\n         return Err(MoneyError::Overflow {\n             max_total_digits: MAX_TOTAL_DIGITS_I128,\n         });\n     }\n \n     let mut digits = String::with_capacity(integral_digits.len() + dp as usize);\n     digits.push_str(integral_digits);\n     digits.push_str(fractional);\n-    for _ in 0..(dp as usize - fractional.len()) {\n+    for _ in 0..(dp as usize + /* ~ changed by cargo-mutants ~ */ fractional.len()) {\n         digits.push('0');\n     }\n \n     if digits.is_empty() {\n         return Ok(0);\n     }\n     digits.parse::<i128>().map_err(|_| MoneyError::Overflow {\n         max_total_digits: MAX_TOTAL_DIGITS_I128,\n",
+    "file": "core/src/money.rs",
+    "function": {
+      "function_name": "parse_decimal_to_minor_i128",
+      "return_type": "-> Result<i128, MoneyError>",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 382
+        },
+        "start": {
+          "column": 1,
+          "line": 335
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/money.rs:372:30: replace - with + in parse_decimal_to_minor_i128",
+    "package": "flaps_core",
+    "replacement": "+",
+    "span": {
+      "end": {
+        "column": 31,
+        "line": 372
+      },
+      "start": {
+        "column": 30,
+        "line": 372
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/money.rs\n+++ replace - with / in parse_decimal_to_minor_i128\n@@ -364,17 +364,17 @@\n         return Err(MoneyError::Overflow {\n             max_total_digits: MAX_TOTAL_DIGITS_I128,\n         });\n     }\n \n     let mut digits = String::with_capacity(integral_digits.len() + dp as usize);\n     digits.push_str(integral_digits);\n     digits.push_str(fractional);\n-    for _ in 0..(dp as usize - fractional.len()) {\n+    for _ in 0..(dp as usize / /* ~ changed by cargo-mutants ~ */ fractional.len()) {\n         digits.push('0');\n     }\n \n     if digits.is_empty() {\n         return Ok(0);\n     }\n     digits.parse::<i128>().map_err(|_| MoneyError::Overflow {\n         max_total_digits: MAX_TOTAL_DIGITS_I128,\n",
+    "file": "core/src/money.rs",
+    "function": {
+      "function_name": "parse_decimal_to_minor_i128",
+      "return_type": "-> Result<i128, MoneyError>",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 382
+        },
+        "start": {
+          "column": 1,
+          "line": 335
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/money.rs:372:30: replace - with / in parse_decimal_to_minor_i128",
+    "package": "flaps_core",
+    "replacement": "/",
+    "span": {
+      "end": {
+        "column": 31,
+        "line": 372
+      },
+      "start": {
+        "column": 30,
+        "line": 372
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/money.rs\n+++ replace format_minor_i128 -> String with String::new()\n@@ -378,31 +378,10 @@\n     }\n     digits.parse::<i128>().map_err(|_| MoneyError::Overflow {\n         max_total_digits: MAX_TOTAL_DIGITS_I128,\n     })\n }\n \n /// Format i128 minor units as a grouped decimal string.\n pub fn format_minor_i128(minor: i128, dp: u32) -> String {\n-    let negative = minor < 0;\n-    let magnitude = minor.unsigned_abs();\n-    let scale = 10u128.pow(dp);\n-    let integral = magnitude / scale;\n-    let fraction = magnitude % scale;\n-\n-    let integral_str = integral.to_string();\n-    let mut grouped = String::with_capacity(integral_str.len() + integral_str.len() / 3);\n-    for (idx, ch) in integral_str.chars().enumerate() {\n-        if idx > 0 && (integral_str.len() - idx).is_multiple_of(3) {\n-            grouped.push(',');\n-        }\n-        grouped.push(ch);\n-    }\n-\n-    if dp == 0 {\n-        let sign = if negative { \"-\" } else { \"\" };\n-        return format!(\"{sign}{grouped}\");\n-    }\n-    let fraction_str = format!(\"{fraction:0width$}\", width = dp as usize);\n-    let sign = if negative { \"-\" } else { \"\" };\n-    format!(\"{sign}{grouped}.{fraction_str}\")\n+    String::new() /* ~ changed by cargo-mutants ~ */\n }\n",
+    "file": "core/src/money.rs",
+    "function": {
+      "function_name": "format_minor_i128",
+      "return_type": "-> String",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 408
+        },
+        "start": {
+          "column": 1,
+          "line": 384
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "core/src/money.rs:386:5: replace format_minor_i128 -> String with String::new()",
+    "package": "flaps_core",
+    "replacement": "String::new()",
+    "span": {
+      "end": {
+        "column": 46,
+        "line": 407
+      },
+      "start": {
+        "column": 5,
+        "line": 386
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/money.rs\n+++ replace format_minor_i128 -> String with \"xyzzy\".into()\n@@ -378,31 +378,10 @@\n     }\n     digits.parse::<i128>().map_err(|_| MoneyError::Overflow {\n         max_total_digits: MAX_TOTAL_DIGITS_I128,\n     })\n }\n \n /// Format i128 minor units as a grouped decimal string.\n pub fn format_minor_i128(minor: i128, dp: u32) -> String {\n-    let negative = minor < 0;\n-    let magnitude = minor.unsigned_abs();\n-    let scale = 10u128.pow(dp);\n-    let integral = magnitude / scale;\n-    let fraction = magnitude % scale;\n-\n-    let integral_str = integral.to_string();\n-    let mut grouped = String::with_capacity(integral_str.len() + integral_str.len() / 3);\n-    for (idx, ch) in integral_str.chars().enumerate() {\n-        if idx > 0 && (integral_str.len() - idx).is_multiple_of(3) {\n-            grouped.push(',');\n-        }\n-        grouped.push(ch);\n-    }\n-\n-    if dp == 0 {\n-        let sign = if negative { \"-\" } else { \"\" };\n-        return format!(\"{sign}{grouped}\");\n-    }\n-    let fraction_str = format!(\"{fraction:0width$}\", width = dp as usize);\n-    let sign = if negative { \"-\" } else { \"\" };\n-    format!(\"{sign}{grouped}.{fraction_str}\")\n+    \"xyzzy\".into() /* ~ changed by cargo-mutants ~ */\n }\n",
+    "file": "core/src/money.rs",
+    "function": {
+      "function_name": "format_minor_i128",
+      "return_type": "-> String",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 408
+        },
+        "start": {
+          "column": 1,
+          "line": 384
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "core/src/money.rs:386:5: replace format_minor_i128 -> String with \"xyzzy\".into()",
+    "package": "flaps_core",
+    "replacement": "\"xyzzy\".into()",
+    "span": {
+      "end": {
+        "column": 46,
+        "line": 407
+      },
+      "start": {
+        "column": 5,
+        "line": 386
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/money.rs\n+++ replace < with == in format_minor_i128\n@@ -378,17 +378,17 @@\n     }\n     digits.parse::<i128>().map_err(|_| MoneyError::Overflow {\n         max_total_digits: MAX_TOTAL_DIGITS_I128,\n     })\n }\n \n /// Format i128 minor units as a grouped decimal string.\n pub fn format_minor_i128(minor: i128, dp: u32) -> String {\n-    let negative = minor < 0;\n+    let negative = minor == /* ~ changed by cargo-mutants ~ */ 0;\n     let magnitude = minor.unsigned_abs();\n     let scale = 10u128.pow(dp);\n     let integral = magnitude / scale;\n     let fraction = magnitude % scale;\n \n     let integral_str = integral.to_string();\n     let mut grouped = String::with_capacity(integral_str.len() + integral_str.len() / 3);\n     for (idx, ch) in integral_str.chars().enumerate() {\n",
+    "file": "core/src/money.rs",
+    "function": {
+      "function_name": "format_minor_i128",
+      "return_type": "-> String",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 408
+        },
+        "start": {
+          "column": 1,
+          "line": 384
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/money.rs:386:26: replace < with == in format_minor_i128",
+    "package": "flaps_core",
+    "replacement": "==",
+    "span": {
+      "end": {
+        "column": 27,
+        "line": 386
+      },
+      "start": {
+        "column": 26,
+        "line": 386
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/money.rs\n+++ replace < with > in format_minor_i128\n@@ -378,17 +378,17 @@\n     }\n     digits.parse::<i128>().map_err(|_| MoneyError::Overflow {\n         max_total_digits: MAX_TOTAL_DIGITS_I128,\n     })\n }\n \n /// Format i128 minor units as a grouped decimal string.\n pub fn format_minor_i128(minor: i128, dp: u32) -> String {\n-    let negative = minor < 0;\n+    let negative = minor > /* ~ changed by cargo-mutants ~ */ 0;\n     let magnitude = minor.unsigned_abs();\n     let scale = 10u128.pow(dp);\n     let integral = magnitude / scale;\n     let fraction = magnitude % scale;\n \n     let integral_str = integral.to_string();\n     let mut grouped = String::with_capacity(integral_str.len() + integral_str.len() / 3);\n     for (idx, ch) in integral_str.chars().enumerate() {\n",
+    "file": "core/src/money.rs",
+    "function": {
+      "function_name": "format_minor_i128",
+      "return_type": "-> String",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 408
+        },
+        "start": {
+          "column": 1,
+          "line": 384
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/money.rs:386:26: replace < with > in format_minor_i128",
+    "package": "flaps_core",
+    "replacement": ">",
+    "span": {
+      "end": {
+        "column": 27,
+        "line": 386
+      },
+      "start": {
+        "column": 26,
+        "line": 386
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/money.rs\n+++ replace < with <= in format_minor_i128\n@@ -378,17 +378,17 @@\n     }\n     digits.parse::<i128>().map_err(|_| MoneyError::Overflow {\n         max_total_digits: MAX_TOTAL_DIGITS_I128,\n     })\n }\n \n /// Format i128 minor units as a grouped decimal string.\n pub fn format_minor_i128(minor: i128, dp: u32) -> String {\n-    let negative = minor < 0;\n+    let negative = minor <= /* ~ changed by cargo-mutants ~ */ 0;\n     let magnitude = minor.unsigned_abs();\n     let scale = 10u128.pow(dp);\n     let integral = magnitude / scale;\n     let fraction = magnitude % scale;\n \n     let integral_str = integral.to_string();\n     let mut grouped = String::with_capacity(integral_str.len() + integral_str.len() / 3);\n     for (idx, ch) in integral_str.chars().enumerate() {\n",
+    "file": "core/src/money.rs",
+    "function": {
+      "function_name": "format_minor_i128",
+      "return_type": "-> String",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 408
+        },
+        "start": {
+          "column": 1,
+          "line": 384
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/money.rs:386:26: replace < with <= in format_minor_i128",
+    "package": "flaps_core",
+    "replacement": "<=",
+    "span": {
+      "end": {
+        "column": 27,
+        "line": 386
+      },
+      "start": {
+        "column": 26,
+        "line": 386
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/money.rs\n+++ replace / with % in format_minor_i128\n@@ -381,17 +381,17 @@\n     })\n }\n \n /// Format i128 minor units as a grouped decimal string.\n pub fn format_minor_i128(minor: i128, dp: u32) -> String {\n     let negative = minor < 0;\n     let magnitude = minor.unsigned_abs();\n     let scale = 10u128.pow(dp);\n-    let integral = magnitude / scale;\n+    let integral = magnitude % /* ~ changed by cargo-mutants ~ */ scale;\n     let fraction = magnitude % scale;\n \n     let integral_str = integral.to_string();\n     let mut grouped = String::with_capacity(integral_str.len() + integral_str.len() / 3);\n     for (idx, ch) in integral_str.chars().enumerate() {\n         if idx > 0 && (integral_str.len() - idx).is_multiple_of(3) {\n             grouped.push(',');\n         }\n",
+    "file": "core/src/money.rs",
+    "function": {
+      "function_name": "format_minor_i128",
+      "return_type": "-> String",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 408
+        },
+        "start": {
+          "column": 1,
+          "line": 384
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/money.rs:389:30: replace / with % in format_minor_i128",
+    "package": "flaps_core",
+    "replacement": "%",
+    "span": {
+      "end": {
+        "column": 31,
+        "line": 389
+      },
+      "start": {
+        "column": 30,
+        "line": 389
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/money.rs\n+++ replace / with * in format_minor_i128\n@@ -381,17 +381,17 @@\n     })\n }\n \n /// Format i128 minor units as a grouped decimal string.\n pub fn format_minor_i128(minor: i128, dp: u32) -> String {\n     let negative = minor < 0;\n     let magnitude = minor.unsigned_abs();\n     let scale = 10u128.pow(dp);\n-    let integral = magnitude / scale;\n+    let integral = magnitude * /* ~ changed by cargo-mutants ~ */ scale;\n     let fraction = magnitude % scale;\n \n     let integral_str = integral.to_string();\n     let mut grouped = String::with_capacity(integral_str.len() + integral_str.len() / 3);\n     for (idx, ch) in integral_str.chars().enumerate() {\n         if idx > 0 && (integral_str.len() - idx).is_multiple_of(3) {\n             grouped.push(',');\n         }\n",
+    "file": "core/src/money.rs",
+    "function": {
+      "function_name": "format_minor_i128",
+      "return_type": "-> String",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 408
+        },
+        "start": {
+          "column": 1,
+          "line": 384
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/money.rs:389:30: replace / with * in format_minor_i128",
+    "package": "flaps_core",
+    "replacement": "*",
+    "span": {
+      "end": {
+        "column": 31,
+        "line": 389
+      },
+      "start": {
+        "column": 30,
+        "line": 389
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/money.rs\n+++ replace % with / in format_minor_i128\n@@ -382,17 +382,17 @@\n }\n \n /// Format i128 minor units as a grouped decimal string.\n pub fn format_minor_i128(minor: i128, dp: u32) -> String {\n     let negative = minor < 0;\n     let magnitude = minor.unsigned_abs();\n     let scale = 10u128.pow(dp);\n     let integral = magnitude / scale;\n-    let fraction = magnitude % scale;\n+    let fraction = magnitude / /* ~ changed by cargo-mutants ~ */ scale;\n \n     let integral_str = integral.to_string();\n     let mut grouped = String::with_capacity(integral_str.len() + integral_str.len() / 3);\n     for (idx, ch) in integral_str.chars().enumerate() {\n         if idx > 0 && (integral_str.len() - idx).is_multiple_of(3) {\n             grouped.push(',');\n         }\n         grouped.push(ch);\n",
+    "file": "core/src/money.rs",
+    "function": {
+      "function_name": "format_minor_i128",
+      "return_type": "-> String",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 408
+        },
+        "start": {
+          "column": 1,
+          "line": 384
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/money.rs:390:30: replace % with / in format_minor_i128",
+    "package": "flaps_core",
+    "replacement": "/",
+    "span": {
+      "end": {
+        "column": 31,
+        "line": 390
+      },
+      "start": {
+        "column": 30,
+        "line": 390
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/money.rs\n+++ replace % with + in format_minor_i128\n@@ -382,17 +382,17 @@\n }\n \n /// Format i128 minor units as a grouped decimal string.\n pub fn format_minor_i128(minor: i128, dp: u32) -> String {\n     let negative = minor < 0;\n     let magnitude = minor.unsigned_abs();\n     let scale = 10u128.pow(dp);\n     let integral = magnitude / scale;\n-    let fraction = magnitude % scale;\n+    let fraction = magnitude + /* ~ changed by cargo-mutants ~ */ scale;\n \n     let integral_str = integral.to_string();\n     let mut grouped = String::with_capacity(integral_str.len() + integral_str.len() / 3);\n     for (idx, ch) in integral_str.chars().enumerate() {\n         if idx > 0 && (integral_str.len() - idx).is_multiple_of(3) {\n             grouped.push(',');\n         }\n         grouped.push(ch);\n",
+    "file": "core/src/money.rs",
+    "function": {
+      "function_name": "format_minor_i128",
+      "return_type": "-> String",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 408
+        },
+        "start": {
+          "column": 1,
+          "line": 384
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/money.rs:390:30: replace % with + in format_minor_i128",
+    "package": "flaps_core",
+    "replacement": "+",
+    "span": {
+      "end": {
+        "column": 31,
+        "line": 390
+      },
+      "start": {
+        "column": 30,
+        "line": 390
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/money.rs\n+++ replace && with || in format_minor_i128\n@@ -387,17 +387,17 @@\n     let magnitude = minor.unsigned_abs();\n     let scale = 10u128.pow(dp);\n     let integral = magnitude / scale;\n     let fraction = magnitude % scale;\n \n     let integral_str = integral.to_string();\n     let mut grouped = String::with_capacity(integral_str.len() + integral_str.len() / 3);\n     for (idx, ch) in integral_str.chars().enumerate() {\n-        if idx > 0 && (integral_str.len() - idx).is_multiple_of(3) {\n+        if idx > 0 || /* ~ changed by cargo-mutants ~ */ (integral_str.len() - idx).is_multiple_of(3) {\n             grouped.push(',');\n         }\n         grouped.push(ch);\n     }\n \n     if dp == 0 {\n         let sign = if negative { \"-\" } else { \"\" };\n         return format!(\"{sign}{grouped}\");\n",
+    "file": "core/src/money.rs",
+    "function": {
+      "function_name": "format_minor_i128",
+      "return_type": "-> String",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 408
+        },
+        "start": {
+          "column": 1,
+          "line": 384
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/money.rs:395:20: replace && with || in format_minor_i128",
+    "package": "flaps_core",
+    "replacement": "||",
+    "span": {
+      "end": {
+        "column": 22,
+        "line": 395
+      },
+      "start": {
+        "column": 20,
+        "line": 395
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/money.rs\n+++ replace > with == in format_minor_i128\n@@ -387,17 +387,17 @@\n     let magnitude = minor.unsigned_abs();\n     let scale = 10u128.pow(dp);\n     let integral = magnitude / scale;\n     let fraction = magnitude % scale;\n \n     let integral_str = integral.to_string();\n     let mut grouped = String::with_capacity(integral_str.len() + integral_str.len() / 3);\n     for (idx, ch) in integral_str.chars().enumerate() {\n-        if idx > 0 && (integral_str.len() - idx).is_multiple_of(3) {\n+        if idx == /* ~ changed by cargo-mutants ~ */ 0 && (integral_str.len() - idx).is_multiple_of(3) {\n             grouped.push(',');\n         }\n         grouped.push(ch);\n     }\n \n     if dp == 0 {\n         let sign = if negative { \"-\" } else { \"\" };\n         return format!(\"{sign}{grouped}\");\n",
+    "file": "core/src/money.rs",
+    "function": {
+      "function_name": "format_minor_i128",
+      "return_type": "-> String",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 408
+        },
+        "start": {
+          "column": 1,
+          "line": 384
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/money.rs:395:16: replace > with == in format_minor_i128",
+    "package": "flaps_core",
+    "replacement": "==",
+    "span": {
+      "end": {
+        "column": 17,
+        "line": 395
+      },
+      "start": {
+        "column": 16,
+        "line": 395
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/money.rs\n+++ replace > with < in format_minor_i128\n@@ -387,17 +387,17 @@\n     let magnitude = minor.unsigned_abs();\n     let scale = 10u128.pow(dp);\n     let integral = magnitude / scale;\n     let fraction = magnitude % scale;\n \n     let integral_str = integral.to_string();\n     let mut grouped = String::with_capacity(integral_str.len() + integral_str.len() / 3);\n     for (idx, ch) in integral_str.chars().enumerate() {\n-        if idx > 0 && (integral_str.len() - idx).is_multiple_of(3) {\n+        if idx < /* ~ changed by cargo-mutants ~ */ 0 && (integral_str.len() - idx).is_multiple_of(3) {\n             grouped.push(',');\n         }\n         grouped.push(ch);\n     }\n \n     if dp == 0 {\n         let sign = if negative { \"-\" } else { \"\" };\n         return format!(\"{sign}{grouped}\");\n",
+    "file": "core/src/money.rs",
+    "function": {
+      "function_name": "format_minor_i128",
+      "return_type": "-> String",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 408
+        },
+        "start": {
+          "column": 1,
+          "line": 384
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/money.rs:395:16: replace > with < in format_minor_i128",
+    "package": "flaps_core",
+    "replacement": "<",
+    "span": {
+      "end": {
+        "column": 17,
+        "line": 395
+      },
+      "start": {
+        "column": 16,
+        "line": 395
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/money.rs\n+++ replace > with >= in format_minor_i128\n@@ -387,17 +387,17 @@\n     let magnitude = minor.unsigned_abs();\n     let scale = 10u128.pow(dp);\n     let integral = magnitude / scale;\n     let fraction = magnitude % scale;\n \n     let integral_str = integral.to_string();\n     let mut grouped = String::with_capacity(integral_str.len() + integral_str.len() / 3);\n     for (idx, ch) in integral_str.chars().enumerate() {\n-        if idx > 0 && (integral_str.len() - idx).is_multiple_of(3) {\n+        if idx >= /* ~ changed by cargo-mutants ~ */ 0 && (integral_str.len() - idx).is_multiple_of(3) {\n             grouped.push(',');\n         }\n         grouped.push(ch);\n     }\n \n     if dp == 0 {\n         let sign = if negative { \"-\" } else { \"\" };\n         return format!(\"{sign}{grouped}\");\n",
+    "file": "core/src/money.rs",
+    "function": {
+      "function_name": "format_minor_i128",
+      "return_type": "-> String",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 408
+        },
+        "start": {
+          "column": 1,
+          "line": 384
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/money.rs:395:16: replace > with >= in format_minor_i128",
+    "package": "flaps_core",
+    "replacement": ">=",
+    "span": {
+      "end": {
+        "column": 17,
+        "line": 395
+      },
+      "start": {
+        "column": 16,
+        "line": 395
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/money.rs\n+++ replace - with + in format_minor_i128\n@@ -387,17 +387,17 @@\n     let magnitude = minor.unsigned_abs();\n     let scale = 10u128.pow(dp);\n     let integral = magnitude / scale;\n     let fraction = magnitude % scale;\n \n     let integral_str = integral.to_string();\n     let mut grouped = String::with_capacity(integral_str.len() + integral_str.len() / 3);\n     for (idx, ch) in integral_str.chars().enumerate() {\n-        if idx > 0 && (integral_str.len() - idx).is_multiple_of(3) {\n+        if idx > 0 && (integral_str.len() + /* ~ changed by cargo-mutants ~ */ idx).is_multiple_of(3) {\n             grouped.push(',');\n         }\n         grouped.push(ch);\n     }\n \n     if dp == 0 {\n         let sign = if negative { \"-\" } else { \"\" };\n         return format!(\"{sign}{grouped}\");\n",
+    "file": "core/src/money.rs",
+    "function": {
+      "function_name": "format_minor_i128",
+      "return_type": "-> String",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 408
+        },
+        "start": {
+          "column": 1,
+          "line": 384
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/money.rs:395:43: replace - with + in format_minor_i128",
+    "package": "flaps_core",
+    "replacement": "+",
+    "span": {
+      "end": {
+        "column": 44,
+        "line": 395
+      },
+      "start": {
+        "column": 43,
+        "line": 395
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/money.rs\n+++ replace - with / in format_minor_i128\n@@ -387,17 +387,17 @@\n     let magnitude = minor.unsigned_abs();\n     let scale = 10u128.pow(dp);\n     let integral = magnitude / scale;\n     let fraction = magnitude % scale;\n \n     let integral_str = integral.to_string();\n     let mut grouped = String::with_capacity(integral_str.len() + integral_str.len() / 3);\n     for (idx, ch) in integral_str.chars().enumerate() {\n-        if idx > 0 && (integral_str.len() - idx).is_multiple_of(3) {\n+        if idx > 0 && (integral_str.len() / /* ~ changed by cargo-mutants ~ */ idx).is_multiple_of(3) {\n             grouped.push(',');\n         }\n         grouped.push(ch);\n     }\n \n     if dp == 0 {\n         let sign = if negative { \"-\" } else { \"\" };\n         return format!(\"{sign}{grouped}\");\n",
+    "file": "core/src/money.rs",
+    "function": {
+      "function_name": "format_minor_i128",
+      "return_type": "-> String",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 408
+        },
+        "start": {
+          "column": 1,
+          "line": 384
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/money.rs:395:43: replace - with / in format_minor_i128",
+    "package": "flaps_core",
+    "replacement": "/",
+    "span": {
+      "end": {
+        "column": 44,
+        "line": 395
+      },
+      "start": {
+        "column": 43,
+        "line": 395
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/money.rs\n+++ replace == with != in format_minor_i128\n@@ -393,16 +393,16 @@\n     let mut grouped = String::with_capacity(integral_str.len() + integral_str.len() / 3);\n     for (idx, ch) in integral_str.chars().enumerate() {\n         if idx > 0 && (integral_str.len() - idx).is_multiple_of(3) {\n             grouped.push(',');\n         }\n         grouped.push(ch);\n     }\n \n-    if dp == 0 {\n+    if dp != /* ~ changed by cargo-mutants ~ */ 0 {\n         let sign = if negative { \"-\" } else { \"\" };\n         return format!(\"{sign}{grouped}\");\n     }\n     let fraction_str = format!(\"{fraction:0width$}\", width = dp as usize);\n     let sign = if negative { \"-\" } else { \"\" };\n     format!(\"{sign}{grouped}.{fraction_str}\")\n }\n",
+    "file": "core/src/money.rs",
+    "function": {
+      "function_name": "format_minor_i128",
+      "return_type": "-> String",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 408
+        },
+        "start": {
+          "column": 1,
+          "line": 384
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/money.rs:401:11: replace == with != in format_minor_i128",
+    "package": "flaps_core",
+    "replacement": "!=",
+    "span": {
+      "end": {
+        "column": 13,
+        "line": 401
+      },
+      "start": {
+        "column": 11,
+        "line": 401
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/ledger/engine.rs\n+++ replace LedgerEngine::with_pool -> Result<Self, Box<dyn std::error::Error>> with Ok(Default::default())\n@@ -24,18 +24,17 @@\n     }\n \n     /// Build the engine over an existing pool WITHOUT creating tables.\n     ///\n     /// Schema SSOT is `platform/migrations/` — apply those first via\n     /// `DatabaseManager::initialize`. This is the preferred constructor for\n     /// servers and tests.\n     pub async fn with_pool(pool: sqlx::SqlitePool) -> Result<Self, Box<dyn std::error::Error>> {\n-        Self::apply_pragmas(&pool).await?;\n-        Ok(Self { pool })\n+        Ok(Default::default()) /* ~ changed by cargo-mutants ~ */\n     }\n \n     /// Performance optimizations (INV-03: WAL, busy_timeout, bounded cache;\n     /// write transactions must stay ≤ 50 ms).\n     async fn apply_pragmas(pool: &sqlx::SqlitePool) -> Result<(), sqlx::Error> {\n         sqlx::query(\"PRAGMA journal_mode = WAL\")\n             .execute(pool)\n             .await?;\n",
+    "file": "core/src/ledger/engine.rs",
+    "function": {
+      "function_name": "LedgerEngine::with_pool",
+      "return_type": "-> Result<Self, Box<dyn std::error::Error>>",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 34
+        },
+        "start": {
+          "column": 5,
+          "line": 26
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "core/src/ledger/engine.rs:32:9: replace LedgerEngine::with_pool -> Result<Self, Box<dyn std::error::Error>> with Ok(Default::default())",
+    "package": "flaps_core",
+    "replacement": "Ok(Default::default())",
+    "span": {
+      "end": {
+        "column": 26,
+        "line": 33
+      },
+      "start": {
+        "column": 9,
+        "line": 32
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/ledger/engine.rs\n+++ replace LedgerEngine::ensure_tables -> Result<(), sqlx::Error> with Ok(())\n@@ -55,103 +55,17 @@\n     }\n \n     /// Ensure all required tables exist (legacy bootstrap path).\n     ///\n     /// Mirrors `platform/migrations/0001_baseline_schema.sql` (schema SSOT).\n     /// Keep in sync until this path is retired (IMPROVEMENT_BACKLOG P1-2).\n     async fn ensure_tables(pool: &sqlx::SqlitePool) -> Result<(), sqlx::Error> {\n         // Accounts table\n-        sqlx::query(\n-            \"CREATE TABLE IF NOT EXISTS accounts (\n-                account_id TEXT PRIMARY KEY,\n-                account_code TEXT NOT NULL,\n-                account_name TEXT NOT NULL,\n-                account_type TEXT NOT NULL,\n-                parent_account_id TEXT,\n-                currency TEXT DEFAULT 'TWD',\n-                description TEXT,\n-                is_active BOOLEAN DEFAULT true,\n-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n-            )\",\n-        )\n-        .execute(pool)\n-        .await?;\n-\n-        // Transactions table\n-        sqlx::query(\n-            \"CREATE TABLE IF NOT EXISTS transactions (\n-                transaction_id TEXT PRIMARY KEY,\n-                transaction_code TEXT NOT NULL,\n-                transaction_date DATE NOT NULL,\n-                description TEXT NOT NULL,\n-                reference_number TEXT,\n-                status TEXT NOT NULL,\n-                source_type TEXT,\n-                created_by TEXT,\n-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n-            )\",\n-        )\n-        .execute(pool)\n-        .await?;\n-\n-        // Transaction items table (integer money: INV-01)\n-        sqlx::query(\n-            \"CREATE TABLE IF NOT EXISTS transaction_items (\n-                item_id TEXT PRIMARY KEY,\n-                transaction_id TEXT NOT NULL,\n-                account_id TEXT NOT NULL,\n-                item_type TEXT NOT NULL,\n-                amount_minor INTEGER NOT NULL,\n-                currency TEXT DEFAULT 'TWD',\n-                exchange_rate INTEGER DEFAULT 10000,\n-                reference TEXT,\n-                description TEXT,\n-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n-                FOREIGN KEY (transaction_id) REFERENCES transactions(transaction_id),\n-                FOREIGN KEY (account_id) REFERENCES accounts(account_id)\n-            )\",\n-        )\n-        .execute(pool)\n-        .await?;\n-\n-        // Audit log table\n-        sqlx::query(\n-            \"CREATE TABLE IF NOT EXISTS audit_log (\n-                log_id TEXT PRIMARY KEY,\n-                transaction_id TEXT,\n-                event_type TEXT NOT NULL,\n-                event_data TEXT,\n-                performed_by TEXT,\n-                performed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n-                FOREIGN KEY (transaction_id) REFERENCES transactions(transaction_id)\n-            )\",\n-        )\n-        .execute(pool)\n-        .await?;\n-\n-        // Hot-path indexes (FR-007)\n-        sqlx::query(\"CREATE INDEX IF NOT EXISTS idx_transactions_date ON transactions (transaction_date DESC)\")\n-            .execute(pool)\n-            .await?;\n-        sqlx::query(\"CREATE INDEX IF NOT EXISTS idx_transactions_status ON transactions (status)\")\n-            .execute(pool)\n-            .await?;\n-        sqlx::query(\"CREATE INDEX IF NOT EXISTS idx_transaction_items_transaction ON transaction_items (transaction_id)\")\n-            .execute(pool)\n-            .await?;\n-        sqlx::query(\n-            \"CREATE INDEX IF NOT EXISTS idx_audit_log_transaction ON audit_log (transaction_id)\",\n-        )\n-        .execute(pool)\n-        .await?;\n-\n-        Ok(())\n+        Ok(()) /* ~ changed by cargo-mutants ~ */\n     }\n \n     /// Post a journal entry: validate, ensure accounts exist, then write the\n     /// header, items, and audit event in ONE atomic transaction (INV-04).\n     ///\n     /// Idempotency: callers generate the `transaction_id` (UUID) — replaying\n     /// an identical id fails on the primary key instead of double-posting.\n     pub async fn post_journal_entry(\n",
+    "file": "core/src/ledger/engine.rs",
+    "function": {
+      "function_name": "LedgerEngine::ensure_tables",
+      "return_type": "-> Result<(), sqlx::Error>",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 150
+        },
+        "start": {
+          "column": 5,
+          "line": 57
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "core/src/ledger/engine.rs:63:9: replace LedgerEngine::ensure_tables -> Result<(), sqlx::Error> with Ok(())",
+    "package": "flaps_core",
+    "replacement": "Ok(())",
+    "span": {
+      "end": {
+        "column": 15,
+        "line": 149
+      },
+      "start": {
+        "column": 9,
+        "line": 63
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/ledger/engine.rs\n+++ replace LedgerEngine::post_journal_entry -> Result<(), Box<dyn std::error::Error>> with Ok(())\n@@ -154,78 +154,17 @@\n     ///\n     /// Idempotency: callers generate the `transaction_id` (UUID) — replaying\n     /// an identical id fails on the primary key instead of double-posting.\n     pub async fn post_journal_entry(\n         &self,\n         transaction: crate::ledger::transaction::Transaction,\n         items: Vec<crate::ledger::transaction::TransactionItem>,\n     ) -> Result<(), Box<dyn std::error::Error>> {\n-        let pool = &self.pool;\n-\n-        // 1) Domain validation (balance, bounds, dates)\n-        self.validate_journal_entry(&transaction, &items).await?;\n-\n-        // 2) Ensure referenced accounts exist (auto-create on first use)\n-        for item in &items {\n-            self.ensure_account_exists(&item.account_id).await?;\n-        }\n-\n-        // 3) Atomic write\n-        let mut tx = pool.begin().await?;\n-\n-        // Insert transaction header\n-        sqlx::query(\n-            \"INSERT INTO transactions (transaction_id, transaction_code, transaction_date, description, reference_number, status, source_type, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)\"\n-        )\n-        .bind(&transaction.transaction_id)\n-        .bind(&transaction.transaction_code)\n-        .bind(transaction.transaction_date)\n-        .bind(&transaction.description)\n-        .bind(&transaction.reference_number)\n-        .bind(&transaction.status)\n-        .bind(&transaction.source_type)\n-        .bind(&transaction.created_by)\n-        .execute(&mut *tx)\n-        .await?;\n-\n-        // Insert transaction items\n-        for item in &items {\n-            sqlx::query(\n-                \"INSERT INTO transaction_items (item_id, transaction_id, account_id, item_type, amount_minor, currency, exchange_rate, reference, description) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)\"\n-            )\n-            .bind(&item.item_id)\n-            .bind(&item.transaction_id)\n-            .bind(&item.account_id)\n-            .bind(&item.item_type)\n-            .bind(item.amount_minor)\n-            .bind(&item.currency)\n-            .bind(item.exchange_rate_scaled)\n-            .bind(&item.reference)\n-            .bind(&item.description)\n-            .execute(&mut *tx)\n-            .await?;\n-        }\n-\n-        // Log the transaction\n-        let event_data = serde_json::to_string(&transaction).unwrap_or_default();\n-        sqlx::query(\n-            \"INSERT INTO audit_log (log_id, transaction_id, event_type, event_data, performed_by) VALUES (?, ?, ?, ?, ?)\"\n-        )\n-        .bind(uuid::Uuid::new_v4().to_string())\n-        .bind(&transaction.transaction_id)\n-        .bind(\"TRANSACTION_POSTED\")\n-        .bind(event_data)\n-        .bind(&transaction.created_by)\n-        .execute(&mut *tx)\n-        .await?;\n-\n-        tx.commit().await?;\n-\n-        Ok(())\n+        Ok(()) /* ~ changed by cargo-mutants ~ */\n     }\n \n     /// Validate journal entry for accounting rules.\n     ///\n     /// Double-entry core (INV-02 / P1-5): debits must equal credits and the\n     /// total must be positive. Enforced here so NO caller — form, API, or\n     /// future batch importer — can persist a one-sided or zero entry.\n     async fn validate_journal_entry(\n",
+    "file": "core/src/ledger/engine.rs",
+    "function": {
+      "function_name": "LedgerEngine::post_journal_entry",
+      "return_type": "-> Result<(), Box<dyn std::error::Error>>",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 224
+        },
+        "start": {
+          "column": 5,
+          "line": 152
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "core/src/ledger/engine.rs:162:9: replace LedgerEngine::post_journal_entry -> Result<(), Box<dyn std::error::Error>> with Ok(())",
+    "package": "flaps_core",
+    "replacement": "Ok(())",
+    "span": {
+      "end": {
+        "column": 15,
+        "line": 223
+      },
+      "start": {
+        "column": 9,
+        "line": 162
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/ledger/engine.rs\n+++ replace LedgerEngine::validate_journal_entry -> Result<(), Box<dyn std::error::Error>> with Ok(())\n@@ -229,76 +229,17 @@\n     /// total must be positive. Enforced here so NO caller — form, API, or\n     /// future batch importer — can persist a one-sided or zero entry.\n     async fn validate_journal_entry(\n         &self,\n         transaction: &crate::ledger::transaction::Transaction,\n         items: &[crate::ledger::transaction::TransactionItem],\n     ) -> Result<(), Box<dyn std::error::Error>> {\n         // Check required fields\n-        if transaction.transaction_id.is_empty() {\n-            return Err(\"Transaction ID is required\".into());\n-        }\n-\n-        if transaction.transaction_date > chrono::Utc::now().date_naive() {\n-            return Err(\"Transaction date cannot be in the future\".into());\n-        }\n-\n-        if items.is_empty() {\n-            return Err(\"At least one transaction item is required\".into());\n-        }\n-\n-        let mut total_debit: i128 = 0;\n-        let mut total_credit: i128 = 0;\n-\n-        // Validate each item\n-        for item in items {\n-            if item.account_id.is_empty() {\n-                return Err(\"Account ID is required for transaction items\".into());\n-            }\n-\n-            if item.amount_minor <= 0 {\n-                return Err(\"Transaction item amount must be positive\".into());\n-            }\n-\n-            if item.amount_minor > MAX_AMOUNT_MINOR {\n-                return Err(format!(\n-                    \"Transaction item amount exceeds the schema cap DECIMAL(15,2) (max minor units {MAX_AMOUNT_MINOR})\"\n-                )\n-                .into());\n-            }\n-\n-            if item.exchange_rate_scaled <= 0 {\n-                return Err(\"Exchange rate must be positive (scaled by 10^4)\".into());\n-            }\n-\n-            if ![\"DEBIT\", \"CREDIT\"].contains(&item.item_type.as_str()) {\n-                return Err(\"Invalid item type. Must be DEBIT or CREDIT\".into());\n-            }\n-\n-            // i128 accumulation: MAX_AMOUNT_MINOR is 17 digits, i64 could\n-            // overflow on many items; i128 makes the sum total-order safe.\n-            match item.item_type.as_str() {\n-                \"DEBIT\" => total_debit += i128::from(item.amount_minor),\n-                _ => total_credit += i128::from(item.amount_minor),\n-            }\n-        }\n-\n-        if total_debit != total_credit {\n-            return Err(format!(\n-                \"Journal entry is not balanced: debits ({total_debit}) must equal credits ({total_credit})\"\n-            )\n-            .into());\n-        }\n-\n-        if total_debit == 0 {\n-            return Err(\"Journal entry total must be greater than zero\".into());\n-        }\n-\n-        Ok(())\n+        Ok(()) /* ~ changed by cargo-mutants ~ */\n     }\n \n     /// Ensure account exists, create if not\n     async fn ensure_account_exists(&self, account_id: &str) -> Result<(), sqlx::Error> {\n         let exists: (i64,) = sqlx::query_as(\"SELECT COUNT(*) FROM accounts WHERE account_id = ?\")\n             .bind(account_id)\n             .fetch_one(&self.pool)\n             .await?;\n",
+    "file": "core/src/ledger/engine.rs",
+    "function": {
+      "function_name": "LedgerEngine::validate_journal_entry",
+      "return_type": "-> Result<(), Box<dyn std::error::Error>>",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 297
+        },
+        "start": {
+          "column": 5,
+          "line": 226
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "core/src/ledger/engine.rs:237:9: replace LedgerEngine::validate_journal_entry -> Result<(), Box<dyn std::error::Error>> with Ok(())",
+    "package": "flaps_core",
+    "replacement": "Ok(())",
+    "span": {
+      "end": {
+        "column": 15,
+        "line": 296
+      },
+      "start": {
+        "column": 9,
+        "line": 237
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/ledger/engine.rs\n+++ replace > with == in LedgerEngine::validate_journal_entry\n@@ -233,17 +233,17 @@\n         transaction: &crate::ledger::transaction::Transaction,\n         items: &[crate::ledger::transaction::TransactionItem],\n     ) -> Result<(), Box<dyn std::error::Error>> {\n         // Check required fields\n         if transaction.transaction_id.is_empty() {\n             return Err(\"Transaction ID is required\".into());\n         }\n \n-        if transaction.transaction_date > chrono::Utc::now().date_naive() {\n+        if transaction.transaction_date == /* ~ changed by cargo-mutants ~ */ chrono::Utc::now().date_naive() {\n             return Err(\"Transaction date cannot be in the future\".into());\n         }\n \n         if items.is_empty() {\n             return Err(\"At least one transaction item is required\".into());\n         }\n \n         let mut total_debit: i128 = 0;\n",
+    "file": "core/src/ledger/engine.rs",
+    "function": {
+      "function_name": "LedgerEngine::validate_journal_entry",
+      "return_type": "-> Result<(), Box<dyn std::error::Error>>",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 297
+        },
+        "start": {
+          "column": 5,
+          "line": 226
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/ledger/engine.rs:241:41: replace > with == in LedgerEngine::validate_journal_entry",
+    "package": "flaps_core",
+    "replacement": "==",
+    "span": {
+      "end": {
+        "column": 42,
+        "line": 241
+      },
+      "start": {
+        "column": 41,
+        "line": 241
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/ledger/engine.rs\n+++ replace > with < in LedgerEngine::validate_journal_entry\n@@ -233,17 +233,17 @@\n         transaction: &crate::ledger::transaction::Transaction,\n         items: &[crate::ledger::transaction::TransactionItem],\n     ) -> Result<(), Box<dyn std::error::Error>> {\n         // Check required fields\n         if transaction.transaction_id.is_empty() {\n             return Err(\"Transaction ID is required\".into());\n         }\n \n-        if transaction.transaction_date > chrono::Utc::now().date_naive() {\n+        if transaction.transaction_date < /* ~ changed by cargo-mutants ~ */ chrono::Utc::now().date_naive() {\n             return Err(\"Transaction date cannot be in the future\".into());\n         }\n \n         if items.is_empty() {\n             return Err(\"At least one transaction item is required\".into());\n         }\n \n         let mut total_debit: i128 = 0;\n",
+    "file": "core/src/ledger/engine.rs",
+    "function": {
+      "function_name": "LedgerEngine::validate_journal_entry",
+      "return_type": "-> Result<(), Box<dyn std::error::Error>>",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 297
+        },
+        "start": {
+          "column": 5,
+          "line": 226
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/ledger/engine.rs:241:41: replace > with < in LedgerEngine::validate_journal_entry",
+    "package": "flaps_core",
+    "replacement": "<",
+    "span": {
+      "end": {
+        "column": 42,
+        "line": 241
+      },
+      "start": {
+        "column": 41,
+        "line": 241
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/ledger/engine.rs\n+++ replace > with >= in LedgerEngine::validate_journal_entry\n@@ -233,17 +233,17 @@\n         transaction: &crate::ledger::transaction::Transaction,\n         items: &[crate::ledger::transaction::TransactionItem],\n     ) -> Result<(), Box<dyn std::error::Error>> {\n         // Check required fields\n         if transaction.transaction_id.is_empty() {\n             return Err(\"Transaction ID is required\".into());\n         }\n \n-        if transaction.transaction_date > chrono::Utc::now().date_naive() {\n+        if transaction.transaction_date >= /* ~ changed by cargo-mutants ~ */ chrono::Utc::now().date_naive() {\n             return Err(\"Transaction date cannot be in the future\".into());\n         }\n \n         if items.is_empty() {\n             return Err(\"At least one transaction item is required\".into());\n         }\n \n         let mut total_debit: i128 = 0;\n",
+    "file": "core/src/ledger/engine.rs",
+    "function": {
+      "function_name": "LedgerEngine::validate_journal_entry",
+      "return_type": "-> Result<(), Box<dyn std::error::Error>>",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 297
+        },
+        "start": {
+          "column": 5,
+          "line": 226
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/ledger/engine.rs:241:41: replace > with >= in LedgerEngine::validate_journal_entry",
+    "package": "flaps_core",
+    "replacement": ">=",
+    "span": {
+      "end": {
+        "column": 42,
+        "line": 241
+      },
+      "start": {
+        "column": 41,
+        "line": 241
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/ledger/engine.rs\n+++ replace <= with > in LedgerEngine::validate_journal_entry\n@@ -250,17 +250,17 @@\n         let mut total_credit: i128 = 0;\n \n         // Validate each item\n         for item in items {\n             if item.account_id.is_empty() {\n                 return Err(\"Account ID is required for transaction items\".into());\n             }\n \n-            if item.amount_minor <= 0 {\n+            if item.amount_minor > /* ~ changed by cargo-mutants ~ */ 0 {\n                 return Err(\"Transaction item amount must be positive\".into());\n             }\n \n             if item.amount_minor > MAX_AMOUNT_MINOR {\n                 return Err(format!(\n                     \"Transaction item amount exceeds the schema cap DECIMAL(15,2) (max minor units {MAX_AMOUNT_MINOR})\"\n                 )\n                 .into());\n",
+    "file": "core/src/ledger/engine.rs",
+    "function": {
+      "function_name": "LedgerEngine::validate_journal_entry",
+      "return_type": "-> Result<(), Box<dyn std::error::Error>>",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 297
+        },
+        "start": {
+          "column": 5,
+          "line": 226
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/ledger/engine.rs:258:34: replace <= with > in LedgerEngine::validate_journal_entry",
+    "package": "flaps_core",
+    "replacement": ">",
+    "span": {
+      "end": {
+        "column": 36,
+        "line": 258
+      },
+      "start": {
+        "column": 34,
+        "line": 258
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/ledger/engine.rs\n+++ replace > with == in LedgerEngine::validate_journal_entry\n@@ -254,17 +254,17 @@\n             if item.account_id.is_empty() {\n                 return Err(\"Account ID is required for transaction items\".into());\n             }\n \n             if item.amount_minor <= 0 {\n                 return Err(\"Transaction item amount must be positive\".into());\n             }\n \n-            if item.amount_minor > MAX_AMOUNT_MINOR {\n+            if item.amount_minor == /* ~ changed by cargo-mutants ~ */ MAX_AMOUNT_MINOR {\n                 return Err(format!(\n                     \"Transaction item amount exceeds the schema cap DECIMAL(15,2) (max minor units {MAX_AMOUNT_MINOR})\"\n                 )\n                 .into());\n             }\n \n             if item.exchange_rate_scaled <= 0 {\n                 return Err(\"Exchange rate must be positive (scaled by 10^4)\".into());\n",
+    "file": "core/src/ledger/engine.rs",
+    "function": {
+      "function_name": "LedgerEngine::validate_journal_entry",
+      "return_type": "-> Result<(), Box<dyn std::error::Error>>",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 297
+        },
+        "start": {
+          "column": 5,
+          "line": 226
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/ledger/engine.rs:262:34: replace > with == in LedgerEngine::validate_journal_entry",
+    "package": "flaps_core",
+    "replacement": "==",
+    "span": {
+      "end": {
+        "column": 35,
+        "line": 262
+      },
+      "start": {
+        "column": 34,
+        "line": 262
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/ledger/engine.rs\n+++ replace > with < in LedgerEngine::validate_journal_entry\n@@ -254,17 +254,17 @@\n             if item.account_id.is_empty() {\n                 return Err(\"Account ID is required for transaction items\".into());\n             }\n \n             if item.amount_minor <= 0 {\n                 return Err(\"Transaction item amount must be positive\".into());\n             }\n \n-            if item.amount_minor > MAX_AMOUNT_MINOR {\n+            if item.amount_minor < /* ~ changed by cargo-mutants ~ */ MAX_AMOUNT_MINOR {\n                 return Err(format!(\n                     \"Transaction item amount exceeds the schema cap DECIMAL(15,2) (max minor units {MAX_AMOUNT_MINOR})\"\n                 )\n                 .into());\n             }\n \n             if item.exchange_rate_scaled <= 0 {\n                 return Err(\"Exchange rate must be positive (scaled by 10^4)\".into());\n",
+    "file": "core/src/ledger/engine.rs",
+    "function": {
+      "function_name": "LedgerEngine::validate_journal_entry",
+      "return_type": "-> Result<(), Box<dyn std::error::Error>>",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 297
+        },
+        "start": {
+          "column": 5,
+          "line": 226
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/ledger/engine.rs:262:34: replace > with < in LedgerEngine::validate_journal_entry",
+    "package": "flaps_core",
+    "replacement": "<",
+    "span": {
+      "end": {
+        "column": 35,
+        "line": 262
+      },
+      "start": {
+        "column": 34,
+        "line": 262
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/ledger/engine.rs\n+++ replace > with >= in LedgerEngine::validate_journal_entry\n@@ -254,17 +254,17 @@\n             if item.account_id.is_empty() {\n                 return Err(\"Account ID is required for transaction items\".into());\n             }\n \n             if item.amount_minor <= 0 {\n                 return Err(\"Transaction item amount must be positive\".into());\n             }\n \n-            if item.amount_minor > MAX_AMOUNT_MINOR {\n+            if item.amount_minor >= /* ~ changed by cargo-mutants ~ */ MAX_AMOUNT_MINOR {\n                 return Err(format!(\n                     \"Transaction item amount exceeds the schema cap DECIMAL(15,2) (max minor units {MAX_AMOUNT_MINOR})\"\n                 )\n                 .into());\n             }\n \n             if item.exchange_rate_scaled <= 0 {\n                 return Err(\"Exchange rate must be positive (scaled by 10^4)\".into());\n",
+    "file": "core/src/ledger/engine.rs",
+    "function": {
+      "function_name": "LedgerEngine::validate_journal_entry",
+      "return_type": "-> Result<(), Box<dyn std::error::Error>>",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 297
+        },
+        "start": {
+          "column": 5,
+          "line": 226
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/ledger/engine.rs:262:34: replace > with >= in LedgerEngine::validate_journal_entry",
+    "package": "flaps_core",
+    "replacement": ">=",
+    "span": {
+      "end": {
+        "column": 35,
+        "line": 262
+      },
+      "start": {
+        "column": 34,
+        "line": 262
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/ledger/engine.rs\n+++ replace <= with > in LedgerEngine::validate_journal_entry\n@@ -261,17 +261,17 @@\n \n             if item.amount_minor > MAX_AMOUNT_MINOR {\n                 return Err(format!(\n                     \"Transaction item amount exceeds the schema cap DECIMAL(15,2) (max minor units {MAX_AMOUNT_MINOR})\"\n                 )\n                 .into());\n             }\n \n-            if item.exchange_rate_scaled <= 0 {\n+            if item.exchange_rate_scaled > /* ~ changed by cargo-mutants ~ */ 0 {\n                 return Err(\"Exchange rate must be positive (scaled by 10^4)\".into());\n             }\n \n             if ![\"DEBIT\", \"CREDIT\"].contains(&item.item_type.as_str()) {\n                 return Err(\"Invalid item type. Must be DEBIT or CREDIT\".into());\n             }\n \n             // i128 accumulation: MAX_AMOUNT_MINOR is 17 digits, i64 could\n",
+    "file": "core/src/ledger/engine.rs",
+    "function": {
+      "function_name": "LedgerEngine::validate_journal_entry",
+      "return_type": "-> Result<(), Box<dyn std::error::Error>>",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 297
+        },
+        "start": {
+          "column": 5,
+          "line": 226
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/ledger/engine.rs:269:42: replace <= with > in LedgerEngine::validate_journal_entry",
+    "package": "flaps_core",
+    "replacement": ">",
+    "span": {
+      "end": {
+        "column": 44,
+        "line": 269
+      },
+      "start": {
+        "column": 42,
+        "line": 269
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/ledger/engine.rs\n+++ delete ! in LedgerEngine::validate_journal_entry\n@@ -265,17 +265,17 @@\n                 )\n                 .into());\n             }\n \n             if item.exchange_rate_scaled <= 0 {\n                 return Err(\"Exchange rate must be positive (scaled by 10^4)\".into());\n             }\n \n-            if ![\"DEBIT\", \"CREDIT\"].contains(&item.item_type.as_str()) {\n+            if  /* ~ changed by cargo-mutants ~ */[\"DEBIT\", \"CREDIT\"].contains(&item.item_type.as_str()) {\n                 return Err(\"Invalid item type. Must be DEBIT or CREDIT\".into());\n             }\n \n             // i128 accumulation: MAX_AMOUNT_MINOR is 17 digits, i64 could\n             // overflow on many items; i128 makes the sum total-order safe.\n             match item.item_type.as_str() {\n                 \"DEBIT\" => total_debit += i128::from(item.amount_minor),\n                 _ => total_credit += i128::from(item.amount_minor),\n",
+    "file": "core/src/ledger/engine.rs",
+    "function": {
+      "function_name": "LedgerEngine::validate_journal_entry",
+      "return_type": "-> Result<(), Box<dyn std::error::Error>>",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 297
+        },
+        "start": {
+          "column": 5,
+          "line": 226
+        }
+      }
+    },
+    "genre": "UnaryOperator",
+    "name": "core/src/ledger/engine.rs:273:16: delete ! in LedgerEngine::validate_journal_entry",
+    "package": "flaps_core",
+    "replacement": "",
+    "span": {
+      "end": {
+        "column": 17,
+        "line": 273
+      },
+      "start": {
+        "column": 16,
+        "line": 273
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/ledger/engine.rs\n+++ delete match arm \"DEBIT\" in LedgerEngine::validate_journal_entry\n@@ -272,17 +272,17 @@\n \n             if ![\"DEBIT\", \"CREDIT\"].contains(&item.item_type.as_str()) {\n                 return Err(\"Invalid item type. Must be DEBIT or CREDIT\".into());\n             }\n \n             // i128 accumulation: MAX_AMOUNT_MINOR is 17 digits, i64 could\n             // overflow on many items; i128 makes the sum total-order safe.\n             match item.item_type.as_str() {\n-                \"DEBIT\" => total_debit += i128::from(item.amount_minor),\n+                 /* ~ changed by cargo-mutants ~ */\n                 _ => total_credit += i128::from(item.amount_minor),\n             }\n         }\n \n         if total_debit != total_credit {\n             return Err(format!(\n                 \"Journal entry is not balanced: debits ({total_debit}) must equal credits ({total_credit})\"\n             )\n",
+    "file": "core/src/ledger/engine.rs",
+    "function": {
+      "function_name": "LedgerEngine::validate_journal_entry",
+      "return_type": "-> Result<(), Box<dyn std::error::Error>>",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 297
+        },
+        "start": {
+          "column": 5,
+          "line": 226
+        }
+      }
+    },
+    "genre": "MatchArm",
+    "name": "core/src/ledger/engine.rs:280:17: delete match arm \"DEBIT\" in LedgerEngine::validate_journal_entry",
+    "package": "flaps_core",
+    "replacement": "",
+    "span": {
+      "end": {
+        "column": 73,
+        "line": 280
+      },
+      "start": {
+        "column": 17,
+        "line": 280
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/ledger/engine.rs\n+++ replace += with -= in LedgerEngine::validate_journal_entry\n@@ -272,17 +272,17 @@\n \n             if ![\"DEBIT\", \"CREDIT\"].contains(&item.item_type.as_str()) {\n                 return Err(\"Invalid item type. Must be DEBIT or CREDIT\".into());\n             }\n \n             // i128 accumulation: MAX_AMOUNT_MINOR is 17 digits, i64 could\n             // overflow on many items; i128 makes the sum total-order safe.\n             match item.item_type.as_str() {\n-                \"DEBIT\" => total_debit += i128::from(item.amount_minor),\n+                \"DEBIT\" => total_debit -= /* ~ changed by cargo-mutants ~ */ i128::from(item.amount_minor),\n                 _ => total_credit += i128::from(item.amount_minor),\n             }\n         }\n \n         if total_debit != total_credit {\n             return Err(format!(\n                 \"Journal entry is not balanced: debits ({total_debit}) must equal credits ({total_credit})\"\n             )\n",
+    "file": "core/src/ledger/engine.rs",
+    "function": {
+      "function_name": "LedgerEngine::validate_journal_entry",
+      "return_type": "-> Result<(), Box<dyn std::error::Error>>",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 297
+        },
+        "start": {
+          "column": 5,
+          "line": 226
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/ledger/engine.rs:280:40: replace += with -= in LedgerEngine::validate_journal_entry",
+    "package": "flaps_core",
+    "replacement": "-=",
+    "span": {
+      "end": {
+        "column": 42,
+        "line": 280
+      },
+      "start": {
+        "column": 40,
+        "line": 280
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/ledger/engine.rs\n+++ replace += with *= in LedgerEngine::validate_journal_entry\n@@ -272,17 +272,17 @@\n \n             if ![\"DEBIT\", \"CREDIT\"].contains(&item.item_type.as_str()) {\n                 return Err(\"Invalid item type. Must be DEBIT or CREDIT\".into());\n             }\n \n             // i128 accumulation: MAX_AMOUNT_MINOR is 17 digits, i64 could\n             // overflow on many items; i128 makes the sum total-order safe.\n             match item.item_type.as_str() {\n-                \"DEBIT\" => total_debit += i128::from(item.amount_minor),\n+                \"DEBIT\" => total_debit *= /* ~ changed by cargo-mutants ~ */ i128::from(item.amount_minor),\n                 _ => total_credit += i128::from(item.amount_minor),\n             }\n         }\n \n         if total_debit != total_credit {\n             return Err(format!(\n                 \"Journal entry is not balanced: debits ({total_debit}) must equal credits ({total_credit})\"\n             )\n",
+    "file": "core/src/ledger/engine.rs",
+    "function": {
+      "function_name": "LedgerEngine::validate_journal_entry",
+      "return_type": "-> Result<(), Box<dyn std::error::Error>>",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 297
+        },
+        "start": {
+          "column": 5,
+          "line": 226
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/ledger/engine.rs:280:40: replace += with *= in LedgerEngine::validate_journal_entry",
+    "package": "flaps_core",
+    "replacement": "*=",
+    "span": {
+      "end": {
+        "column": 42,
+        "line": 280
+      },
+      "start": {
+        "column": 40,
+        "line": 280
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/ledger/engine.rs\n+++ replace += with -= in LedgerEngine::validate_journal_entry\n@@ -273,17 +273,17 @@\n             if ![\"DEBIT\", \"CREDIT\"].contains(&item.item_type.as_str()) {\n                 return Err(\"Invalid item type. Must be DEBIT or CREDIT\".into());\n             }\n \n             // i128 accumulation: MAX_AMOUNT_MINOR is 17 digits, i64 could\n             // overflow on many items; i128 makes the sum total-order safe.\n             match item.item_type.as_str() {\n                 \"DEBIT\" => total_debit += i128::from(item.amount_minor),\n-                _ => total_credit += i128::from(item.amount_minor),\n+                _ => total_credit -= /* ~ changed by cargo-mutants ~ */ i128::from(item.amount_minor),\n             }\n         }\n \n         if total_debit != total_credit {\n             return Err(format!(\n                 \"Journal entry is not balanced: debits ({total_debit}) must equal credits ({total_credit})\"\n             )\n             .into());\n",
+    "file": "core/src/ledger/engine.rs",
+    "function": {
+      "function_name": "LedgerEngine::validate_journal_entry",
+      "return_type": "-> Result<(), Box<dyn std::error::Error>>",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 297
+        },
+        "start": {
+          "column": 5,
+          "line": 226
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/ledger/engine.rs:281:35: replace += with -= in LedgerEngine::validate_journal_entry",
+    "package": "flaps_core",
+    "replacement": "-=",
+    "span": {
+      "end": {
+        "column": 37,
+        "line": 281
+      },
+      "start": {
+        "column": 35,
+        "line": 281
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/ledger/engine.rs\n+++ replace += with *= in LedgerEngine::validate_journal_entry\n@@ -273,17 +273,17 @@\n             if ![\"DEBIT\", \"CREDIT\"].contains(&item.item_type.as_str()) {\n                 return Err(\"Invalid item type. Must be DEBIT or CREDIT\".into());\n             }\n \n             // i128 accumulation: MAX_AMOUNT_MINOR is 17 digits, i64 could\n             // overflow on many items; i128 makes the sum total-order safe.\n             match item.item_type.as_str() {\n                 \"DEBIT\" => total_debit += i128::from(item.amount_minor),\n-                _ => total_credit += i128::from(item.amount_minor),\n+                _ => total_credit *= /* ~ changed by cargo-mutants ~ */ i128::from(item.amount_minor),\n             }\n         }\n \n         if total_debit != total_credit {\n             return Err(format!(\n                 \"Journal entry is not balanced: debits ({total_debit}) must equal credits ({total_credit})\"\n             )\n             .into());\n",
+    "file": "core/src/ledger/engine.rs",
+    "function": {
+      "function_name": "LedgerEngine::validate_journal_entry",
+      "return_type": "-> Result<(), Box<dyn std::error::Error>>",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 297
+        },
+        "start": {
+          "column": 5,
+          "line": 226
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/ledger/engine.rs:281:35: replace += with *= in LedgerEngine::validate_journal_entry",
+    "package": "flaps_core",
+    "replacement": "*=",
+    "span": {
+      "end": {
+        "column": 37,
+        "line": 281
+      },
+      "start": {
+        "column": 35,
+        "line": 281
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/ledger/engine.rs\n+++ replace != with == in LedgerEngine::validate_journal_entry\n@@ -277,17 +277,17 @@\n             // i128 accumulation: MAX_AMOUNT_MINOR is 17 digits, i64 could\n             // overflow on many items; i128 makes the sum total-order safe.\n             match item.item_type.as_str() {\n                 \"DEBIT\" => total_debit += i128::from(item.amount_minor),\n                 _ => total_credit += i128::from(item.amount_minor),\n             }\n         }\n \n-        if total_debit != total_credit {\n+        if total_debit == /* ~ changed by cargo-mutants ~ */ total_credit {\n             return Err(format!(\n                 \"Journal entry is not balanced: debits ({total_debit}) must equal credits ({total_credit})\"\n             )\n             .into());\n         }\n \n         if total_debit == 0 {\n             return Err(\"Journal entry total must be greater than zero\".into());\n",
+    "file": "core/src/ledger/engine.rs",
+    "function": {
+      "function_name": "LedgerEngine::validate_journal_entry",
+      "return_type": "-> Result<(), Box<dyn std::error::Error>>",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 297
+        },
+        "start": {
+          "column": 5,
+          "line": 226
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/ledger/engine.rs:285:24: replace != with == in LedgerEngine::validate_journal_entry",
+    "package": "flaps_core",
+    "replacement": "==",
+    "span": {
+      "end": {
+        "column": 26,
+        "line": 285
+      },
+      "start": {
+        "column": 24,
+        "line": 285
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/ledger/engine.rs\n+++ replace == with != in LedgerEngine::validate_journal_entry\n@@ -284,17 +284,17 @@\n \n         if total_debit != total_credit {\n             return Err(format!(\n                 \"Journal entry is not balanced: debits ({total_debit}) must equal credits ({total_credit})\"\n             )\n             .into());\n         }\n \n-        if total_debit == 0 {\n+        if total_debit != /* ~ changed by cargo-mutants ~ */ 0 {\n             return Err(\"Journal entry total must be greater than zero\".into());\n         }\n \n         Ok(())\n     }\n \n     /// Ensure account exists, create if not\n     async fn ensure_account_exists(&self, account_id: &str) -> Result<(), sqlx::Error> {\n",
+    "file": "core/src/ledger/engine.rs",
+    "function": {
+      "function_name": "LedgerEngine::validate_journal_entry",
+      "return_type": "-> Result<(), Box<dyn std::error::Error>>",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 297
+        },
+        "start": {
+          "column": 5,
+          "line": 226
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/ledger/engine.rs:292:24: replace == with != in LedgerEngine::validate_journal_entry",
+    "package": "flaps_core",
+    "replacement": "!=",
+    "span": {
+      "end": {
+        "column": 26,
+        "line": 292
+      },
+      "start": {
+        "column": 24,
+        "line": 292
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/ledger/engine.rs\n+++ replace LedgerEngine::ensure_account_exists -> Result<(), sqlx::Error> with Ok(())\n@@ -293,49 +293,17 @@\n             return Err(\"Journal entry total must be greater than zero\".into());\n         }\n \n         Ok(())\n     }\n \n     /// Ensure account exists, create if not\n     async fn ensure_account_exists(&self, account_id: &str) -> Result<(), sqlx::Error> {\n-        let exists: (i64,) = sqlx::query_as(\"SELECT COUNT(*) FROM accounts WHERE account_id = ?\")\n-            .bind(account_id)\n-            .fetch_one(&self.pool)\n-            .await?;\n-\n-        if exists.0 == 0 {\n-            // Create default account if it doesn't exist\n-            let default_account = crate::ledger::account::Account::new(\n-                account_id.to_string(),\n-                account_id.to_string(),\n-                format!(\"Account {}\", account_id),\n-                \"ASSETS\".to_string(), // Default to asset account\n-                None,\n-                \"TWD\".to_string(),\n-                Some(\"Auto-created account\".to_string()),\n-            );\n-\n-            sqlx::query(\n-                \"INSERT INTO accounts (account_id, account_code, account_name, account_type, parent_account_id, currency, description, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?)\"\n-            )\n-            .bind(&default_account.account_id)\n-            .bind(&default_account.account_code)\n-            .bind(&default_account.account_name)\n-            .bind(&default_account.account_type)\n-            .bind(&default_account.parent_account_id)\n-            .bind(&default_account.currency)\n-            .bind(&default_account.description)\n-            .bind(default_account.is_active)\n-            .execute(&self.pool)\n-            .await?;\n-        }\n-\n-        Ok(())\n+        Ok(()) /* ~ changed by cargo-mutants ~ */\n     }\n \n     /// Query transactions with filters\n     pub async fn query_transactions(\n         &self,\n         start_date: Option<chrono::NaiveDate>,\n         end_date: Option<chrono::NaiveDate>,\n         status: Option<String>,\n",
+    "file": "core/src/ledger/engine.rs",
+    "function": {
+      "function_name": "LedgerEngine::ensure_account_exists",
+      "return_type": "-> Result<(), sqlx::Error>",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 334
+        },
+        "start": {
+          "column": 5,
+          "line": 299
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "core/src/ledger/engine.rs:301:9: replace LedgerEngine::ensure_account_exists -> Result<(), sqlx::Error> with Ok(())",
+    "package": "flaps_core",
+    "replacement": "Ok(())",
+    "span": {
+      "end": {
+        "column": 15,
+        "line": 333
+      },
+      "start": {
+        "column": 9,
+        "line": 301
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/ledger/engine.rs\n+++ replace == with != in LedgerEngine::ensure_account_exists\n@@ -298,17 +298,17 @@\n \n     /// Ensure account exists, create if not\n     async fn ensure_account_exists(&self, account_id: &str) -> Result<(), sqlx::Error> {\n         let exists: (i64,) = sqlx::query_as(\"SELECT COUNT(*) FROM accounts WHERE account_id = ?\")\n             .bind(account_id)\n             .fetch_one(&self.pool)\n             .await?;\n \n-        if exists.0 == 0 {\n+        if exists.0 != /* ~ changed by cargo-mutants ~ */ 0 {\n             // Create default account if it doesn't exist\n             let default_account = crate::ledger::account::Account::new(\n                 account_id.to_string(),\n                 account_id.to_string(),\n                 format!(\"Account {}\", account_id),\n                 \"ASSETS\".to_string(), // Default to asset account\n                 None,\n                 \"TWD\".to_string(),\n",
+    "file": "core/src/ledger/engine.rs",
+    "function": {
+      "function_name": "LedgerEngine::ensure_account_exists",
+      "return_type": "-> Result<(), sqlx::Error>",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 334
+        },
+        "start": {
+          "column": 5,
+          "line": 299
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/ledger/engine.rs:306:21: replace == with != in LedgerEngine::ensure_account_exists",
+    "package": "flaps_core",
+    "replacement": "!=",
+    "span": {
+      "end": {
+        "column": 23,
+        "line": 306
+      },
+      "start": {
+        "column": 21,
+        "line": 306
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/ledger/engine.rs\n+++ replace LedgerEngine::query_recent_transaction_summaries -> Result<Vec<TransactionSummary>, Box<dyn std::error::Error>> with Ok(vec![])\n@@ -390,30 +390,17 @@\n \n impl LedgerEngine {\n     /// Most recent transactions with their summed minor amounts, newest first.\n     /// Read-only (GET path); parameterized limit.\n     pub async fn query_recent_transaction_summaries(\n         &self,\n         limit: i64,\n     ) -> Result<Vec<TransactionSummary>, Box<dyn std::error::Error>> {\n-        let rows = sqlx::query_as::<_, TransactionSummary>(\n-            \"SELECT t.transaction_id, t.transaction_code, t.transaction_date, t.description, \\\n-             t.reference_number, t.status, t.source_type, t.created_by, t.created_at, t.updated_at, \\\n-             COALESCE(SUM(CASE WHEN i.item_type = 'DEBIT' THEN i.amount_minor ELSE 0 END), 0) AS total_amount_minor, \\\n-             COALESCE(MIN(i.currency), 'TWD') AS currency \\\n-             FROM transactions t LEFT JOIN transaction_items i ON i.transaction_id = t.transaction_id \\\n-             GROUP BY t.transaction_id \\\n-             ORDER BY t.transaction_date DESC, t.created_at DESC LIMIT ?\",\n-        )\n-        .bind(limit)\n-        .fetch_all(&self.pool)\n-        .await?;\n-\n-        Ok(rows)\n+        Ok(vec![]) /* ~ changed by cargo-mutants ~ */\n     }\n \n     /// Paged variant of `query_recent_transaction_summaries`. `limit` and\n     /// `offset` are bound parameters — the page number never reaches SQL as\n     /// concatenated text. Callers validate/clamp the page number.\n     pub async fn query_transaction_summaries_paged(\n         &self,\n         limit: i64,\n",
+    "file": "core/src/ledger/engine.rs",
+    "function": {
+      "function_name": "LedgerEngine::query_recent_transaction_summaries",
+      "return_type": "-> Result<Vec<TransactionSummary>, Box<dyn std::error::Error>>",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 412
+        },
+        "start": {
+          "column": 5,
+          "line": 392
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "core/src/ledger/engine.rs:398:9: replace LedgerEngine::query_recent_transaction_summaries -> Result<Vec<TransactionSummary>, Box<dyn std::error::Error>> with Ok(vec![])",
+    "package": "flaps_core",
+    "replacement": "Ok(vec![])",
+    "span": {
+      "end": {
+        "column": 17,
+        "line": 411
+      },
+      "start": {
+        "column": 9,
+        "line": 398
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/ledger/engine.rs\n+++ replace LedgerEngine::query_recent_transaction_summaries -> Result<Vec<TransactionSummary>, Box<dyn std::error::Error>> with Ok(vec![Default::default()])\n@@ -390,30 +390,17 @@\n \n impl LedgerEngine {\n     /// Most recent transactions with their summed minor amounts, newest first.\n     /// Read-only (GET path); parameterized limit.\n     pub async fn query_recent_transaction_summaries(\n         &self,\n         limit: i64,\n     ) -> Result<Vec<TransactionSummary>, Box<dyn std::error::Error>> {\n-        let rows = sqlx::query_as::<_, TransactionSummary>(\n-            \"SELECT t.transaction_id, t.transaction_code, t.transaction_date, t.description, \\\n-             t.reference_number, t.status, t.source_type, t.created_by, t.created_at, t.updated_at, \\\n-             COALESCE(SUM(CASE WHEN i.item_type = 'DEBIT' THEN i.amount_minor ELSE 0 END), 0) AS total_amount_minor, \\\n-             COALESCE(MIN(i.currency), 'TWD') AS currency \\\n-             FROM transactions t LEFT JOIN transaction_items i ON i.transaction_id = t.transaction_id \\\n-             GROUP BY t.transaction_id \\\n-             ORDER BY t.transaction_date DESC, t.created_at DESC LIMIT ?\",\n-        )\n-        .bind(limit)\n-        .fetch_all(&self.pool)\n-        .await?;\n-\n-        Ok(rows)\n+        Ok(vec![Default::default()]) /* ~ changed by cargo-mutants ~ */\n     }\n \n     /// Paged variant of `query_recent_transaction_summaries`. `limit` and\n     /// `offset` are bound parameters — the page number never reaches SQL as\n     /// concatenated text. Callers validate/clamp the page number.\n     pub async fn query_transaction_summaries_paged(\n         &self,\n         limit: i64,\n",
+    "file": "core/src/ledger/engine.rs",
+    "function": {
+      "function_name": "LedgerEngine::query_recent_transaction_summaries",
+      "return_type": "-> Result<Vec<TransactionSummary>, Box<dyn std::error::Error>>",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 412
+        },
+        "start": {
+          "column": 5,
+          "line": 392
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "core/src/ledger/engine.rs:398:9: replace LedgerEngine::query_recent_transaction_summaries -> Result<Vec<TransactionSummary>, Box<dyn std::error::Error>> with Ok(vec![Default::default()])",
+    "package": "flaps_core",
+    "replacement": "Ok(vec![Default::default()])",
+    "span": {
+      "end": {
+        "column": 17,
+        "line": 411
+      },
+      "start": {
+        "column": 9,
+        "line": 398
+      }
+    }
+  },
+  {
+    "diff": "--- core/src/ledger/engine.rs\n+++ replace == with != in LedgerEngine::monthly_by_account\n@@ -482,17 +482,17 @@\n         let start = format!(\"{}-01\", ym);\n         let end = if ym.ends_with(\"-12\") {\n             format!(\"{}-01-01\", &ym[..4])\n         } else {\n             // Next month\n             let parts: Vec<&str> = ym.split('-').collect();\n             let year: i32 = parts[0].parse().unwrap_or(2026);\n             let month: u32 = parts[1].parse().unwrap_or(1);\n-            if month == 12 {\n+            if month != /* ~ changed by cargo-mutants ~ */ 12 {\n                 format!(\"{}-01-01\", year + 1)\n             } else {\n                 format!(\"{:04}-{:02}-01\", year, month + 1)\n             }\n         };\n         let rows = sqlx::query_as::<_, AccountMonthTotal>(\n             \"SELECT i.account_id, \\\n              COALESCE(SUM(CASE WHEN i.item_type = 'DEBIT' THEN i.amount_minor ELSE 0 END), 0) AS debit_minor, \\\n",
+    "file": "core/src/ledger/engine.rs",
+    "function": {
+      "function_name": "LedgerEngine::monthly_by_account",
+      "return_type": "-> Result<Vec<AccountMonthTotal>, Box<dyn std::error::Error>>",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 509
+        },
+        "start": {
+          "column": 5,
+          "line": 476
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "core/src/ledger/engine.rs:490:22: replace == with != in LedgerEngine::monthly_by_account",
+    "package": "flaps_core",
+    "replacement": "!=",
+    "span": {
+      "end": {
+        "column": 24,
+        "line": 490
+      },
+      "start": {
+        "column": 22,
+        "line": 490
+      }
+    }
+  }
+]

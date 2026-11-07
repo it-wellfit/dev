@@ -1,0 +1,26 @@
+{
+  "id": "claim-20261107-002",
+  "claim_type": "invariant",
+  "status": "published",
+  "track": "b",
+  "confidence": 0.95,
+  "valid_from": "2026-11-07",
+  "valid_to": null,
+  "recorded_at": "2026-11-07T11:03:14.290668800Z",
+  "supersedes": [],
+  "superseded_by": null,
+  "evidence": [
+    {
+      "path": "ekpi-platform/docs/quality/phase-gates.md",
+      "rev": "a268319",
+      "quote": "A gate is approved only by the named accountable role, with linked evidence and a review date."
+    }
+  ],
+  "topics": [
+    "ekpi-platform",
+    "quality"
+  ],
+  "source": "raw/ekpi/2026-11-07-seed.md",
+  "title": "階段門僅由具名當責角色以鏈結證據核准",
+  "body": "A gate is approved only by the named accountable role, with linked evidence and a review date."
+}

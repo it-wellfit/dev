@@ -1,0 +1,26 @@
+{
+  "id": "claim-20261107-014",
+  "claim_type": "invariant",
+  "status": "published",
+  "track": "b",
+  "confidence": 0.95,
+  "valid_from": "2026-11-07",
+  "valid_to": null,
+  "recorded_at": "2026-11-07T11:03:14.290738200Z",
+  "supersedes": [],
+  "superseded_by": null,
+  "evidence": [
+    {
+      "path": "docs/engineering/THINKING_OPERATING_SYSTEM.md",
+      "rev": "working-tree",
+      "quote": "證據規則（指令＋修訂版＋退出碼；UNKNOWN ≠ PASS ≠ FAIL）"
+    }
+  ],
+  "topics": [
+    "methodology",
+    "evidence-rule"
+  ],
+  "source": "raw/methodology/2026-11-07-seed.md",
+  "title": "UNKNOWN ≠ PASS ≠ FAIL 證據規則",
+  "body": "Workspace evidence rule: results carry command + revision + exit code, and UNKNOWN is never conflated with PASS or FAIL."
+}
