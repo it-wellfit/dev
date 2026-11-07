@@ -225,7 +225,7 @@ fn cmd_ingest(root: &Path, ledger: &Path, batch_file: String) -> Result<(), KemE
             known.insert(claim.id.clone());
         }
         let verdict = vet_t1(&claim, &ctx);
-        record_verdict(ledger, "kem-seed", &claim.id, &verdict, now)?;
+        record_verdict(ledger, "kem-t1", &claim.id, &verdict, now)?;
         match verdict.outcome {
             Outcome::Accept => {
                 stage_claim(&root.join("claims"), &claim)?;
