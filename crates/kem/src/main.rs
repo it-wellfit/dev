@@ -99,10 +99,18 @@ fn cmd_seed(root: &Path, ledger: &Path, force: bool) -> Result<(), KemError> {
     std::fs::create_dir_all(root.join(".kem"))?;
     if force && ledger.exists() {
         let entries = kem::ledger::read_all(ledger)?;
-        let foreign = entries.iter().filter(|e| e.actor != "kem-seed").count();
+        // Reset is only allowed when every entry belongs to the seed set
+        // (empty claim_id = capture meta entries). Any user-filed claim
+        // makes --force refuse, protecting real knowledge.
+        let seed_ids: std::collections::HashSet<String> =
+            seed_claims().iter().map(|c| c.id.clone()).collect();
+        let foreign = entries
+            .iter()
+            .filter(|e| !e.claim_id.is_empty() && !seed_ids.contains(&e.claim_id))
+            .count();
         if foreign > 0 {
             return Err(KemError::InvalidInput(format!(
-                "--force refused: ledger holds {foreign} non-seed entries"
+                "--force refused: ledger holds {foreign} entries outside the seed set"
             )));
         }
         for dir in ["raw", "claims"] {
