@@ -7,11 +7,13 @@ edition = "2021"
 [package.metadata]
 cargo-fuzz = true
 
+[workspace]
+
 [dependencies]
 libfuzzer-sys = "0.4"
 
 [dependencies.flaps_core]
-path = ".."
+path = "../core"
 
 [[bin]]
 name = "money_parser"

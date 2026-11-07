@@ -63,7 +63,7 @@
 
 **結論**（`[PROP]`）:
 1. **採用 A 的管線設計**作為藍圖（生命週期最完整、審計性最強）。
-2. **裁決層可插拔**：預設＝確定性規則（程式碼擁有所有門檻，pi-jev-wiki 哲學）→ 第二層＝本地 LLM（qwen3.5:4b）→ 選配＝JEV（有金鑰時）。這正是 `FREE_AI_ROUTING.md` §3.2 fallback 鏈的知識版。
+2. **裁決層可插拔**：預設＝確定性規則（程式碼擁有所有門檻，pi-jev-wiki 哲學）→ 第二層＝本地 LLM（qwen3.5:4b）＋自一致性投票 → 第三層＝自研蒸餾決策模型。**付費 AI（含 JEV）全面排除**——零成本是硬性約束，非加權項（2026-11-07 使用者裁定）；JEV 僅作為模式來源。這正是 `FREE_AI_ROUTING.md` §3.2 fallback 鏈的知識版。
 3. **補上 A 缺少的兩項**：雙時間軸（取自 B/Graphiti）與兩軌治理（取自 eli.ai/Wikidata）。
 4. **檢索**：BM25（tantivy，工作區既有技術）＋向量（Ollama embeddings）為主；PPR 多跳列為 Phase 5 選配（GraphRAG 社群摘要索引成本不合本地優先）。
 
@@ -160,7 +160,7 @@ knowledge/
 |----|------|------|------------|
 | T1 規則（預設） | Rust 確定性檢查：證據存在、引證逐字匹配、重複偵測（hash＋相似度）、機密掃描、有效連結 | 結構性可判定項 | 程式碼（常數＋測試鎖定） |
 | T2 本地 LLM | qwen3.5:4b，結構化輸出 7 維評分：groundedness/derivability/durability/importance/duplication/sensitivity/placement | 語義判斷（如「這是決策還是事實？」） | 程式碼把分數映射為決策；信心 0.30–0.70 → 審查佇列（JEV cookbook 不確定帶模式 `[FACT:DOC]`） |
-| T3 JEV（選配） | TypeSafe System One（Noul/Choice/Score） | 有金鑰且需低延遲高一致性 | 同 T2 門檻映射；JEV 只出機率，**決策權恆在程式碼** |
+| T3 自研蒸餾 | 帳本（人工複核過的处置）累積為訓練集 → 特徵化 → 小型分類器（CatBoost/邏輯迴歸起步，0.8B 級蒸餾為遠期） | T2 人工複核量成長後，把重複判斷固化為零呼叫模型 | 程式碼擁有門檻；Decision4Rec 實證：訓練後 0.8B 開源決策模型在 11/15 情境勝商用 Jev `[FACT:DOC]`——免費路線長期可超越付費 |
 
 規則: 每個裁決決策（接受/審查/拒絕＋分數＋理由）寫入 `ledger.jsonl`；覆寫（override）允許但必須記帳 `[FACT:DOC]` pi-jev-wiki 模式。
 
@@ -305,7 +305,7 @@ draft → pending_review → published ──→ superseded ──┐
 | **P2 檢索**（3 天） | M5：tantivy BM25＋Ollama 向量＋MCP `kem_ask` | 金標查詢集 §8-V1 全綠；斷網 smoke 全綠 | L3 |
 | **P3 演進**（4 天） | M6：sync 對 commit 重驗證；衰減＋再確認；取代流程；T2＋SCS k=5 上線 | §8-V2/V3/V4 全綠（演化/雙時間軸/退役傳播）＋SCS-G1 | L3 |
 | **P4 治理**（3 天） | M7–M8：審查佇列、lint、doctor、status；併入 check.ps1 | 四關 EXIT=0；lint 對種子缺陷集 100% 命中 | L4 |
-| **P5 選配**（視需求） | T3 JEV 後端；PPR 多跳；跨專案多 wiki 目錄 | 有金鑰後 14 天試點＋成本報告 | L5 |
+| **P5 遠期**（帳本量驅動） | T3 自研蒸餾決策模型（帳本→訓練→本地推理）；SCS G2–G4 階梯；PPR 多跳；跨專案多 wiki 目錄 | 複核量 ≥ 500 筆後 14 天試點：SCS-G2/G3/G4 逐級達標（證據基線 99.2% → 千題解析度上限 99.9%）；V4/V11/V12 全綠 | L5 |
 
 **路線圖風險控制**: 每階段結束跑四關＋證據寫入 session manifest；不綠不前進（flaps 計畫 §6 慣例）。
 
