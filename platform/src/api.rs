@@ -12,7 +12,7 @@
 //!   THREAT_MODEL T-07).
 
 use askama::Template;
-use axum::extract::{Form, State};
+use axum::extract::{Form, Query, State};
 use axum::http::{header, StatusCode};
 use axum::response::{Html, IntoResponse, Redirect, Response};
 use axum::routing::{get, post};
@@ -31,7 +31,29 @@ use crate::db::DatabaseManager;
 const MAX_DESCRIPTION_LEN: usize = 200;
 const MAX_ACCOUNT_ID_LEN: usize = 64;
 const SUPPORTED_CURRENCIES: [&str; 4] = ["TWD", "USD", "EUR", "JPY"];
-const RECENT_TRANSACTION_LIMIT: i64 = 20;
+/// Dashboard overview: how many recent transactions the summary table shows
+/// (the full, paged list lives under the 交易管理 section — see M1).
+const RECENT_TRANSACTION_LIMIT: i64 = 5;
+
+/// Transaction list page size (M1, blueprint §M1: 20 rows per page).
+const LIST_PAGE_SIZE: i64 = 20;
+
+/// Fail-closed page parsing (M1): non-numeric, non-positive or absurd values
+/// fall back to page 1 — a crafted `page` parameter must never reach SQL and
+/// must never produce a 500. The upper bound is clamped against the real page
+/// count via [`clamp_page`] once the total is known.
+fn parse_page_param(raw: Option<&str>) -> i64 {
+    raw.map(str::trim)
+        .and_then(|s| s.parse::<i64>().ok())
+        .filter(|&p| (1..=1_000_000).contains(&p))
+        .unwrap_or(1)
+}
+
+/// Clamp a requested page into `[1, total_pages]` (past-the-end requests show
+/// the last page, per blueprint §M1 acceptance).
+fn clamp_page(requested: i64, total_pages: i64) -> i64 {
+    requested.clamp(1, total_pages.max(1))
+}
 
 /// Shared application state for the web tier.
 #[derive(Clone)]
@@ -148,6 +170,8 @@ pub struct IndexTemplate {
     pub total_transactions: String,
     pub next_page: Option<String>,
     pub transactions: Vec<TransactionRow>,
+    /// Dashboard overview: 5 most recent entries (unpaged, M1).
+    pub recent: Vec<TransactionRow>,
     pub accounts: Vec<String>,
     pub error: Option<String>,
     pub form: FormValues,
@@ -281,8 +305,25 @@ pub fn router(state: AppState) -> Router {
         .with_state(state)
 }
 
-async fn index(State(state): State<AppState>, session: Extension<Session>) -> Response {
-    let html = build_index(&state, &session, None, FormValues::default()).await;
+/// Query string for list pages: `?page=N` (M1). Parsed fail-closed.
+#[derive(Deserialize)]
+pub struct PageQuery {
+    pub page: Option<String>,
+}
+
+async fn index(
+    State(state): State<AppState>,
+    session: Extension<Session>,
+    Query(query): Query<PageQuery>,
+) -> Response {
+    let html = build_index(
+        &state,
+        &session,
+        None,
+        FormValues::default(),
+        parse_page_param(query.page.as_deref()),
+    )
+    .await;
     match html {
         Ok(body) => Html(body).into_response(),
         Err(e) => (
@@ -304,15 +345,44 @@ async fn design_system_css() -> impl IntoResponse {
     )
 }
 
+/// GET /api/health — machine-readable deployment probe (R2/M2).
+///
+/// Reports DB reachability, applied migration count and the transaction
+/// total. When the database is unreachable the probe answers 503 with
+/// `status = "degraded"` so orchestrators can take the instance out.
 async fn health(State(state): State<AppState>) -> Response {
     let db_connected = sqlx::query("SELECT 1").fetch_one(&state.pool).await.is_ok();
-    Json(serde_json::json!({
-        "status": "ok",
-        "db": db_connected,
-        "service": "flaps-server",
-        "version": env!("CARGO_PKG_VERSION"),
-    }))
-    .into_response()
+    let (migrations, transactions): (i64, i64) = if db_connected {
+        let m: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM _sqlx_migrations")
+            .fetch_one(&state.pool)
+            .await
+            .unwrap_or(-1);
+        let t: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM transactions")
+            .fetch_one(&state.pool)
+            .await
+            .unwrap_or(-1);
+        (m, t)
+    } else {
+        (-1, -1)
+    };
+    let status = if db_connected { "ok" } else { "degraded" };
+    let code = if db_connected {
+        StatusCode::OK
+    } else {
+        StatusCode::SERVICE_UNAVAILABLE
+    };
+    (
+        code,
+        Json(serde_json::json!({
+            "status": status,
+            "db": db_connected,
+            "migrations_applied": migrations,
+            "transactions": transactions,
+            "service": "flaps-server",
+            "version": env!("CARGO_PKG_VERSION"),
+        })),
+    )
+        .into_response()
 }
 
 async fn create_transaction(
@@ -330,6 +400,7 @@ async fn create_transaction(
                     .to_string(),
             ),
             FormValues::default(),
+            1,
         )
         .await;
         return match html {
@@ -344,7 +415,7 @@ async fn create_transaction(
         // Redirect::to uses 303 See Other — the correct PRG verb after POST.
         Ok(()) => Redirect::to("/#transactions").into_response(),
         Err((status, message)) => {
-            let html = build_index(&state, &session, Some(message), saved_form).await;
+            let html = build_index(&state, &session, Some(message), saved_form, 1).await;
             match html {
                 Ok(body) => (status, Html(body)).into_response(),
                 Err(e) => (status, format!("錯誤頁面渲染失敗：{e}")).into_response(),
@@ -2625,6 +2696,7 @@ async fn build_index(
     session: &Session,
     error: Option<String>,
     form: FormValues,
+    requested_page: i64,
 ) -> Result<String, askama::Error> {
     let db_connected = sqlx::query("SELECT 1").fetch_one(&state.pool).await.is_ok();
 
@@ -2636,66 +2708,135 @@ async fn build_index(
     };
     let current_ym = chrono::Utc::now().date_naive().format("%Y-%m").to_string();
 
-    let (transactions, accounts, transaction_count, account_count, total_amount_display) =
-        if db_connected {
-            let summaries = state
-                .engine
-                .query_recent_transaction_summaries(RECENT_TRANSACTION_LIMIT)
+    #[allow(clippy::type_complexity)]
+    let (
+        recent,
+        transactions,
+        accounts,
+        transaction_count,
+        account_count,
+        total_amount_display,
+        pending_review_count,
+        page,
+        total_pages,
+        prev_page,
+        next_page,
+        total_transactions,
+    ) = if db_connected {
+        // M1 (blueprint §M1): server-side pagination, 20 rows per page. The
+        // page number is parsed fail-closed and clamped against the real
+        // count; LIMIT/OFFSET are bound parameters, never concatenated SQL.
+        let transaction_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM transactions")
+            .fetch_one(&state.pool)
+            .await
+            .unwrap_or(0);
+        let total_pages_i64 = ((transaction_count + LIST_PAGE_SIZE - 1) / LIST_PAGE_SIZE).max(1);
+        let page_i64 = clamp_page(requested_page, total_pages_i64);
+        let offset = (page_i64 - 1) * LIST_PAGE_SIZE;
+
+        let summaries = state
+            .engine
+            .query_transaction_summaries_paged(LIST_PAGE_SIZE, offset)
+            .await
+            .unwrap_or_default();
+        let transactions: Vec<TransactionRow> = summaries
+            .iter()
+            .map(|s| TransactionRow {
+                transaction_code: s.transaction.transaction_code.clone(),
+                description: s.transaction.description.clone(),
+                transaction_date: s.transaction.transaction_date.to_string(),
+                amount_display: format_minor(s.total_amount_minor, 2),
+                currency: s.currency.clone(),
+                status: s.transaction.status.clone(),
+            })
+            .collect();
+
+        // Dashboard overview keeps the most recent entries (unpaged).
+        let recent_summaries = state
+            .engine
+            .query_recent_transaction_summaries(RECENT_TRANSACTION_LIMIT)
+            .await
+            .unwrap_or_default();
+        let recent: Vec<TransactionRow> = recent_summaries
+            .iter()
+            .map(|s| TransactionRow {
+                transaction_code: s.transaction.transaction_code.clone(),
+                description: s.transaction.description.clone(),
+                transaction_date: s.transaction.transaction_date.to_string(),
+                amount_display: format_minor(s.total_amount_minor, 2),
+                currency: s.currency.clone(),
+                status: s.transaction.status.clone(),
+            })
+            .collect();
+
+        // M3 (blueprint §M3): 待覆核 = status 'PENDING_REVIEW'; real count,
+        // 0 when none — never a placeholder dash.
+        let pending_review_count: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) FROM transactions WHERE status = 'PENDING_REVIEW'")
+                .fetch_one(&state.pool)
+                .await
+                .unwrap_or(0);
+
+        let account_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM accounts")
+            .fetch_one(&state.pool)
+            .await
+            .unwrap_or(0);
+        let total_minor: i64 =
+            sqlx::query_scalar("SELECT COALESCE(SUM(amount_minor), 0) FROM transaction_items")
+                .fetch_one(&state.pool)
+                .await
+                .unwrap_or(0);
+
+        let account_ids: Vec<String> =
+            sqlx::query_scalar("SELECT account_id FROM accounts ORDER BY account_id LIMIT 100")
+                .fetch_all(&state.pool)
                 .await
                 .unwrap_or_default();
-            let rows: Vec<TransactionRow> = summaries
-                .iter()
-                .map(|s| TransactionRow {
-                    transaction_code: s.transaction.transaction_code.clone(),
-                    description: s.transaction.description.clone(),
-                    transaction_date: s.transaction.transaction_date.to_string(),
-                    amount_display: format_minor(s.total_amount_minor, 2),
-                    currency: s.currency.clone(),
-                    status: s.transaction.status.clone(),
-                })
-                .collect();
 
-            let transaction_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM transactions")
-                .fetch_one(&state.pool)
-                .await
-                .unwrap_or(0);
-            let account_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM accounts")
-                .fetch_one(&state.pool)
-                .await
-                .unwrap_or(0);
-            let total_minor: i64 =
-                sqlx::query_scalar("SELECT COALESCE(SUM(amount_minor), 0) FROM transaction_items")
-                    .fetch_one(&state.pool)
-                    .await
-                    .unwrap_or(0);
-
-            let account_ids: Vec<String> =
-                sqlx::query_scalar("SELECT account_id FROM accounts ORDER BY account_id LIMIT 100")
-                    .fetch_all(&state.pool)
-                    .await
-                    .unwrap_or_default();
-
-            (
-                rows,
-                account_ids,
-                transaction_count.to_string(),
-                account_count.to_string(),
-                format_minor(total_minor, 2),
-            )
+        let prev_page = if page_i64 > 1 {
+            Some(format!("/?page={}", page_i64 - 1))
         } else {
-            (
-                Vec::new(),
-                Vec::new(),
-                "—".to_string(),
-                "—".to_string(),
-                "—".to_string(),
-            )
+            None
+        };
+        let next_page = if page_i64 < total_pages_i64 {
+            Some(format!("/?page={}", page_i64 + 1))
+        } else {
+            None
         };
 
-    // "—" placeholders are only shown when the database is unreachable; the
-    // template switches the KPI block to literals in that case, so the count
-    // strings above are for the connected path.
-    let _ = (&transaction_count, &account_count, &total_amount_display);
+        (
+            recent,
+            transactions,
+            account_ids,
+            transaction_count.to_string(),
+            account_count.to_string(),
+            format_minor(total_minor, 2),
+            pending_review_count.to_string(),
+            page_i64 as u32,
+            total_pages_i64 as u32,
+            prev_page,
+            next_page,
+            transaction_count.to_string(),
+        )
+    } else {
+        (
+            Vec::new(),
+            Vec::new(),
+            Vec::new(),
+            "—".to_string(),
+            "—".to_string(),
+            "—".to_string(),
+            "—".to_string(),
+            1u32,
+            1u32,
+            None,
+            None,
+            "—".to_string(),
+        )
+    };
+
+    // KPI strings are real counts on the connected path (M3); "—" only when
+    // the database is unreachable (degraded layout, FR-004).
     IndexTemplate {
         acting_user: session.user_id.clone(),
         csrf_token: session.csrf_token.clone(),
@@ -2703,16 +2844,17 @@ async fn build_index(
         current_ym,
         chart_svg,
         db_connected,
-        transaction_count: transaction_count.clone(),
+        transaction_count,
         total_amount_display,
         account_count,
-        pending_review_count: "0".to_string(),
-        prev_page: None,
-        page: 1,
-        total_pages: 1,
-        total_transactions: transaction_count.clone(),
-        next_page: None,
+        pending_review_count,
+        prev_page,
+        page,
+        total_pages,
+        total_transactions,
+        next_page,
         transactions,
+        recent,
         accounts,
         error,
         form,
@@ -2764,6 +2906,36 @@ mod tests {
         .execute(pool)
         .await
         .expect("seed store user");
+    }
+
+    /// Seed `count` minimal transactions with the given status (pagination and
+    /// KPI tests need deterministic row counts, not full ledger entries).
+    async fn seed_transactions(pool: &SqlitePool, count: i64, status: &str) {
+        for i in 0..count {
+            sqlx::query(
+                "INSERT INTO transactions (transaction_id, transaction_code, transaction_date, description, status, created_by) \
+                 VALUES (?, ?, '2026-11-01', ?, ?, 'seed')",
+            )
+            .bind(format!("tx-seed-{i}"))
+            .bind(format!("TX-SEED-{i}"))
+            .bind(format!("seed row {i}"))
+            .bind(status)
+            .execute(pool)
+            .await
+            .expect("seed transaction");
+        }
+    }
+
+    #[test]
+    fn parse_page_param_is_fail_closed() {
+        assert_eq!(parse_page_param(None), 1, "missing page defaults to 1");
+        assert_eq!(parse_page_param(Some("")), 1, "empty page defaults to 1");
+        assert_eq!(parse_page_param(Some("abc")), 1, "garbage defaults to 1");
+        assert_eq!(parse_page_param(Some("0")), 1, "zero clamps to 1");
+        assert_eq!(parse_page_param(Some("-3")), 1, "negative clamps to 1");
+        assert_eq!(parse_page_param(Some("2")), 2, "valid page passes through");
+        assert_eq!(parse_page_param(Some("99999999")), 1, "absurd falls back");
+        assert_eq!(clamp_page(999, 2), 2, "past-the-end clamps to last page");
     }
 
     async fn test_app() -> (Router, SqlitePool) {
@@ -3117,6 +3289,139 @@ mod tests {
         .await;
         assert_eq!(status, StatusCode::OK, "health probe is public");
         assert!(body.contains("\"db\":true"), "health must report live DB");
+        assert!(
+            body.contains("\"migrations_applied\":"),
+            "health must report the applied migration count (M2)"
+        );
+        assert!(
+            body.contains("\"transactions\":"),
+            "health must report the transaction total (M2)"
+        );
+    }
+
+    #[tokio::test]
+    async fn health_degrades_to_503_when_db_unreachable() {
+        let (app, pool) = test_app().await;
+        pool.close().await;
+        let (status, body, _) = send(
+            app,
+            Request::builder()
+                .uri("/api/health")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await;
+        assert_eq!(
+            status,
+            StatusCode::SERVICE_UNAVAILABLE,
+            "unreachable DB must degrade to 503 (M2)"
+        );
+        assert!(
+            body.contains("\"status\":\"degraded\""),
+            "degraded status must be machine-readable"
+        );
+    }
+
+    #[tokio::test]
+    async fn pagination_splits_25_rows_into_20_plus_5() {
+        let (app, pool) = test_app().await;
+        seed_credentials(&pool).await;
+        let (cookie, _) = login(&app, &pool, "admin", TEST_ADMIN_PASSWORD).await;
+        seed_transactions(&pool, 25, "POSTED").await;
+
+        let request = Request::builder()
+            .uri("/?page=1")
+            .header(header::COOKIE, cookie.clone())
+            .body(Body::empty())
+            .unwrap();
+        let (status, body, _) = send(app.clone(), request).await;
+        assert_eq!(status, StatusCode::OK);
+        assert!(
+            body.contains("第 1 / 2 頁・共 25 筆"),
+            "page 1 status line must render (M1)"
+        );
+        assert!(
+            body.contains("href=\"/?page=2\""),
+            "next-page link must be present on page 1"
+        );
+
+        let request = Request::builder()
+            .uri("/?page=2")
+            .header(header::COOKIE, cookie)
+            .body(Body::empty())
+            .unwrap();
+        let (status, body, _) = send(app, request).await;
+        assert_eq!(status, StatusCode::OK);
+        assert!(
+            body.contains("第 2 / 2 頁・共 25 筆"),
+            "page 2 status line must render (M1)"
+        );
+        assert!(
+            body.contains("href=\"/?page=1\""),
+            "previous-page link must be present on page 2"
+        );
+    }
+
+    #[tokio::test]
+    async fn pagination_clamps_out_of_range_page_to_last() {
+        let (app, pool) = test_app().await;
+        seed_credentials(&pool).await;
+        let (cookie, _) = login(&app, &pool, "admin", TEST_ADMIN_PASSWORD).await;
+        seed_transactions(&pool, 25, "POSTED").await;
+
+        let request = Request::builder()
+            .uri("/?page=999")
+            .header(header::COOKIE, cookie)
+            .body(Body::empty())
+            .unwrap();
+        let (status, body, _) = send(app, request).await;
+        assert_eq!(status, StatusCode::OK, "clamped page must not 500");
+        assert!(
+            body.contains("第 2 / 2 頁・共 25 筆"),
+            "page=999 must show the last page (M1)"
+        );
+    }
+
+    #[tokio::test]
+    async fn pagination_falls_back_to_page_1_on_garbage() {
+        let (app, pool) = test_app().await;
+        seed_credentials(&pool).await;
+        let (cookie, _) = login(&app, &pool, "admin", TEST_ADMIN_PASSWORD).await;
+        seed_transactions(&pool, 25, "POSTED").await;
+
+        for raw in ["abc", "0", "-3", ""] {
+            let request = Request::builder()
+                .uri(format!("/?page={raw}"))
+                .header(header::COOKIE, cookie.clone())
+                .body(Body::empty())
+                .unwrap();
+            let (status, body, _) = send(app.clone(), request).await;
+            assert_eq!(status, StatusCode::OK, "page={raw:?} must not 500");
+            assert!(
+                body.contains("第 1 / 2 頁・共 25 筆"),
+                "page={raw:?} must fall back to page 1 (M1)"
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn pending_review_kpi_shows_real_count() {
+        let (app, pool) = test_app().await;
+        seed_credentials(&pool).await;
+        let (cookie, _) = login(&app, &pool, "admin", TEST_ADMIN_PASSWORD).await;
+        seed_transactions(&pool, 2, "PENDING_REVIEW").await;
+
+        let request = Request::builder()
+            .uri("/")
+            .header(header::COOKIE, cookie)
+            .body(Body::empty())
+            .unwrap();
+        let (status, body, _) = send(app, request).await;
+        assert_eq!(status, StatusCode::OK);
+        assert!(
+            body.contains("id=\"kpi-pending-review\">2</dd>"),
+            "KPI must show the real pending-review count, never a dash (M3)"
+        );
     }
 
     #[tokio::test]

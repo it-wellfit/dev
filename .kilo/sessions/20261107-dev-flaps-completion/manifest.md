@@ -33,3 +33,11 @@
 - 10 commits (e82a49e..9704933) individually inspected: corruption lineage contained no other semantic deltas besides stress-value churn + blank lines + CRLF + BOM.
 - Preserved: `dc414ac`/`8b8b92b` deliberate calibration (100k + BEGIN/COMMIT + assert 100k).
 - Next: P1–P5 pages (start `/states`), R5 encoding guards (PUA/BOM scan test), M4–M6, S5 tests, S6 ops.
+
+## M1–M3 re-implementation (2026-11-07)
+
+- Blueprint §5 claimed M1 (pagination) / M2 (health) / M3 (KPI) done 2026-11-06 with tests.
+- **Verified ABSENT in main**: `git log -S 'parse_page' --all` empty; `-S 'degraded'` empty; all worktrees scanned (local-develop/release/test, booming-radon) — no matches; no pagination/health tests existed. Recorded as spec-vs-reality divergence (plan §12.3 rule: 現況＋套件本文為準); re-implemented to blueprint spec §M1/§R2/§M3.
+- Implemented: M1 fail-closed page parsing (`parse_page_param`/`clamp_page`) + bound LIMIT/OFFSET + `第 X / Y 頁・共 Z 筆` + prev/next with disabled states + dashboard 5-row overview split; M2 health probe (`db` + `migrations_applied` + `transactions`; 503 `status=degraded`); M3 `pending_review` = `COUNT(status='PENDING_REVIEW')` rendered as a real number.
+- Evidence: `cargo test -p platform --locked` → **54 passed / 0 failed** (incl. `stress_10000` @100k rows, 14.2s suite); `cargo clippy -p platform --all-targets -- -D warnings` EXIT=0; rustfmt clean; api.rs normalized to LF (0 CR).
+- New tests: `parse_page_param_is_fail_closed` (8 assertions), `pagination_splits_25_rows_into_20_plus_5`, `pagination_clamps_out_of_range_page_to_last`, `pagination_falls_back_to_page_1_on_garbage`, `health_degrades_to_503_when_db_unreachable`, `pending_review_kpi_shows_real_count`; `health_reports_database_status` extended.

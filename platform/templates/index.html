@@ -82,7 +82,7 @@
                 </div>
                 <div class="kpi">
                     <dt>待覆核交易</dt>
-                    <dd>— <span class="pending-note">需人工覆核</span></dd>
+                    <dd id="kpi-pending-review">{{ pending_review_count }}</dd>
                 </div>
             </dl>
 
@@ -99,7 +99,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        {% if transactions.is_empty() %}
+                        {% if recent.is_empty() %}
                         <tr>
                             <td colspan="5">
                                 <p class="empty-state">
@@ -110,7 +110,7 @@
                             </td>
                         </tr>
                         {% else %}
-                        {% for row in transactions %}
+                        {% for row in recent %}
                         <tr>
                             <td>{{ row.transaction_code }}</td>
                             <td>{{ row.description }}</td>
@@ -132,7 +132,7 @@
             {{ chart_svg|safe }}
             {% endif %}
 
-            <p class="section-note">清單支援分頁與排序，將由後端 API 提供（見 docs/testing/TEST_STRATEGY.md 的契約測試計畫）。</p>
+            <p class="section-note">此表為最近 5 筆摘要；完整清單與分頁見下方「交易管理」。</p>
         </section>
 
         <section id="modules" class="panel" aria-labelledby="modules-title">
@@ -192,7 +192,7 @@
             <h3 id="transactions-title">交易管理</h3>
             <div class="table-wrap">
                 <table>
-                    <caption>全部交易</caption>
+                    <caption>交易清單</caption>
                     <thead>
                         <tr>
                             <th scope="col">交易編號</th>
@@ -226,8 +226,21 @@
                     </tbody>
                 </table>
             </div>
+            <nav class="pagination" aria-label="交易清單分頁">
+                {% if let Some(p) = prev_page %}
+                <a href="{{ p }}">← 上一頁</a>
+                {% else %}
+                <span class="is-disabled" aria-disabled="true">← 上一頁</span>
+                {% endif %}
+                <span class="page-status">第 {{ page }} / {{ total_pages }} 頁・共 {{ total_transactions }} 筆</span>
+                {% if let Some(p) = next_page %}
+                <a href="{{ p }}">下一頁 →</a>
+                {% else %}
+                <span class="is-disabled" aria-disabled="true">下一頁 →</span>
+                {% endif %}
+            </nav>
             <p class="section-note">
-                讀取使用 GET；建立、修改、刪除使用 POST；成功提交後以 303 導回（Post/Redirect/Get）。
+                每頁 20 筆，頁碼參數以 bind 綁定（M1）；讀取使用 GET；建立、修改、刪除使用 POST；成功提交後以 303 導回（Post/Redirect/Get）。
             </p>
         </section>
 
