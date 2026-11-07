@@ -2,6 +2,9 @@
 /target/
 **/target/
 
+# Mutation testing artifacts (cargo-mutants; tracked via docs/engineering/MUTATION_SCORE_REPORT.md)
+/mutants.out/
+
 # Local databases and runtime data (server default path: data/flaps.db)
 /data/
 *.db
