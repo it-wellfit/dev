@@ -12,8 +12,12 @@
 //! - the ledger is append-only with a SHA-256 hash chain
 //! - supersede, never delete: `retired` is the only terminal state
 
+pub mod capture;
+pub mod filing;
 pub mod ledger;
 pub mod schema;
+pub mod seed;
+pub mod vetting;
 
 pub const SCHEMA_VERSION: &str = "1";
 
