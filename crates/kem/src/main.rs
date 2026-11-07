@@ -1,8 +1,8 @@
-#![forbid(unsafe_code)]
-//! KEM CLI — subcommands over the knowledge root (default `knowledge/`).
+﻿#![forbid(unsafe_code)]
+//! KEM CLI ??subcommands over the knowledge root (default `knowledge/`).
 //!
-//! P0: seed, validate · P1: capture, ingest, finalize · P2: ask ·
-//! P3: sync · P4: lint, doctor, status. PowerShell-friendly: one command
+//! P0: seed, validate 繚 P1: capture, ingest, finalize 繚 P2: ask 繚
+//! P3: sync 繚 P4: lint, doctor, status. PowerShell-friendly: one command
 //! per invocation, JSON or line output, exit code = result.
 
 use chrono::Utc;
@@ -129,7 +129,7 @@ fn cmd_seed(root: &Path, ledger: &Path, force: bool) -> Result<(), KemError> {
         staged += 1;
     }
     let claims = seed_claims();
-    // Evidence paths are workspace-relative (KEM doc §4.2): resolve against
+    // Evidence paths are workspace-relative (KEM doc 禮4.2): resolve against
     // the workspace root (cwd), not the knowledge store root.
     let ctx = VetContext::new(PathBuf::from("."), Vec::new());
     let mut accepted = 0usize;
@@ -137,11 +137,11 @@ fn cmd_seed(root: &Path, ledger: &Path, force: bool) -> Result<(), KemError> {
         let verdict = vet_t1(claim, &ctx);
         if verdict.outcome != Outcome::Accept {
             return Err(KemError::SchemaViolation(format!(
-                "seed claim {} not accepted: {:?} — {}",
+                "seed claim {} not accepted: {:?} ??{}",
                 claim.id, verdict.outcome, verdict.reasons.join("; ")
             )));
         }
-        record_verdict(ledger, &claim.id, &verdict, now)?;
+        record_verdict(ledger, "kem-seed", &claim.id, &verdict, now)?;
         stage_claim(&root.join("claims"), claim)?;
         kem::ledger::append(
             ledger,
@@ -205,7 +205,7 @@ fn cmd_capture(root: &Path, ledger: &Path, flags: &std::collections::HashMap<Str
     Ok(())
 }
 
-/// P1 M2–M3: vet a batch of drafted claims; accept/review/reject per T1.
+/// P1 M2?3: vet a batch of drafted claims; accept/review/reject per T1.
 fn cmd_ingest(root: &Path, ledger: &Path, batch_file: String) -> Result<(), KemError> {
     let text = std::fs::read_to_string(&batch_file)
         .map_err(|e| KemError::InvalidInput(format!("cannot read {batch_file}: {e}")))?;
@@ -225,7 +225,7 @@ fn cmd_ingest(root: &Path, ledger: &Path, batch_file: String) -> Result<(), KemE
             known.insert(claim.id.clone());
         }
         let verdict = vet_t1(&claim, &ctx);
-        record_verdict(ledger, &claim.id, &verdict, now)?;
+        record_verdict(ledger, "kem-seed", &claim.id, &verdict, now)?;
         match verdict.outcome {
             Outcome::Accept => {
                 stage_claim(&root.join("claims"), &claim)?;
@@ -244,7 +244,7 @@ fn cmd_ingest(root: &Path, ledger: &Path, batch_file: String) -> Result<(), KemE
             Outcome::Reject => {
                 let item = serde_json::json!({
                     "claim_id": claim.id, "verdict": "reject",
-                    "reasons": verdict.reasons, "triage": "see docs KEM §4.3.1", "at": now.to_rfc3339(),
+                    "reasons": verdict.reasons, "triage": "see docs KEM 禮4.3.1", "at": now.to_rfc3339(),
                 });
                 append_jsonl(&queue, &item)?;
                 rej += 1;

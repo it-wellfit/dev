@@ -1,5 +1,5 @@
-#![forbid(unsafe_code)]
-//! M3 — T1 deterministic vetting (KEM doc §4.3).
+﻿#![forbid(unsafe_code)]
+//! M3 ??T1 deterministic vetting (KEM doc 禮4.3).
 //!
 //! T1 owns every structural judgment with zero LLM calls:
 //! groundedness (verbatim quote in evidence file), duplication (normalized
@@ -22,12 +22,12 @@ pub enum Outcome {
     Reject,
 }
 
-/// T1 scorecard. All thresholds are constants below — code owns them.
+/// T1 scorecard. All thresholds are constants below ??code owns them.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Scores {
     /// 1.0 when every evidence quote is found verbatim in its file.
     pub groundedness: f64,
-    /// 1.0 when no existing claim duplicates this body (≥ DUP_OVERLAP).
+    /// 1.0 when no existing claim duplicates this body (??DUP_OVERLAP).
     pub duplication: f64,
     /// 1.0 when no secret patterns or sensitive topics detected.
     pub sensitivity: f64,
@@ -43,7 +43,7 @@ pub struct Verdict {
     pub reasons: Vec<String>,
 }
 
-/// Accept thresholds — code owns every number (pi-jev-wiki philosophy).
+/// Accept thresholds ??code owns every number (pi-jev-wiki philosophy).
 pub const DUP_OVERLAP: f64 = 0.9;
 /// Secret patterns that hard-reject a claim (never stored).
 pub const SECRET_PATTERNS: [&str; 6] = [
@@ -116,7 +116,7 @@ pub fn vet_t1(claim: &Claim, ctx: &VetContext) -> Verdict {
         completeness,
     };
 
-    // Decision mapping — deterministic, thresholds owned here.
+    // Decision mapping ??deterministic, thresholds owned here.
     let outcome = if sensitivity < 1.0 {
         Outcome::Reject // secrets are never stored, only triaged
     } else if completeness < 1.0 || groundedness < 1.0 || duplication < 1.0 {
@@ -247,16 +247,18 @@ pub fn stage_claim(
     Ok(path)
 }
 
-/// Ledger helper shared by CLI commands.
+/// Ledger helper shared by CLI commands. The actor names the decision maker
+/// (e.g. `kem-seed` for the bootstrap flow, `kem-t1` for normal ingest).
 pub fn record_verdict(
     ledger_path: &Path,
+    actor: &str,
     claim_id: &str,
     verdict: &Verdict,
     now: DateTime<Utc>,
 ) -> Result<(), KemError> {
     crate::ledger::append(
         ledger_path,
-        "kem-t1",
+        actor,
         crate::ledger::LedgerAction::Vet,
         claim_id,
         serde_json::to_value(verdict)?,
@@ -372,7 +374,7 @@ mod tests {
             scores: Scores { groundedness: 1.0, duplication: 1.0, sensitivity: 1.0, completeness: 1.0 },
             reasons: vec![],
         };
-        record_verdict(&ledger, "claim-20261107-042", &v, now()).unwrap();
+        record_verdict(&ledger, "kem-t1", "claim-20261107-042", &v, now()).unwrap();
         assert_eq!(crate::ledger::verify(&ledger).unwrap(), 1);
     }
 }
