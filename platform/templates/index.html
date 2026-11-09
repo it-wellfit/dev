@@ -164,19 +164,23 @@
                     <caption>最近稽核紀錄</caption>
                     <thead>
                         <tr>
-                            <th scope="col">事件類型</th>
-                            <th scope="col">執行者</th>
+                            <th scope="col">Log ID</th>
+                            <th scope="col">使用者</th>
+                            <th scope="col">動作</th>
+                            <th scope="col">資源</th>
+                            <th scope="col">詳細內容</th>
                             <th scope="col">時間</th>
-                            <th scope="col">摘要</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for log in recent_audit_logs %}
                         <tr>
-                            <td><span class="badge badge-info">{{ log.event_type }}</span></td>
-                            <td>{{ log.performed_by }}</td>
-                            <td>{{ log.performed_at }}</td>
-                            <td>{{ log.summary }}</td>
+                            <td class="mono">{{ log.log_id }}</td>
+                            <td>{{ log.user_id }}</td>
+                            <td><span class="badge badge-info">{{ log.action }}</span></td>
+                            <td>{{ log.resource }}</td>
+                            <td>{{ log.details }}</td>
+                            <td class="mono">{{ log.created_at }}</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -185,6 +189,52 @@
             {% endif %}
             <p class="section-note">
                 API 端點：/api/search · /api/sync · /api/com · /api/ai · /api/health
+            </p>
+        </section>
+
+        <section id="audit" class="panel" aria-labelledby="audit-title">
+            <h3 id="audit-title">稽核軌跡（Governance & Audit Studio）</h3>
+            <p class="preview-note">
+                所有系統變更與存取事件均記錄於此，支援篩選、分頁與 CSV 匯出。
+            </p>
+            <div class="form-row" style="display:flex; gap:var(--s2); flex-wrap:wrap; margin-bottom:var(--s3);">
+                <input class="input" type="text" id="audit-user" placeholder="使用者 ID" />
+                <input class="input" type="text" id="audit-action" placeholder="動作關鍵字" />
+                <input class="input" type="date" id="audit-start" />
+                <input class="input" type="date" id="audit-end" />
+                <button class="btn btn-primary" id="audit-filter">篩選</button>
+                <a href="/api/audit/export" class="btn btn-secondary">匯出 CSV</a>
+            </div>
+            <div class="table-wrap">
+                <table id="audit-table">
+                    <caption>稽核紀錄清單</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col">Log ID</th>
+                            <th scope="col">使用者</th>
+                            <th scope="col">動作</th>
+                            <th scope="col">資源</th>
+                            <th scope="col">詳細內容</th>
+                            <th scope="col">時間</th>
+                        </tr>
+                    </thead>
+                    <tbody id="audit-tbody">
+                        {% for log in recent_audit_logs %}
+                        <tr>
+                            <td class="mono">{{ log.log_id }}</td>
+                            <td>{{ log.user_id }}</td>
+                            <td><span class="badge badge-info">{{ log.action }}</span></td>
+                            <td>{{ log.resource }}</td>
+                            <td>{{ log.details }}</td>
+                            <td class="mono">{{ log.created_at }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div id="audit-pagination" style="margin-top:var(--s2); display:flex; gap:var(--s2);"></div>
+            <p class="section-note">
+                共 {{ recent_audit_logs.len() }} 筆記錄 · API：GET /api/audit?page=&limit=&user_id=&action=&start_date=&end_date=
             </p>
         </section>
 

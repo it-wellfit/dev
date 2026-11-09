@@ -25,7 +25,14 @@ use serde::Deserialize;
 use sqlx::SqlitePool;
 
 use crate::auth::{self, Session};
+#[cfg(feature = "bankpay")]
+use crate::bankpay::api::{
+    bankpay_health_handler, config_get_handler, config_post_handler, export_handler,
+    import_handler, query_handler, transition_handler,
+};
 use crate::db::DatabaseManager;
+#[cfg(feature = "bankpay")]
+use crate::status::status_handler;
 
 /// Maximum lengths accepted from the form (fail-closed input validation).
 const MAX_DESCRIPTION_LEN: usize = 200;
@@ -66,6 +73,13 @@ pub struct AppState {
     pub(crate) rate_limiter: std::sync::Arc<auth::LoginRateLimiter>,
     /// Full-text search engine (Slice 13).
     pub(crate) search: crate::search::SearchEngine,
+    /// E.Sun BankPay 配置（可變，供管理員於執行時切換模擬/生產模式）。
+    #[cfg(feature = "bankpay")]
+    pub(crate) bankpay_config:
+        std::sync::Arc<tokio::sync::Mutex<crate::bankpay::model::EsunConfig>>,
+    /// 系統狀態監控引擎（Slice 13）。
+    #[cfg(feature = "bankpay")]
+    pub(crate) status_engine: crate::status::StatusEngine,
 }
 
 impl AppState {
@@ -84,6 +98,12 @@ impl AppState {
             permissions,
             rate_limiter: std::sync::Arc::new(auth::LoginRateLimiter::new()),
             search: crate::search::SearchEngine::new(),
+            #[cfg(feature = "bankpay")]
+            bankpay_config: std::sync::Arc::new(tokio::sync::Mutex::new(
+                crate::bankpay::model::EsunConfig::default(),
+            )),
+            #[cfg(feature = "bankpay")]
+            status_engine: crate::status::StatusEngine::new(env!("CARGO_PKG_VERSION")),
         })
     }
 }
@@ -102,10 +122,13 @@ pub struct TransactionRow {
 /// Render model for a recent audit log entry.
 #[derive(Debug, Clone)]
 pub struct AuditLogRow {
-    pub event_type: String,
-    pub performed_by: String,
-    pub performed_at: String,
-    pub summary: String,
+    pub log_id: String,
+    pub user_id: String,
+    pub username: String,
+    pub action: String,
+    pub resource: String,
+    pub details: String,
+    pub created_at: String,
 }
 
 /// Values echoed back into the form after a failed submission (PRG failure
@@ -292,7 +315,26 @@ pub fn router(state: AppState) -> Router {
         .route("/drafts/ai_suggest", post(ai_suggest))
         .route("/drafts/adopt", post(drafts_adopt))
         .route("/admin/parse_coverage", get(parse_coverage_page))
-        .route("/states", get(states_page))
+        .route("/states", get(states_page));
+
+    // BankPay／系統狀態 API（並行流成果整合）：以 feature 隔離；
+    // 未啟用時整段（handlers、狀態、路由）不參與編譯與執行。
+    #[cfg(feature = "bankpay")]
+    let protected = protected
+        // ── BankPay API (E.Sun 整合) ──
+        .route("/api/bankpay/export", post(export_handler))
+        .route("/api/bankpay/import", post(import_handler))
+        .route("/api/bankpay/query", get(query_handler))
+        .route(
+            "/api/bankpay/config",
+            get(config_get_handler).post(config_post_handler),
+        )
+        .route("/api/bankpay/health", get(bankpay_health_handler))
+        .route("/api/bankpay/transition", post(transition_handler))
+        // ── System Status API ──
+        .route("/api/status", get(status_handler));
+
+    let protected = protected
         .route_layer(axum::extract::DefaultBodyLimit::max(IMPORT_MAX_BYTES))
         .route_layer(axum::middleware::from_fn_with_state(
             state.clone(),
@@ -3174,7 +3216,25 @@ async fn build_index(
         sync_pending_count: 0,
         com_bridge_objects: 0,
         ai_models_available: 3,
-        recent_audit_logs: vec![],
+        recent_audit_logs: {
+            let rows: Vec<crate::cross_module_api::AuditRow> = sqlx::query_as(
+                "SELECT al.log_id, al.performed_by, u.username, al.event_type, al.transaction_id, al.event_data, al.performed_at FROM audit_log al LEFT JOIN users u ON al.performed_by = u.user_id ORDER BY al.performed_at DESC LIMIT 10",
+            )
+            .fetch_all(&state.pool)
+            .await
+            .unwrap_or_default();
+            rows.into_iter().map(|(log_id, performed_by, username, event_type, transaction_id, event_data, performed_at)| {
+                AuditLogRow {
+                    log_id,
+                    user_id: performed_by,
+                    username: username.unwrap_or_else(|| "unknown".to_string()),
+                    action: event_type,
+                    resource: transaction_id,
+                    details: event_data,
+                    created_at: performed_at,
+                }
+            }).collect()
+        },
     }
     .render()
 }

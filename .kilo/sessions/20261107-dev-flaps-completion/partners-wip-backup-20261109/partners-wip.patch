@@ -1,0 +1,339 @@
+diff --git a/platform/src/api.rs b/platform/src/api.rs
+index b0c508a..7c3973f 100644
+--- a/platform/src/api.rs
++++ b/platform/src/api.rs
+@@ -25,7 +25,12 @@ use serde::Deserialize;
+ use sqlx::SqlitePool;
+ 
+ use crate::auth::{self, Session};
++use crate::bankpay::api::{
++    bankpay_health_handler, config_get_handler, config_post_handler, export_handler,
++    import_handler, query_handler, transition_handler,
++};
+ use crate::db::DatabaseManager;
++use crate::status::status_handler;
+ 
+ /// Maximum lengths accepted from the form (fail-closed input validation).
+ const MAX_DESCRIPTION_LEN: usize = 200;
+@@ -66,6 +71,11 @@ pub struct AppState {
+     pub(crate) rate_limiter: std::sync::Arc<auth::LoginRateLimiter>,
+     /// Full-text search engine (Slice 13).
+     pub(crate) search: crate::search::SearchEngine,
++    /// E.Sun BankPay 配置（可變，供管理員於執行時切換模擬/生產模式）。
++    pub(crate) bankpay_config:
++        std::sync::Arc<tokio::sync::Mutex<crate::bankpay::model::EsunConfig>>,
++    /// 系統狀態監控引擎（Slice 13）。
++    pub(crate) status_engine: crate::status::StatusEngine,
+ }
+ 
+ impl AppState {
+@@ -84,6 +94,10 @@ impl AppState {
+             permissions,
+             rate_limiter: std::sync::Arc::new(auth::LoginRateLimiter::new()),
+             search: crate::search::SearchEngine::new(),
++            bankpay_config: std::sync::Arc::new(tokio::sync::Mutex::new(
++                crate::bankpay::model::EsunConfig::default(),
++            )),
++            status_engine: crate::status::StatusEngine::new(env!("CARGO_PKG_VERSION")),
+         })
+     }
+ }
+@@ -102,10 +116,13 @@ pub struct TransactionRow {
+ /// Render model for a recent audit log entry.
+ #[derive(Debug, Clone)]
+ pub struct AuditLogRow {
+-    pub event_type: String,
+-    pub performed_by: String,
+-    pub performed_at: String,
+-    pub summary: String,
++    pub log_id: String,
++    pub user_id: String,
++    pub username: String,
++    pub action: String,
++    pub resource: String,
++    pub details: String,
++    pub created_at: String,
+ }
+ 
+ /// Values echoed back into the form after a failed submission (PRG failure
+@@ -293,6 +310,18 @@ pub fn router(state: AppState) -> Router {
+         .route("/drafts/adopt", post(drafts_adopt))
+         .route("/admin/parse_coverage", get(parse_coverage_page))
+         .route("/states", get(states_page))
++        // ── BankPay API (E.Sun 整合) ──
++        .route("/api/bankpay/export", post(export_handler))
++        .route("/api/bankpay/import", post(import_handler))
++        .route("/api/bankpay/query", get(query_handler))
++        .route(
++            "/api/bankpay/config",
++            get(config_get_handler).post(config_post_handler),
++        )
++        .route("/api/bankpay/health", get(bankpay_health_handler))
++        .route("/api/bankpay/transition", post(transition_handler))
++        // ── System Status API ──
++        .route("/api/status", get(status_handler))
+         .route_layer(axum::extract::DefaultBodyLimit::max(IMPORT_MAX_BYTES))
+         .route_layer(axum::middleware::from_fn_with_state(
+             state.clone(),
+@@ -3174,7 +3203,25 @@ async fn build_index(
+         sync_pending_count: 0,
+         com_bridge_objects: 0,
+         ai_models_available: 3,
+-        recent_audit_logs: vec![],
++        recent_audit_logs: {
++            let rows: Vec<crate::cross_module_api::AuditRow> = sqlx::query_as(
++                "SELECT al.log_id, al.performed_by, u.username, al.event_type, al.transaction_id, al.event_data, al.ip_address, al.performed_at FROM audit_log al LEFT JOIN users u ON al.performed_by = u.user_id ORDER BY al.performed_at DESC LIMIT 10"
++            )
++            .fetch_all(&state.pool)
++            .await
++            .unwrap_or_default();
++            rows.into_iter().map(|(log_id, performed_by, username, event_type, transaction_id, event_data, performed_at)| {
++                AuditLogRow {
++                    log_id,
++                    user_id: performed_by,
++                    username: username.unwrap_or_else(|| "unknown".to_string()),
++                    action: event_type,
++                    resource: transaction_id,
++                    details: event_data,
++                    created_at: performed_at,
++                }
++            }).collect()
++        },
+     }
+     .render()
+ }
+diff --git a/platform/src/cross_module_api.rs b/platform/src/cross_module_api.rs
+index 30314c0..959ea6d 100644
+--- a/platform/src/cross_module_api.rs
++++ b/platform/src/cross_module_api.rs
+@@ -38,7 +38,6 @@ pub struct AuditEntry {
+     pub action: String,
+     pub resource: String,
+     pub details: String,
+-    pub ip_address: String,
+     pub created_at: String,
+ }
+ 
+@@ -51,7 +50,7 @@ pub struct AuditListResponse {
+     pub total_pages: u32,
+ }
+ 
+-type AuditRow = (
++pub type AuditRow = (
+     String,
+     String,
+     Option<String>,
+@@ -59,7 +58,6 @@ type AuditRow = (
+     String,
+     String,
+     String,
+-    String,
+ );
+ 
+ pub async fn audit_list(
+@@ -70,27 +68,27 @@ pub async fn audit_list(
+     let limit = query.limit.unwrap_or(50).clamp(1, 500);
+     let offset = (page - 1) * limit;
+ 
+-    let mut sql = "SELECT al.log_id, al.user_id, u.username, al.action, al.resource, al.details, al.ip_address, al.created_at FROM audit_log al LEFT JOIN users u ON al.user_id = u.user_id WHERE 1=1".to_string();
++    let mut sql = "SELECT al.log_id, al.performed_by, u.username, al.event_type, al.transaction_id, al.event_data, al.performed_at FROM audit_log al LEFT JOIN users u ON al.performed_by = u.user_id WHERE 1=1".to_string();
+     let mut params: Vec<String> = vec![];
+ 
+     if let Some(ref uid) = query.user_id {
+-        sql.push_str(" AND al.user_id = ?");
++        sql.push_str(" AND al.performed_by = ?");
+         params.push(uid.clone());
+     }
+     if let Some(ref action) = query.action {
+-        sql.push_str(" AND al.action LIKE ?");
++        sql.push_str(" AND al.event_type LIKE ?");
+         params.push(format!("%{}%", action));
+     }
+     if let Some(ref sd) = query.start_date {
+-        sql.push_str(" AND al.created_at >= ?");
++        sql.push_str(" AND al.performed_at >= ?");
+         params.push(sd.clone());
+     }
+     if let Some(ref ed) = query.end_date {
+-        sql.push_str(" AND al.created_at <= ?");
++        sql.push_str(" AND al.performed_at <= ?");
+         params.push(ed.clone());
+     }
+ 
+-    sql.push_str(" ORDER BY al.created_at DESC LIMIT ? OFFSET ?");
++    sql.push_str(" ORDER BY al.performed_at DESC LIMIT ? OFFSET ?");
+     params.push(limit.to_string());
+     params.push(offset.to_string());
+ 
+@@ -112,16 +110,23 @@ pub async fn audit_list(
+     let items: Vec<AuditEntry> = rows
+         .into_iter()
+         .map(
+-            |(log_id, user_id, username, action, resource, details, ip_address, created_at)| {
++            |(
++                log_id,
++                performed_by,
++                username,
++                event_type,
++                transaction_id,
++                event_data,
++                performed_at,
++            )| {
+                 AuditEntry {
+                     log_id,
+-                    user_id,
++                    user_id: performed_by,
+                     username: username.unwrap_or_else(|| "unknown".to_string()),
+-                    action,
+-                    resource,
+-                    details,
+-                    ip_address,
+-                    created_at,
++                    action: event_type,
++                    resource: transaction_id,
++                    details: event_data,
++                    created_at: performed_at,
+                 }
+             },
+         )
+@@ -143,25 +148,25 @@ pub async fn audit_export(
+     State(state): State<AppState>,
+ ) -> Result<axum::response::Response, (axum::http::StatusCode, String)> {
+     let rows: Vec<AuditRow> = sqlx::query_as(
+-        "SELECT al.log_id, al.user_id, u.username, al.action, al.resource, al.details, al.ip_address, al.created_at FROM audit_log al LEFT JOIN users u ON al.user_id = u.user_id ORDER BY al.created_at DESC LIMIT 10000"
++        "SELECT al.log_id, al.performed_by, u.username, al.event_type, al.transaction_id, al.event_data, al.performed_at FROM audit_log al LEFT JOIN users u ON al.performed_by = u.user_id ORDER BY al.performed_at DESC LIMIT 10000"
+     )
+     .fetch_all(&state.pool)
+     .await
+     .map_err(|e| (axum::http::StatusCode::INTERNAL_SERVER_ERROR, format!("匯出失敗：{}", e)))?;
+ 
+-    let mut csv =
+-        String::from("log_id,user_id,username,action,resource,details,ip_address,created_at\n");
+-    for (log_id, user_id, username, action, resource, details, ip_address, created_at) in &rows {
++    let mut csv = String::from("log_id,user_id,username,action,resource,details,created_at\n");
++    for (log_id, performed_by, username, event_type, transaction_id, event_data, performed_at) in
++        &rows
++    {
+         csv.push_str(&format!(
+-            "\"{}\",\"{}\",\"{}\",\"{}\",\"{}\",\"{}\",\"{}\",\"{}\"\n",
++            "\"{}\",\"{}\",\"{}\",\"{}\",\"{}\",\"{}\",\"{}\"\n",
+             log_id,
+-            user_id,
++            performed_by,
+             username.as_deref().unwrap_or("unknown"),
+-            action,
+-            resource,
+-            details,
+-            ip_address,
+-            created_at
++            event_type,
++            transaction_id,
++            event_data,
++            performed_at,
+         ));
+     }
+ 
+diff --git a/platform/src/lib.rs b/platform/src/lib.rs
+index 20f462e..917b24e 100644
+--- a/platform/src/lib.rs
++++ b/platform/src/lib.rs
+@@ -1,9 +1,11 @@
+ pub mod api;
+ pub mod auth;
++pub mod bankpay;
+ pub mod com;
+ pub mod cross_module_api;
+ pub mod db;
+ pub mod search;
++pub mod status;
+ pub mod sync;
+ 
+ // AI Integration Module
+diff --git a/platform/templates/index.html b/platform/templates/index.html
+index e64a60b..abf3485 100644
+--- a/platform/templates/index.html
++++ b/platform/templates/index.html
+@@ -164,19 +164,23 @@
+                     <caption>最近稽核紀錄</caption>
+                     <thead>
+                         <tr>
+-                            <th scope="col">事件類型</th>
+-                            <th scope="col">執行者</th>
++                            <th scope="col">Log ID</th>
++                            <th scope="col">使用者</th>
++                            <th scope="col">動作</th>
++                            <th scope="col">資源</th>
++                            <th scope="col">詳細內容</th>
+                             <th scope="col">時間</th>
+-                            <th scope="col">摘要</th>
+                         </tr>
+                     </thead>
+                     <tbody>
+                         {% for log in recent_audit_logs %}
+                         <tr>
+-                            <td><span class="badge badge-info">{{ log.event_type }}</span></td>
+-                            <td>{{ log.performed_by }}</td>
+-                            <td>{{ log.performed_at }}</td>
+-                            <td>{{ log.summary }}</td>
++                            <td class="mono">{{ log.log_id }}</td>
++                            <td>{{ log.user_id }}</td>
++                            <td><span class="badge badge-info">{{ log.action }}</span></td>
++                            <td>{{ log.resource }}</td>
++                            <td>{{ log.details }}</td>
++                            <td class="mono">{{ log.created_at }}</td>
+                         </tr>
+                         {% endfor %}
+                     </tbody>
+@@ -188,6 +192,52 @@
+             </p>
+         </section>
+ 
++        <section id="audit" class="panel" aria-labelledby="audit-title">
++            <h3 id="audit-title">稽核軌跡（Governance & Audit Studio）</h3>
++            <p class="preview-note">
++                所有系統變更與存取事件均記錄於此，支援篩選、分頁與 CSV 匯出。
++            </p>
++            <div class="form-row" style="display:flex; gap:var(--s2); flex-wrap:wrap; margin-bottom:var(--s3);">
++                <input class="input" type="text" id="audit-user" placeholder="使用者 ID" />
++                <input class="input" type="text" id="audit-action" placeholder="動作關鍵字" />
++                <input class="input" type="date" id="audit-start" />
++                <input class="input" type="date" id="audit-end" />
++                <button class="btn btn-primary" id="audit-filter">篩選</button>
++                <a href="/api/audit/export" class="btn btn-secondary">匯出 CSV</a>
++            </div>
++            <div class="table-wrap">
++                <table id="audit-table">
++                    <caption>稽核紀錄清單</caption>
++                    <thead>
++                        <tr>
++                            <th scope="col">Log ID</th>
++                            <th scope="col">使用者</th>
++                            <th scope="col">動作</th>
++                            <th scope="col">資源</th>
++                            <th scope="col">詳細內容</th>
++                            <th scope="col">時間</th>
++                        </tr>
++                    </thead>
++                    <tbody id="audit-tbody">
++                        {% for log in recent_audit_logs %}
++                        <tr>
++                            <td class="mono">{{ log.log_id }}</td>
++                            <td>{{ log.user_id }}</td>
++                            <td><span class="badge badge-info">{{ log.action }}</span></td>
++                            <td>{{ log.resource }}</td>
++                            <td>{{ log.details }}</td>
++                            <td class="mono">{{ log.created_at }}</td>
++                        </tr>
++                        {% endfor %}
++                    </tbody>
++                </table>
++            </div>
++            <div id="audit-pagination" style="margin-top:var(--s2); display:flex; gap:var(--s2);"></div>
++            <p class="section-note">
++                共 {{ recent_audit_logs.len() }} 筆記錄 · API：GET /api/audit?page=&limit=&user_id=&action=&start_date=&end_date=
++            </p>
++        </section>
++
+         <section id="transactions" class="panel" aria-labelledby="transactions-title">
+             <h3 id="transactions-title">交易管理</h3>
+             <div class="table-wrap">

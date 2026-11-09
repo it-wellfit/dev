@@ -38,7 +38,6 @@ pub struct AuditEntry {
     pub action: String,
     pub resource: String,
     pub details: String,
-    pub ip_address: String,
     pub created_at: String,
 }
 
@@ -51,11 +50,10 @@ pub struct AuditListResponse {
     pub total_pages: u32,
 }
 
-type AuditRow = (
+pub type AuditRow = (
     String,
     String,
     Option<String>,
-    String,
     String,
     String,
     String,
@@ -70,27 +68,27 @@ pub async fn audit_list(
     let limit = query.limit.unwrap_or(50).clamp(1, 500);
     let offset = (page - 1) * limit;
 
-    let mut sql = "SELECT al.log_id, al.user_id, u.username, al.action, al.resource, al.details, al.ip_address, al.created_at FROM audit_log al LEFT JOIN users u ON al.user_id = u.user_id WHERE 1=1".to_string();
+    let mut sql = "SELECT al.log_id, al.performed_by, u.username, al.event_type, al.transaction_id, al.event_data, al.performed_at FROM audit_log al LEFT JOIN users u ON al.performed_by = u.user_id WHERE 1=1".to_string();
     let mut params: Vec<String> = vec![];
 
     if let Some(ref uid) = query.user_id {
-        sql.push_str(" AND al.user_id = ?");
+        sql.push_str(" AND al.performed_by = ?");
         params.push(uid.clone());
     }
     if let Some(ref action) = query.action {
-        sql.push_str(" AND al.action LIKE ?");
+        sql.push_str(" AND al.event_type LIKE ?");
         params.push(format!("%{}%", action));
     }
     if let Some(ref sd) = query.start_date {
-        sql.push_str(" AND al.created_at >= ?");
+        sql.push_str(" AND al.performed_at >= ?");
         params.push(sd.clone());
     }
     if let Some(ref ed) = query.end_date {
-        sql.push_str(" AND al.created_at <= ?");
+        sql.push_str(" AND al.performed_at <= ?");
         params.push(ed.clone());
     }
 
-    sql.push_str(" ORDER BY al.created_at DESC LIMIT ? OFFSET ?");
+    sql.push_str(" ORDER BY al.performed_at DESC LIMIT ? OFFSET ?");
     params.push(limit.to_string());
     params.push(offset.to_string());
 
@@ -112,16 +110,23 @@ pub async fn audit_list(
     let items: Vec<AuditEntry> = rows
         .into_iter()
         .map(
-            |(log_id, user_id, username, action, resource, details, ip_address, created_at)| {
+            |(
+                log_id,
+                performed_by,
+                username,
+                event_type,
+                transaction_id,
+                event_data,
+                performed_at,
+            )| {
                 AuditEntry {
                     log_id,
-                    user_id,
+                    user_id: performed_by,
                     username: username.unwrap_or_else(|| "unknown".to_string()),
-                    action,
-                    resource,
-                    details,
-                    ip_address,
-                    created_at,
+                    action: event_type,
+                    resource: transaction_id,
+                    details: event_data,
+                    created_at: performed_at,
                 }
             },
         )
@@ -143,25 +148,25 @@ pub async fn audit_export(
     State(state): State<AppState>,
 ) -> Result<axum::response::Response, (axum::http::StatusCode, String)> {
     let rows: Vec<AuditRow> = sqlx::query_as(
-        "SELECT al.log_id, al.user_id, u.username, al.action, al.resource, al.details, al.ip_address, al.created_at FROM audit_log al LEFT JOIN users u ON al.user_id = u.user_id ORDER BY al.created_at DESC LIMIT 10000"
+        "SELECT al.log_id, al.performed_by, u.username, al.event_type, al.transaction_id, al.event_data, al.performed_at FROM audit_log al LEFT JOIN users u ON al.performed_by = u.user_id ORDER BY al.performed_at DESC LIMIT 10000"
     )
     .fetch_all(&state.pool)
     .await
     .map_err(|e| (axum::http::StatusCode::INTERNAL_SERVER_ERROR, format!("匯出失敗：{}", e)))?;
 
-    let mut csv =
-        String::from("log_id,user_id,username,action,resource,details,ip_address,created_at\n");
-    for (log_id, user_id, username, action, resource, details, ip_address, created_at) in &rows {
+    let mut csv = String::from("log_id,user_id,username,action,resource,details,created_at\n");
+    for (log_id, performed_by, username, event_type, transaction_id, event_data, performed_at) in
+        &rows
+    {
         csv.push_str(&format!(
-            "\"{}\",\"{}\",\"{}\",\"{}\",\"{}\",\"{}\",\"{}\",\"{}\"\n",
+            "\"{}\",\"{}\",\"{}\",\"{}\",\"{}\",\"{}\",\"{}\"\n",
             log_id,
-            user_id,
+            performed_by,
             username.as_deref().unwrap_or("unknown"),
-            action,
-            resource,
-            details,
-            ip_address,
-            created_at
+            event_type,
+            transaction_id,
+            event_data,
+            performed_at,
         ));
     }
 
