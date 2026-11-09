@@ -3,7 +3,7 @@
   "claim_type": "decision",
   "status": "published",
   "track": "b",
-  "confidence": 0.95,
+  "confidence": 0.8,
   "valid_from": "2026-11-07",
   "valid_to": null,
   "recorded_at": "2026-11-07T11:03:14.290744Z",

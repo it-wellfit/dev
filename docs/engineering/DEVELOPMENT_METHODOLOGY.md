@@ -130,9 +130,9 @@ SSOT 場景註冊表：docs/testing/BDD_SCENARIOS.feature（Gherkin）。
 | # | 技術 | 本工作區現況 | 缺口/行動 |
 |---|---|---|---|
 | 15 | PBT | proptest 僅在 money | 擴至 ledger engine 不變量、parallel 歸一、pivot/pagination |
-| 18 | MT mutation | **已導入** cargo-mutants 27.1.0；money 73: 69 caught / 4 missed = **94.5 %**；engine 22 (excluded 5 stubs): 21 caught / 0 missed after fix = **95.5 %**；TOTAL 94.7 % ≥80 % PASS。剩 4 money missed (Display×1 + 3 format/parse) 追蹤於 FAULT-02 | 已完成(剩 P1) |
+| 18 | MT mutation | **已導入** cargo-mutants 27.1.0；money 73/73 全殺（Display mutant 由 `money_error_display_is_not_empty` 補殺）＝**100 %**；engine 22 (excluded 5 stubs): 0 missed＝**100 %**；TOTAL ≥98 % ≥80 % PASS（詳細見 MUTATION_SCORE_REPORT v2；FAULT-02 已關閉） | 已完成 |
 | 19 | MPT 變形測試 | 未導入 | 報表金額守恆、欄序不變 relationships |
-| 17 | FBT 模糊 | 未導入 | cargo fuzz for CSV parser/money parser(限高價值路徑) |
+| 17 | FBT 模糊 | **已導入（建置層）** cargo-fuzz 0.13.2＋nightly 1.101.0；target `fuzz/fuzz_targets/money_parser.rs`（INV 非負＋round-trip）build PASS；run 受阻 Windows ASan DLL（STATUS_DLL_NOT_FOUND） | 解鎖見 `docs/engineering/FUZZING.md` §3；解鎖後執行最小迴圈並回歸化 crash |
 | 6 | ATDD | BDD Scenario 已註冊 8 個，但隨 code 演進不必然同步 | feature→測試綁定自動稽核(CI job) |
 | 20/21 | FM 形式化/DbC | 未導入 | 優先 engine 借貸平衡，以 proptest+模糊+smt(BITBY) 渐升 |
 | 24 | FMEA/FTA + STPA | THREAT_MODEL 已有表，但未接 BDD/STPA | FMEA→BDD 綁定 |

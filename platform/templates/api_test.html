@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>API 測試工作台 | Flaps ERP</title>
+    <link rel="stylesheet" href="/assets/design-system.css">
+</head>
+<body class="bg-base">
+    <nav class="nav-main">
+        <a href="/" class="nav-logo">Flaps ERP</a>
+        <div class="nav-links">
+            <a href="/#transactions">交易明細</a>
+            <a href="/admin/users">使用者管理</a>
+            <a href="/admin/api/catalog">API 目錄</a>
+            <a href="/admin/api/test" class="active">API 測試</a>
+            <a href="/admin/api/logs">API 稽核</a>
+            <a href="/admin/api/config">API 設定</a>
+        </div>
+    </nav>
+
+    <main class="container">
+        <header class="page-header">
+            <div class="header-content">
+                <h1>API 測試工作台</h1>
+                <p class="subtitle">實時驗證銀行介面響應與資料格式</p>
+            </div>
+            <div class="header-actions">
+                <a href="/admin/api/catalog" class="btn btn-ghost btn-sm">返回目錄</a>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 gap-6">
+            <div class="card card-border">
+                <div class="card-header">
+                    <div class="flex items-center gap-2">
+                        <span class="method-badge GET">GET</span>
+                        <code class="endpoint-path">{{ endpoint }}</code>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="/admin/api/test/execute">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                        <input type="hidden" name="endpoint" value="{{ endpoint }}">
+                        
+                        <div class="form-group">
+                            <label class="form-label">請求內容 (JSON)</label>
+                            <textarea name="request_body" class="form-textarea" rows="6" placeholder="{}">{{ request_body }}</textarea>
+                        </div>
+                        
+                        <div class="card-footer">
+                            <button type="submit" class="btn btn-primary">執行請求</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            {% if response_body.is_some() %}
+            <div class="card card-border card-response">
+                <div class="card-header">
+                    <div class="flex items-center gap-2">
+                        <span>回應結果</span>
+                        <span class="badge badge-status">Status: {{ status_code.unwrap_or(0) }}</span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <pre class="response-code">{{ response_body.unwrap() }}</pre>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </main>
+</body>
+</html>

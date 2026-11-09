@@ -1,0 +1,1 @@
+{"model":"qwen3.5:4b","messages":[{"role":"user","content":"Judge this claim. Reply with ONLY JSON: {\"durability\": <0-5>}. Claim: Paid AI services are excluded permanently."}],"max_tokens":100}

@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>API 服務目錄 | Flaps ERP</title>
+    <link rel="stylesheet" href="/assets/design-system.css">
+</head>
+<body class="bg-base">
+    <nav class="nav-main">
+        <a href="/" class="nav-logo">Flaps ERP</a>
+        <div class="nav-links">
+            <a href="/#transactions">交易明細</a>
+            <a href="/admin/users">使用者管理</a>
+            <a href="/admin/api/catalog" class="active">API 目錄</a>
+            <a href="/admin/api/logs">API 稽核</a>
+            <a href="/admin/api/config">API 設定</a>
+        </div>
+    </nav>
+
+    <main class="container">
+        <header class="page-header">
+            <div class="header-content">
+                <h1>API 服務目錄</h1>
+                <p class="subtitle">玉山銀行網銀串接 V2.8 介面定義與規格</p>
+            </div>
+            <div class="header-actions">
+                <span class="badge badge-info">v2.8-stable</span>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 gap-6">
+            {% for endpoint in endpoints %}
+            <div class="card card-border">
+                <div class="card-header">
+                    <div class="flex items-center gap-2">
+                        <span class="method-badge {{ endpoint.method }}"> {{ endpoint.method }} </span>
+                        <code class="endpoint-path">{{ endpoint.path }}</code>
+                    </div>
+                    <span class="status-badge status-ok">Active</span>
+                </div>
+                <div class="card-body">
+                    <p class="description">{{ endpoint.description }}</p>
+                    <div class="params-section">
+                        <h4 class="section-title">請求參數</h4>
+                        <table class="table-minimal">
+                            <thead>
+                                <tr>
+                                    <th>參數名稱</th>
+                                    <th>說明</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for param in endpoint.parameters %}
+                                <tr>
+                                    <td><code>{{ param.0 }}</code></td>
+                                    <td>{{ param.1 }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="card-footer">
+                        <a href="/admin/api/test?endpoint={{ endpoint.path }}" class="btn btn-secondary btn-sm">測試此端點</a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </main>
+</body>
+</html>

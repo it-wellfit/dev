@@ -5,7 +5,7 @@ use sqlx::FromRow;
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct Config {
     pub config_id: String,
-    pub config_category: String, // Categories: ORG (蝏?), PERM (??), ACT (瘣餃), STORE (?典?), POS (POS霈曉?), INV (摨?)
+    pub config_category: String, // Categories: ORG (組織), PERM (權限), ACT (動作), STORE (門市), POS (POS 終端), INV (存貨)
     pub config_key: String,
     pub config_value: String,
     pub config_type: String, // STRING, NUMBER, BOOLEAN, JSON

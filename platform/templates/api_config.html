@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>API 系統設定 | Flaps ERP</title>
+    <link rel="stylesheet" href="/assets/design-system.css">
+</head>
+<body class="bg-base">
+    <nav class="nav-main">
+        <a href="/" class="nav-logo">Flaps ERP</a>
+        <div class="nav-links">
+            <a href="/#transactions">交易明細</a>
+            <a href="/admin/users">使用者管理</a>
+            <a href="/admin/api/catalog">API 目錄</a>
+            <a href="/admin/api/logs">API 稽核</a>
+            <a href="/admin/api/config" class="active">API 設定</a>
+        </div>
+    </nav>
+
+    <main class="container">
+        <header class="page-header">
+            <div class="header-content">
+                <h1>API 系統設定</h1>
+                <p class="subtitle">管理銀行連線參數與功能開關</p>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 gap-6">
+            <div class="card card-border">
+                <div class="card-body">
+                    <table class="table-minimal">
+                        <thead>
+                            <tr>
+                                <th>設定鍵 (Key)</th>
+                                <th>設定值 (Value)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in config %}
+                            <tr>
+                                <td><code>{{ item.0 }}</code></td>
+                                <td>{{ item.1 }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card card-border">
+                <div class="card-header">
+                    <h3>新增或更新設定</h3>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="/admin/api/config">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="form-group">
+                                <label class="form-label">設定鍵 (Key)</label>
+                                <input type="text" name="key" class="form-input" placeholder="例如: timeout_ms" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">設定值 (Value)</label>
+                                <input type="text" name="value" class="form-input" placeholder="例如: 5000" required>
+                            </div>
+                        </div>
+                        <div class="card-footer">
+                            <button type="submit" class="btn btn-primary">儲存設定</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </main>
+</body>
+</html>

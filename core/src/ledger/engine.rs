@@ -25,7 +25,7 @@ impl LedgerEngine {
 
     /// Build the engine over an existing pool WITHOUT creating tables.
     ///
-    /// Schema SSOT is `platform/migrations/` — apply those first via
+    /// Schema SSOT is `platform/migrations/` ??apply those first via
     /// `DatabaseManager::initialize`. This is the preferred constructor for
     /// servers and tests.
     pub async fn with_pool(pool: sqlx::SqlitePool) -> Result<Self, Box<dyn std::error::Error>> {
@@ -34,7 +34,7 @@ impl LedgerEngine {
     }
 
     /// Performance optimizations (INV-03: WAL, busy_timeout, bounded cache;
-    /// write transactions must stay ≤ 50 ms).
+    /// write transactions must stay ??50 ms).
     async fn apply_pragmas(pool: &sqlx::SqlitePool) -> Result<(), sqlx::Error> {
         sqlx::query("PRAGMA journal_mode = WAL")
             .execute(pool)
@@ -51,6 +51,9 @@ impl LedgerEngine {
         sqlx::query("PRAGMA busy_timeout = 5000")
             .execute(pool)
             .await?;
+        // PRAGMA optimize hints SQLite to gather statistics and create
+        // internal indexes for hot query paths (helps the 500ms P95 SLA).
+        let _ = sqlx::query("PRAGMA optimize").execute(pool).await;
         Ok(())
     }
 
@@ -152,7 +155,7 @@ impl LedgerEngine {
     /// Post a journal entry: validate, ensure accounts exist, then write the
     /// header, items, and audit event in ONE atomic transaction (INV-04).
     ///
-    /// Idempotency: callers generate the `transaction_id` (UUID) — replaying
+    /// Idempotency: callers generate the `transaction_id` (UUID) ??replaying
     /// an identical id fails on the primary key instead of double-posting.
     pub async fn post_journal_entry(
         &self,
@@ -226,8 +229,8 @@ impl LedgerEngine {
     /// Validate journal entry for accounting rules.
     ///
     /// Double-entry core (INV-02 / P1-5): debits must equal credits and the
-    /// total must be positive. Enforced here so NO caller — form, API, or
-    /// future batch importer — can persist a one-sided or zero entry.
+    /// total must be positive. Enforced here so NO caller ??form, API, or
+    /// future batch importer ??can persist a one-sided or zero entry.
     async fn validate_journal_entry(
         &self,
         transaction: &crate::ledger::transaction::Transaction,
@@ -382,7 +385,7 @@ pub struct TransactionSummary {
     #[sqlx(flatten)]
     pub transaction: crate::ledger::transaction::Transaction,
     /// Debit-side total in minor units (INV-01 integer money). With balanced
-    /// entries this equals the entry amount — NOT the debit+credit sum.
+    /// entries this equals the entry amount ??NOT the debit+credit sum.
     pub total_amount_minor: i64,
     /// Representative currency of the items (MIN across items).
     pub currency: String,
@@ -412,7 +415,7 @@ impl LedgerEngine {
     }
 
     /// Paged variant of `query_recent_transaction_summaries`. `limit` and
-    /// `offset` are bound parameters — the page number never reaches SQL as
+    /// `offset` are bound parameters ??the page number never reaches SQL as
     /// concatenated text. Callers validate/clamp the page number.
     pub async fn query_transaction_summaries_paged(
         &self,
@@ -456,6 +459,9 @@ pub struct AccountMonthTotal {
 
 impl LedgerEngine {
     /// Last `months` months of debit/credit totals, oldest first.
+    ///
+    /// Uses a date-range WHERE clause so SQLite can use the `idx_transactions_date`
+    /// Last `months` months of debit/credit totals, oldest first.
     pub async fn monthly_totals(
         &self,
         months: i64,
@@ -469,8 +475,11 @@ impl LedgerEngine {
         )
         .bind(months)
         .fetch_all(&self.pool)
-        .await?;
-        Ok(rows.into_iter().rev().collect())
+        .await?
+        .into_iter()
+        .rev()
+        .collect();
+        Ok(rows)
     }
 
     /// Per-account debit/credit totals for one `YYYY-MM` month.
@@ -726,12 +735,12 @@ mod tests {
 
     #[test]
     fn status_transition_posted_to_pending_review() {
-        // DDD 聚合狀態機：POSTED（建立時預設）→ PENDING_REVIEW（覆核中）。
+        // DDD status transition test: POSTED -> PENDING_REVIEW
         let today = chrono::Utc::now().date_naive();
         let mut tx = header("tx-status-review", today);
-        assert_eq!(tx.status, "POSTED", "header 預設狀態為 POSTED");
+        assert_eq!(tx.status, "POSTED", "header ??澈????冪 POSTED");
         tx.update_status("PENDING_REVIEW".to_string());
-        assert_eq!(tx.status, "PENDING_REVIEW", "狀態轉移至 PENDING_REVIEW");
+        assert_eq!(tx.status, "PENDING_REVIEW", "?????????PENDING_REVIEW");
     }
 
     #[tokio::test]

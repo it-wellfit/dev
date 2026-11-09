@@ -1,5 +1,5 @@
 #![forbid(unsafe_code)]
-//! KEM CLI ??subcommands over the knowledge root (default `knowledge/`).
+//! KEM CLI — subcommands over the knowledge root (default `knowledge/`).
 //!
 //! P0: seed, validate 繚 P1: capture, ingest, finalize 繚 P2: ask 繚
 //! P3: sync 繚 P4: lint, doctor, status. PowerShell-friendly: one command
@@ -22,7 +22,21 @@ struct Args {
 }
 
 fn parse_args() -> Result<Args, String> {
-    const VALUE_FLAGS: [&str; 8] = ["root", "topic", "name", "file", "ext", "query", "top", "set"];
+    const VALUE_FLAGS: [&str; 13] = [
+        "root",
+        "topic",
+        "name",
+        "file",
+        "ext",
+        "query",
+        "top",
+        "set",
+        "claim",
+        "old",
+        "votes",
+        "disposition",
+        "reviewer",
+    ];
     let mut argv = std::env::args().skip(1);
     let mut root = PathBuf::from("knowledge");
     let mut cmd = String::new();
@@ -81,6 +95,13 @@ fn run() -> Result<(), KemError> {
         "finalize" => cmd_finalize(&root, &ledger),
         "ask" => cmd_ask(&root, &args.flags),
         "eval" => cmd_eval(&root, &args.flags),
+        "sync" => cmd_sync(&root, &ledger),
+        "supersede" => cmd_supersede(&root, &ledger, &args.flags),
+        "vet2" => cmd_vet2(&root, &ledger, &args.flags),
+        "lint" => cmd_lint(&root),
+        "doctor" => cmd_doctor(&root, &ledger),
+        "status" => cmd_status(&root, &ledger),
+        "review" => cmd_review(&root, &args.flags),
         other => Err(KemError::InvalidInput(format!("unknown command {other:?}"))),
     }
 }
@@ -137,7 +158,7 @@ fn cmd_seed(root: &Path, ledger: &Path, force: bool) -> Result<(), KemError> {
         staged += 1;
     }
     let claims = seed_claims();
-    // Evidence paths are workspace-relative (KEM doc 禮4.2): resolve against
+    // Evidence paths are workspace-relative (KEM doc §4.2): resolve against
     // the workspace root (cwd), not the knowledge store root.
     let ctx = VetContext::new(PathBuf::from("."), Vec::new());
     let mut accepted = 0usize;
@@ -145,7 +166,7 @@ fn cmd_seed(root: &Path, ledger: &Path, force: bool) -> Result<(), KemError> {
         let verdict = vet_t1(claim, &ctx);
         if verdict.outcome != Outcome::Accept {
             return Err(KemError::SchemaViolation(format!(
-                "seed claim {} not accepted: {:?} ??{}",
+                "seed claim {} not accepted: {:?} — {}",
                 claim.id,
                 verdict.outcome,
                 verdict.reasons.join("; ")
@@ -163,9 +184,7 @@ fn cmd_seed(root: &Path, ledger: &Path, force: bool) -> Result<(), KemError> {
         )?;
         accepted += 1;
     }
-    let all = load_claims(&root.join("claims"))?;
-    write_index(root, &all)?;
-    write_log(root, ledger)?;
+    finalize_views(root, ledger)?;
     println!("seed ok: {staged} raw sources, {accepted} claims filed, ledger verified");
     Ok(())
 }
@@ -219,7 +238,7 @@ fn cmd_capture(
     Ok(())
 }
 
-/// P1 M2?3: vet a batch of drafted claims; accept/review/reject per T1.
+/// P1 M2–M3: vet a batch of drafted claims; accept/review/reject per T1.
 fn cmd_ingest(root: &Path, ledger: &Path, batch_file: String) -> Result<(), KemError> {
     let text = std::fs::read_to_string(&batch_file)
         .map_err(|e| KemError::InvalidInput(format!("cannot read {batch_file}: {e}")))?;
@@ -264,7 +283,7 @@ fn cmd_ingest(root: &Path, ledger: &Path, batch_file: String) -> Result<(), KemE
             Outcome::Reject => {
                 let item = serde_json::json!({
                     "claim_id": claim.id, "verdict": "reject",
-                    "reasons": verdict.reasons, "triage": "see docs KEM 禮4.3.1", "at": now.to_rfc3339(),
+                    "reasons": verdict.reasons, "triage": "see docs KEM §4.3.1", "at": now.to_rfc3339(),
                 });
                 append_jsonl(&queue, &item)?;
                 rej += 1;
@@ -275,16 +294,113 @@ fn cmd_ingest(root: &Path, ledger: &Path, batch_file: String) -> Result<(), KemE
     Ok(())
 }
 
-/// P1 M4: regenerate index.md and log.md from the SSOT.
-fn cmd_finalize(root: &Path, ledger: &Path) -> Result<(), KemError> {
+/// Shared view regeneration: index.md + log.md + dashboard.html.
+/// Returns (claims, findings, queue items) for reporting.
+#[allow(clippy::type_complexity)]
+fn finalize_views(
+    root: &Path,
+    ledger: &Path,
+) -> Result<(Vec<Claim>, usize, Vec<(String, Vec<String>)>), KemError> {
     let claims = load_claims(&root.join("claims"))?;
+    let findings = kem::gov::lint(&claims, Utc::now());
+    let findings_count = findings.len();
     write_index(root, &claims)?;
     write_log(root, ledger)?;
+    // Review queue: unresolved items (claim_id + reasons per line).
+    let queue_path = root.join(".kem/review-queue.jsonl");
+    let mut queue_items: Vec<(String, Vec<String>)> = Vec::new();
+    if queue_path.exists() {
+        let text = std::fs::read_to_string(&queue_path)?;
+        for line in text.lines().filter(|l| !l.trim().is_empty()) {
+            if let Ok(v) = serde_json::from_str::<serde_json::Value>(line) {
+                if v.get("disposition").is_some() {
+                    continue; // resolved entries are history, not pending
+                }
+                let id = v
+                    .get("claim_id")
+                    .and_then(|x| x.as_str())
+                    .unwrap_or_default()
+                    .to_string();
+                let reasons = v
+                    .get("reasons")
+                    .and_then(|x| x.as_array())
+                    .map(|a| {
+                        a.iter()
+                            .filter_map(|r| r.as_str().map(String::from))
+                            .collect()
+                    })
+                    .unwrap_or_default();
+                queue_items.push((id, reasons));
+            }
+        }
+    }
+    let ledger_entries = if ledger.exists() {
+        kem::ledger::read_all(ledger)?
+    } else {
+        Vec::new()
+    };
+    let ledger_tail: Vec<(u64, String, String, String)> = ledger_entries
+        .iter()
+        .rev()
+        .take(12)
+        .map(|e| {
+            (
+                e.seq,
+                format!("{:?}", e.action).to_lowercase(),
+                e.claim_id.clone(),
+                e.ts.to_rfc3339(),
+            )
+        })
+        .collect();
+    // Latest T2 ensemble verdict (actor kem-t2) for the governance panel.
+    let ensemble = ledger_entries
+        .iter()
+        .rev()
+        .find(|e| e.actor == "kem-t2")
+        .and_then(|e| {
+            let models: Vec<String> = e
+                .detail
+                .get("models_used")
+                .and_then(|m| m.as_array())
+                .map(|a| {
+                    a.iter()
+                        .filter_map(|x| x.as_str().map(String::from))
+                        .collect()
+                })
+                .unwrap_or_default();
+            let agreement = e.detail.get("agreement").and_then(|a| a.as_f64())?;
+            let top = e
+                .detail
+                .get("top_score")
+                .and_then(|t| t.as_u64())
+                .map(|t| t as u8);
+            (!models.is_empty()).then_some((models, agreement, top))
+        });
+    kem::dashboard::write_dashboard(
+        root,
+        &claims,
+        findings_count,
+        &queue_items,
+        &ledger_tail,
+        ensemble,
+    )?;
+    Ok((claims, findings_count, queue_items))
+}
+
+/// P1 M4: regenerate all views from the SSOT.
+fn cmd_finalize(root: &Path, ledger: &Path) -> Result<(), KemError> {
+    let (claims, findings, queue) = finalize_views(root, ledger)?;
     println!(
-        "finalize: index.md + log.md regenerated ({} claims)",
-        claims.len()
+        "finalize: index.md + log.md + dashboard.html（{} claims, {} findings, {} queued）",
+        claims.len(),
+        findings,
+        queue.len()
     );
-    Ok(())
+    if findings == 0 {
+        Ok(())
+    } else {
+        Err(KemError::SchemaViolation(format!("{findings} findings")))
+    }
 }
 
 /// P2 M5: BM25 ask — lifecycle filter BEFORE ranking, top-N with scores.
@@ -337,6 +453,276 @@ fn cmd_eval(
             "golden set failed: {pass}/{total}"
         )))
     }
+}
+
+/// P3 M6: re-verify evidence quotes + refresh confidence + queue issues.
+fn cmd_sync(root: &Path, ledger: &Path) -> Result<(), KemError> {
+    let now = Utc::now();
+    let mut claims = load_claims(&root.join("claims"))?;
+    let queue = root.join(".kem/review-queue.jsonl");
+    let mut queued = 0usize;
+    let results = kem::evolve::sync_all(
+        Path::new("."),
+        ledger,
+        &mut claims,
+        |r| {
+            if !r.issues.is_empty() {
+                queued += 1;
+                append_jsonl(
+                    &queue,
+                    &serde_json::json!({
+                        "claim_id": r.claim_id, "reasons": r.issues,
+                        "queued_at": now.to_rfc3339(), "source": "sync",
+                    }),
+                )?;
+            }
+            Ok(())
+        },
+        now,
+    )?;
+    for c in &claims {
+        kem::filing::save_claim(&root.join("claims"), c)?;
+    }
+    let broken = results.iter().filter(|r| !r.issues.is_empty()).count();
+    println!(
+        "sync: {} claims checked, {} with issues (queued), ledger updated",
+        results.len(),
+        broken
+    );
+    finalize_views(root, ledger)?;
+    Ok(())
+}
+
+/// P3: structural replacement (Track A successor replaces a published claim).
+fn cmd_supersede(
+    root: &Path,
+    ledger: &Path,
+    flags: &std::collections::HashMap<String, String>,
+) -> Result<(), KemError> {
+    let old_id = flag(flags, "old")?;
+    let file = flag(flags, "file")?;
+    let text = std::fs::read_to_string(&file)
+        .map_err(|e| KemError::InvalidInput(format!("cannot read {file}: {e}")))?;
+    let successor: Claim = serde_json::from_str(&text)?;
+    let mut claims = load_claims(&root.join("claims"))?;
+    kem::evolve::supersede(root, ledger, &mut claims, successor, &old_id, Utc::now())?;
+    finalize_views(root, ledger)?;
+    println!("superseded {old_id}");
+    Ok(())
+}
+
+/// P3 T2: SCS k-vote over hybrid endpoints (local first; unreachable = UNKNOWN).
+fn cmd_vet2(
+    root: &Path,
+    ledger: &Path,
+    flags: &std::collections::HashMap<String, String>,
+) -> Result<(), KemError> {
+    let claim_id = flag(flags, "claim")?;
+    let k: usize = flags.get("votes").and_then(|v| v.parse().ok()).unwrap_or(5);
+    let local_only = flags.contains_key("local-only");
+    let claims = load_claims(&root.join("claims"))?;
+    let claim = claims
+        .iter()
+        .find(|c| c.id == claim_id)
+        .ok_or_else(|| KemError::NotFound(claim_id.clone()))?;
+
+    let rt = tokio::runtime::Runtime::new()
+        .map_err(|e| KemError::InvalidInput(format!("tokio runtime: {e}")))?;
+    // 模型池（2026-11-07 全數本機實測；KEM doc §4.3.1 + FREE_AI_ROUTING §8）:
+    // R1 敏感資料 → --local-only 僅留 L0。每票輪換不同模型 → 跨模型聯合
+    // 一致率（R7）。OVH 2/min/IP → min_interval 31s 配額護欄（R5）。
+    let e_ollama = kem::evolve::ModelEntry {
+        label: "local-ollama".into(),
+        base: "http://127.0.0.1:11434".into(),
+        kind: kem::evolve::EndpointKind::OllamaNative,
+        model: "qwen3.5:4b".into(),
+        min_interval_secs: 0,
+    };
+    let ovh = "https://oai.endpoints.kepler.ai.cloud.ovh.net/v1";
+    let pool: Vec<kem::evolve::ModelEntry> = if local_only {
+        vec![e_ollama]
+    } else {
+        vec![
+            e_ollama,
+            kem::evolve::ModelEntry {
+                label: "ovh-qwen3.8-27b".into(),
+                base: ovh.into(),
+                kind: kem::evolve::EndpointKind::OpenAi,
+                model: "Qwen3.8-27B".into(),
+                min_interval_secs: 31,
+            },
+            kem::evolve::ModelEntry {
+                label: "llm7-gpt-oss-20b".into(),
+                base: "https://api.llm7.io/v1".into(),
+                kind: kem::evolve::EndpointKind::OpenAi,
+                model: "gpt-oss:20b".into(),
+                min_interval_secs: 7,
+            },
+            kem::evolve::ModelEntry {
+                label: "ovh-gpt-oss-120b".into(),
+                base: ovh.into(),
+                kind: kem::evolve::EndpointKind::OpenAi,
+                model: "gpt-oss-120b".into(),
+                min_interval_secs: 31,
+            },
+            kem::evolve::ModelEntry {
+                label: "pollinations-gpt-oss-20b".into(),
+                base: "https://text.pollinations.ai/openai".into(),
+                kind: kem::evolve::EndpointKind::OpenAi,
+                model: "openai-fast".into(),
+                min_interval_secs: 7,
+            },
+        ]
+    };
+    let verdict = rt.block_on(kem::evolve::scs_vote(&pool, &claim.title, &claim.body, k));
+    if verdict.llm_unreachable {
+        println!("vet2: UNKNOWN — no LLM endpoint reachable (honest refusal, no fabricated score)");
+        for e in &verdict.errors {
+            eprintln!("vet2 note: {e}");
+        }
+        kem::ledger::append(
+            ledger,
+            "kem-t2",
+            LedgerAction::Vet,
+            &claim.id,
+            serde_json::json!({"status": "unknown", "reason": "all endpoints unreachable"}),
+            Utc::now(),
+        )?;
+        return Ok(());
+    }
+    println!(
+        "vet2: k={} {} — top_durability={:?} agreement={:.2} models=[{}]",
+        verdict.k,
+        claim.id,
+        verdict.top_score,
+        verdict.agreement,
+        verdict.models_used.join(", ")
+    );
+    for v in &verdict.votes {
+        println!(
+            "  vote: {} → durability={} ({})",
+            v.model, v.score, v.rationale
+        );
+    }
+    for e in &verdict.errors {
+        eprintln!("vet2 note: {e}");
+    }
+    // SCS floor (KEM doc §4.3.2): agreement < 0.60 → review queue (never
+    // silent acceptance of a split vote).
+    if verdict.agreement < 0.60 {
+        append_jsonl(
+            &root.join(".kem/review-queue.jsonl"),
+            &serde_json::json!({
+                "claim_id": claim.id,
+                "reasons": [format!(
+                    "SCS agreement {:.2} below 0.60 floor (k={}, top={:?})",
+                    verdict.agreement, verdict.k, verdict.top_score
+                )],
+                "queued_at": Utc::now().to_rfc3339(),
+                "source": "vet2",
+            }),
+        )?;
+        println!("vet2: agreement below 0.60 floor — queued for human review");
+    }
+    kem::ledger::append(
+        ledger,
+        "kem-t2",
+        LedgerAction::Vet,
+        &claim.id,
+        serde_json::to_value(&verdict)?,
+        Utc::now(),
+    )?;
+    Ok(())
+}
+
+/// P4 M7: lint the store.
+fn cmd_lint(root: &Path) -> Result<(), KemError> {
+    let claims = load_claims(&root.join("claims"))?;
+    let findings = kem::gov::lint(&claims, Utc::now());
+    for f in &findings {
+        println!("{} {}: {}", f.rule, f.claim_id, f.detail);
+    }
+    println!(
+        "lint: {} findings over {} claims",
+        findings.len(),
+        claims.len()
+    );
+    if findings.is_empty() {
+        Ok(())
+    } else {
+        Err(KemError::SchemaViolation(format!(
+            "{} findings",
+            findings.len()
+        )))
+    }
+}
+
+/// P4 M7: deep health (ledger chain + counts + queue).
+fn cmd_doctor(root: &Path, ledger: &Path) -> Result<(), KemError> {
+    let h = kem::gov::doctor(root, ledger, &root.join(".kem/review-queue.jsonl"))?;
+    println!(
+        "doctor: ledger {} entries (chain_ok={}) | claims {} | findings {} | queue {}",
+        h.ledger_entries, h.ledger_ok, h.claims, h.findings, h.review_queue
+    );
+    if h.ledger_ok {
+        Ok(())
+    } else {
+        Err(KemError::ChainBroken {
+            at: 0,
+            reason: "doctor".into(),
+        })
+    }
+}
+
+/// P4 M7: status summary.
+fn cmd_status(root: &Path, ledger: &Path) -> Result<(), KemError> {
+    let claims = load_claims(&root.join("claims"))?;
+    for (status, count) in kem::filing::status_counts(&claims) {
+        if count > 0 {
+            println!("{:?}: {}", status, count);
+        }
+    }
+    let entries = if ledger.exists() {
+        kem::ledger::read_all(ledger)?.len()
+    } else {
+        0
+    };
+    println!("ledger entries: {entries}");
+    Ok(())
+}
+
+/// P4 M7: record a review disposition (queue stays append-only).
+fn cmd_review(
+    root: &Path,
+    flags: &std::collections::HashMap<String, String>,
+) -> Result<(), KemError> {
+    let claim_id = flag(flags, "claim")?;
+    let disp = match flag(flags, "disposition")?.as_str() {
+        "accept" => kem::gov::Disposition::Accept,
+        "reject" => kem::gov::Disposition::Reject,
+        "supersede" => kem::gov::Disposition::Supersede,
+        "defer" => kem::gov::Disposition::Defer,
+        other => {
+            return Err(KemError::InvalidInput(format!(
+                "unknown disposition {other:?}"
+            )))
+        }
+    };
+    let reviewer = flags
+        .get("reviewer")
+        .cloned()
+        .unwrap_or_else(|| "human".into());
+    let note = flags.get("note").cloned().unwrap_or_default();
+    kem::gov::record_disposition(
+        &root.join(".kem/review-queue.jsonl"),
+        &claim_id,
+        disp,
+        &reviewer,
+        &note,
+        Utc::now(),
+    )?;
+    println!("review recorded: {claim_id} {disp:?} by {reviewer}");
+    Ok(())
 }
 
 fn next_id(

@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
+#[derive(Clone)]
 /// Simple in-memory search engine for Flaps ERP
 /// (Tantivy replaced with in-memory search due to compilation issues)
 pub struct SearchEngine {

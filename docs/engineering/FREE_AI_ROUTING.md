@@ -138,7 +138,34 @@ These providers offer free tiers but require account creation and API key. They 
 
 ---
 
-## 8. 混合動態架構 v2（本地 Ollama ＋ 免費雲端池；2026-11-07 全量重查）
+## 8. 混合動態架構 v2.1（2026-11-07 全機實測＋聯合裁決上線）
+
+### 8.0 本機實測快照（2026-11-07，curl/reqwest 雙驗證）
+
+| 池 | 端點 | 免費層實測模型（挑選） | 狀態 |
+|----|------|------------------------|------|
+| L0 Ollama | 127.0.0.1:11434（原生 /api/chat，think:false＋JSON schema） | qwen3.5:4b | check 直接通過 |
+| L1 OVHcloud | oai.endpoints.kepler.ai.cloud.ovh.net/v1（免 key，2/min/IP） | Qwen3.8-27B(262K)、gpt-oss-120b、gpt-oss-20b、Qwen3.6-27B、Qwen3.5-397B-A17B(262K)、Llama-3.3-70B、Mistral-Small-3.2-24B、Qwen3Guard-Gen-8B（護欄）、bge-m3/Qwen3-Embedding-8B（嵌入） | check 直接通過 |
+| L1 LLM7.io | api.llm7.io/v1（匿名，tier=turbo 免費） | gpt-oss:20b(128K, JSON)、codestral-latest、mistral-Nemo、nemotron-3-nano:30b(1M) | check 直接通過 |
+| L1 Pollinations | text.pollinations.ai/openai（匿名） | openai-fast=GPT-OSS-20B（reasoning、tools） | check 直接通過 |
+| L2 Groq/OpenRouter/Gemini 等 | 需免費註冊 | 見 §8.4 | 未實測（無金鑰） |
+
+### 8.0.1 聯合裁決（Ensemble）— 已上線
+
+kem vet2 的 SCS k 票改為**跨模型輪換**：每票依 pick_entry 於模型池輪轉（本地→OVH Qwen3.8→LLM7 gpt-oss:20b→OVH gpt-oss-120b→Pollinations），配額護欄（OVH 31s、LLM7/Pollinations 7s）內建於輪換器；每票帶模型歸因（ScsVote.model），verdict 列 models_used。分歧（agreement<0.60）誠實入審查佇列。首次聯合實測（claim-016）：5 票來自 5 個不同模型，durability 分佈 1–5，agreement 0.40 → 入隊——分歧可見、不掩蓋。
+
+### 8.0.2 情境路由表（角色→模型池）
+
+| 角色 | 首選 | 備援 | 依據 |
+|------|------|------|------|
+| vet（SCS 裁決） | 本地 qwen3.5:4b＋OVH Qwen3.8-27B＋LLM7 gpt-oss:20b | OVH gpt-oss-120b、Pollinations | JSON 模式＋配額 |
+| code | OVH Qwen3.8-27B / LLM7 codestral | 本地 | 編碼基準 |
+| longctx（>200K） | OVH Qwen3.5-397B-A17B(262K) / LLM7 nemotron-3-nano(1M) | — | 上下文長度 |
+| embed（向量檢索） | OVH bge-m3 / Qwen3-Embedding-8B（免 key） | Ollama 本地嵌入 | P2b 向量檢索待接線 |
+| guard（敏感度護欄） | OVH Qwen3Guard-Gen-8B（免 key 護欄模型） | T1 規則 | 專職護欄 |
+
+以下 §8.1–§8.5 為 v2.0 查證記錄（保留）。
+## 8.1 四層資源池（v2.0 查證記錄，2026-11-06–07）
 
 ### 8.1 四層資源池（全部零付費；§2.2/§7 保留為 2026-11-06 實測記錄）
 

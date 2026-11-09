@@ -1,7 +1,7 @@
 #![forbid(unsafe_code)]
-//! M7 ??Governance: lint, doctor, status, review-queue dispositions.
+//! M7 — Governance: lint, doctor, status, review-queue dispositions.
 //!
-//! Lint rules (KEM doc 禮8 V-tests feed here):
+//! Lint rules (KEM doc §8 V-tests feed here):
 //! - L1 published claim without retrievable evidence file (grounding broken)
 //! - L2 supersedes reference pointing at unknown/retired successor mismatch
 //! - L3 confidence below the stale threshold on a published claim
@@ -15,7 +15,7 @@ use std::path::Path;
 use crate::schema::{Claim, ClaimStatus, KemError};
 use crate::vetting::token_overlap;
 
-/// Confidence below this on a published claim = stale (KEM doc 禮4.5 floor).
+/// Confidence below this on a published claim = stale (KEM doc §4.5 floor).
 pub const STALE_THRESHOLD: f64 = 0.45;
 /// Title near-collision overlap for L4.
 pub const TITLE_OVERLAP: f64 = 0.9;
@@ -31,12 +31,11 @@ pub struct Finding {
 /// Run all lint rules over the claim store. Returns findings; empty = clean.
 pub fn lint(claims: &[Claim], now: DateTime<Utc>) -> Vec<Finding> {
     let mut out = Vec::new();
-    let ids: std::collections::BTreeSet<&str> =
-        claims.iter().map(|c| c.id.as_str()).collect();
+    let ids: std::collections::BTreeSet<&str> = claims.iter().map(|c| c.id.as_str()).collect();
 
     for c in claims {
         // L1: grounding of published claims re-checked here is cheap; the
-        // authoritative check lives in sync ??lint flags the structural gap.
+        // authoritative check lives in sync — lint flags the structural gap.
         if c.status == ClaimStatus::Published && c.evidence.is_empty() {
             out.push(Finding {
                 rule: "L1",
@@ -87,7 +86,7 @@ pub fn lint(claims: &[Claim], now: DateTime<Utc>) -> Vec<Finding> {
     out
 }
 
-/// Doctor: deep health check ??ledger chain + store coherence.
+/// Doctor: deep health check — ledger chain + store coherence.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Health {
     pub ledger_entries: usize,
@@ -252,8 +251,15 @@ mod tests {
     fn disposition_appends_and_counts() {
         let dir = tempfile::tempdir().unwrap();
         let q = dir.path().join(".kem/review-queue.jsonl");
-        record_disposition(&q, "claim-20261107-001", Disposition::Accept, "human", "ok", Utc::now())
-            .unwrap();
+        record_disposition(
+            &q,
+            "claim-20261107-001",
+            Disposition::Accept,
+            "human",
+            "ok",
+            Utc::now(),
+        )
+        .unwrap();
         let h = doctor(dir.path(), &dir.path().join(".kem/ledger.jsonl"), &q).unwrap();
         assert_eq!(h.review_queue, 1);
         assert!(h.ledger_ok); // no ledger yet = trivially ok

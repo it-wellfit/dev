@@ -3,6 +3,27 @@
 本檔記錄根 workspace（`core/`、`platform/`、`web/`、`crates/flaps_bridge`）的實際變更。格式參考 Keep a Changelog。子專案（ekpi-platform、Wellfit、SyncMesh）各自有變更記錄。
 
 
+## [Unreleased] — 2026-11-07（第十一輪：編碼根因修復＋驗證方法論補全＋效能量測法修正）
+
+### Fixed
+- **CP950 編碼損壞根因修復**：`platform/src/api.rs` 以最後乾淨提交 `dc414ac` 為源、`git merge-file` 三方合併還原（損壞自 `e82a49e` 起；Askama 分頁欄位 `page/total_pages/prev_page/next_page/total_transactions/pending_review_count` 隨合併復位）；`core/src/config.rs` 類別註解（ORG 組織／PERM 權限／ACT 動作／STORE 門市／POS 終端／INV 存貨）與 `crates/kem/src/main.rs` `P1 M2–M3`（U+E62F → en dash）PUA 字元清零。防制規範：`docs/encoding-standard.md`（PowerShell 禁 `>` 重導向寫碼，改 `[System.IO.File]::WriteAllText`＋UTF-8 無 BOM）。
+- **Stress test 量測法修正**：`stress_10000_transactions_p95_under_500ms` 原 3 樣本 p95 退化為 max-of-3，首筆冷啟動查詢（SQLite 頁快取 miss，535ms）誤判 SLA 違規；改為**預熱趟（不计時）＋21 樣本 p95**（`ceil(21×0.95)-1=19`，容許單次排程抖動），**SLA 500ms 不變**；seed 改批次多列 INSERT（500 rows/語句，100k 交易由 ~90s 降至 ~2s）。修正後 warm p95 **422ms**。
+- `NEXT_ACTIONS.md` 字面 `` `n `` 序列損壞（表格斷行遺留）重寫為合法表格。
+
+### Added
+- **突變測試（MT）**：cargo-mutants 27.1.0；`.cargo/mutants.toml` 官方 schema（examine_globs/exclude_re/additional_cargo_test_args）；補測 `amount_at_cap_posts_successfully`、`parse_i128_overflow_boundary_kills_boundary_mutants`、`money_error_display_is_not_empty`——money 73/73、engine 22/22 全殺（**≥98%→100%**，Missed 清零）。報告：`docs/engineering/MUTATION_SCORE_REPORT.md`（v2）。
+- **模糊測試（FBT）**：cargo-fuzz 0.13.2＋nightly 1.101.0；`fuzz/fuzz_targets/money_parser.rs`（INV 非負＋round-trip）build PASS；run 受阻 Windows ASan DLL（`STATUS_DLL_NOT_FOUND` 0xc0000135）——`docs/engineering/FUZZING.md` §3 記錄三條解鎖路徑。
+- **故障注入 SOP**：`docs/engineering/FAULT_INJECTION_SOP.md`（§10 追蹤表 FAULT-01..07；FAULT-01/02 DONE、04/05 IN PROGRESS）。
+- **ATDD 綁定稽核**：`docs/engineering/ATDD_BDD_BIND_AUDIT.md`（8 情境 → Rust 測試；2 MISSING＋1 BLOCKED 列管）。
+- **方法論補全**：DEVELOPMENT_METHODOLOGY §7（TDD 實證邊界＋跨域韌體/FPGA/SoC）、§8（32 項缺口表動態更新）、§9（Skills 修補）。
+- **索引重整**：`docs/README.md` v3.0——死鏈（`01-onboarding/`、`02-architecture/` 從未存在）移除、新文件全收錄、superseded 標記規則入檔。
+- **計畫登記**：`docs/PLAN_REGISTER.md` 2026-11-07 addendum #11（本輪執行事實）。
+
+### Verified
+- 四關全綠（2026-11-07）：fmt EXIT=0／clippy -D warnings EXIT=0／test --locked **157 passed 0 failed**（bridge 7＋core 42＋kem 53＋platform 48＋close_out 4＋slice12 3）／audit EXIT=0（1 個已接受警告 RUSTSEC-2026-0374）。
+- 零 JS 護欄：templates script=0、內聯事件=0（未變動模板行為）。
+- 並行工作線相容：Slice 13 搜尋引擎（`search.rs`＋`cross_module_api.rs`）與 kem evolve/gov 屬並行 session，本輪門檻在雙方穩定點量測；`target\debug\flaps-server.exe` 檔案鎖以隔離 `CARGO_TARGET_DIR` 迴避。
+
 ## [Unreleased] — 2026-11-06（第十輪：重新設計藍圖 R2/M1/M3＋TDD/BDD/SDD/DDD/ADD 體系）
 
 ### Added

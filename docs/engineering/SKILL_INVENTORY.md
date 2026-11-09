@@ -29,11 +29,12 @@
 | Server | 類型 | 本次實際使用 | 產出 | Reason |
 |--------|------|--------------|------|--------|
 | playwright | local（bunx） | 是：`browser_open` 實機檢視（總覽／介面狀態／新增交易三分區） | 截圖證據（深色主題、:target 切換、狀態樣式、表單） | UI 驗證不經原始碼宣稱完美 |
-| crates-io | local（cratesio-mcp.exe） | 未直接呼叫 | — | 版本確認由 cargo update/audit 覆蓋 |
-| rust-analyzer | local | 未呼叫 | — | clippy/test 已覆蓋診斷需求 |
+| websearch（session 內建） | remote | 是（2026-11-07）：三大工作室痛點研究 — 企業工作台 UX（ICEB 2026 grounded theory、ServiceNow/Epicor 案例）、API 中樞/iPaaS（Axway IDC 2026、Boomi、Forrester Wave GRC Q2 2026、RegScale CCM 2026） | 痛點表 WP-01..10 / HP-01..10 / GP-01..08，併入三大工作室計畫 §1/§7 | 計畫文件要求「從網路上發覺痛點與需求種類」，不得僅依記憶宣稱 |
+| crates-io | local（cratesio-mcp.exe） | 未直接呼叫 | — | 版本確認由 cargo update/audit 覆蓋（cargo-mutants 27.1.0、cargo-fuzz 0.13.2 以 cargo install 安裝記錄） |
+| rust-analyzer | local | 未呼叫 | — | clippy/test 已覆蓋診斷需求；2026-11-07 編譯診斷由 cargo 錯誤輸出直接定位 |
 | narsil | local | 未呼叫 | — | 無語意搜尋需求 |
-| firecrawl / jina / context7 / grep-app | remote | 未呼叫 | — | 本輪無需外部研究（ADR-0001 基於實測） |
-| sequentialthinking | local | 未呼叫 | — | 計畫已定，執行不需額外推理工具 |
+| firecrawl / jina / context7 / grep-app | remote | 未呼叫 | — | 2026-11-07 痛點研究由 websearch 覆蓋；context7 留待外部 API 文件需求 |
+| sequentialthinking | local | 未呼叫 | — | 2026-11-07 為執行與文件整合輪（決策路徑已在計畫登記冊固化）；複雜未決決策（三大工作室 v3.1 撰寫）將載入並留痕 |
 
 ## 4. 缺口與改善方案
 

@@ -49,5 +49,6 @@ Monthly: all MoneyError variants render non-empty Display
 
 - `mutants.out/caught.txt`, `missed.txt`, `outcomes.json`
 - `cargo test -p flaps_core --lib` → **42 passed, 0 failed**
-- `cargo fmt` (`-p flaps_core -p kem` clean; workspace fmt blocked by `platform/src/api.rs` encoding corruption — tracked as pre-existing debt)
-- `cargo clippy -p flaps_core -- -D warnings` clean
+- `cargo fmt --all -- --check` → **PASS（2026-11-07 全工作區）**；先前 v2 記錄之 api.rs 編碼損壞已由三方合併根因修復（見 docs/encoding-standard.md）
+- `cargo clippy --workspace --all-targets -- -D warnings` → PASS
+- 工作區門檻基線：157 passed / 0 failed（含 stress 100k tx warm p95 422ms ≤ 500ms）

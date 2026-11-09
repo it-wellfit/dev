@@ -160,6 +160,21 @@ This addendum records execution facts only; it does not approve product scope, c
 
 This addendum records execution facts only; it does not approve product scope, certification, or release.
 
+## 2026-11-07 addendum #11 (encoding root-cause fix + verification methodology + stress SLA)
+
+Executed in session lineage of `.kilo/plans/1793789700000-flaps-erp-performance-report.md` (performance report line) and the three-studio plan stub `.kilo/plans/1792865422970-three-studio-governance-platform.md`. Evidence: command+exit-code bound.
+
+| Item | Disposition | Evidence |
+|---|---|---|
+| CP950 encoding corruption root-cause fix | `platform/src/api.rs` restored via 3-way `git merge-file` against clean oracle `dc414ac` (corruption introduced at/after `e82a49e`); Askama pagination fields restored; `core/src/config.rs` category comment and `crates/kem/src/main.rs` `P1 M2–M3` PUA chars fixed | `cargo check --workspace` PASS; docs/encoding-standard.md; PUA scan = 0 in repaired files |
+| Stress test measurement methodology | p95 degenerated to max-of-3 with cold-start sample (535ms false violation); fixed to warm-up pass + 21 samples; SLA 500ms unchanged; seed batched (500 rows/statement) cutting test wall time ~90s→~13s | warm p95 422ms; `stress_10000_transactions_p95_under_500ms` PASS |
+| Workspace gates | fmt EXIT=0 / clippy -D warnings EXIT=0 / **157 passed 0 failed** / audit EXIT=0 (1 accepted RUSTSEC-2026-0374) | `cargo test --locked --workspace` 2026-11-07 log (isolated CARGO_TARGET_DIR to avoid parallel-session server file lock) |
+| Verification methodology | MUTATION_SCORE_REPORT v2 (money/engine 100% after Display mutant kill); FAULT_INJECTION_SOP §10 (FAULT-02 DONE, 04/05 IN PROGRESS); ATDD_BDD_BIND_AUDIT (8 scenarios, 2 MISSING + 1 BLOCKED); FUZZING.md (cargo-fuzz build PASS, run blocked by ASan DLL — GAP-04) | docs/engineering/* |
+| Docs integration | docs/README.md v3.0 index rebuilt (dead links removed, new docs indexed, superseded marked); PROJECT_STATUS/NEXT_ACTIONS/GAPS_AND_RISKS refreshed; NEXT_ACTIONS literal backtick-n corruption fixed | docs/README.md |
+| Three-studio plan stub | PLAN 1792865422970 exists as TOC-only stub (§0–§24 promised, body missing; trailing "\n# Test Append" corruption) — body completion is a tracked gap (GAP-06) | .kilo/plans/1792865422970-three-studio-governance-platform.md |
+
+This addendum records execution facts only; it does not approve product scope, certification, or release.
+
 ## Consolidation rules
 
 1. Keep one current navigation register and one acceptance/evidence ledger per project. Detailed requirements belong in their project documents.

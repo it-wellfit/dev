@@ -75,10 +75,10 @@
 | ID | 事項 | 狀態 | 參照 |
 |----|------|------|------|
 | FAULT-01 | engine 上限等值補測殺死 `>→>=` | **DONE** (2026-11-07 `amount_at_cap_posts_successfully`) | money/engine mutant |
-| FAULT-02 | money 剩餘 3 missed (||→&&, +→-, >→>= in format) | TODO (P1) — format/parse 附加測試 | MUTATION_SCORE_REPORT |
-| FAULT-03 | PBT 擴至 ledger/parallel/pivot | TODO (P1) | §8 PBT |
-| FAULT-04 | FBT 模糊：CSV/money parser | TODO (P1) | §8 FBT |
-| FAULT-05 | ATDD feature→test 自動稽核 | TODO (P1) | §8 ATDD |
+| FAULT-02 | money 剩餘 missed（Display/||→&&/+→-/>→>=） | **DONE** (2026-11-07 全數殺死，missed.txt 0 行) | MUTATION_SCORE_REPORT v2 |
+| FAULT-03 | PBT 擴至 ledger/parallel/pivot | TODO (P1) — proptest strategies 設計已定 | §8 PBT |
+| FAULT-04 | FBT 模糊：CSV/money parser | **IN PROGRESS** — `fuzz/fuzz_targets/money_parser.rs` build PASS；run 受阻 ASan DLL（見 FUZZING.md §3） | docs/engineering/FUZZING.md |
+| FAULT-05 | ATDD feature→test 自動稽核 | **IN PROGRESS** — 8 情境綁定稽核完成（2 MISSING + 1 BLOCKED 已列管） | ATDD_BDD_BIND_AUDIT.md |
 | FAULT-06 | FMEA/STPA→BDD 綁定 | TODO (P2) | §8 FMEA |
 | FAULT-07 | Chaos/DevSecOps/SRE 導入 | TODO (P2) | §8 25-32 |
 

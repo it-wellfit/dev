@@ -207,6 +207,10 @@ knowledge/
 
 **持續改進迴圈**（hill-climbing）: 每次 G 級未達標 → 從失敗案例萃 prompt 修正（貼回 `skills/llm-wiki` 對應題庫）→ 重跑該級評測 → 綠則晉級、紅則再修。prompt 檔案與評測集同版本控制，每次變更記帳（ledger + git rev）`[PROP]`。
 
+
+### 4.3.2a 聯合裁決實測（2026-11-07 上線）
+
+SCS k 票升級為**跨模型輪換聯合**：pick_entry 於五模型池輪轉（本地 qwen3.5:4b → OVH Qwen3.8-27B → LLM7 gpt-oss:20b → OVH gpt-oss-120b → Pollinations openai-fast），配額護欄內建（OVH 31s、雲 7s），每票歸因（ScsVote.model）、verdict 列 models_used。--local-only 執行 R1（敏感資料僅本地）。首次聯合實測（claim-016）：5 票來自 **5 個不同模型**、durability 分佈 1–5、agreement 0.40 → 誠實入隊。意義：跨模型分歧被看見而非掩蓋；一致率地板把不確定導入人審——Kitchen Loop 的 drift 控制在裁決層落地。
 ### 4.3.3 北極星框架：多目標多維度跨領域逼近 100%（16 個 9 的工程化）
 
 **定位**（依使用者裁定 2026-11-07）: 99.99999999999999%（16 個 9）＝全領域知識覆蓋率與準確度的**方向性極限（north-star limit）**，適用於多目標、多維度、跨領域。工程轉譯規則：**16 個 9 永不作為可宣稱數字**（驗證需 ~10¹⁶ 樣本，超出一切可行評測）；它以三個可稽核機制逼近：
@@ -360,8 +364,26 @@ draft → pending_review → published ──→ superseded ──┐
 
 ## 10. 相關文件
 
-- `docs/engineering/FREE_AI_ROUTING.md` — 裁決層 T1→T2→T3 的資源基礎
+- `docs/engineering/FREE_AI_ROUTING.md` — 裁決層 T1→T2→T3 的資源基礎（v2 混合動態架構）
 - `docs/engineering/THINKING_OPERATING_SYSTEM.md` — §4 量化方法論被本文件 §3.2、§8 引用
 - `docs/knowledge-index.md` — 既有 KB 消費契約（ADR-0004）
 - `.kilo/plans/1793966971740-autonomous-engineering-evolution-workflow.md` — KEM 是其知識層落地
 - 來源: jevwiki.ai（JEV 概念/cookbook）、pi.dev/packages/pi-jev-wiki、VLDB vol18 p1390（KG 生命週期）、eli.ai concept-governance（兩軌）、Moonpool docs（衰減）、Graphiti/Zep/Mem0/Cognee 官方文件與 2026 比較、APQC KM CAT、GraphRAG benchmark（wonlab 2026-08、arXiv 2506.05690）
+
+---
+
+## 11. 實作狀態（2026-11-07，crates/kem）
+
+| 階段 | 狀態 | 證據（指令 → 退出碼/結果） |
+|------|------|---------------------------|
+| P0 契約 | ✅ 完成 | `cargo test --locked -p kem` → 50 passed/0 failed；schema V-A01..A11＋帳本雜湊鏈＋竄改偵測測試 |
+| P1 擷取歸檔 | ✅ 完成 | `kem seed --force` → 7 raw sources、20 claims filed、ledger verified；`kem validate` → 20/0 invalid |
+| P2 檢索 | ✅ 完成 | BM25 `kem ask` 現場排序正確；`kem eval` → **20/20 top-1 pass**（含 4 拒答案例） |
+| P3 演進 | ✅ 完成 | `kem sync` → 20 claims checked/0 issues；`kem supersede` 測試雙向連結＋帳本 2 條；`kem vet2`（SCS k=5，Ollama 原生 `think:false`＋JSON schema）現場運行 2 次 |
+| P4 治理 | ✅ 完成 | `kem lint` → 0 findings/20 claims；`kem doctor` → 67 entries chain_ok=true；`kem review` 处置記錄；`kem status` |
+| 儀表板 | ✅ 完成 | `knowledge/dashboard.html`：18,115 字元、`<script>` 計數 **0**、4 面板、20 信心長條、深色模式、:target 導航、:focus-visible、空/錯誤狀態 |
+| 四關（工作區） | ✅/⚠️ | fmt EXIT=0（含 api.rs:4169 機械修復）；clippy --all-targets -D warnings EXIT=0；audit EXIT=0（1 預接受）；測試：kem 50✓ flaps_core 42✓ flaps_bridge 7✓ web 0✓ **platform 46✓＋stress_10000 FAIL（114.27s）——誠實記錄，非懸掛** |
+| SCS 實測 | 📊 | claim-016: durability=4 agreement=0.40（<0.60 → 入隊規則已實作）；claim-007: durability=1 agreement=0.60（恰在地板）——4B 模型校準極限如實顯現，佐證 G4 蒸餾必要性 |
+| P5 遠期 | ⏳ | 帳本量驅動（≥500 筆複核後啟動蒸餾） |
+
+**已知限制**（`[LIMIT]`）: platform stress 測試在此機器 p95 超標（TOS §2.2 案例分析：需獨立 perf job＋時間預算，主閘門維持快速測試）；T2 信心未校準（帳本回饋後校準）。
