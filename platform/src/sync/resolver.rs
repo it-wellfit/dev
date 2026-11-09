@@ -1,1 +1,1 @@
-﻿// Placeholder for resolver.rs
+// Placeholder for resolver.rs

@@ -1,4 +1,4 @@
-﻿// COM bridge implementation using windows-rs
+// COM bridge implementation using windows-rs
 // This module provides interoperability between Rust and Windows COM objects
 
 use windows::Win32::System::Com::*;

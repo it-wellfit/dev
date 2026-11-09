@@ -1,1 +1,1 @@
-﻿// Placeholder for tantivy.rs
+// Placeholder for tantivy.rs

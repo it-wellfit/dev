@@ -1,1 +1,1 @@
-﻿// Placeholder for migration.rs
+// Placeholder for migration.rs

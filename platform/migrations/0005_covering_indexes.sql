@@ -1,4 +1,4 @@
-﻿-- Migration 0005: covering indexes for hot query paths (Slice 12, performance hardening)
+-- Migration 0005: covering indexes for hot query paths (Slice 12, performance hardening)
 --
 -- Covering index on transaction_items so monthly_by_account and monthly_totals
 -- can satisfy SUM(CASE ...) aggregations entirely from the index without

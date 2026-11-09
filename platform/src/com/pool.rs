@@ -1,4 +1,4 @@
-﻿use windows::Win32::System::Com::*;
+use windows::Win32::System::Com::*;
 
 /// COM object pool for managing object lifecycle and reuse
 pub struct ObjectPool {

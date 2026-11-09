@@ -1,1 +1,1 @@
-﻿// Placeholder for detector.rs
+// Placeholder for detector.rs

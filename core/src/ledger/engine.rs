@@ -738,9 +738,9 @@ mod tests {
         // DDD status transition test: POSTED -> PENDING_REVIEW
         let today = chrono::Utc::now().date_naive();
         let mut tx = header("tx-status-review", today);
-        assert_eq!(tx.status, "POSTED", "header ??澈????冪 POSTED");
+        assert_eq!(tx.status, "POSTED", "header 建立後狀態應為 POSTED");
         tx.update_status("PENDING_REVIEW".to_string());
-        assert_eq!(tx.status, "PENDING_REVIEW", "?????????PENDING_REVIEW");
+        assert_eq!(tx.status, "PENDING_REVIEW", "覆核後狀態應為 PENDING_REVIEW");
     }
 
     #[tokio::test]

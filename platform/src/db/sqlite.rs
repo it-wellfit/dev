@@ -1,1 +1,1 @@
-﻿// Placeholder for sqlite.rs
+// Placeholder for sqlite.rs

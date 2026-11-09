@@ -1,1 +1,1 @@
-﻿// Placeholder for redis.rs
+// Placeholder for redis.rs
