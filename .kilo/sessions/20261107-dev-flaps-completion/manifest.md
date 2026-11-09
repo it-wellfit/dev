@@ -57,3 +57,11 @@
 - **Partner live overlay**: ~12:56 the partner stream resumed editing api.rs (TDD red tests `detail_back_link_preserves_list_context`, `pagination_links_preserve_search_term`, plus a test fn awaiting `#[test]`); their live edits were NOT committed and remain untouched on disk for their cycle.
 - Residual: `--features bankpay` build still carries the partner's in-flight gaps (response-type bindings, config binding, BankPayStatus visibility) — theirs to finish; default build unaffected.
 - Metrics: api.rs 5,161 lines (awaiting R1 split) | bankpay/ 918 | status.rs 253 | templates 18 | platform tests 58+4+3 green.
+
+## PRE-R1a — route characterization (PIN) suite (2026-11-09)
+
+- New `platform/tests/characterization.rs` (6 tests, 27 endpoints): public contract (login/health/css); anonymous protected GETs → 303 /login (12 routes); authenticated GET markers (7 pages) + report pages + CSV (`?ym=YYYY-MM`); detail 404; anonymous POSTs → 303 (10 routes); bad-CSRF behavior (exact 403 for /transactions with a complete form; 4xx for the other 9); logout never-5xx.
+- Calibrated fail-closed contracts recorded: monthly report/CSV require `?ym=` (400 otherwise); the Form extractor rejects incomplete bodies (422) before the handler-level CSRF check.
+- Role: safety net required by the partner plan §PRE-R1a (`1793787631643`) before any api.rs module split; the refactor must keep these assertions unchanged.
+- Evidence (isolated worktree @ eb522b2 + this file only): clippy -D warnings EXIT=0; characterization 6/6 passed. Main-tree full suite also green at capture: 65 lib + 6 char + 4 + 2 guards + 3.
+- Observed, not ours, not touched: partner's live edit at `api.rs:1703` carried a clippy `manual_pattern_char_comparison` violation at capture time (their batch-adjudication work); partner gates will surface it.
