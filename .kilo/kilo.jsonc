@@ -63,5 +63,9 @@
   },
   "indexing": {
     "model": "mistralai/mistral-embed-2312"
-  }
+  },
+  "instructions": [
+    ".kilo/memories/corrections.md",
+    ".kilo/memories/project.md"
+  ]
 }

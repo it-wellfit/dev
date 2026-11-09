@@ -1,7 +1,8 @@
 # PROJECT_STATUS — 專案現況
 
-> 更新：2026-11-07｜真實狀態以測試 log 為準，不以本檔宣稱。
-> 品質閘門本輪結果：**fmt EXIT=0｜clippy -D warnings EXIT=0｜test 157 passed / 0 failed｜audit EXIT=0**（1 個已接受警告 RUSTSEC-2026-0374 basic-toml unmaintained）。
+> 更新：2026-11-09｜真實狀態以測試 log 為準，不以本檔宣稱。
+> 品質閘門本輪結果（本線）：**fmt EXIT=0｜clippy -D warnings EXIT=0｜platform 77 passed / 0 failed｜合併線 141 passed / 0 failed｜platform-hub 22 passed / 0 failed｜audit EXIT=0**（1 個已接受警告 RUSTSEC-2026-0374 basic-toml unmaintained）。
+> kem 線（並行 session）in-flight 重構中，整工作區門檻待其穩定點重跑（隔離 `CARGO_TARGET_DIR` 紀律）。
 
 ## 目前階段
 
@@ -35,6 +36,12 @@
 2. **Stress test 量測法修正**：`api::tests::stress_10000_transactions_p95_under_500ms` 原以 3 樣本取 max 為 p95，首筆冷啟動查詢 535ms 誤判逾時；改為預熱趟（排除冷快取）＋21 樣本 p95（容許單次排程抖動），SLA 500ms 保持不變，seed 批次化。
 3. **方法論補強**：DEVELOPMENT_METHODOLOGY §7–§9（TDD 實證邊界/跨域/缺口表/Skills）；cargo-mutants 排除設計；FAULT_INJECTION_SOP（FAULT-01..07）；ATDD 綁定稽核（8 情境）。
 4. **並行工作線（未纳入本輪門檻，屬另一 session）**：Slice 13 全文檢索引擎與 `cross_module_api.rs`（search/sync/com/ai 橋接）、kem evolve/gov 模組 — 其狀態以該線記錄為準。
+
+## 2026-11-09 本輪完成（可追溯）
+
+1. **三大工作室切片落地**（`1793787631643` 執行計畫 v4）：G1.1 八資料態、G1.2 上下文連續、G1.3 角色起始頁＋KPI 定義、G1.4 批量覆核、G2.1 冪等+DLQ、G2.2 熔斷、G2.3 UDM 實體＋單位契約、G2.4 對帳計算、G2.5 agent 限流/草稿/審計、G3.1 證據四要件導出、G3.2 控制庫跨框架映射、G3.3 CCM 三指標。逐切片證據：PLAN_REGISTER addendum #12/#13；追溯：master plan §22。
+2. **重構判定框架**（`1793787631643` §0.5）：五步程序＋定理量測表＋已裁決候選（api.rs R1 最後排序、MoneyCents 契約不合併、Kafka stub 不動、DEC-15 fail-closed）。
+3. **並行線**：Slice 13 搜尋＋bankpay＋characterization.rs（6 tests）由並行 session 交付；kem in-flight。
 
 ## 品質門檻重現命令
 

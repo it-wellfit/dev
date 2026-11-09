@@ -14,6 +14,7 @@
 
 pub mod capture;
 pub mod dashboard;
+pub mod embed;
 pub mod evolve;
 pub mod filing;
 pub mod gov;

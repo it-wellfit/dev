@@ -17,3 +17,6 @@ chrono = { workspace = true }
 thiserror = { workspace = true }
 sqlx = { workspace = true }
 async-trait = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true }

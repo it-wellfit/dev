@@ -175,6 +175,87 @@ Executed in session lineage of `.kilo/plans/1793789700000-flaps-erp-performance-
 
 This addendum records execution facts only; it does not approve product scope, certification, or release.
 
+## 2026-11-09 addendum #12 (SLICE-G1.1 + G2.1–G2.5: three-studio execution plan v4)
+
+Executed under `.kilo/plans/1793787631643-three-studio-slice-execution-plan.md` (v4, refactoring-judgment framework included). Evidence: command+exit-code bound.
+
+| Item | Disposition | Evidence |
+|---|---|---|
+| SLICE-G1.1 (S1, WP-08) | `states.html` extended to the full eight data states (empty/zero/loading/partial/stale/denied/error/conflict) with `data-state-*` anchors and next-step affordances; `design-system.css` + docs snapshot gained `.zero-state/.stale-state/.denied-state/.conflict-state` (token-only, dark-mode safe); RED→GREEN matrix test | `states_page_covers_eight_data_states` PASS; platform lib **59 passed / 0 failed** |
+| SLICE-G2.1 (S2, HP-05) | eventbus: `RetryPolicy` (exponential backoff, ±20% bounded deterministic jitter), `DeliveryOutcome`, `DeadLetterStore` (record/list/signed replay with actor audit) + in-memory impl; Kafka stub untouched | platform-hub-eventbus **4 passed / 0 failed** (duplicate-consume idempotency, exhaustion→DLQ, signed replay) |
+| SLICE-G2.2 (S2, HP-05) | channels: `CircuitBreakerAdapter` decorator (Closed→Open→HalfOpen→Closed; immediate reopen on failed probe), `CircuitOpen` error variant, `CircuitStats` observability; injectable clock for deterministic fault injection (FAULT-07) | platform-hub-channels **5 passed / 0 failed** (threshold→open+fast-fail; half-open probes re-close; probe failure reopens) |
+| SLICE-G2.3 (S2, HP-03/04) | udm: `CustomerRecord`/`InvoiceRecord`/`PaymentRecord` each with `authoritative_system`; unit contract for UDM MoneyCents ↔ root minor (explicit, checked, refuse-truncation conversions) — merge remains forbidden per §0.5 ruling | platform-hub-udm **9 passed / 0 failed** (3 roundtrips + boundary fitness) |
+| SLICE-G2.4 (S2, HP-06) | udm: `reconcile_orders` → `ReconciliationReport` (matched/missing/mismatch, deterministic sorted lists, 10-entry sample cap, i128 cent totals, JSON-serializable) | 3 tests incl. hand-computation fixture and determinism/cap checks |
+| SLICE-G2.5 (S2, HP-09) | agent-policy: `AgentRateLimiter` (sliding window, caller-supplied clock), `WriteDisposition::DraftRequired` fail-closed for ALL risk levels (DEC-15 preserved), `AgentAuditMarker.audit_event()` | platform-hub-agent-policy **6 passed / 0 failed** |
+| platform-hub gates | fmt 0 / clippy -D warnings 0 / **22 passed / 0 failed** / (audit via root lock) | `cargo test --locked --workspace` in platform-hub |
+
+This addendum records execution facts only; it does not approve product scope, certification, or release.
+
+## 2026-11-09 addendum #13 (SLICE-G1.2–G1.4 + G3.1–G3.3: three-studio execution completion)
+
+Continuation of addendum #12 under `.kilo/plans/1793787631643-three-studio-slice-execution-plan.md` (v4). Evidence: command+exit-code bound. kem in-flight refactor by the parallel line blocks whole-workspace runs; gates are run per-lane (platform/core/bridge + platform-hub), matching the plan's isolation rule.
+
+| Item | Disposition | Evidence |
+|---|---|---|
+| SLICE-G1.2 (S1, WP-10) | Detail links carry `from_page`+`q` context; detail page back link restores the exact filtered view (CJK percent-encoded, hostile input truncated/degraded, never error); pagination q-preservation PINned (Askama escapes `&` as `&#38;` — assertion matches wire format) | `pagination_links_preserve_search_term`, `detail_back_link_preserves_list_context` PASS |
+| SLICE-G1.3 (S1, WP-05/04/02) | Role-based landing panel on `/` (FINANCE→review queue; STORE/VIEWER→reports; ADMIN/others→overview; `data-role` anchor), role fetched live from user_roles; KPI cards carry definition/timepoint/source titles + visible `data-kpi-definitions` note | `finance_landing_leads_with_review_queue`, `store_landing_leads_with_reports`, `admin_landing_defaults_to_overview`, `kpi_definitions_are_inline` PASS |
+| SLICE-G1.4 (S1, WP-07) | `POST /reviews/bulk`: single POST, per-row outcomes with rule names (SELF_ADJUDICATION_FORBIDDEN / NOT_PENDING / NOT_FOUND / STATE_CHANGED), per-row REVIEW_BULK audit events with actor signature, failed-row highlight (`tr.outcome-failed`), replay-safe by design (re-submission fails per-row, never double-posts), 100-row cap, forged-CSRF and RBAC gates | `bulk_review_reports_mixed_outcomes_and_audits_each_row`, `bulk_review_reject_marks_rejected`, `bulk_review_requires_ledger_write`, `bulk_review_rejects_forged_csrf` PASS |
+| SLICE-G3.1 (S3, GP-04) | `GET /admin/audit_evidence.csv` (ROLE_MANAGE): four audit-readiness requirements as header block — 控制相關 (control library ids), 涵蓋期間 (validated from..to, fail-closed), 完整性 (SHA-256 row digest at export time), 來源 (platform audit_log); RFC 4180 escaping | `evidence_export_includes_four_requirements_and_rows`, `evidence_export_requires_role_manage` PASS |
+| SLICE-G3.2 (S3, GP-02) | `platform/src/controls.rs`: one control library (CTRL-POST/IMPORT/REVIEW/CRED/AI) each mapping audit event types × framework obligations (ISO-27001 annex / INTERNAL-IC / BANK-FSC); `lint_control_coverage` reuses kem gov.rs Finding shape (UNMAPPED_EVENT / INACTIVE_CONTROL); `GET /admin/control_coverage.json` | `platform/src/controls.rs` 4 unit tests + `control_coverage_maps_observed_and_flags_unmapped` PASS |
+| SLICE-G3.3 (S3, GP-05) | `GET /admin/ccm.json`: three indicators with definition/timepoint/source — M1 金額不變量違反 (unbalanced transactions), M2 登入異常 (honest null + gap note: login auditing not yet implemented — a fake zero would fake a green control), M3 簽名完整性違反 (unsigned audit rows) | `ccm_indicators_detect_invariant_and_signature_violations` PASS |
+| PRE-R1a | Delivered by the parallel line (not duplicated here): `platform/tests/characterization.rs` | 6 tests PASS in combined run |
+| Gates (this lane) | fmt 0 / clippy -D warnings 0 / **platform 77 passed 0 failed** (lib) / combined lanes **141 passed 0 failed** (bridge 7 + core 42 + platform 77 + characterization 6 + close_out 4 + slice12 2 + misc 3) / audit EXIT=0 (1 accepted warning) | 2026-11-09 logs |
+| G3.4 | Spec-only per plan (OQ-GOV-04 credential model unresolved) | plan §2 PHASE-G3 |
+
+This addendum records execution facts only; it does not approve product scope, certification, or release.
+
+## 2026-11-09 addendum #14 (SLICE-E2E: BankPay 整合收斂 + 稽核 NULL 安全 + 設定持久化)
+
+Executed by the review/verification lane on the shared working tree (S1/S2/S3 streams were concurrently active on the same files; converged artifacts noted). Evidence: command+exit-code bound.
+
+| Item | Disposition | Evidence |
+|---|---|---|
+| BankPay 模組建置修復 | 37 編譯錯誤→0（缺失回應型別匯入、請求結構補 `Serialize`、`const` 中 `vec!` 改 `match` 靜態切片、`StatusEngine: Clone`、`has_permission_db` 回傳 `bool` 誤用 `.unwrap_or(false)` 移除、`permissions` 欄位可見性） | 該輪 `cargo check -p platform --features bankpay` EXIT=0（14:0x）；其後架構收斂移除 feature 閘控（`time`→`chrono`，零新增依賴），修復內容併入無條件編譯模組 |
+| 設定持久化（erp_config SSOT） | `bankpay::load_config`/`save_config`（決定性 `config_id`=`bankpay:{key}`、冪等 UPSERT）；POST 先持久化後記憶體（fail-closed）；啟動時載入 | 單元測試 3 項 PASS（roundtrip／UPSERT 不重複列／新 AppState 重啟載入）；runtime smoke：POST→GET 生效（14:27，erp_config 5 列） |
+| 稽核 NULL 安全 | 三處查詢改 `COALESCE(al.transaction_id,'')`／`COALESCE(al.event_data,'')`（NULL 列不再毒化整批查詢） | platform/src/api.rs L3731；cross_module_api.rs audit_list／audit_export |
+| 分頁語義確認 | 儀表板頁尺寸=`LIST_PAGE_SIZE`(20)；`?page=999` 以 `clamp_page` 夾限至末頁；非法 `page` 回第 1 頁（fail-closed） | runtime smoke：`/transactions?page=999`→`第 1 / 1 頁`（6 筆）；E2E 測試斷言 21 筆→`第 2 / 2 頁` 已就位待綠樹重跑 |
+| E2E 測試交付 | `platform/tests/bankpay_persistence.rs`：21 筆分頁＋超頁夾限＋config 持久化（適配 `X-CSRF-Token`）＋session 跨「重啟」（DB-backed） | **PASS**：`cargo test -p platform --test bankpay_persistence` 1 passed / 0 failed（1.16s）；同輪全平台 97+16 測試 0 失敗；`cargo fmt -p platform -- --check` EXIT=0（15:44） |
+| clippy 閘門觀察 | `cargo clippy -p platform --all-targets -- -D warnings` 共 12 警告，全部位於並行流收斂中之新碼：10× `result_large_err`（platform/src/bankpay/api.rs:50/167/222/275/426/488/562/592/674/700）、2× `div_ceil`（cross_module_api.rs:178、bankpay/api.rs:701） | 15:45 clippy 全目標輸出。建議修法（不新增 allow）：錯誤以小結構承載（如 `ApiError{status,message}` + `impl IntoResponse`）取代 `Result<_, Response>`；除法改 `u64::div_ceil`／`u32::div_ceil`。由該串流修復後重跑為綠 |
+
+This addendum records execution facts only; it does not approve product scope, certification, or release.
+
+## 2026-11-09 addendum #15 (SLICE-E2E收斂後修復: BankPay 交付完整性 + 稽核/CSRF/冪等 + 狀態誠實化)
+
+Executed on the shared working tree after addendum #14. Scope: `platform/src/bankpay/*`, `platform/src/status.rs`, `platform/src/auth.rs`, `platform/src/api.rs`, `platform/src/cross_module_api.rs`, `platform/migrations/000{6,7}_*.sql`, `platform/templates/index.html`, `web/assets/design-system.css` (+docs snapshot), `platform/tests/bankpay_api.rs`. Parallel-stream files (`crates/kem/*`, `platform-hub/*`, `platform/src/apihub.rs`, `knowledge/*`) untouched. Decision rationale: `docs/adr/ADR-0012-bankpay-integration-boundary.md`; plan-level disposition table: `.kilo/plans/1793782615513-esun-bankpay-ui-optimization.md` 附錄 A.
+
+| Item | Disposition | Evidence |
+|---|---|---|
+| Feature gate 移除（交付缺口關閉） | `bankpay`/`status` 改無條件編譯+註冊；`time`/`reqwest/multipart` 不再需要 → 依賴零新增 | `cargo test --locked -p platform`（預設 features）124 passed / 0 failed |
+| 稽核寫入修復 | 6 寫入點中 5 個 bind 數錯誤（4 binds vs 3 placeholders，執行期必敗且被 `let _ =` 吞掉）→ 統一 `write_audit`；fail-closed（稽核失敗→500，配合冪等重放安全） | 整合測試 `bankpay_export_is_idempotent_and_audited`（audit 列存在、actor 簽署） |
+| 冪等批次帳 | 遷移 0006：`bankpay_batches`（`batch_id` PK、`esun_ref` UNIQUE、金額 CHECK、狀態 CHECK）+ `bankpay_audits`；匯出 `ON CONFLICT DO NOTHING` → 重放回傳既有狀態不重複呼叫銀行 | 遷移 0006/0007；整合測試重放回應逐位元組一致 |
+| CSRF（T-08） | 變更類 POST 驗 `X-CSRF-Token`；拒絕時不留批次/稽核痕跡 | 整合測試 `bankpay_export_requires_csrf_token`；live smoke：缺漏/錯誤 token 皆 403 且 DB 無新增批次 |
+| API 401 + 未認證漏洞關閉 | `auth::require_session_api`（401 JSON）；`cross_module_api` 原於 `route_layer` 後 merge → 稽核/CSV 匯出/COM/AI 無需登入 → 改先 merge 後掛層 | 整合測試 `bankpay_api_requires_session`（含 `/api/audit` 401） |
+| 路徑白名單（CWE-22） | 匯入僅接受 `data/bankpay/inbound/*.csv`（canonicalize 前綴比對） | 整合測試 `bankpay_import_rejects_path_traversal`；live smoke 400 |
+| 模擬誠實化（P7） | 捏造端點/欄位移除；mock 匯入真實解析 CSV；查詢金額由本地批次帳補入；生產模式 fail-closed 500（權威實作指向 `Wellfit/crates/wellfit_bankpay`） | `client.rs` 單元測試；live smoke `matched:2/mismatched:1` |
+| 狀態誠實化 | `/api/status` 即時探測（移除 Unknown 快取→`degraded` 恆真 bug）；sync/com/ai 標 Idle 並說明；bankpay 模擬模式標 Warning；儀表板 AI 模型數 3→0 | 整合測試 `status_endpoint_shape_and_mock_warning`；live smoke JSON |
+| UI（T8/T10/T11/T13） | 導航移除 `/states`（路由保留）；sticky 狀態列 + `:target` 詳情面板（Design Token，`web/assets/design-system.css` + docs 快照同步）；BankPay 卡片；稽核篩選死控制改真實 GET 表單 | 整合測試 `index_renders_bankpay_card_and_status_bar`；live smoke 渲染斷言 |
+| clippy/fmt | `ApiError(StatusCode,String)` 小型錯誤型別（`result_large_err` 合規，禁用 allow）；`div_ceil`；`cargo clippy -p platform --all-targets -- -D warnings` = 0；`cargo fmt -p platform -- --check` = 通過 | clippy/fmt 輸出 |
+| Live smoke（:8091, 獨立 smoke DB, 已清理） | 401（未登入）/303（PRG 登入）/匯出 200→冪等重放一致→查詢推進 COMPLETED＋本地帳金額/白名單外 400/`/api/audit` 需登入 | 本 addendum 執行記錄 |
+
+This addendum records execution facts only; it does not approve product scope, certification, or release.
+## 2026-11-09 addendum #14 (security-driven sqlx 0.9 upgrade + RUSTSEC-2026-0459 disposition)
+
+Trigger: `cargo audit` began reporting RUSTSEC-2026-0459 (CVE-2026-119375, severity 6.8 medium) after the advisory DB refresh — libsqlite3-sys 0.30.1 bundles SQLite < 3.54.0 (uninitialized page-cache memory disclosure via crafted .db + mismatched-page-size -wal pair; LOCAL vector). Evidence: audit EXIT=1 log 2026-11-09; advisory https://rustsec.org/advisories/RUSTSEC-2026-0459.
+
+| Item | Disposition | Evidence |
+|---|---|---|
+| sqlx 0.8.6 → 0.9.0 | Upgraded across the workspace (root workspace deps, core/Cargo.toml, platform/Cargo.toml). First attempt left dual sqlx versions in the graph (core pinned 0.8 → E0308 two-Pool types + fallout FromRow/dynamic-SQL-audit errors); root-caused via `cargo tree -i sqlx` and fixed by unifying all three manifests to 0.9 | `cargo check --workspace` EXIT=0 after unification |
+| libsqlite3-sys 0.39.0 | NOT reachable: sqlx-sqlite 0.9.0 (latest crates.io release) pins `>=0.30.1, <0.38.0` | `cargo update -p libsqlite3-sys --precise 0.39.0` failure log |
+| Acceptance disposition | Documented in `.cargo/audit.toml` per GOVERNANCE P2/P7: local-vector-only exposure; app opens only operator-created files under data\; single-user desktop deployment; daily backup bounds exposure. Revisit triggers: sqlx widens the range, or the app ever opens third-party DB files | `cargo audit` EXIT=0 (2 documented dispositions) |
+| Four gates after upgrade | fmt EXIT=0 / clippy -D warnings EXIT=0 / **235 passed 0 failed** whole workspace (kem line recovered by parallel session: 58 lib tests green) / audit EXIT=0 | 2026-11-09 logs |
+
+This addendum records execution facts only; it does not approve product scope, certification, or release.
+
 ## Consolidation rules
 
 1. Keep one current navigation register and one acceptance/evidence ledger per project. Detailed requirements belong in their project documents.

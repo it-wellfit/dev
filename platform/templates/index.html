@@ -24,12 +24,15 @@
                     <button class="btn btn-secondary" type="submit">登出</button>
                 </form>
                 ｜
-                服務狀態：
-                {% if db_connected %}
-                <span class="badge badge-success">已連線</span>
+                服務狀態（整體）：
+                {% if sys_status_overall == "healthy" %}
+                <span class="badge badge-success">正常</span>
+                {% else if sys_status_overall == "degraded" %}
+                <span class="badge badge-warning">降級</span>
                 {% else %}
-                <span class="badge badge-warning">未連線</span>
+                <span class="badge badge-error">異常</span>
                 {% endif %}
+                <a href="#status-panel">詳情</a>
             </p>
         </div>
     </header>
@@ -41,7 +44,7 @@
             <a href="#accounts">會計科目</a>
             <a href="#ai-decisions">AI 決策</a>
             <a href="#new-transaction">新增交易</a>
-            <a href="/states">介面狀態</a>
+            <a href="/bankpay">銀行支付</a>
             <a href="/import">快速匯入</a>
             <a href="/drafts">草稿解析</a>
             <a href="/reports/monthly?ym={{ current_ym }}">月報表</a>
@@ -49,15 +52,99 @@
             <a href="/reports/parallel?months=6">平行座標投影</a>
             {% if can_manage_users %}
             <a href="/admin/users">使用者管理</a>
+            <a href="/admin/api/catalog">API 中樞</a>
+            <a href="/admin/api/logs">API 日誌</a>
+            <a href="/admin/api/config">API 設定</a>
             {% endif %}
         </div>
     </nav>
 
+    {# 全域狀態列（T10/T11）：sticky 頂部、零 JS；「查看詳情」以 CSS :target
+       展開詳情面板。與 /api/status 同一即時探測來源（status::probe_modules），
+       狀態永不快取、永不殘留 Unknown。 #}
+    <div id="status-bar" class="status-bar status-{{ sys_status_overall }}" role="status" aria-label="系統狀態">
+        <div class="container status-bar-inner">
+            <span class="status-dot status-dot-{{ sys_status_overall }}" aria-hidden="true"></span>
+            <strong>系統狀態：</strong>
+            {% if sys_status_overall == "healthy" %}
+            <span>正常</span>
+            {% else if sys_status_overall == "degraded" %}
+            <span>降級（部分模組需注意）</span>
+            {% else %}
+            <span>異常</span>
+            {% endif %}
+            {% for chip in status_chips %}
+            <span class="status-chip status-chip-{{ chip.status }}">{{ chip.label }}：<span class="status-chip-text" title="{{ chip.status }}">{{ chip.status_label }}</span></span>
+            {% endfor %}
+            <a class="btn btn-secondary status-detail-toggle" href="#status-panel">查看詳情</a>
+        </div>
+    </div>
+
+    {# 狀態詳情面板（T11）：:target 顯示；含每模組狀態徽章、說明（問題＋處理
+       建議）與最後檢查時間。 #}
+    <div id="status-panel" class="panel status-panel" role="dialog" aria-label="系統狀態詳情" aria-labelledby="status-panel-title">
+        <div class="status-panel-head">
+            <h3 id="status-panel-title">系統狀態詳情</h3>
+            <a class="btn btn-secondary" href="#main" aria-label="關閉狀態詳情">✕ 關閉</a>
+        </div>
+        <p class="section-note">整體狀態：{{ sys_status_overall }}｜本面板與 /api/status 同源（即時探測，非快取）。JSON API：<a href="/api/status">GET /api/status</a>（需登入；未登入回 401）。</p>
+        <div class="table-wrap">
+            <table>
+                <caption>各模組即時狀態</caption>
+                <thead>
+                    <tr>
+                        <th scope="col">模組</th>
+                        <th scope="col">狀態</th>
+                        <th scope="col">說明與處理建議</th>
+                        <th scope="col">最後檢查</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for chip in status_chips %}
+                    <tr class="status-row-{{ chip.status }}">
+                        <th scope="row">{{ chip.label }}</th>
+                        <td><span class="badge {% if chip.status == "ok" %}badge-success{% else if chip.status == "warning" %}badge-warning{% else if chip.status == "error" %}badge-error{% else %}badge-info{% endif %}" title="{{ chip.status }}">{{ chip.status_label }}</span></td>
+                        <td>{{ chip.detail }}</td>
+                        <td>{{ chip.last_checked }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
     <main id="main" class="container">
+
+        {% if !role_code.is_empty() %}
+        {# G1.3 (WP-05/WP-04): role-based landing — one panel, branch by role
+           code from the live RBAC tables. FINANCE starts from the review
+           queue; read-only roles start from reports; everything else gets
+           the overview. #}
+        <section id="role-landing" class="panel" aria-labelledby="role-landing-title" data-role="{{ role_code }}">
+            <h3 id="role-landing-title">您的角色：{{ role_code }}</h3>
+            {% if role_code == "FINANCE" %}
+            <p class="section-note">會計角色建議從待覆核佇列開始：覆核後過帳，或先檢視待覆核清單中的差異。</p>
+            <p>
+                <a class="btn btn-primary" href="/transactions">待覆核佇列</a>
+                <a class="btn btn-secondary" href="/drafts">草稿解析</a>
+            </p>
+            {% else if role_code == "STORE" || role_code == "VIEWER" %}
+            <p class="section-note">檢視角色入口：報表為唯讀（GET），不會修改任何帳務資料。</p>
+            <p>
+                <a class="btn btn-primary" href="/reports/monthly">月報</a>
+                <a class="btn btn-secondary" href="/reports/pivot">樞紐分析</a>
+                <a class="btn btn-secondary" href="/reports/parallel">平行座標</a>
+            </p>
+            {% else %}
+            <p class="section-note">工作總覽：以下面板涵蓋帳務、跨模組狀態與稽核軌跡；角色專屬入口將於角色指派後顯示。</p>
+            {% endif %}
+        </section>
+        {% endif %}
 
         <section id="dashboard" class="panel" aria-labelledby="dashboard-title">
             <h3 id="dashboard-title">總覽</h3>
             {% if db_connected %}
+            <p class="badge badge-success">資料庫已連線</p>
             <p class="preview-note">
                 資料來源：本機 SQLite（唯讀查詢，GET 不修改狀態）。金額以整數分（i64）儲存，顯示時還原為兩位小數；清單金額為借方合計。
             </p>
@@ -69,22 +156,46 @@
 
             <dl class="kpi-grid">
                 <div class="kpi">
-                    <dt>交易總筆數</dt>
+                    <dt title="定義：transactions 表全部狀態的筆數｜時點：查詢當下｜來源：transactions">交易總筆數</dt>
                     <dd>{{ transaction_count }}</dd>
                 </div>
                 <div class="kpi">
-                    <dt>交易總金額</dt>
+                    <dt title="定義：Σ transaction_items.amount_minor（整數分，借貸分列合計）｜時點：查詢當下｜來源：transaction_items">交易總金額</dt>
                     <dd>{{ total_amount_display }}</dd>
                 </div>
                 <div class="kpi">
-                    <dt>啟用科目數</dt>
+                    <dt title="定義：accounts 表全部科目筆數｜時點：查詢當下｜來源：accounts">啟用科目數</dt>
                     <dd>{{ account_count }}</dd>
                 </div>
                 <div class="kpi">
-                    <dt>待覆核交易</dt>
+                    <dt title="定義：status='PENDING_REVIEW' 的交易筆數｜時點：查詢當下｜來源：transactions">待覆核交易</dt>
                     <dd id="kpi-pending-review">{{ pending_review_count }}</dd>
                 </div>
             </dl>
+            <p class="section-note" data-kpi-definitions>
+                指標定義（G1.3/WP-02）：交易總筆數＝transactions 全部狀態筆數；交易總金額＝分錄金額整數分合計；啟用科目數＝accounts 全部筆數；待覆核＝status='PENDING_REVIEW' 筆數。時點均為查詢當下；來源為本機 SQLite 對應資料表。
+            </p>
+
+            {# G1.4 (WP-07): bulk review — single POST, per-row audit, actor-signed.
+               Failed rows are highlighted in the result page (badge-error +
+               outcome-failed row class). #}
+            <form method="post" action="/reviews/bulk" class="section-gap" data-bulk-review>
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <label for="bulk-decision">批量裁決（僅作用於待覆核列；每列獨立審計與回報）</label>
+                <div class="form-row">
+                    <select class="input" id="bulk-decision" name="decision">
+                        <option value="approve">核准（回 POSTED）</option>
+                        <option value="reject">駁回（REJECTED）</option>
+                    </select>
+                </div>
+                <div class="form-row">
+                    <label for="bulk-ids">交易編號（逗號或換行分隔，上限 100 筆）</label>
+                    <textarea class="input" id="bulk-ids" name="tx_ids" rows="2" placeholder="tx-001, tx-002"></textarea>
+                </div>
+                <div class="form-actions">
+                    <button class="btn btn-primary" type="submit">送出批量裁決</button>
+                </div>
+            </form>
 
             <div class="table-wrap">
                 <table>
@@ -135,6 +246,77 @@
             <p class="section-note">此表為最近 5 筆摘要；完整清單與分頁見下方「交易管理」。</p>
         </section>
 
+        {# 銀行支付儀表板卡片（T13）：批次狀態一覽。模擬模式以警示徽章明示
+           ——資料為確定性模擬，非真實銀行交易（治理 P7 反模擬）。 #}
+        {% if let Some(card) = bankpay_card %}
+        <section id="bankpay" class="panel" aria-labelledby="bankpay-title">
+            <div class="status-panel-head">
+                <h3 id="bankpay-title">銀行支付（E.Sun BankPay）</h3>
+                {% if card.mock_mode %}
+                <span class="badge badge-warning">模擬模式（資料非真實）</span>
+                {% else %}
+                <span class="badge badge-success">生產模式</span>
+                {% endif %}
+            </div>
+            <dl class="kpi-grid">
+                <div class="kpi">
+                    <dt title="定義：status IN (PENDING, SUBMITTED) 的批次數｜時點：查詢當下｜來源：bankpay_batches">進行中批次</dt>
+                    <dd>{{ card.active_batches }}</dd>
+                </div>
+                <div class="kpi">
+                    <dt title="定義：status = COMPLETED 的批次數｜時點：查詢當下｜來源：bankpay_batches">已完成批次</dt>
+                    <dd>{{ card.completed_batches }}</dd>
+                </div>
+                <div class="kpi">
+                    <dt title="定義：status = FAILED 的批次數｜時點：查詢當下｜來源：bankpay_batches">失敗批次</dt>
+                    <dd>{{ card.failed_batches }}</dd>
+                </div>
+                <div class="kpi">
+                    <dt title="定義：status = REJECTED 的批次數｜時點：查詢當下｜來源：bankpay_batches">退件批次</dt>
+                    <dd>{{ card.rejected_batches }}</dd>
+                </div>
+                <div class="kpi">
+                    <dt title="定義：Σ status = COMPLETED 批次的 amount_minor（整數分）｜時點：查詢當下｜來源：bankpay_batches">已完成金額</dt>
+                    <dd>{{ card.completed_amount_display }}</dd>
+                </div>
+            </dl>
+            <div class="table-wrap">
+                <table>
+                    <caption>最近批次（5 筆）</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col">批次 ID</th>
+                            <th scope="col">銀行參照</th>
+                            <th scope="col">金額（分）</th>
+                            <th scope="col">幣別</th>
+                            <th scope="col">狀態</th>
+                            <th scope="col">建立時間</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for b in card.recent %}
+                        <tr>
+                            <td>{{ b.batch_id }}</td>
+                            <td>{{ b.esun_ref.as_deref().unwrap_or("—") }}</td>
+                            <td>{{ b.amount_minor }}</td>
+                            <td>{{ b.currency }}</td>
+                            <td>{{ b.status }}</td>
+                            <td>{{ b.created_at }}</td>
+                        </tr>
+                        {% endfor %}
+                        {% if card.recent.is_empty() %}
+                        <tr>
+                            <td colspan="6" class="status-empty-note">目前無銀行支付批次。可透過 POST /api/bankpay/export 建立批次（需 LEDGER_WRITE 權限與 X-CSRF-Token）。</td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+            <p class="section-note">API：POST /api/bankpay/export｜POST /api/bankpay/import（檔案須位於 data/bankpay/inbound/）｜GET /api/bankpay/query｜GET /api/bankpay/health。未登入 401；無權限 403；變更類操作需 X-CSRF-Token。</p>
+            <p><a class="btn btn-primary" href="/bankpay">進入銀行支付作業</a></p>
+        </section>
+        {% endif %}
+
         <section id="modules" class="panel" aria-labelledby="modules-title">
             <h3 id="modules-title">跨模組狀態（Slice 13）</h3>
             <p class="preview-note">
@@ -158,7 +340,6 @@
                     <dd>{{ ai_models_available }}</dd>
                 </div>
             </dl>
-            {% if !recent_audit_logs.is_empty() %}
             <div class="table-wrap">
                 <table>
                     <caption>最近稽核紀錄</caption>
@@ -177,16 +358,18 @@
                         <tr>
                             <td class="mono">{{ log.log_id }}</td>
                             <td>{{ log.user_id }}</td>
-                            <td><span class="badge badge-info">{{ log.action }}</span></td>
+                            <td><span class="badge {{ log.action_class }}" title="{{ log.action }}">{{ log.action_label }}</span></td>
                             <td>{{ log.resource }}</td>
                             <td>{{ log.details }}</td>
                             <td class="mono">{{ log.created_at }}</td>
                         </tr>
                         {% endfor %}
+                        {% if recent_audit_logs.is_empty() %}
+                        <tr><td colspan="6" class="status-empty-note">暫無稽核紀錄。所有系統變更（交易、匯入、銀行支付、設定）都會自動記錄於此。</td></tr>
+                        {% endif %}
                     </tbody>
                 </table>
             </div>
-            {% endif %}
             <p class="section-note">
                 API 端點：/api/search · /api/sync · /api/com · /api/ai · /api/health
             </p>
@@ -197,14 +380,21 @@
             <p class="preview-note">
                 所有系統變更與存取事件均記錄於此，支援篩選、分頁與 CSV 匯出。
             </p>
-            <div class="form-row" style="display:flex; gap:var(--s2); flex-wrap:wrap; margin-bottom:var(--s3);">
-                <input class="input" type="text" id="audit-user" placeholder="使用者 ID" />
-                <input class="input" type="text" id="audit-action" placeholder="動作關鍵字" />
-                <input class="input" type="date" id="audit-start" />
-                <input class="input" type="date" id="audit-end" />
-                <button class="btn btn-primary" id="audit-filter">篩選</button>
+            {# 篩選控制（零 JS）：真實 GET 表單，送出後導向 /api/audit JSON API
+               並套用篩選（對應 AuditQuery：user_id/action/start_date/end_date）。
+               原實作為無表單按鈕（需 JS 才能運作），違反零 JS 規範，已修正。 #}
+            <form class="form-row" method="get" action="/api/audit" style="display:flex; gap:var(--space-2); flex-wrap:wrap; margin-bottom:var(--space-3);" aria-label="稽核紀錄篩選">
+                <label class="sr-only" for="audit-user">使用者 ID</label>
+                <input class="input" type="text" id="audit-user" name="user_id" placeholder="使用者 ID" />
+                <label class="sr-only" for="audit-action">動作關鍵字</label>
+                <input class="input" type="text" id="audit-action" name="action" placeholder="動作關鍵字" />
+                <label class="sr-only" for="audit-start">起始日期</label>
+                <input class="input" type="date" id="audit-start" name="start_date" />
+                <label class="sr-only" for="audit-end">結束日期</label>
+                <input class="input" type="date" id="audit-end" name="end_date" />
+                <button class="btn btn-primary" type="submit">篩選（導向 JSON API）</button>
                 <a href="/api/audit/export" class="btn btn-secondary">匯出 CSV</a>
-            </div>
+            </form>
             <div class="table-wrap">
                 <table id="audit-table">
                     <caption>稽核紀錄清單</caption>
@@ -223,16 +413,19 @@
                         <tr>
                             <td class="mono">{{ log.log_id }}</td>
                             <td>{{ log.user_id }}</td>
-                            <td><span class="badge badge-info">{{ log.action }}</span></td>
+                            <td><span class="badge {{ log.action_class }}" title="{{ log.action }}">{{ log.action_label }}</span></td>
                             <td>{{ log.resource }}</td>
                             <td>{{ log.details }}</td>
                             <td class="mono">{{ log.created_at }}</td>
                         </tr>
                         {% endfor %}
+                        {% if recent_audit_logs.is_empty() %}
+                        <tr><td colspan="6" class="status-empty-note">暫無稽核紀錄。所有系統變更（交易、匯入、銀行支付、設定）都會自動記錄於此。</td></tr>
+                        {% endif %}
                     </tbody>
                 </table>
             </div>
-            <div id="audit-pagination" style="margin-top:var(--s2); display:flex; gap:var(--s2);"></div>
+            <div id="audit-pagination" style="margin-top:var(--space-2); display:flex; gap:var(--space-2);"></div>
             <p class="section-note">
                 共 {{ recent_audit_logs.len() }} 筆記錄 · API：GET /api/audit?page=&limit=&user_id=&action=&start_date=&end_date=
             </p>

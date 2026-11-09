@@ -1,12 +1,13 @@
 pub mod api;
+pub mod apihub;
 pub mod auth;
-#[cfg(feature = "bankpay")]
+pub mod bm25;
 pub mod bankpay;
 pub mod com;
+pub mod controls;
 pub mod cross_module_api;
 pub mod db;
 pub mod search;
-#[cfg(feature = "bankpay")]
 pub mod status;
 pub mod sync;
 

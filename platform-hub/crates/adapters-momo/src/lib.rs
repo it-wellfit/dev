@@ -3,7 +3,9 @@
 //! momo adapter — skeleton only (pending_contract until official API spec obtained).
 
 use async_trait::async_trait;
-use platform_hub_channels::{Capabilities, ChannelAdapter, ChannelError, ColumnContract, FormatDeriver};
+use platform_hub_channels::{
+    Capabilities, ChannelAdapter, ChannelError, ColumnContract, FormatDeriver,
+};
 use platform_hub_udm::{InventoryRecord, UnifiedOrder};
 
 /// momo adapter. All methods return `pending_contract` until the official API spec is obtained.

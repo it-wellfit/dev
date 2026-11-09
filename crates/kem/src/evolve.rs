@@ -44,7 +44,9 @@ pub fn recompute_confidence(
     let anchor = last_affirmed.unwrap_or(claim.recorded_at);
     let age_days = (now - anchor).num_hours() as f64 / 24.0;
     match half_life_days(claim_type_of(claim)) {
-        None => base.max(claim.confidence.min(base)),
+        // Non-decaying types keep the best-known confidence: never decayed,
+        // never silently reset to base by a sync (review defect #4).
+        None => base.max(claim.confidence),
         Some(hl) => {
             let decayed = base * 0.5f64.powf(age_days / hl);
             // Floor: demote but never zero — claims fade to "needs reaffirm".
@@ -656,6 +658,16 @@ mod evolve_tests {
         let old = claim(ClaimType::Concept, 400);
         let c = recompute_confidence(&old, None, Utc::now());
         assert!((c - 0.8).abs() < 1e-9);
+    }
+
+    #[test]
+    fn concept_keeps_historical_confidence() {
+        // Review defect #4: concepts must never be silently reset DOWN to
+        // base by a sync — best-known confidence is preserved.
+        let mut old = claim(ClaimType::Concept, 400);
+        old.confidence = 1.0;
+        let c = recompute_confidence(&old, None, Utc::now());
+        assert!((c - 1.0).abs() < 1e-9, "got {c}");
     }
 
     #[test]

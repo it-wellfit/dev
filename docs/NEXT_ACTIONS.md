@@ -1,29 +1,30 @@
 # NEXT_ACTIONS — 下一個實際開發任務
 
-> 更新：2026-11-07｜依價值排序。每項完成後更新 PROJECT_STATUS.md 與本文件。
-> （v2 修復：原檔第 11 行含字面 `` `n `` 序列損壞，本版以合法表格重寫。）
+> 更新：2026-11-09｜依價值排序。每項完成後更新 PROJECT_STATUS.md 與本文件。
+> （v3：十二切片已完成並登錄 addendum #12/#13；剩餘項目如下。）
 
-## 已完成（2026-11-06 → 2026-11-07）
+## 已完成（2026-11-07 → 2026-11-09）
 
 | # | 任務 | 證據 |
 |---|------|------|
-| ✅ | Health check 強化（migration 版本＋交易總數；DB 不可達 503 degraded） | `health_reports_*` ×2 測試通過 |
-| ✅ | 驗證方法論體系（TDD 紅綠、BDD 8 情境綁定稽核、SDD 追溯、DDD 狀態機、ADD 戰術表） | DEVELOPMENT_METHODOLOGY §3/§5/§7–§9；ATDD_BDD_BIND_AUDIT |
-| ✅ | DDD 狀態機測試 POSTED→PENDING_REVIEW | core/src/ledger/engine.rs（42 tests） |
-| ✅ | 交易分頁（模板欄位 page/total_pages/prev/next 還原） | platform/templates/index.html；IndexTemplate |
+| ✅ | 三大工作室十二切片（G1.1–G1.4／G2.1–G2.5／G3.1–G3.3） | PLAN_REGISTER addendum #12/#13；追溯矩陣 master §22 全綠 |
 | ✅ | Stress test 量測法修正（預熱＋21 樣本 p95；SLA 500ms 不變） | warm p95 422ms；100k tx |
 | ✅ | CP950 編碼損壞根因修復（api.rs 三方合併；config.rs/kem main.rs PUA） | docs/encoding-standard.md |
+| ✅ | 驗證方法論體系（TDD/BDD 8 情境/SDD/DDD/ADD；MT 100%；FUZZING.md） | DEVELOPMENT_METHODOLOGY §7–§9 |
+| ✅ | docs/README v3.0 索引重整＋PROJECT_STATUS/NEXT_ACTIONS/GAPS 刷新 | 2026-11-07/09 |
+| ✅ | PRE-R1a 特徵化測試（並行 session 交付 characterization.rs） | 6 tests PASS |
 
 ## 最高價值（排序）
 
 | # | 任務 | 階段 | 前置 |
 |---|------|------|------|
-| 1 | **Backup/Restore 演練**（data\flaps.db 複製→還原→查詢驗證）＋BACKUP_RECOVERY.md | Phase 2 | 無（可本機執行） |
-| 2 | **三大工作室計畫 v3.1 落地**：S1 部門工作台、S2 API 中樞與資料管理（platform-hub：UDM/eventbus/channels/agent-policy）、S3 治理稽核（kem 證據鏈）— 計畫文件 §0–§24 補實後逐項實作 | 跨線 | 計畫文件 |
-| 3 | **fuzz 執行解鎖**：Windows ASan DLL（STATUS_DLL_NOT_FOUND 0xc0000135）— 部署 clang_rt.asan 或改用 `-Zsanitizer=none`＋libFuzzer only | Phase 1→2 | 工具鏈 |
-| 4 | **ATDD 缺口補測**：`rate_limiter_locks_after_threshold`、`health_reports_degraded_when_database_unreachable` 綁定補齊 | Phase 1 | 無 |
+| 1 | **kem 線穩定後整工作區四關重跑**（含 kem in-flight evolve/gov/search） | 收口 | 並行線穩定點 |
+| 2 | **Backup/Restore 演練**（data\flaps.db 複製→還原→查詢驗證）＋BACKUP_RECOVERY.md | Phase 2 | 無 |
+| 3 | **fuzz 執行解鎖**：Windows ASan DLL（0xc0000135）或 libFuzzer-only／Linux CI | Phase 1→2 | 工具鏈 |
+| 4 | **對帳報告渲染**：G2.4 計算層接 api_logs.html 演進（掛平行線） | G2 收口 | 平行線 |
 | 5 | **部署環境決策**（TLS／網域／主機）——**需擁有者授權** | Phase 2 | 授權 |
-| 6 | OpenTelemetry 導入評估 | Phase 2 | 部署環境 |
+| 6 | OpenTelemetry 導入評估 | Phase 2/PHASE-G4 | 部署環境 |
+| 7 | R1 api.rs 模組化（23 路由）：特徵化測試已備，待 GAP-08 分歧解鎖 | PHASE-G4 | 分歧裁決＋ADR |
 
 ## 高風險問題
 

@@ -111,6 +111,13 @@ pub fn write_log(root: &Path, ledger_path: &Path) -> Result<(), KemError> {
     Ok(())
 }
 
+/// Strip a UTF-8 BOM if present. Windows tooling (PowerShell 5.1
+/// Set-Content -Encoding UTF8) writes BOM by default; serde_json rejects
+/// it. All kem JSON inputs go through this (review defect #6, E2E smoke).
+pub fn strip_bom(text: &str) -> &str {
+    text.strip_prefix('\u{feff}').unwrap_or(text)
+}
+
 /// Count claims per status — feeds `kem status`.
 pub fn status_counts(claims: &[Claim]) -> [(ClaimStatus, usize); 6] {
     use ClaimStatus::*;
@@ -130,4 +137,14 @@ pub fn status_counts(claims: &[Claim]) -> [(ClaimStatus, usize); 6] {
         }
     }
     out
+}
+#[cfg(test)]
+mod bom_tests {
+    use super::*;
+
+    #[test]
+    fn strip_bom_removes_only_bom() {
+        assert_eq!(strip_bom("\u{feff}[1,2]"), "[1,2]");
+        assert_eq!(strip_bom("[1,2]"), "[1,2]");
+    }
 }

@@ -96,6 +96,40 @@ pub struct Health {
     pub review_queue: usize,
 }
 
+/// Pending review-queue items (unresolved lines only — lines carrying a
+/// `disposition` field are resolved history). Single source of truth for
+/// both `doctor` and the dashboard/report views (review defect #3).
+pub fn pending_queue(queue_path: &Path) -> Result<Vec<(String, Vec<String>)>, KemError> {
+    if !queue_path.exists() {
+        return Ok(Vec::new());
+    }
+    let text = std::fs::read_to_string(queue_path)?;
+    let mut out = Vec::new();
+    for line in text.lines().filter(|l| !l.trim().is_empty()) {
+        if let Ok(v) = serde_json::from_str::<serde_json::Value>(line) {
+            if v.get("disposition").is_some() {
+                continue; // resolved entries are history, not pending
+            }
+            let id = v
+                .get("claim_id")
+                .and_then(|x| x.as_str())
+                .unwrap_or_default()
+                .to_string();
+            let reasons = v
+                .get("reasons")
+                .and_then(|x| x.as_array())
+                .map(|a| {
+                    a.iter()
+                        .filter_map(|r| r.as_str().map(String::from))
+                        .collect()
+                })
+                .unwrap_or_default();
+            out.push((id, reasons));
+        }
+    }
+    Ok(out)
+}
+
 pub fn doctor(root: &Path, ledger_path: &Path, queue_path: &Path) -> Result<Health, KemError> {
     let ledger_entries = if ledger_path.exists() {
         crate::ledger::read_all(ledger_path)?.len()
@@ -109,14 +143,7 @@ pub fn doctor(root: &Path, ledger_path: &Path, queue_path: &Path) -> Result<Heal
     };
     let claims = crate::filing::load_claims(&root.join("claims"))?;
     let findings = lint(&claims, Utc::now()).len();
-    let review_queue = if queue_path.exists() {
-        std::fs::read_to_string(queue_path)?
-            .lines()
-            .filter(|l| !l.trim().is_empty())
-            .count()
-    } else {
-        0
-    };
+    let review_queue = pending_queue(queue_path)?.len();
     Ok(Health {
         ledger_entries,
         ledger_ok,
@@ -261,7 +288,17 @@ mod tests {
         )
         .unwrap();
         let h = doctor(dir.path(), &dir.path().join(".kem/ledger.jsonl"), &q).unwrap();
-        assert_eq!(h.review_queue, 1);
+        // Resolved dispositions are history — pending count must stay 0
+        // (review defect #3: doctor previously counted resolved lines).
+        assert_eq!(h.review_queue, 0);
+        // An unresolved line does count as pending.
+        std::fs::write(
+            &q,
+            "{\"claim_id\":\"claim-20261107-002\",\"reasons\":[\"quote drifted\"]}\n",
+        )
+        .unwrap();
+        let h2 = doctor(dir.path(), &dir.path().join(".kem/ledger.jsonl"), &q).unwrap();
+        assert_eq!(h2.review_queue, 1);
         assert!(h.ledger_ok); // no ledger yet = trivially ok
         assert_eq!(h.claims, 0);
     }

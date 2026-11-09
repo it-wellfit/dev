@@ -477,6 +477,28 @@ pub async fn require_session(
     }
 }
 
+/// API 版 session 中間件：未登入回 401 JSON（而非 HTML 轉址）。
+///
+/// 用於 `/api/*` 路由群組——API 用戶端（curl/前端 fetch）需要機器可判讀的
+/// 狀態碼，且計畫驗收標準明定「未登入用戶存取 API 返回 401」。
+pub async fn require_session_api(
+    State(state): State<AppState>,
+    mut request: Request,
+    next: Next,
+) -> Response {
+    match current_session(&state, request.headers()).await {
+        Some(session) => {
+            request.extensions_mut().insert(session);
+            next.run(request).await
+        }
+        None => (
+            axum::http::StatusCode::UNAUTHORIZED,
+            "未授權：請先登入（缺少有效 flaps_session Cookie）。處理方式：先以 /login 取得 session 後重試。",
+        )
+            .into_response(),
+    }
+}
+
 /// Convenience constructor shared with the API router.
 pub fn login_router() -> Router<crate::api::AppState> {
     Router::new()

@@ -17,7 +17,7 @@
 | **Windows COM RPA 支援** | `Cargo.toml#L28` | `windows 0.58`（Win32_Foundation & Win32_System_Com）原生桌面自動化。 |
 | **Tauri 2.0 桌面集成** | `Cargo.toml#L19` | 客戶端跨平台桌面殼。 |
 | **發布編譯最佳化** | `Cargo.toml#L36-L42` | `opt-level = 3`, `lto = true`。 |
-| **測試基線 157/0** | `cargo test --locked --workspace`（2026-11-07） | bridge 7＋core 42＋kem 53＋platform 48＋close_out 4＋slice12 3，全綠。 |
+| **測試基線 235/0** | `cargo test --locked --workspace`（2026-11-09，sqlx 0.9 後） | bridge 7＋core 42＋kem 58＋platform 97＋close_out 4＋slice12 2＋kem-int 15＋characterization 6＋misc 3，全綠。 |
 | **效能 SLA 成立** | `platform/src/api.rs` stress 測試 | 100k 交易 warm p95 422ms ≤ 500ms（預熱趟＋21 樣本量測法）。 |
 | **路由 SSOT 23 條** | `platform/src/api.rs` `.route(` 計數 | 新增路由必同步 docs/design/INFORMATION_ARCHITECTURE.md。 |
 | **編碼根因已修** | `dc414ac` 三方合併＋`encoding-standard.md` | api.rs/config.rs/kem main.rs PUA 清零；防制規範就位。 |
@@ -50,4 +50,5 @@
 | **CP950 編碼損壞復發** | 工具以非 UTF-8 讀寫 | 原始碼/文件 mojibake（本週根因修復 3 檔） | `encoding-standard.md` 強制 UTF-8 無 BOM；PowerShell 用 `[System.IO.File]::WriteAllText`+UTF8NoBOM | ✅ 已防制 |
 | **建置鎖衝突** | 並行 session 的 flaps-server.exe 佔用 target | test/cargo 檔案鎖失敗 | `CARGO_TARGET_DIR` 隔離建置；禁止殺他人行程 | ✅ 已防制 |
 | **p95 量測法誤判** | 冷啟動計入小樣本 p95 | 誤報 SLA 違規（本週 535ms 誤判） | 預熱趟＋≥21 樣本；SLA 只規範 warm 穩態 | ✅ 已修正 |
+| **依賴 CVE 殘餘（RUSTSEC-2026-0459）** | 開啟第三方提供的 .db＋-wal 檔對 | 頁快取未初始化記憶體洩漏（本地向量，6.8 medium） | 已文件化接受（audit.toml）：僅開啟 data\ 自建檔；重審觸發＝sqlx 放寬 libsqlite3-sys 範圍至 ≥0.39 | 🟡 已文件化（addendum #14） |
 | **並行線同檔衝突** | 兩 session 同改 api.rs/kem | 瞬時編譯錯誤 | board 分工宣告；門檻重跑前 `cargo check` 對齊 | 🟡 監控中 |

@@ -1,59 +1,80 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="zh-Hant-TW">
 <head>
     <meta charset="UTF-8">
-    <title>API 稽核日誌 | Flaps ERP</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API 稽核日誌 — Flaps ERP</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%23005fcc'/%3E%3Ctext x='8' y='12' font-size='10' font-family='sans-serif' fill='white' text-anchor='middle' font-weight='bold'%3EF%3C/text%3E%3C/svg%3E">
     <link rel="stylesheet" href="/assets/design-system.css">
 </head>
-<body class="bg-base">
-    <nav class="nav-main">
-        <a href="/" class="nav-logo">Flaps ERP</a>
-        <div class="nav-links">
-            <a href="/#transactions">交易明細</a>
-            <a href="/admin/users">使用者管理</a>
-            <a href="/admin/api/catalog">API 目錄</a>
-            <a href="/admin/api/logs" class="active">API 稽核</a>
-            <a href="/admin/api/config">API 設定</a>
-        </div>
-    </nav>
+<body>
+    <a class="skip-link" href="#main">跳至主要內容</a>
 
-    <main class="container">
-        <header class="page-header">
-            <div class="header-content">
+    <header class="app-header">
+        <div class="container">
+            <div>
                 <h1>API 稽核日誌</h1>
-                <p class="subtitle">所有銀行端點呼叫之追溯記錄</p>
+                <p class="app-subtitle">audit_log 最近 100 筆（新→舊）；可追溯、可匯出</p>
             </div>
-        </header>
+            <p class="app-subtitle">
+                使用者：<strong>{{ acting_user }}</strong>
+                ｜
+                <a class="btn btn-secondary" href="/api/audit/export">匯出 CSV</a>
+                <a class="btn btn-secondary" href="/admin/api/catalog">服務目錄</a>
+                <a class="btn btn-secondary" href="/">返回工作台</a>
+            </p>
+        </div>
+    </header>
 
-        <div class="card card-border">
-            <div class="card-body">
-                <table class="table-minimal">
+    <main id="main" class="container">
+        <p class="preview-note">
+            稽核寫入為 fail-closed：作業成功但稽核寫入失敗時，系統回報錯誤而非靜默略過；
+            NULL 欄位以 <code>COALESCE</code> 正規化為空字串，避免單筆缺欄導致整批查詢失敗。
+        </p>
+
+        <section class="panel" aria-labelledby="logs-title">
+            <h2 id="logs-title">事件列表（{{ logs.len() }} 筆）</h2>
+            {% if logs.is_empty() %}
+            <p class="empty-state" data-state-empty>
+                <strong>尚無稽核記錄</strong>
+                交易、匯入、銀行支付與設定變更等作業完成後，事件將顯示於此。
+            </p>
+            {% else %}
+            <div class="table-wrap">
+                <table>
+                    <caption>稽核軌跡（最近 100 筆）</caption>
                     <thead>
                         <tr>
-                            <th>時間</th>
-                            <th>執行者</th>
-                            <th>事件類型</th>
-                            <th>詳細資料</th>
+                            <th scope="col">時間</th>
+                            <th scope="col">動作</th>
+                            <th scope="col">使用者</th>
+                            <th scope="col">資源</th>
+                            <th scope="col">詳細資料</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for log in logs %}
                         <tr>
-                            <td><code>{{ log.performed_at }}</code></td>
-                            <td>{{ log.performed_by }}</td>
-                            <td><span class="badge badge-sm">{{ log.event_type }}</span></td>
-                            <td class="text-muted">{{ log.summary }}</td>
+                            <td><code>{{ log.created_at }}</code></td>
+                            <td><span class="badge badge-info">{{ log.action }}</span></td>
+                            <td>{{ log.username }}</td>
+                            <td><code>{{ log.resource }}</code></td>
+                            <td>{{ log.details }}</td>
                         </tr>
                         {% endfor %}
-                        {% if logs.is_empty() %}
-                        <tr>
-                            <td colspan="4" class="text-center py-4">目前無相關稽核記錄</td>
-                        </tr>
-                        {% endif %}
                     </tbody>
                 </table>
             </div>
-        </div>
+            {% endif %}
+            <p class="section-note">完整分頁與篩選：<code>GET /api/audit?page=&amp;limit=&amp;user_id=&amp;action=&amp;start_date=&amp;end_date=</code></p>
+        </section>
     </main>
+
+    <footer class="site-footer">
+        <div class="container">
+            <p>Flaps ERP 工作台 · API 資料管理平台（零 JavaScript，WCAG 2.2 AA 方向）</p>
+            <p>規格：docs/ux/UI-UX_需求規格.md · 設計系統：web/assets/design-system.css</p>
+        </div>
+    </footer>
 </body>
 </html>

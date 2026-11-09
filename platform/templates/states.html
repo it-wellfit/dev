@@ -97,29 +97,58 @@
         </section>
 
         <section class="panel" aria-labelledby="s-feedback">
-            <h2 id="s-feedback">回饋與系統狀態（Feedback）</h2>
+            <h2 id="s-feedback">資料八態（Eight Data States）</h2>
+            <p class="section-note">八態錨點：<code>data-state-empty / zero / loading / partial / stale / denied / error / conflict</code>——文案互異、各含下一步，供驗收與新頁面對照（G1.1/WP-08）。</p>
 
             <h3>載入中（Loading）</h3>
-            <p class="loading-state"><span class="spinner" aria-hidden="true"></span>資料載入中…（僅在 &gt;300ms 時顯示；尊重 reduced-motion）</p>
+            <p class="loading-state" data-state-loading><span class="spinner" aria-hidden="true"></span>資料載入中…（僅在 >300ms 時顯示；尊重 reduced-motion）</p>
 
             <h3>錯誤（Error）— 問題＋可能原因＋處理方式</h3>
-            <div class="error-state" role="alert">
+            <div class="error-state" role="alert" data-state-error>
                 <strong>無法載入交易清單</strong>
                 <p>可能原因：後端服務未啟動或連線中斷。請確認服務狀態後重試；若持續失敗，請聯絡系統管理員。</p>
                 <p><a class="btn btn-secondary" href="/states">重試</a></p>
             </div>
 
-            <h3>部分不可用（Degraded）</h3>
-            <div class="degraded-state" role="status">
+            <h3>部分不可用（Degraded／Partial）</h3>
+            <div class="degraded-state" role="status" data-state-partial>
                 <strong>AI 決策服務暫停</strong>
                 <p>規則引擎不受影響，登帳與查詢照常運作；服務恢復後本區塊回到完整狀態。</p>
             </div>
 
             <h3>空狀態（Empty）</h3>
-            <p class="empty-state">
+            <p class="empty-state" data-state-empty>
                 <strong>尚無資料</strong>
                 未知或無資料一律以「—」呈現，不以範例數字冒充真實帳務。
             </p>
+
+            <h3>零結果（Zero Result）— 有資料但篩選無相符</h3>
+            <div class="zero-state" role="status" data-state-zero>
+                <strong>沒有符合目前條件的項目</strong>
+                <p>資料庫中有其他紀錄，但沒有一筆符合目前的篩選條件；與「尚無資料」（全新空庫）不同。請調整關鍵字或日期範圍後再試。</p>
+                <p><a class="btn btn-secondary" href="/transactions">調整條件</a></p>
+            </div>
+
+            <h3>資料過期（Stale）— 明示最後更新時間</h3>
+            <div class="stale-state" role="status" data-state-stale>
+                <strong>此資料非最新</strong>
+                <p>本報告產生於 <time class="stale-time" datetime="2026-11-09T08:00:00Z">2026-11-09 08:00</time>；其後已有新交易入帳，數字可能不含最新異動。</p>
+                <p><a class="btn btn-secondary" href="/states">重新整理</a></p>
+            </div>
+
+            <h3>無權限（Permission Denied）— 指名權限碼</h3>
+            <div class="denied-state" role="alert" data-state-denied>
+                <strong>無權檢視此內容</strong>
+                <p>缺少權限碼 <code>LEDGER_READ</code>。請向系統管理員申請權限，或改用您可存取的頁面。</p>
+                <p><a class="btn btn-secondary" href="/states">申請權限</a></p>
+            </div>
+
+            <h3>狀態衝突（Conflict）— 他人已先處理</h3>
+            <div class="conflict-state" role="alert" data-state-conflict>
+                <strong>操作衝突：此項目已被處理</strong>
+                <p>重複確認或狀態已變更（HTTP 409）。請重新載入最新狀態，確認後再送出；系統不會重複入帳（重放防護）。</p>
+                <p><a class="btn btn-secondary" href="/states">重新載入</a></p>
+            </div>
         </section>
 
         <section class="panel" aria-labelledby="s-table">

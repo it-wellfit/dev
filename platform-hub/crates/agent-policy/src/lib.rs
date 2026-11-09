@@ -76,7 +76,10 @@ impl AutoApprovalGate {
 
         // High-risk / paid / sensitive → human required.
         if is_paid
-            || matches!(recommendation.risk_level, RiskLevel::High | RiskLevel::Critical)
+            || matches!(
+                recommendation.risk_level,
+                RiskLevel::High | RiskLevel::Critical
+            )
             || matches!(
                 recommendation.classification,
                 DataClassification::Confidential | DataClassification::Restricted
@@ -91,6 +94,88 @@ impl AutoApprovalGate {
         } else {
             ApprovalDecision::RequireHuman
         }
+    }
+}
+
+// ============================================================================
+// G2.5 (HP-09): governed agent access — rate limiting, draft-only writes,
+// and audit markers. DEC-15 stays fail-closed throughout: nothing here can
+// auto-post to the ledger; agent output always lands as a draft.
+// ============================================================================
+
+/// Sliding-window rate limiter for one agent identity.
+pub struct AgentRateLimiter {
+    max_requests: u32,
+    window: std::time::Duration,
+    hits: std::sync::Mutex<std::collections::VecDeque<std::time::Instant>>,
+}
+
+/// Outcome of a rate-limit check.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RateDecision {
+    Allow,
+    RateLimited,
+}
+
+impl AgentRateLimiter {
+    pub fn new(max_requests: u32, window: std::time::Duration) -> Self {
+        Self {
+            max_requests,
+            window,
+            hits: std::sync::Mutex::new(std::collections::VecDeque::new()),
+        }
+    }
+
+    /// Check and (on allow) consume one request slot at instant `now`.
+    /// `now` is caller-supplied so tests and schedulers stay deterministic.
+    pub fn check(&self, now: std::time::Instant) -> RateDecision {
+        let mut hits = self.hits.lock().unwrap_or_else(|p| p.into_inner());
+        let horizon = now - self.window;
+        while hits.front().is_some_and(|&hit| hit < horizon) {
+            hits.pop_front();
+        }
+        if hits.len() >= self.max_requests as usize {
+            return RateDecision::RateLimited;
+        }
+        hits.push_back(now);
+        RateDecision::Allow
+    }
+}
+
+/// Where an agent write must land. Single-variant by design: DEC-15 keeps
+/// every agent write in the human adoption queue.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum WriteDisposition {
+    /// Write to the draft store; a named human must adopt before posting.
+    DraftRequired,
+}
+
+/// Fail-closed disposition: independent of risk level, confidence, or any
+/// future flag, agent writes never post directly to the ledger.
+pub fn write_disposition(
+    _risk: RiskLevel,
+    _confidence: f32,
+    _auto_approval_enabled: bool,
+) -> WriteDisposition {
+    WriteDisposition::DraftRequired
+}
+
+/// Structured audit marker emitted with every governed agent request.
+#[derive(Debug, Clone)]
+pub struct AgentAuditMarker {
+    pub agent_id: String,
+    pub action: String,
+    pub classification: DataClassification,
+    pub risk_level: RiskLevel,
+}
+
+impl AgentAuditMarker {
+    /// Single-line, grep-friendly audit event (key=value pairs).
+    pub fn audit_event(&self) -> String {
+        format!(
+            "AGENT_ACT agent={} action={} class={:?} risk={:?}",
+            self.agent_id, self.action, self.classification, self.risk_level
+        )
     }
 }
 
@@ -132,5 +217,68 @@ mod tests {
             classification: DataClassification::Public,
         };
         assert_eq!(gate.decide(&rec, false), ApprovalDecision::RequireHuman);
+    }
+
+    // ------------------------------------------------------------------
+    // G2.5 (HP-09): rate limiting, draft-only writes, audit markers.
+    // ------------------------------------------------------------------
+
+    #[test]
+    fn rate_limiter_blocks_burst_and_recovers_after_window() {
+        let limiter = AgentRateLimiter::new(3, std::time::Duration::from_secs(60));
+        let t0 = std::time::Instant::now();
+
+        // Three requests fill the window.
+        for i in 0..3 {
+            assert_eq!(
+                limiter.check(t0 + std::time::Duration::from_millis(i * 10)),
+                RateDecision::Allow,
+                "request {i} within budget must be allowed"
+            );
+        }
+        // Fourth request inside the window is rejected.
+        assert_eq!(
+            limiter.check(t0 + std::time::Duration::from_millis(50)),
+            RateDecision::RateLimited,
+            "burst beyond the window budget must be limited"
+        );
+        // Sliding window: the first hit expires at t0+60s.
+        assert_eq!(
+            limiter.check(t0 + std::time::Duration::from_secs(61)),
+            RateDecision::Allow,
+            "window must slide: expired hits free budget"
+        );
+    }
+
+    #[test]
+    fn agent_writes_are_always_draft_only() {
+        // DEC-15 fail-closed: no risk level, confidence, or flag changes the
+        // disposition — agent writes land as drafts for human adoption.
+        for risk in [
+            RiskLevel::Low,
+            RiskLevel::Medium,
+            RiskLevel::High,
+            RiskLevel::Critical,
+        ] {
+            assert_eq!(
+                write_disposition(risk, 1.0, false),
+                WriteDisposition::DraftRequired
+            );
+        }
+    }
+
+    #[test]
+    fn audit_marker_renders_agent_identity_and_classification() {
+        let marker = AgentAuditMarker {
+            agent_id: "kem-vet-01".into(),
+            action: "draft_suggest".into(),
+            classification: DataClassification::Internal,
+            risk_level: RiskLevel::Medium,
+        };
+        let line = marker.audit_event();
+        assert!(line.contains("agent=kem-vet-01"), "{line}");
+        assert!(line.contains("action=draft_suggest"), "{line}");
+        assert!(line.contains("class=Internal"), "{line}");
+        assert!(line.contains("risk=Medium"), "{line}");
     }
 }

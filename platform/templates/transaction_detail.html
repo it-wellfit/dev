@@ -19,7 +19,7 @@
             <p class="app-subtitle">
                 使用者：<strong>{{ acting_user }}</strong>
                 ｜
-                <a class="btn btn-secondary" href="/transactions">返回交易清單</a>
+                <a class="btn btn-secondary" href="{{ back_href }}">返回交易清單</a>
             </p>
         </div>
     </header>
@@ -29,7 +29,7 @@
         <div class="error-state" role="alert">
             <strong>找不到交易（{{ tx_id }}）</strong>
             <p>問題：查無此交易編號。可能原因：連結過期、紀錄不存在或編號輸入有誤。處理方式：回到交易清單重新選擇。</p>
-            <p><a class="btn btn-secondary" href="/transactions">返回交易清單</a></p>
+            <p><a class="btn btn-secondary" href="{{ back_href }}">返回交易清單</a></p>
         </div>
         {% else %}
         <section class="panel" aria-labelledby="header-title">

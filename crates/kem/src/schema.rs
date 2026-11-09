@@ -106,7 +106,10 @@ pub struct Evidence {
 /// One atomic unit of knowledge. JSON is the SSOT; markdown views are derived.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Claim {
-    /// `claim-YYYYMMDD-NNN`, never reused.
+    /// `claim-YYYYMMDD-NNN`, never reused. `default` allows ingest drafts to
+    /// omit it (ingest auto-assigns); an empty id fails V-A01 validation, so
+    /// no id-less claim can ever be published.
+    #[serde(default)]
     pub id: String,
     pub claim_type: ClaimType,
     pub status: ClaimStatus,

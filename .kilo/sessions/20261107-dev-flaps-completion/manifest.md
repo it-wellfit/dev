@@ -65,3 +65,11 @@
 - Role: safety net required by the partner plan §PRE-R1a (`1793787631643`) before any api.rs module split; the refactor must keep these assertions unchanged.
 - Evidence (isolated worktree @ eb522b2 + this file only): clippy -D warnings EXIT=0; characterization 6/6 passed. Main-tree full suite also green at capture: 65 lib + 6 char + 4 + 2 guards + 3.
 - Observed, not ours, not touched: partner's live edit at `api.rs:1703` carried a clippy `manual_pattern_char_comparison` violation at capture time (their batch-adjudication work); partner gates will surface it.
+## BankPay 整合收斂與 E2E 驗證（2026-11-09 下午，review/verification 流）
+
+- 修復 BankPay/status 模組 37 編譯錯誤至綠燈（`Serialize` 推導、const 轉 match 靜態切片、`StatusEngine: Clone`、bool 誤用 unwrap 移除、`permissions` 可見性）；該輪 `--features bankpay` 測試 13/13 通過（含新增 `erp_config` 持久化 3 測試）。
+- `erp_config` 設定持久化落地：`bankpay::{load,save}_config`（冪等 UPSERT，`config_id`=`bankpay:{key}`）＋ POST 先持久化後記憶體（fail-closed）＋啟動載入；runtime smoke（登入→`/api/status`→config POST/GET→erp_config 5 列）通過（14:26-14:27）。
+- 稽核 NULL 毒化修復：`api.rs`（儀表板最近稽核）＋ `cross_module_api.rs`（audit_list／audit_export）三處 `COALESCE`。
+- 分頁語義確認：儀表板頁尺寸=`LIST_PAGE_SIZE`(20)（非 5；5 僅供未分頁 recent 概觀）；`clamp_page` 夾限以 runtime smoke 驗證。
+- 新增 `platform/tests/bankpay_persistence.rs`（21 筆→`第 2 / 2 頁`、超頁夾限、config 持久化跨「重啟」、session 跨重啟皆斷言；已適配 `X-CSRF-Token` 契約）；**PASS**：`cargo test -p platform --test bankpay_persistence` 1 passed / 0 failed（1.16s，15:44）；同輪全平台 97+16 測試 0 失敗、fmt EXIT=0。clippy 12 警告全在並行流收斂中新碼（bankpay/api.rs 10×`result_large_err`＋2×`div_ceil`），建議以 `ApiError{status,message}` 小結構＋`impl IntoResponse` 修復，由該串流重跑。
+- 觀察：並行流架構收斂 — `time`→`chrono`、移除 `bankpay` feature 閘控（零新增依賴）、bankpay JSON API 加 `X-CSRF-Token`、audit 匯出加 CWE-1236 公式注入防護。

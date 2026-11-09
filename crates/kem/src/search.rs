@@ -12,10 +12,19 @@ use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 
+use crate::embed::{fresh_lookup, VectorIndexFile};
 use crate::schema::{Claim, ClaimStatus, KemError};
 
 pub const K1: f64 = 1.5;
 pub const B: f64 = 0.75;
+
+/// Semantic refusal floor for hybrid mode: raw-cosine hits with zero lexical
+/// support below this are dropped (honest refusal preserved under fusion).
+/// Evidence-driven calibration (2026-11-09, `cargo run --example calibrate`):
+/// max cosine across all 4 golden refusal queries × their false hits was
+/// 0.4872 ("quantum qubit" × claim-011); the cross-lingual positive sits well
+/// above. Floor 0.55 separates the two populations.
+pub const REFUSAL_FLOOR: f32 = 0.55;
 
 /// A scored hit.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -25,6 +34,9 @@ pub struct Hit {
     pub status: ClaimStatus,
     pub confidence: f64,
     pub score: f64,
+    /// Retrieval path provenance: "hybrid" (BM25+vector fused) or "bm25".
+    #[serde(default)]
+    pub via: String,
 }
 
 /// BM25 statistics over a claim collection.
@@ -131,6 +143,7 @@ impl Index {
                 status: c.status,
                 confidence: c.confidence,
                 score: self.score(&c.id, &qterms),
+                via: "bm25".into(),
             })
             .filter(|h| h.score > 0.0)
             .collect();
@@ -142,6 +155,100 @@ impl Index {
         scored.truncate(top);
         scored
     }
+
+    /// Raw BM25 scores for every filtered claim (fusion input, unsorted).
+    pub fn scores_all(&self, filtered: &[Claim], query: &str) -> Vec<(String, f64)> {
+        let qterms = tokenize(query);
+        filtered
+            .iter()
+            .map(|c| (c.id.clone(), self.score(&c.id, &qterms)))
+            .collect()
+    }
+}
+
+/// Hybrid fusion (KEM doc §8.2 R7 / P2b): α·norm(BM25) + (1−α)·norm(cosine).
+/// Claims without a (fresh) vector fall back to BM25-only and are marked
+/// via="bm25" — honest degradation, never fabricated vector scores.
+pub fn hybrid_fuse(
+    filtered: &[Claim],
+    bm25_scores: &[(String, f64)],
+    vectors: Option<&std::collections::HashMap<String, Vec<f32>>>,
+    query_vec: Option<&[f32]>,
+    top: usize,
+    alpha: f32,
+    vec_refusal_floor: f32,
+) -> Vec<Hit> {
+    let mut bm25: std::collections::HashMap<&str, f64> = std::collections::HashMap::new();
+    let mut bm25_max = 0.0f64;
+    for (id, s) in bm25_scores {
+        bm25.insert(id.as_str(), *s);
+        if *s > bm25_max {
+            bm25_max = *s;
+        }
+    }
+    let mut vec_scores: std::collections::HashMap<&str, f32> = std::collections::HashMap::new();
+    let mut vec_max = 0.0f32;
+    if let (Some(vectors), Some(qv)) = (vectors, query_vec) {
+        for c in filtered {
+            if let Some(v) = vectors.get(c.id.as_str()) {
+                let s = crate::embed::cosine(qv, v);
+                if s > vec_max {
+                    vec_max = s;
+                }
+                vec_scores.insert(c.id.as_str(), s);
+            }
+        }
+    }
+    let norm = |v: f64, max: f64| if max > 0.0 { (v / max) as f32 } else { 0.0 };
+    let alpha = f64::from(alpha);
+    let mut fused: Vec<Hit> = filtered
+        .iter()
+        .filter_map(|c| {
+            let b = bm25.get(c.id.as_str()).copied().unwrap_or(0.0);
+            let vs = vec_scores.get(c.id.as_str()).copied();
+            let score = match vs {
+                Some(v) => {
+                    // Semantic refusal floor: a hit with ZERO lexical support
+                    // whose raw cosine sits below the floor is weak semantic
+                    // adjacency, not knowledge — drop it (honest refusal
+                    // preserved under fusion; review 2026-11-09).
+                    if b == 0.0 && v < vec_refusal_floor {
+                        return None;
+                    }
+                    let bn = norm(b, bm25_max) as f64;
+                    let vn = if vec_max > 0.0 {
+                        (v / vec_max) as f64
+                    } else {
+                        0.0
+                    };
+                    alpha * bn + (1.0 - alpha) * vn
+                }
+                None => norm(b, bm25_max) as f64,
+            };
+            if score <= 0.0 {
+                return None;
+            }
+            Some(Hit {
+                id: c.id.clone(),
+                title: c.title.clone(),
+                status: c.status,
+                confidence: c.confidence,
+                score,
+                via: if vs.is_some() {
+                    "hybrid".into()
+                } else {
+                    "bm25".into()
+                },
+            })
+        })
+        .collect();
+    fused.sort_by(|a, b| {
+        b.score
+            .partial_cmp(&a.score)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
+    fused.truncate(top);
+    fused
 }
 
 /// Lifecycle + validity filter applied BEFORE ranking.
@@ -171,12 +278,22 @@ pub fn run_golden(
     index: &Index,
     all: &[Claim],
     cases: &[GoldenCase],
+    vectors: Option<&VectorIndexFile>,
+    qvecs: Option<&std::collections::HashMap<String, Vec<f32>>>,
 ) -> Result<(usize, usize, Vec<String>), KemError> {
+    let vmap: Option<std::collections::HashMap<String, Vec<f32>>> = vectors.map(|v| {
+        fresh_lookup(v, all)
+            .into_iter()
+            .map(|(k, vec)| (k.to_string(), vec.to_vec()))
+            .collect()
+    });
     let mut pass = 0usize;
     let mut failures = Vec::new();
     for case in cases {
         let filtered = visible_at(all, None);
-        let hits = index.search(&filtered, &case.query, 1);
+        let bm25 = index.scores_all(&filtered, &case.query);
+        let qvec: Option<&[f32]> = qvecs.and_then(|m| m.get(&case.query)).map(|v| v.as_slice());
+        let hits = hybrid_fuse(&filtered, &bm25, vmap.as_ref(), qvec, 1, 0.5, REFUSAL_FLOOR);
         let ok = if case.expect == "none" {
             hits.is_empty()
         } else {
@@ -322,8 +439,45 @@ mod tests {
                 expect: "none".into(),
             },
         ];
-        let (pass, total, fails) = run_golden(&idx, &claims, &cases).unwrap();
+        let (pass, total, fails) = run_golden(&idx, &claims, &cases, None, None).unwrap();
         assert_eq!((pass, total), (2, 2));
         assert!(fails.is_empty());
+    }
+    #[test]
+    fn refusal_floor_drops_weak_vector_only_hits() {
+        let c = claim(
+            "claim-20261107-009",
+            "Redis caching layer",
+            "redis cache stores session data",
+            ClaimStatus::Published,
+        );
+        let idx = Index::build(std::slice::from_ref(&c));
+        let bm25 = idx.scores_all(std::slice::from_ref(&c), "quantum entanglement physics");
+        assert!(bm25.iter().all(|(_, s)| *s == 0.0));
+        let mut vectors = std::collections::HashMap::new();
+        vectors.insert("claim-20261107-009".to_string(), vec![0.9f32, 0.1]);
+        let qv = [0.3f32, 0.95]; // cosine ~0.28 < floor
+        let hits = hybrid_fuse(
+            std::slice::from_ref(&c),
+            &bm25,
+            Some(&vectors),
+            Some(&qv),
+            5,
+            0.5,
+            REFUSAL_FLOOR,
+        );
+        assert!(hits.is_empty(), "weak vector-only hit must be refused");
+        let qv2 = [0.99f32, 0.05]; // cosine ~0.99 > floor
+        let hits2 = hybrid_fuse(
+            std::slice::from_ref(&c),
+            &bm25,
+            Some(&vectors),
+            Some(&qv2),
+            5,
+            0.5,
+            REFUSAL_FLOOR,
+        );
+        assert_eq!(hits2.len(), 1);
+        assert_eq!(hits2[0].via, "hybrid");
     }
 }

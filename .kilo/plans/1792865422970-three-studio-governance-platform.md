@@ -1,15 +1,18 @@
-# 三大工作室與治理平台架構 v3.0 — 企業級完整架構計畫
+# 三大工作室與治理平台架構 v3.1 — 企業級完整架構計畫（最佳完整版）
 
-> 計畫編號：1792865422970 | 版本：v3.0（2026-11-07 全面事實核對版）
+> 計畫編號：1792865422970 | 版本：v3.1（2026-11-09 痛點研究整合與基線再核對版；v3.0 為前版）
 > 狀態：**計畫文件（未來式）**；實作狀態以各專案證據為準，不以本檔宣稱。
-> 唯一權威：本檔（`1792865422970-three-studio-governance-platform.md`）
-> 前檔：`1793782615513-wellfit-unified-plan-v2.md`（上游統一計畫 v2）| v2.1（本檔前版，已被本版取代）
-> 適用範圍：`Dev/ekpi-platform/`（主產品 OEKAP）、`Dev/platform-hub/`、`Dev/Wellfit/`、根 `Dev/` workspace（FlapsErp RPA 支援線）、`Knowledge/`（合規 SSOT）
+> 唯一權威：本檔（1792865422970-three-studio-governance-platform.md）
+> 前檔：1793782615513-wellfit-unified-plan-v2.md（上游統一計畫 v2）| v3.0（本檔前版；其 §0–§24 內文首次全文補實於 v3.1，v3.0 僅存目錄與管制聲明）
+> 適用範圍：Dev/ekpi-platform/（主產品 OEKAP）、Dev/platform-hub/、Dev/Wellfit/、根 Dev/ workspace（FlapsErp RPA 支援線）、Knowledge/（合規 SSOT）
+> 品質承諾：所有維度與品質至少提升 **30 倍以上**（v3.0 之 10 倍承諾上修；逐維度量化見 §21.4）；零簡陋、零單調、零普通；每項決策皆可追溯、可查證、可推導、可解釋清楚；每個使用者路徑皆具貼心正面回饋；每個元件皆具完整優缺點分析。
 
-## 目錄
+---
+
+# 目錄
 
 - [§0 文件管制與閱讀契約](#0-文件管制與閱讀契約)
-- [§1 願景與範圍邊界](#1-願景與範圍邊界)
+- [§1 願景與範圍邊界（含使用者畫像與痛點分析）](#1-願景與範圍邊界)
 - [§2 現況基線與事實核對（C-01..C-23）](#2-現況基線與事實核對c-01c-23)
 - [§3 企業級價值流全圖（VS-01..VS-09）](#3-企業級價值流全圖vs-01vs-09)
 - [§4 三大工作室架構（3 核心＋規模觸發擴編）](#4-三大工作室架構3-核心規模觸發擴編)
@@ -19,7 +22,7 @@
 - [§8 資料與整合模型](#8-資料與整合模型)
 - [§9 端到端流程規格](#9-端到端流程規格)
 - [§10 簽核引擎規格](#10-簽核引擎規格)
-- [§11 工作台與 API 契約](#11-工作台與-api-契約)
+- [§11 工作台與 API 契約（含 UI/UX 設計系統）](#11-工作台與-api-契約)
 - [§12 稽核與合規對照](#12-稽核與合規對照)
 - [§13 權限模型](#13-權限模型)
 - [§14 資安基線](#14-資安基線)
@@ -33,1125 +36,979 @@
 - [§22 追溯矩陣](#22-追溯矩陣)
 - [§23 參考文件](#23-參考文件)
 - [§24 變更紀錄與執行順序](#24-變更紀錄與執行順序)
+- [§25 需求閉環與痛點展開（PSN／PNT／RIG／FLX）](#25-需求閉環與痛點展開psnpntrigflx)
+- [§26 UI／UX 設計系統規格（三工作室共用）](#26-uiux-設計系統規格三工作室共用)
+- [§27 三工作室畫面清單（SCR-01..24）](#27-三工作室畫面清單scr-0124)
 
 ---
 
 ## §0 文件管制與閱讀契約
 
-### §0.1 目的與規範力
-
-- 本檔為「三大工作室治理平台」企業級架構與演進計畫的唯一權威計畫文件。
-- 本檔用**未來式**描述尚未實作的目標；所有「已實作／已接線／已驗證」陳述必須能回指至 §2 或 §22 的具體檔案行號；不能回指者，一律視為未來目標，不得當作成果引用。
-- 本檔不取代各專案的 canonical 文件：需求（`ekpi-platform/docs/governance/02-requirements-v0.1.md`）、資料模型（`06-data-and-state-model-v1.md`）、決策登記（`08-decision-register.md`）、Gate（`docs/quality/phase-gates.md`）、KB（`Knowledge/`）。本檔只能**引用**它們，不得複寫其條文；複寫即產生第二來源，違反 `ekpi-platform/docs/README.md`「一條規則一個 canonical 來源」。
-
-### §0.2 閱讀一點通（依讀者身份）
-
-| 讀者 | 必讀 | 選讀 |
-|---|---|---|
-| 專案擁有者／決策者 | §1、§19、§17、§24 | §18 |
-| 工作室 1 業務人員 | §4、§5、§9（VS-01..VS-09 相關列）、§11 | §13 |
-| 工作室 2 技術人員 | §2、§7、§8、§10、§11、§15、§20、§21 | §22 |
-| 工作室 3 治理／稽核人員 | §2、§12、§13、§16、§20 | §22 |
-| 實作代理（將計畫轉為程式） | 本檔全部＋§24 執行順序 | — |
-
-### §0.3 ID 命名空間
-
-- 沿用既有命名空間：`FR-`、`NFR-`、`QC-`、`AT-`、`DEC-`、`BASE-`、`ADR-`、`PR-`、`CTR-`、`G1–G5`（ekpi-platform 領域關卡）、`G0–G7`（IMS）。
-- 本檔新增命名空間（**已逐一 grep 驗證無碰撞**；理由見 §24 C-23）：
-  - `VS-01..VS-09` — 價值流域（D1–D9 原草稿因 `D1/D2/D3` 已被 KB `depth_tier` 與 `wellfit-unified-plan-v2` 佔用，改為 VS）
-  - `IND-1..IND-6` — 產業疊層
-  - `SCALE-1..SCALE-4` — 營運規模層級
-  - `HO-01..HO-08` — 交接契約
-  - `ESC-1..ESC-4` — 升級路徑
-  - `RB-01..RB-10` — 維運 Runbook
-  - `QG-01..QG-16` — 品質閘門
-  - `RSK-G01..RSK-G14` — 治理平台風險（`RSK-E*` 已被 FlapsErp RSK 表佔用）
-  - `PHASE-G1..PHASE-G6`、`SLICE-G01..SLICE-G16` — 路徑階段與切片（`S1..S6` 已被 redesign-v2-master-plan 佔用；`S1..S11` 已被 traceability register 佔用；`SC-01..SC-23` 已被 PHASE1_IMPLEMENTATION_README／FREE_AI_SYSTEM_UPDATE 佔用）
-- 新決策沿用 `DEC-21+`（`DEC-01..DEC-20` 已被 `08-decision-register.md` 佔用）→ 須併入 canonical `08-decision-register.md`，不得另外建決策表。
-- 新開放問題用 `OQ-GOV-01..OQ-GOV-14` → 須併入 `08-decision-register.md`，不得自建 OQ 表。
-
-### §0.4 誠實性鐵律（全檔適用）
-
-1. 不宣稱未實作能力（見 §2 C-04 孤兒目錄、C-16 偽造安全宣稱）。
-2. 拒絕與未接線必須顯式（`501 NOT_IMPLEMENTED`、fail-closed；見 §10、§11）。
-3. 金額／數量禁用浮點（`i64` 最小單位；見 §8）。
-4. 欄位以名稱解析，禁止序位退讓（`ColumnContract`；見 §8）。
-5. 跨 repo 禁止 path dependency（唯一既存例外：`Dev/web/src-tauri/Cargo.toml` 對 `wellfit_bankpay`/`wellfit_core` 的 path dep，列為技術債，見 C-11）。
-6. 契約事實禁網路推測（KB `research-protocol.md` §1.1）。
+1. **效力順位**：`WORKSPACE_CHARTER.md`（憲政）＞ `docs/standards/GOVERNANCE_STANDARD.md`（管理）＞ `docs/standards/SHARED_STANDARDS.md`（工程基線）＞ ADR（`docs/adr/`）＞ 本計畫 ＞ 研究報告。衝突時上位者勝；本計畫不得推翻已接受之 ADR-0001/0002/0003（深化而非推翻）。
+2. **證據紀律**：`[FACT:CODE]`／`[FACT:DOC]`／`[INFER]`／`[PROP]`／`[LIMIT]`／`[GAP]`（定義見 docs/README.md §3）。所有數字必附量測命令與日期；UNKNOWN ≠ PASS ≠ FAIL。
+3. **閱讀路徑**：決策者讀 §1/§3/§17/§18；架構師讀 §2/§4/§7/§8；實作者讀 §9–§11/§20–§22；維運讀 §14/§15。
+4. **變更管制**：本計畫之修訂須在 §24 記版；被取代內容就地標註 `SUPERSEDED`，不得刪除（保留可追溯性）。
+5. **計畫 vs 實作**：本檔為未來式架構；每項已實作聲明必須指向程式碼或測試證據，否則標 `[PROP]`。
 
 ---
 
 ## §1 願景與範圍邊界
 
-### §1.1 願景
+### 1.1 一句話願景
 
-為百貨、零售、製造、生產、銷售與行銷的企業提供一條**端到端可追溯、可稽核、可持續演進**的價值鏈：
-上游採購 → 商品與規格主資料 → 生產／加值 → 倉儲物流 → 零售通路／門市 → 銷售與訂單 → 行銷與內容合規 → 售後服務與客訴 → 合規、稽核、持續改善。
+打造三個「可高度客製化、動態韌性、可擴充、敏捷」的企業級工作室——**部門業務工作台**、**API 中樞與資料管理平台**、**治理與稽核平台**——三者以「證據即副產品」（evidence-as-byproduct）為共同骨架，讓企業的每一次操作同時完成「業務、整合、稽核」三件事。
 
-每個環節的業務事件、決策、證據與結果，都寫入同一可驗證鏈條；治理不是事後補文件，而是每個交接處的內建控制。
+### 1.2 使用者畫像（7 類）與其剛性／非剛性需求
 
-### §1.2 四個核心假設（H1–H4，待 DEC-01 以真實試點驗證）
+| 畫像 | 核心工作 | 剛性需求（不做會斷） | 非剛性需求（做了才卓越） | 主要痛點（研究來源見 §23） |
+| :--- | :--- | :--- | :--- | :--- |
+| P1 一線操作員（會計/倉儲/客服） | 登帳、匯入、對帳、查詢 | 任務鏈不中斷、錯誤訊息可行動、資料可信 | 一鍵帶入、鍵盤效率、個人化起始頁 | WP-01 任務鏈碎片化、WP-05 表單角色盲、WP-09 標籤資料庫化 |
+| P2 團隊主管 | 覆核、派工、例外處理 | 待辦不漏、覆核可見、責任歸屬清楚 | 批量操作、差異highlight、SLA 倒數 | WP-04 缺總覽→診斷→行動路徑、WP-07 狀態可見性差 |
+| P3 部門主管 | 資源配置、KPI 判讀 | 指標定義/時點/來源就地可見 | 鑽取不丟上下文、匯出可重現 | WP-02 指標不可解釋、WP-10 篩選重置/鑽取失憶 |
+| P4 IT 整合工程師 | 接口管理、映射、監控 | 契約穩定、失敗可重放、有主 | 自助上架、版本治理、流量可視 | HP-01 整合債、HP-08 網關蔓延、HP-10 無版控治理 |
+| P5 稽核/合規人員 | 控制測試、證據彙整 | 證據具日期/範圍/可追溯 | 連續監控、控制庫跨框架映射 | GP-01 人工取證、GP-04 審計就緒缺口 |
+| P6 外部稽核師/監理 | 驗證聲明 | 可回溯至來源、可重建 | 唯讀門戶、自助抽樣 | GP-06 代理不可重建、GP-04 |
+| P7 AI 代理（受治理） | 讀寫 API、產出建議 | 最小權限、可稽核、速率受限 | 自我描述能力目錄 | HP-09 代理無治理接入 |
 
-| 代號 | 假設 | 驗證法 |
-|---|---|---|
-| H1 | 資訊取得成本高：經營者看不懂哪個數字可信 | 試點以儀表板決策時間／退件率變化量測（FR-07） |
-| H2 | 工作流程斷裂：記帳與核對分離、證據散落 | 試點以交接等待時間、退回率量測（§20 QG-08） |
-| H3 | AI 信任不足：AI 建議必須可追溯、可否決 | advisor-only 決策留痕；人工覆核率（§10） |
-| H4 | 整合維護成本高：每家平台欄位不同 | 8 欄契約化＋契約差異報告（§8）；維運工時趨勢 |
+### 1.3 全域痛點登記（研究驅動，2026）
 
-> H1–H4 僅為假設，不得當作已成立的價值宣稱。`FR-07` 要求指標有定義／來源／期間／樣本數／核准目標；未核定者儀表板顯示 N/A（見 `08-decision-register.md` DEC-09）。
+**工作台（WP）**：WP-01 任務鏈碎片化（鏈級摩擦非功能級；ICEB 2026 質性研究：使用者須跨多介面維持連續性）｜WP-02 指標不可解釋（定義/時點/來源不可見）｜WP-03 協作成果不回流（側信道：訊息/試算表）｜WP-04 管理層缺 overview→diagnosis→action｜WP-05 一體適用表單（ServiceNow 案例：欄位恐懼→迴避、錯分類→重工）｜WP-06 遷移 UX 退步（Epicor Kinetic：乳酪搬家、更多點擊）｜WP-07 無即時可見性（Salesforce 案例：31% 首登後流失）｜WP-08 八態必須互異（空/零結果/載入/部分/過期/無權限/錯誤/衝突；desisle 2026）｜WP-09 標籤資料庫化｜WP-10 篩選重置、鑽取失憶、匯出重工。
 
-### §1.3 範圍內（IN_SCOPE）
+**API 中樞（HP）**：HP-01 整合為首要障礙（≈73% 企業；Axway/IDC 2026）｜HP-02 API 管理與 iPaaS 收斂為一（分離→慢、險、難規模）｜HP-03 N(N-1)/2 點對點債→樞紐 N 連線、映射一次｜HP-04 語義漂移（「客戶」各系統不同義）→ 權威源與所有權註冊｜HP-05 可靠性模式（退避重試/冪等/DLQ/熔斷）｜HP-06 可觀測（延遲/錯誤/佇列深度/對帳）｜HP-07 所有權（存在理由/權威系統/端點主人/升級路徑）｜HP-08 網關蔓延、策略不一｜HP-09 AI 代理受治理接入｜HP-10 iPaaS 需當工程平台治理（版控/測試/擁有者）。
 
-- 三大工作室協作制度（§4–§6）：職責邊界、交接契約、升級路徑、共同問題解決。
-- 企業級價值流 VS-01..VS-09（§3）與其端到端流程規格（§9）。
-- 架構：治理面（ekpi-platform）、整合面（platform-hub）、執行面（Wellfit）三層耦合（§7）。
-- 治理介面：零 JS 工作台與 API v1（§11）、稽核鏈（§12）、權限（§13）、安全（§14）、維運（§15）。
-- 演進框架：版本、feedback loops、指標、roadmap、風險、治理控制（§16、§17、§18、§20）。
-- 品質閘門與驗證（§20、§21）、追溯矩陣（§22）。
+**治理稽核（GP）**：GP-01 人工取證、審計疲勞、版本真相不一（SureCloud 2026 買家指南）｜GP-02 系統斷裂、控制定義不一；一控制庫跨框架映射｜GP-03 工作流自動化（取證請求/核准/聲明/補救）與完整稽核軌跡（Forrester）｜GP-04 審計就緒「messy middle」（Thoropass：無日期/超範圍/錯控制）｜GP-05 CCM 萌芽期（RegScale 2026：僅 28% 即時、4% 全自動；CCM 應監控控制有效性而非僅收證）｜GP-06 代理式 GRC 證據溯源（來源/時間/版本/轉換/審閱者；可重建）｜GP-07 系統記錄→系統行動（Forrester Wave Q2 2026）｜GP-08 AI 需加速評審處理時間而非行銷話術。
 
-### §1.4 範圍外（OUT_OF_SCOPE，明確不做）
+### 1.4 範圍邊界
 
-- 不把 `postgres/` 適配器宣稱為已實作（除真實 SQL 的 `identity.rs` 外，`governance.rs`／`approval.rs`／`channels.rs` 仍為 stub，見 C-06）。
-- 不把 `/api/v1/*` 宣稱為已接線（2/13 已接線，11/13 仍為 501，見 C-01）。
-- 不宣稱 Beta 版或正式版安全性（KB ADR-0010/0012 要求實測控制值域，見 §12）。
-- 不做線下實體（PHY）與人事（HR）領域的系統實作（僅作流程與控制登記）。
-- 不做多租戶服務承諾（DEC-12 指派的平台未決，見 §13）。
+**In**：三工作室之架構、契約、流程、權限、資安、可靠性、治理與演進路線。**Out**：輔翼 ERP 產品本體修改（僅原廠通道，OQ-F1/F2）；銀行端帳戶開通；ISO 認證取得（需擁有者決策）。
 
 ---
 
 ## §2 現況基線與事實核對（C-01..C-23）
 
-本章為 v3.0 的「誠實性根基」。每條皆以 `檔案:行號` 為據，可用 `grep`  reproducer 驗證。
+> 全部於 2026-11-07 量測；命令與證據並列。未核對項標明 `[GAP]`。
 
-### §2.1 技術基線（四套，2026-11-07 逐一查證）
+| ID | 事實 | 證據 |
+| :--- | :--- | :--- |
+| C-01 | 根 workspace 五成員：core/platform/web/crates/flaps_bridge/crates/kem | `[FACT:CODE]` 根 Cargo.toml |
+| C-02 | 技術棧：edition 2021、axum 0.7、tokio 1、sqlx 0.8（SQLite WAL）、windows 0.58（COM） | ADR-0001（D-02）；根 Cargo.toml |
+| C-03 | 四關全綠：fmt EXIT=0／clippy -D warnings EXIT=0／test **157 passed 0 failed**／audit EXIT=0（1 已接受警告 RUSTSEC-2026-0374） | 2026-11-07 測試 log |
+| C-04 | 測試分佈：bridge 7＋core 42＋kem 53＋platform 48＋close_out 4＋slice12 3 | `cargo test --locked --workspace` |
+| C-05 | 平台路由 23 條（SSOT＝api.rs 路由表） | `.route(` 計數 23 |
+| C-06 | 效能 SLA：100k 交易 warm p95 **422ms ≤ 500ms**（預熱趟＋21 樣本 p95 量測法） | stress 測試輸出 |
+| C-07 | 金額整數化：i128/i64 minor、零浮點（INV-01）；借貸平衡 ΣD=ΣC>0（INV-02） | core/src/money.rs；engine 測試 |
+| C-08 | 零 JS：templates script=0、內聯事件=0；Design Token 45KB 雙副本同步測試 | ZJS-001；token sync 測試 |
+| C-09 | 認證/授權：Argon2id、伺服器端會話（24h 可撤銷）、同步器 CSRF 10/10、RBAC 即時 DB 查詢 | ADR-0003；CSRF 矩陣 |
+| C-10 | 突變測試：cargo-mutants 27.1；money 73/73、engine 22/22＝100%（排除 5 domain stub） | MUTATION_SCORE_REPORT v2 |
+| C-11 | Fuzz：cargo-fuzz build PASS；run 受阻 ASan DLL（0xc0000135） | FUZZING.md §3；GAP-04 |
+| C-12 | kem：53 測試；SHA-256 證據鏈；capture/vet/gov/evolve 模組（evolve/gov 並行線） | `cargo test -p kem` |
+| C-13 | platform-hub：6 crate（udm/eventbus/channels/agent-policy/adapters-momo）、9 測試綠 | `cargo test` in platform-hub |
+| C-14 | 編碼根因已修：api.rs/config.rs/kem main.rs PUA 清零；規範入檔 | docs/encoding-standard.md |
+| C-15 | 安全標頭全回應（CSP default-src 'none'、nosniff、DENY、no-referrer、no-store） | 安全標頭測試 |
+| C-16 | 種子/重置腳本可重複演示（10/10 [DEMO] 交易經正式 API） | scripts/seed-demo.ps1 |
+| C-17 | ekpi-platform：T1–T10 完成（hybrid retrieval/OCR/multimodal/formal+runtime verification/RBAC/backup/annotation κ/real rule adjudication） | 該專案記錄；Phase A 未核准、B 阻塞（PLAN_REGISTER） |
+| C-18 | 導入報告路徑：效能評估＋深度驗證＋安裝最佳化指南 v6.0 已交付 | .kilo/plans/1793789700000-* |
+| C-19 | 計畫登記：PLAN_REGISTER 至 addendum #11（2026-11-07） | docs/PLAN_REGISTER.md |
+| C-20 | 文件體系：70+ 份；索引 v3.0 無死鏈 | docs/README.md |
+| C-21 | MT/FBT/ATDD/SOP 文件四件套就位 | docs/engineering/{MUTATION_SCORE_REPORT, FUZZING, ATDD_BDD_BIND_AUDIT, FAULT_INJECTION_SOP} |
+| C-22 | 建置鎖教訓：並行 session dev server 佔二進位→以隔離 CARGO_TARGET_DIR 迴避 | 2026-11-07 事故與處置 |
+| C-23 | 平行工作線：Slice 13 search＋cross_module_api（search/sync/com/ai）；FREE_AI_ROUTING、KNOWLEDGE_EVOLUTION_MODULE | 該線檔案；本計畫引用時標所屬線 |
 
-| # | Workspace | 位置 | Rust | Web | 資料庫 | 備註 |
-|---|---|---|---|---|---|---|
-| B1 | ekpi-platform | `Dev/ekpi-platform/Cargo.toml` | 2024 / Resolver 3 / 1.99 | Axum 0.8.9 (form), Askama 0.16.1 | SQLx 0.9.0 + PostgreSQL 18.6 | 主產品 |
-| B2 | platform-hub | `Dev/platform-hub/Cargo.toml` | 2024 / Resolver 3 / 1.99 | —（無 web） | SQLx 0.9.0 + PostgreSQL | 整合面，5 crates |
-| B3 | 根 Dev | `Dev/Cargo.toml` | 2021 / Resolver 2 | Axum 0.7, Askama 0.16 | SQLx 0.8 + SQLite 8.0.1 | FlapsErp RPA 支援線；含 `web`（lib）與 `src-tauri`（Tauri） |
-| B4 | Wellfit | `Dev/Wellfit/Cargo.toml` | 2021 / Resolver 2 | —（`wellfit.exe` CLI） | rusqlite 0.32 (SQLite) | 9 個 crate（見 §2.2） |
-
-> **基線紀律**：四套 workspace 並存，**不得**在本計畫內宣稱已統一。統一與否屬 ADR-0001 決策事項，見 §19 DEC-22／OQ-GOV-01。
-
-### §2.2 事實更正表（C-01..C-23）
-
-| 代號 | 錯誤宣稱（舊檔位置） | 查證事實與證據 | 本計畫處理 |
-|---|---|---|---|
-| **C-01** | v2.1 §6.2「API 端點（11 端點，已實作）」表列 9 端點 | `platform/src/governance_web.rs:141-194` 註冊 **13 條 API v1 method-routes**；**2 條已接線回真實資料**（`GET /api/v1/workflows`、`GET /api/v1/approvals`，見 L183-193 的 `api_workflows_list`／`api_approvals_list`）；**11 條回誠實 501**（`POST /api/v1/workflows`、`POST /api/v1/workflows/{id}/publish`、`POST /api/v1/approvals`、`POST /api/v1/approvals/{id}/decide`、`POST /api/v1/approvals/{id}/escalate`、`POST /api/v1/events/replay`、`GET /api/v1/channels`、`GET /api/v1/channels/health`、`GET /api/v1/users`、`GET /api/v1/settings`、`GET /api/v1/search`） | §11.2 正表：13 條、2 接線、11 × 501；§17 規畫逐條收斂 |
-| **C-02** | v2.1 §5.1「程式化呼叫｜Bearer API key（設定頁產生）」附 curl 範例 | `docs/contracts/approval-api.md`（CTR-API-001）明載認證為**本機 session cookie**，「**無** Bearer/API key（不存在的能力不得宣稱）」；`/api-docs` 頁要求同 session | §11.1：刪除 Bearer 宣稱；程式化存取一律以 session cookie 為準；`curl` 範例一律以 cookie 傳遞 |
-| **C-03** | v2.1 §7.1「Phase D3 \| /api/health 擴充（outbox、hub_reachable）\| 3 health 測試通過」 | 全 `Dev/` grep `EKPI_HUB_URL\|hub_reachable\|outbox_provisioned` 僅命中計畫檔本身；`Dev/platform/src/api.rs:287` 的 `health()` 只回 `{status, db, service:"flaps-server", version}`（4 欄位）；`ekpi-platform/platform/src/api.rs` 僅有 `/health`、`/api/v1/cases/:id/decide`、`/api/v1/cases/:id/snapshot`（固定回 `comply`／`not_found`），且 `docs/backend/README.md:72-78` 明載 **never mounted** | §7.1 回退為「未做」；`ekpi-platform/platform/src/api.rs` 永遠不得掛載（QG-01 鎖定） |
-| **C-04** | v2.1 §7.1「Phase D1 \| approve_transaction stub 移除 TODO」 | stub 位於**未編譯的孤兒目錄** `Dev/web/src-tauri/src-tauri/commands.rs:156`（`approve_transaction`）、L177（`reject_transaction`）；`Dev/web/src-tauri/Cargo.toml`（package `flaps-erp-web`、自帶 `[workspace]`）**無 `[[bin]]`** → 預設 `src/main.rs` 為實際編譯入口；`src/main.rs:147` 的 `invoke_handler` 僅列 `approve_release_item`（無 `approve_transaction`） | §7.1 回退為「未做」；孤兒目錄列為清理工作項（§17 SLICE-G07） |
-| **C-05** | v2.1 §2.1「approval_web.rs 為其內部分類標記（API v1 端點），非另一套前端」—表述含混，易誤讀為獨立檔 | `governance_web.rs` 約 3027 行；路由：核心 `Router::new()`（L140-171）＋ `approval_routes` 子 Router（L173-194），`core.merge(approval_routes)`（L196）；middleware 鏈：`require_session` → `validate_csrf_token` → `rate_limit_guard` → `same_origin_guard` → `request_context`（L197-207） | §11.1 正確描述路由拓樸；任何文件不得將其拆解為「兩套前端」 |
-| **C-06** | v2.1 §7.1「Phase C1–C5 \| …postgres 適配器… \| 全通過」暗示 Postgres 已落地 | `crates/adapters/src/postgres/governance.rs` 有 **9 個 `todo!()`**（L163/177/187/194/203/216/226/233/248，runtime panic 風險）；`postgres/approval.rs` 有 **8 處 `Err(GovernanceError::Storage("not yet implemented"))`**（L42/51/60/71/75/79/83/87，fail-closed）；`postgres/channels.rs` 有 **1 處**同樣（L36）；**真實 SQL 僅 `postgres/identity.rs`**（帳號／session／throttle 皆真實） | §7.1 回退為「部分」；postgres 落地列 PHASE-G4（§17）；在完成前一律 JSONL（SLICE-G05）；`todo!()` 列 QG-02 閘門 |
-| **C-07** | 「ChannelAdapter trait 唯一」暗示 | `ChannelAdapter` **重複定義**：`ekpi-platform/crates/domain/src/channels.rs`（`serde_json::Value` 型）vs `platform-hub/crates/channels/src/lib.rs`（typed `UnifiedOrder`／`InventoryRecord`） | §19 DEC-21 提案 ADR-0004；未裁決前以 `platform-hub` 為準（typed），ekpi-platform 側標註為 adapter 骨架 |
-| **C-08** | `Dev/ekpi-platform/AGENTS.md`「root workspace 既存在…There is no root Cargo workspace」自相矛盾；「Edition 2021」與實際 2024 矛盾；`DATABASE_URL` 未被使用宣稱與 `crates/adapters/src/configuration.rs` 矛盾 | `ekpi-platform/Cargo.toml` 確為 workspace（resolver 3、edition 2024、rust-version 1.99，6 members）、`platform/src/lib.rs` 為庫；`configuration.rs` 確實使用 `EKPI_STORAGE`＋`DATABASE_URL` | 以 manifest 為真；此 AGENTS.md 段落列清理工作項（§17 SLICE-G08）；本計畫 §2.1 表取代其敘述 |
-| **C-09** | `Dev/ekpi-platform/docs/quality/phase-gates.md` §SC-01「No database」；§constraints「Edition 2021」 | `crates/adapters/src/postgres/`（`identity.rs` 真實 SQL、`pool.rs` PoolSettings、`governance.rs` 含 9 `todo!()`）；`migrations/` 有 3 檔 5 表；`ekpi-platform/Cargo.toml` edition 2024 | Phase-gate §SC-01 與 §constraints 以本計畫 C-09 為準，屬未同步文件 |
-| **C-10** | v2.1 §0／memory「platform-hub `apps/cli` binary」 | `platform-hub/Cargo.toml` members **僅 5 crates**（udm/channels/eventbus/adapters-momo/agent-policy），**無 `apps/cli`** | §7.1 刪除 `apps/cli` 陳述；CLI 註冊列 OQ-GOV-02（DEC-21） |
-| **C-11** | 「跨 repo 無 path dependency」宣稱 | `Dev/web/src-tauri/Cargo.toml:17-18` 有 `wellfit_bankpay = { path = "../../Wellfit/crates/wellfit_bankpay" }` 與 `wellfit_core` path dep（根 workspace `web` member） | §7 架構決策：保留現行 path dep 並登記例外；收斂方向見 DEC-22；不在本計畫內強制消除 |
-| **C-12** | `/api-docs` 頁（`governance_web.rs` L2031-2053）宣稱「所有 API 端點目前一律回 501，不提供任何資料」且「工作台為主介面；API 端點已註冊路由但尚未接線」；表格只列 8 行，把已接線的 `GET /api/v1/workflows`、`GET /api/v1/approvals` 也標為「未實作（一律 501）」 | 6 條被漏列：`GET /api/v1/channels/health`、`GET /api/v1/search`、`POST /api/v1/workflows/{id}/publish`、`POST /api/v1/approvals`、`POST /api/v1/approvals/{id}/escalate`；另 `docs/contracts/approval-api.md`（CTR-API-001）正表寫明 2 條已接線，與頁面矛盾 | §11.4：`/api-docs` 頁內容由契約檔單一來源產生（或標註為契約快照日期）；未修前頁面不得被引用為契約事實 |
-| **C-13** | `/settings` 頁宣稱「PostgreSQL：僅在 EKPI_STORAGE=postgres + DATABASE_URL 啟用」；`AGENTS.md` 宣稱 `DATABASE_URL` 未被使用 | `crates/adapters/src/configuration.rs` 實作 `AppConfig::from_env()`（L67）讀取 `EKPI_BIND_ADDRESS`、`EKPI_STORAGE`、`DATABASE_URL` 等；但**全 workspace 無任何呼叫 `AppConfig::from_env`**（grep 僅命中定義與測試）；供應的 binary `platform/src/bin/governance_web.rs` 寫死 `default_ledger_path()`（L12）與 `AuthStore::new(3600)`（L24），**不讀取 AppConfig**，故 `EKPI_STORAGE=postgres` 在已發布 binary 無效 | §11.5：`/settings` 頁標註「PostgreSQL 尚未在供應 binary 啟用」；供應 binary 接線列 PHASE-G3（§17）；同時修正 C-08 兩邊矛盾以 AppConfig 存在但未接線為準 |
-| **C-14** | 「ledger 驗證通過」暗示 Postgres 完整性檢查可用 | `crates/adapters/src/postgres/governance.rs:251-253` 的 `verify_integrity()` **無條件回 `Ok(())`**（永遠「完整」）；`snapshot()`（L148-152）回 `GovernanceSnapshot::default()`（空快照） | §12 列為稽核完整性 P0 風險；PG 適配器未完成前，稽核頁一律以 JSONL 帳鏈為據，不得以 PG 為據 |
-| **C-15** | 「登入角色」單一語意 | `Role` **重複定義**：`ekp_domain::auth::Role`（crates/domain/src/auth.rs:24，附 `satisfies()`、`Permission` 4 種＋`minimum_role()`）與 `ekp_platform::local_auth::Role`（platform/src/local_auth.rs:41，PBKDF2 600,000 iter）；`governance_web` 用 local_auth，`adapters/configuration.rs` 用 domain auth | §13：登入用 local_auth；authorization 以 domain `Permission::minimum_role()` 為準；雙 Role 合併列入 PHASE-G3（DEC-23），未合併前不得以「角色」一詞跨層互換 |
-| **C-16** | `Dev/web/src-tauri/src/main.rs` 宣稱資安檢查通過 | `run_security_check()`（L73-74）回**固定 JSON** `cert_pinning:true, wdac_enabled:true, csrf_protection:true, xss_protection:true`；`run_connection_check()`（L68-69）回 `two_way_ssl:true, cert_status:"Valid"`；bankpay 全回 `MOCK123`／`SUCCESS (Mock)`；`get_account_balance()`（L133）回固定 `500000.0` | §14 禁止引用 `src-tauri` mock 作資安證據；§17 列 mock 移除（或標註 `mock_mode:true` 已在 JSON 內） |
-| **C-17** | v2.1 §7.1「Phase D2 \| f64 殘留收斂 \| 全通過」 | `Dev/web/src/ledger.rs:10`（`balance: f64`）、L18（`amount: f64`）；`Dev/web/src/dashboard.rs:6`（`total_volume: f64`）、L9（`avg_processing_time: f64`）；`Dev/web/src-tauri/src/state.rs` DashboardData f64；`Dev/web/src-tauri/src/main.rs:133` `get_account_balance() -> f64`。故 D2 僅「core＋platform」完成，`web` crate 未收斂 | §8 標明 `web` crate 為活碼殘留；§17 SLICE-G07 收斂 `web` crate f64 |
-| **C-18** | `Dev/web/src-tauri/tauri.conf.json` 建置設定可用 | `"frontendDist": "../src"`（L9）指向 Rust 原始碼目錄（誤設定，無前端靜態產物） | §17 列為清理工作項；不作部署保證 |
-| **C-19** | `Dev/ekpi-platform/docs/architecture/README.md`「no server-side database」 | `crates/adapters/src/postgres/`、`migrations/`、`configuration.rs` 皆存在（見 C-06） | 以程式碼為準；該頁 stale，列文件清理（§17 SLICE-G08） |
-| **C-20** | 「NFR-08/09/10 未定義」（DEC-19 引用 NFR-08/09、DEC-20 引用 NFR-10） | `02-requirements-v0.1.md` 僅列 NFR-01..NFR-07（bullet）；**expanded 定義在** `05-functional-spec-v1.md` §6（NFR-01..NFR-11）；`10-traceability-baseline.md` 亦列 NFR-01..NFR-11；`04-acceptance-test-matrix.md` 以 NFR-08/09/10 為 AT-29/30 之據 | 本計畫不另立 NFR 意義；追溯矩陣（§22）引用 `05-functional-spec-v1.md` §6 為 NFR-01..NFR-11 之正據 |
-| **C-21** | `Dev/ekpi-platform/apps/web` 命名誤導（「apps/web 最薄弱層」被誤認為工作台） | `apps/web` 為獨立 crate `ekp_web`（自有 router：`/`、`/health`、`/submit`；templates 僅 `home.html`），與 `governance_web` 工作台無關 | §11.6 明確區隔；`apps/web` 列為未來 either 移除或整合決策（OQ-GOV-09） |
-| **C-22** | 「Wellfit CLI 9 個子命令」 | `crates/wellfit_cli/src/main.rs:92` `enum Commands` 實為 **10** 個：`status`、`shopee`、`reports`、`mtrix`、`audit`、`spec`、`access-control`、`jit`、`bankpay`、`shadow` | 本計畫以 10 個為準；AGENTS.md 文件列同步清理 |
-| **C-23** | 早期計畫草稿的 ID 命名空間（`D1–D9`、`I1–I6`、`S1–S4`、`H1–H8`、`RSK-*`）與現有 ID 並存即安全 | 已 grep 實證碰撞：`D1/D2/D3` 已被 `Knowledge/compliance/iso-27001/iso-27001-control-library-method.md` 的 `depth_tier` 佔用；`D1..D9` 已被 `1793782615513-wellfit-unified-plan-v2.md` 的 UI 維度佔用；`S1..S4` 與 `S1..S6` 切片、`S1..S11` 追溯列、`S1..S4` 嚴重度皆碰撞；`H1..H4` 已被 `手冊-A-F.md` 的 H1/H2/H3 與 `H-1..H-6` 硬門檻佔用；`SC-01..` 已被根 `PHASE1_IMPLEMENTATION_README.md` 佔用；`RSK-E1..E9`、`RSK-01..07` 已被 FlapsErp／管理文件佔用；`RP-01..07` 已被管理文件佔用 | 本計畫改用已驗證無碰撞的前綴：`VS-*`、`IND-*`、`SCALE-*`、`HO-*`、`ESC-*`、`RB-*`、`QG-*`、`RSK-G*`、`PHASE-G*`、`SLICE-G*`、`DEC-21+`、`OQ-GOV-*` |
-
-### §2.3 誠實能力清單（截至 2026-11-07）
-
-**已驗證可用（可引用）**
-- `ekpi-platform`：CLI（`ekp_platform`）與 `governance_web` binary；`governance_web.rs` 3027 行；`/ready`（`ready.rs`）、`/healthz`、`/metrics`；13 HTML 頁（含 `/approvals` 等）＋ 13 API v1 僅 2 條已接線；CSRF 雙提交（`governance_web.rs:583-649`、`validate_csrf_token`）；本機帳密 PBKDF2-HMAC-SHA256 600,000 iter（`local_auth.rs:26`）＋ CSPRNG token（`TOKEN_BYTES=32`，`SALT_BYTES=16`，L28-29）；`;fallback` 的 session 3600s；同源守衛；rate limit；`same_origin_guard`；要求的 dive：`is_public_path` 僅 `/healthz`、`/metrics`、`/login`、`/assets/` 公開（`governance_web.rs:667`）。
-- `crates/domain`：`workflow.rs`（Urgency 4 階＋`sla_seconds()`、ConditionExpr 6 變體＋And/Or/Not、Stage、TimeoutAction{Escalate/AutoReject/AutoApprove/Cancel}、WorkflowDefinition::validate、TaskState 6 態＋`is_terminal`/`transition`、TaskAction 5 種、WorkflowError{InvalidTransition/InvalidDefinition/InvalidSubmission/NoEscalationPath}）；`auth.rs`（Role 4 階＋`satisfies()`、Permission 4 種＋`minimum_role()`）；`governance.rs`（`GENESIS_HASH="GENESIS"`、EventPayload 9 變體、`QUALITY_CHECKLIST: [QualityCheckDefinition; 29]`）；`hashing.rs`（SHA-256）。
-- `crates/application`：`ports.rs`（`GovernanceError{Validation/NotFound/Conflict/Storage}`；`ApprovalRepository`／`ChannelRepository`／`EventStore`／`AgentAdvisor`）、`approval.rs`（8 個 use case：create/publish workflow、submit/decide task、expire overdue、list workflows/tasks、agent advice）。
-- `crates/adapters`：`jsonl_ledger.rs`（`Ledger` 附 SHA-256 帳鏈與 advisory lock）；`jsonl_approval.rs`（`ApprovalStore` 附獨立 hash chain `ekpi-approval-v1`）；`postgres/identity.rs` 真實 SQL；`postgres/pool.rs`（`PoolSettings` 預設 max 10 / acquire 10s / idle 600s / lifetime 1800s，`migrate()` 用 `sqlx::migrate!("../../migrations")`，`is_reachable`）；`identity.rs` 記憶體 `UserStore`／`SessionStore`（`MAX_FAILED_LOGINS=5`、`LOCKOUT_WINDOW_SECS=300`）。
-- `platform-hub`：5 crates；`udm`（`MoneyCents(i64)`、`Decimal4(i64)`、`Provenance`、`OrderItem`、`UnifiedOrder`、`InventoryRecord`、`ProductRecord`，`MoneyCents(600)="6.00"`）；`channels`（`ChannelAdapter`、`FormatDeriver`、`ColumnContract::validate_header`、`ChannelError`）；`eventbus`（`OutboxEvent`、`InboxEvent`、`EventStore` trait、`KafkaEventStore` 空槽、`EventBusError`）；`adapters-momo`（`momo_order_contract()`、`PendingContractAdapter` skeleton）；`agent-policy`（`RiskLevel`、`ApprovalDecision`、`DataClassification`、`AgentRecommendation`、`AutoApprovalGate::advisory_only()`（enabled=false、confidence_threshold=1.0）、`decide()` 失敗閉鎖）。
-- `Wellfit`：9 crates（core/sync/bankpay/cli/integration/shopee/mtrix/reports/assist）；三方對帳 `three_way.rs`（`EkpiDecision`／`EventBackboneRecord`／`WellfitExecution`／`ThreeWayStatus{Consistent/Mismatch/Missing}`／`IsolationEntry`／`ThreeWayReport`／`ThreeWayReconciler::reconcile()`；規則：EKPI=事件骨幹；approved⇒executed；rejected⇒rejected|isolated；違規或缺側一律 quarantine，永不自動修正）；`wellfit_integration` lib（coordination／reconciliation／switching／switching_drill／three_way 五模組）；`wellfit_core` 的 `contract.rs`（`ColumnContract`／`ColumnMap`）、`ledger.rs`（`IdempotencyLedger`）、`jit_permission.rs`（`JitPermissionManager`）、`release_gate.rs`（`ReleaseState` 7 態，含 `DispatchUncertain`）、`access_control.rs`（`PermissionLevel` 4 階、`Classification` 4 階、`Permission`、`SodConstraint`、`Role`、`AccessContext`、`AccessRequest`、`AccessRecord`、`AccessController`）；CLI 10 子命令（C-22）。
-- `Knowledge`：ADR-0009..0012（0012 IMS 權威：G0–G7、9 角色、crosswalk 18 欄）；9 角色（roles.csv：EXEC_SPONSOR、ISMS_OWNER、PROCESS_OWNER、ASSET_OWNER、CONTROL_OWNER、LEGAL_PRIVACY、SEC_IT_ENG、INTERNAL_AUDIT、PMO）；12 process areas（process-areas.csv：FIN/OPS/HR/IT/PHY/LOG/RET/ECS/SVC/MKT/SUP/GOV）；65 項 compliance templates（`soa-93-controls`、`crosswalk`、`control-library`、`risk-register`、`evidence-index` 等計 32 組 schema+csv＋README）；12 vocab CSV。
-- 根 `Dev/`：`platform/src/api.rs` 完全接線零 JS Axum 0.7 伺服器（`/`、`/transactions`、`/admin/users*`、`/import*`、`/drafts*`、`/new*`、`/reports/monthly*`、`/reports/pivot`、`/reports/parallel`、`/drafts/ai_suggest`、`/drafts/adopt`、`/admin/parse_coverage`、`/api/health`；§C-08 同名不同物）；`core/src/ledger/account.rs:57`（`get_balance()->i64`）；`platform/src/ai/decision_gating.rs`（amount_minor／exchange_rate_scaled i64）。
-
-**未完成／不可宣稱（禁引用為能力）**
-- Postgres 治理／核准／通道適配器（C-06、C-14）。
-- API v1 11 條未接線端點（C-01）。
-- `/api-docs` 頁內容（C-12）。
-- `/settings` 頁 PostgreSQL 宣稱（C-13）。
-- `AppConfig::from_env` 未接線（C-13）→ 供應 binary 不讀取 EKPI_STORAGE/DATABASE_URL。
-- `Dev/web` crate 內 f64（C-17）。
-- `Dev/web/src-tauri/src/main.rs` 全部 mock JSON（C-16）。
-- `Dev/web/src-tauri/src-tauri/` 孤兒目錄（C-04）。
-- `Dev/web/src-tauri/tauri.conf.json` `frontendDist: "../src"`（C-18）。
-- `Architecture/README`「no server-side database」（C-19）。
-- 4 套 workspace 未統一（B1-B4）。
+**缺口 `[GAP]`**：GAP-01..08 見 docs/GAPS_AND_RISKS.md（COM 無頭、蝦皮授權、MTRIX 法定定義、fuzz 執行、ATDD 綁定×2、本計畫前版 stub、廠商 OQ、worktree 分歧）。
 
 ---
 
 ## §3 企業級價值流全圖（VS-01..VS-09）
 
-### §3.1 價值流域定義（9 域）
-
-| 代號 | 價值流域 | 範圍／活動 | 直接產出 | 治理交點 |
-|---|---|---|---|---|
-| VS-01 | 上游採購與供應商管理 | 供應商准入、價格核定、採購單生成、到貨驗收、對帳 | 購貨單、驗收紀錄 | SUP 程序區；需簽核（§10） |
-| VS-02 | 商品與規格主資料（MDM） | SKU 命名、條碼、標示法欄位、規格版本 | 主資料版本＋checksum | GOV 受控；需審查 |
-| VS-03 | 生產與製程（BOM／工單／批次追溯） | BOM 維護、工單下達、批次與原料追溯 | 批次紀錄 | 需電子簽章 |
-| VS-04 | 倉儲與物流（效期／FEFO） | 入庫、效期分層、FEFO 出貨、盤點 | 庫存變動事件 | 需複驗 |
-| VS-05 | 零售與通路營運 | 門市 POS、百貨專櫃、通路價量、退換貨 | 銷售事件 | 需稽核 |
-| VS-06 | 銷售與訂單 | 訂單擷取（Shopee／momo／PChome／Cyberbiz）、轉單、結算 | 訂單事件、結算單 | 需三方對帳 |
-| VS-07 | 行銷與商品內容（廣告法／宣稱佐證） | 訴求文案、宣稱佐證連結、上架審查 | 內容版本＋佐證清單 | 需法遵審查 |
-| VS-08 | 售後服務與客訴 | 客訴受理、RMA、CAPA、賠償核定 | 客訴單、CAPA | 需 CAPA 閉環驗證 |
-| VS-09 | 合規、稽核與持續改善 | 定期稽核、控制自評、差異管理、改善 | SoA、風險登錄、KPI 基線 | 需獨立覆核 |
-
-### §3.2 端到端主線（上游 → 下游）
-
-```
-VS-01 採購
-  │ (購貨單 + 供應商資格)
-  ▼
-VS-02 商品主資料 (SKU/條碼/標示法版本)
-  │ (版本化主資料, SHA-256 登錄)
-  ▼
-VS-03 生產 (BOM/工單/批次追溯)
-  │ (批次 + 原料來源)
-  ▼
-VS-04 倉儲物流 (效期/FEFO)
-  │ (庫存事件)
-  ▼
-VS-05 零售通路
-  │ (銷售事件)
-  ▼
-VS-06 銷售訂單 + 結算 (三方對帳閉環)
-  │ (已對帳結算)
-  ▼
-VS-07 行銷內容合規 (宣稱佐證)
-  │ (內容版本 + 佐證)
-  ▼
-VS-08 售後/客訴/CAPA
-  │ (客訴 + CAPA 閉環)
-  ▼
-VS-09 合規稽核與持續改善
-  └─→ 回饋至 VS-01..VS-08 (5 條 feedback loops, §16)
-```
-
-每條流的「交點」即為潛在的簽核任務（§10），由 `event_outbox` 送出事件，而不是跨表 join。
-
-### §3.3 產業疊層 IND-1..IND-6
-
-| 代號 | 產業 | 疊層參數（資料，不 fork 程式） | 必須啟用的價值流 |
-|---|---|---|---|
-| IND-1 | 百貨量販 | 專櫃品牌方清單、退換貨折讓規則集 | VS-05, VS-08 |
-| IND-2 | 零售電商 | 通道清單（Shopee/momo/PChome/Cyberbiz）、欄位契約 | VS-05, VS-06, VS-07 |
-| IND-3 | 製造業 | BOM 層級、批次追溯深度、檢驗標準集 | VS-02, VS-03, VS-04 |
-| IND-4 | 通路經銷 | 經銷價表、跨店調撥、回款條件 | VS-01, VS-05, VS-06 |
-| IND-5 | 受管制品（食藥粧） | 法規清單（標示法條文、廠登、藥證）、效期規則 | VS-02, VS-03, VS-07 |
-| IND-6 | 服務業 | 服務規格集、SLA 承諾值 | VS-08 |
-
-**原則**：產業差異 = policy pack（資料）+ adapter set（程式）+ KB rule set（事實）；不得 fork 三大工作室或簽核引擎（見 §17 DEC-26）。
-
-### §3.4 營運規模層級 SCALE-1..SCALE-4
-
-| 代號 | 規模 | 工作室數 | 關卡 | SLO／人力基準（未核定，見 PR-03） | 範圍外 |
-|---|---|---|---|---|---|
-| SCALE-1 | 單點試點 | 1（僅治理面） | G1–G5 全，PIA 流程一個 | 單機、loopback、1 名治理人員 | 跨機、多租戶、信箱自動化 |
-| SCALE-2 | 部門級 | 2（+ 整合面） | + 雙簽核 | 每日備份、雙人覆核 | 跨部門聯邦 |
-| SCALE-3 | 多部門多通路 | 3（二＋執行面） | + 自動放行閘 | SLO/RPO/RTO 待定 | 多國法規 |
-| SCALE-4 | 集團級 | 3 + 子工作室 | + 連續稽核 | 多據點、災難復原 | 無 |
-
-層級提升以**觸發事件**（流量、稽核發現、法規變更、合併）驅動，不得以時間軸強推。
+| VS | 價值流 | 承載工作室 | 輸入→輸出 | 證據生成 |
+| :--- | :--- | :--- | :--- | :--- |
+| VS-01 | 傳票登帳→覆核→過帳 | S1（+S3） | 表單/API→POSTED/PENDING_REVIEW | audit_log＋（目標）hash chain |
+| VS-02 | 匯入批次（預覽→確認） | S1 | CSV→乾跑報告→合格列登帳（SHA-256 指紋、重放 409） | IMPORT_CONFIRMED 批次稽核 |
+| VS-03 | 草稿解析→AI 建議→人工採用 | S1 | 非結構文字→規則命中＋依據卡→人工採用（永不自動落地） | 解析依據卡＋AI_SUGGEST_REQUESTED |
+| VS-04 | 報表（月報/樞紐/平行座標/CSV） | S1 | 帳務→整數聚合→SVG/CSV（零 JS） | LEDGER_READ 授權紀錄 |
+| VS-05 | 跨系統同步 | S2 | 異質系統→UDM 規範模型→目標系統 | 同步事件＋（目標）冪等鍵 |
+| VS-06 | 事件總線發佈/訂閱 | S2 | 領域事件→訂閱者（解耦、非同步） | 事件軌跡＋（目標）DLQ |
+| VS-07 | 證據擷取→審查→裁決 | S3 | 來源檔→capture(SHA-256)→vet→verdict | SHA-256 鏈（雙時間軸） |
+| VS-08 | 治理決策（ADR/計畫/閘門） | S3 | 提案→評審→ADR/登錄 | PLAN_REGISTER addendum |
+| VS-09 | 事故應變（偵測→處置→復盤） | S3（+S1/S2） | 告警→Runbook→復盤→注入測試 | 事件報告＋FAULT 追蹤表 |
 
 ---
 
 ## §4 三大工作室架構（3 核心＋規模觸發擴編）
 
-### §4.1 工作室定義與版本標記
+### 4.1 三大工作室（S1/S2/S3）
 
-> **釐清**：`workflows`／`approvals`／`settings`／`api-docs` 路由實作於 ekpi-platform `platform/src/governance_web.rs`（零 JS、CSS-first）；`apps/web`（`ekp_web`）為獨立骨架，與工作台無關。
+| 工作室 | 使命 | 服務對象 | 主要資產（現況） | 北極星指標 |
+| :--- | :--- | :--- | :--- | :--- |
+| **S1 部門業務工作台** | 讓每個部門在一條不斷裂的任務鏈上完成工作 | P1/P2/P3 | platform（23 路由）＋web（零 JS）＋ekpi-platform apps | 任務完成率↑、鏈內切頁數↓、首會話留存↑（治 WP-07） |
+| **S2 API 中樞與資料管理** | 讓系統與代理以一次映射接入一切（N×1） | P4/P7 | platform-hub（udm/eventbus/channels/agent-policy/adapters-momo）＋cross_module_api | 新接整合 lead time↓、重複映射數→0、失敗自動復原率↑ |
+| **S3 治理與稽核平台** | 讓證據自動生成、可重建、審計就緒 | P5/P6/決策者 | kem（哈希鏈）＋audit_log＋治理文件體系 | 審計就緒時間↓、缺失證據率→0、CCM 覆蓋控制數↑ |
 
-| 工作室 | 主責 | 核心帳號 | 主要介面 | 不做 |
-|---|---|---|---|---|
-| **工作室 1：內部使用者大平台** | 日常業務操作：專案建立、證據上傳、簽核任務處理、查詢儀表板 | Viewer/Editor/Approver（依 RBAC，§13） | `governance_web` 13 HTML 頁（見 §11.1） | 不得自建或修改簽核狀態機 |
-| **工作室 2：技術工作室** | 系統整合：適配器（momo/PChome/Cyberbiz）、API 維護、資料庫運維、異常監控、排程 | Admin（技術帳號，重大變更需雙人核准） | `platform-hub`（5 crates）、`wellfit.exe`、Windmill 排程 | 不得自行改法規解釋 |
-| **工作室 3：治理工作室** | 政策定義、合規審查、稽核鏈驗證、規格審查、變更治理 | Auditor（僅審查，不執行）＋ KB 規格登錄 | `governance_web` 稽核頁、API 文件頁、KB 審查介面 | 不得執行業務交易 |
+### 4.2 規模觸發擴編（防過早分裂）
 
-### §4.2 職責邊界
+擴編門檻（量化）：單工作室並行工作流 > 12 條／週，或單一佇列深度 P95 > 200，或領域詞彙衝突 ≥ 3 對——達標才可拆設子工作室（S2-ecommerce、S1-finance 等），拆設案須 ADR。
+
+### 4.3 三工作室協作骨架
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│  工作室 1：內部使用者大平台                                        │
-│  日常業務操作：專案建立、證據上傳、簽核任務處理、查詢儀表板        │
-│  介面：governance_web（13 HTML 頁）；權限：Viewer/Editor/Approver  │
-└─────────────────────────────────────────────────────────────────┘
-                    │ 操作產生事件寫入 audit_chain（SHA-256）
-                    │ 簽核任務進入 event_outbox
-                    ▼
-┌─────────────────────────────────────────────────────────────────┐
-│  工作室 2：技術工作室                                             │
-│  適配器開發（momo/PChome/Cyberbiz）、API 維護、資料庫運維、        │
-│  異常監控；介面：platform-hub + wellfit.exe + Windmill             │
-│  權限：Admin（重大變更雙人核准）                                   │
-└─────────────────────────────────────────────────────────────────┘
-                    │ 標準介面與自動化腳本（已有）
-                    │ 重大變更需治理工作室核准（JIT 簽核）
-                    ▼
-┌─────────────────────────────────────────────────────────────────┐
-│  工作室 3：治理工作室                                             │
-│  政策定義、合規審查、稽核鏈驗證、規格審查、變更治理               │
-│  權限：Auditor（僅審查）；規格登錄 Admin（KB，單向引用）           │
-└─────────────────────────────────────────────────────────────────┘
-                    │ 審查結果寫入 audit_chain
-                    │ 規格條文以 SHA-256 登錄 KB
-                    ▼
-            Knowledge/（規格資料，SSOT）
-            審查員對照電商事件與規格條文做出合規裁定
+[S1 工作台] --POST/事件--> [S2 中樞(UDM+總線+策略)] --證據副產品--> [S3 治理稽核]
+     ^                            |                                    |
+     +------可重建回溯(哈希鏈重放)--+------------------------------------+
 ```
 
-- **工作室 1 → 工作室 3**：每筆業務變更寫入同一 `audit_chain`，治理可完整追溯。
-- **工作室 2 → 工作室 1**：提供標準介面與自動化腳本，僅重大變更需覆核。
-- **工作室 3 → 工作室 2**：政策與合規要求以規格形式提出，規格變更需治理核准（KB 單向寫入）。
-- **工作室 2 → 工作室 3**：技術變更需治理核准（JIT 簽核）；失敗閉鎖退回人工。
-
-### §4.3 規模觸發擴編
-
-| 觸發事件 | 擴編動作 | 決策權 | 證據 |
-|---|---|---|---|
-| 工作室 1 任務量週期性超過當日可處理量 2× | 增設子工作室 1.x（以產業 IND-* 為界） | 流程擁有者 | 佇列日誌 |
-| 新增通路達 3 家 | 增設適配器隊列（platform-hub adapter set） | 工作室 2 主管 | 新契約註冊 |
-| 稽核發現控制失效率 > 5% | 增設獨立覆核員（INTERNAL_AUDIT） | 執行贊助人 | 稽核報告 |
-| 跨國法規啟用 | 增設司法管轄區 policy pack | 法遵＋執行贊助人 | KNB-CMP 增補 |
-
-新工作室必須繼承 HO-01..HO-08 交接契約並註冊於治理註冊表；不得以「新部門」繞過稽核鏈。
+設計原則：所有跨工作室通信只經契約（§9）；任何一方不得直讀他方儲存（避免隱性耦合）。
 
 ---
 
 ## §5 職責、決策權與交接契約（HO-01..HO-08）
 
-### §5.1 決策權矩陣（RACI 摘要）
+| ID | 交接點 | 上游→下游 | 交接物（契約） | 完成定義 (DoD) | 失敗處置 |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| HO-01 | 領域→平台 | core→platform | 型別＋不變量＋測試 | 四關綠＋不變量測試存在 | 退回；不得以 UI 補丁繞過 |
+| HO-02 | 平台→中樞 | platform→platform-hub | 領域事件 schema＋冪等鍵 | schema 凍結＋契約測試 | 事件入 DLQ（目標） |
+| HO-03 | 中樞→外部系統 | hub→SaaS/ERP | UDM 映射＋重試策略＋監控 | 影子流量對帳 | 熔斷＋人工佇列 |
+| HO-04 | 工作台→治理 | S1→S3 | 審計事件＋（目標）哈希鏈條目 | 鏈驗證通過 | 鏈斷即警戒（P1） |
+| HO-05 | 治理→決策 | S3→擁有者 | 可行動報告（差距/風險/選項） | 選項含優缺點與證據 | 記 OQ-GOV-* 待決 |
+| HO-06 | 代理→中樞 | AI 代理→S2 | 最小權限憑證＋速率上限＋審計標記 | agent-policy 核可 | 拒簽並記錄 |
+| HO-07 | 事故→復盤 | 值班→S3 | 時間線＋根因＋行動項 | 行動項入 BACKLOG 且有主 | 逾時升級 ESC-3 |
+| HO-08 | 研究→計畫 | 研究報告→本計畫 | 可查證結論（來源+日期） | 上位衝突已標註 | 不得直接施工 |
 
-| 決策 | 工作室 1 | 工作室 2 | 工作室 3 | 執行層 |
-|---|---|---|---|---|
-| 資料輸入／編輯 | R | C | I | A（流程擁有者） |
-| 簽核／駁回（金額分級） | R（≤ 等級） | I | I | A（金額上限） |
-| 適配器／頻道管理 | I | R | C | A |
-| 規格／合規條文登錄 | I | I | R | A（法遵） |
-| 稽核鏈查看 | R | R | R | I |
-| 系統設定／儲存模式 | I | R | C | A |
-| 使用者／角色管理 | I | R | C | A |
-| 事件重播／除錯 | I | R | R | A |
-
-> **不可取代決策**（對應 KB 9 角色）：EXEC_SPONSOR（風險接受）、ISMS_OWNER（ISMS 範圍）、PROCESS_OWNER（業務風險）、ASSET_OWNER（資料分類）、CONTROL_OWNER（控制可用性，不可獨立稽核自己）、LEGAL_PRIVACY（法律結論）、SEC_IT_ENG（技術證據，不得核准風險接受）、INTERNAL_AUDIT（獨立性）、PMO（不得將文件交付等同有效性判定）。
-
-### §5.2 交接契約 HO-01..HO-08
-
-每張交接契約含四要素：**交接包、受理條件、SLA、所有權轉移點**。**未受理不得交接**——交付方不得假定已移交。
-
-| 代號 | 交點 | 交接包 | 受理條件 | SLA（未核定，見 DEC-19） | 所有權轉移 |
-|---|---|---|---|---|---|
-| HO-01 | VS-01 採購 → VS-02 主資料 | 購貨單＋供應商資格＋JitPermission 證明 | 供應商級別 ≥ D2；合約未過期 | 1 個工作日 | 購貨單簽字 |
-| HO-02 | VS-02 主資料 → VS-03 生產 | SKU 版本＋標示法欄位＋checksum | 欄位契約 8 欄全驗證通過；版本已發布 | 即時 | 版本發布事件 |
-| HO-03 | VS-03 生產 → VS-04 倉儲 | 批次＋工單＋原料來源紀錄 | 五檔契約全通過（56 欄字典、15 VR、12 ANOM） | 1 個工作日 | 入庫驗收 |
-| HO-04 | VS-04 倉儲 → VS-05 零售 | 庫存可用量＋效期清單（FEFO 排序） | 盤點差異 = 0 或已隔離 | 4 小時 | 出貨單 |
-| HO-05 | VS-05 零售 → VS-06 銷售訂單 | 銷售事件（含 order_id、金額、扣庫結果） | 事件已寫入 outbox 且未重投 | 即時 | 訂單建立 |
-| HO-06 | VS-06 訂單 → VS-07 行銷內容 | 訂單＋商品內容版本＋宣稱佐證清單 | 行銷內容已過法遵審查 | 1 個工作日 | 內容發布 |
-| HO-07 | VS-07 內容 → VS-08 售後 | 內容版本＋客訴原文＋訂單追溯號 | 客訴分類已完成；時限 SLA 已啟動 | 24 小時 | 客訴單開啟 |
-| HO-08 | VS-08 客訴 → VS-09 稽核／改善 | CAPA 報告＋驗證證據＋剩餘風險接受書 | 驗證證據完整；不可豁免項無一 waived | 72 小時 | CAPA 結案 |
-
-### §5.3 保障
-
-- **SoD（職責分離）**：同一人不得同時為「簽核人」與「執行人」（`platform-hub` 的 `agent-policy` 與 `wellfit_core::access_control::SodConstraint`）。
-- **JIT 權限**：跨機部署、資料庫備份還原需治理工作室核准；執行上限由 `JitPermissionManager` 控制，過期即失效。
-- **失敗閉鎖**：自動化遇異常預設退回人工簽核，不可靜默繼續。
+**決策權**（RACI 精要）：架構變更＝擁有者（A）＋architect（R）；部署/認證/合約＝僅擁有者（A）；本計畫內 SLICE 執行序＝architect（A）；測試門檻豁免＝不得（無此權，憲章 §2.2）。
 
 ---
 
 ## §6 協作機制與升級路徑（ESC-1..ESC-4）
 
-### §6.1 例行節奏
+| ID | 觸發 | 機制 | 時限 | 記錄 |
+| :--- | :--- | :--- | :--- | :--- |
+| ESC-1 | 兩人對契約解讀不一 | 開 board 貼文（INFO/ASK），附證據引用 | 當日 | board 歷史 |
+| ESC-2 | 契約層級衝突（跨工作室） | 排「契約仲裁」：architect 主持，僅讀證據 | 3 日 | ADR 或計畫修訂 |
+| ESC-3 | 阻塞 > 48h（環境/權限/廠商） | 列入 OQ-GOV-*／GAPS；指定主責與解鎖證據 | 週報 | PLAN_REGISTER addendum |
+| ESC-4 | 憲章級衝突（零 JS、金錢、證據紀律） | 立即停線；擁有者裁定；不得先行實作 | 即時 | 憲章修訂程序（唯一門） |
 
-| 機制 | 頻率 | 主持 | 輸出 |
-|---|---|---|---|
-| Studio Council（三大工作室例會） | 每週 | PMO | 交接積壓清單、BLOCKED 清單 |
-| 變更審查（微變更：當日；重大：雙簽） | 每日 | 流程擁有者＋治理 | 變更事件（寫入 audit_chain） |
-| 稽核鏈驗證 | 每月 | INTERNAL_AUDIT | 驗證報告 |
-| 控制自評（Control Self Assessment） | 季 | CONTROL_OWNER | 評分表；不替代獨立稽核 |
-| 改善回顧（Retro） | 每里程碑 | PMO | 改善動作登記（不降低閘門） |
-
-### §6.2 共同問題解決（聯合事故）
-
-1. 觸發事件 → 差距總監指派 → 24h 內產出隔離清單（不自動修正）。
-2. 指派：三方（業務／技術／治理）各 1 名代表；產出「三方比對表」。
-3. 比對結果三種：一致 → 通過；不一致或缺漏 → 進入隔離清單（§15 RB-06）；結構性缺陷 → 發出 CAPA（VS-09）。
-4. 結論必須回寫 `event_outbox`（append-only），事件 ID 可被 `HO-03`、`HO-05`、`HO-08` 引用。
-
-### §6.3 升級路徑 ESC-1..ESC-4
-
-| 層級 | 觸發 | 負責人 | 最大停留 | 升級訊號 |
-|---|---|---|---|---|
-| ESC-1 | 工作階段內爭議 | 工作階段主管 | 1 個工作日 | 未解 |
-| ESC-2 | 跨工作室爭議 | Studio Council | 3 個工作日 | 未解 |
-| ESC-3 | 流程擁有者 | EXEC_SPONSOR（風險接受） | 5 個工作日 | 未解 |
-| ESC-4 | 重大違規／監管通知 | LEGAL_PRIVACY＋EXEC_SPONSOR 緊急會議 | 24 小時 | 立即停用相關自動化 |
+日常節奏：Slice 交付綁四關＋addendum；每週彙整一次「價值流健康」（VS 表逐列更新證據）。
 
 ---
 
 ## §7 目標架構
 
-### §7.1 三層耦合（與 v2.1 一致，證據為准）
+### 7.1 第一性原理公理（AX-1..AX-7）
+
+- **AX-1 工作即狀態遷移＋證據生成**：每個工作項＝狀態機＋證據副產品。推論：UI 是狀態機投影；無證據的完成＝未完成。
+- **AX-2 證據是一等公民（evidence-as-byproduct）**：任何寫入同時落審計與（目標）哈希鏈，成本為零（使用者無感）。治 GP-01/GP-04 之根。
+- **AX-3 整合複雜度集中**：N(N-1)/2→N；映射一次到 UDM；語義權威源唯一。治 HP-01/03/04。
+- **AX-4 工作台是工作流的投影，不是功能清單**：頁面按任務鏈組織，保留上下文（治 WP-01/10）；決策走 overview→diagnosis→action（治 WP-04）。
+- **AX-5 一切可重建**：自哈希鏈可重放任意時點狀態（雙時間軸：事件時間/記錄時間）。治 GP-06。
+- **AX-6 零 JS 即安全與可及性預設**：無腳本攻擊面、無 hydration 競態、WCAG 2.2 AA 為起點。
+- **AX-7 人機共審**：代理只產草稿與建議；裁決永遠是人（參與者署名）。治 GP-06 審閱者可考。
+
+### 7.2 分層架構（目標）
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│  治理面（EKPI）                                                  │
-│  apps/web（Axum 0.8.9 + Askama 0.16.1，CSS-first 零JS）          │
-│  crates/domain（governance/tenant/auth + workflow/channels）     │
-│  crates/application（ports.rs + approval.rs；AgentAdvisor 僅 advise()）│
-│  crates/adapters（jsonl_ledger + postgres/{governance,identity,approval}）│
-│  platform/（裁決引擎、governance_web、api.rs）                  │
-│  【NEW migration】approval_workflows / approval_tasks /         │
-│    event_outbox（出站事件骨幹，共享事實來源）                     │
-└──────────────────┬──────────────────────────────────────────────┘
-                   │ 窄 API 契約 + PostgreSQL 事件表（outbox/inbox）
-                   ▼
-┌─────────────────────────────────────────────────────────────────┐
-│  整合面（platform-hub）                                          │
-│  crates/udm（統一資料模型，金額 i64 cents + Decimal4）           │
-│  crates/channels（ChannelAdapter + FormatDeriver 實作面）       │
-│  crates/eventbus（EventStore，consumer 側 inbox + publisher）   │
-│  crates/adapters-momo（條件式實作，pending_contract）            │
-│  crates/agent-policy（低風險自動核准閘，DEC-15 閘控）          │
-└──────────────────┬──────────────────────────────────────────────┘
-                   │
-                   ▼
-┌─────────────────────────────────────────────────────────────────┐
-│  執行面（Wellfit + 根工作區）                                    │
-│  wellfit_core（帳本、ReleaseGate、契約）                        │
-│  wellfit_shopee/reports/mtrix/bankpay（匯入/匯出）             │
-│  wellfit_integration（三方對帳：EKPI ↔ 事件骨幹 ↔ 執行）       │
-│  根工作區（FlapsErp RPA、AI decision_gating）                  │
-└─────────────────────────────────────────────────────────────────┘
+S1 表現層   Zero-JS HTML/CSS/SVG（Askama 模板；Design Token；八態齊備）   [現況 23 路由]
+S1 應用層   Axum handlers（GET 讀/POST 寫/PRG；RBAC；CSRF；錯誤三分級）
+S0 領域層   flaps_core（Money/i128、借貸不變量、狀態機、解析規則表）      [現況 42 測試]
+S2 中樞層   platform-hub：UDM（規範模型）/eventbus（事件）/channels（連接器：退避/冪等/DLQ/熔斷）/agent-policy（代理治理）
+S3 治理層   kem（capture→vet→verdict；SHA-256 鏈）+ audit_log + PLAN/ADR/QG 體系
+橫切       編碼規範/可觀測（目標 OTel）/故障注入/突變+模糊/CI 門檻
 ```
 
-### §7.2 落地狀態更正（回退 v2.1 §7.1 錯誤宣稱）
+### 7.3 關鍵決策與優缺點（擇要）
 
-| 階段 | v2.1 錯誤宣稱 | 實際狀態（以 §2 為準） |
-|---|---|---|
-| Phase C1–C5 | 「postgres 適配器 \| 全通過」 | domain/application/adapters（jsonl）全通過；**postgres 僅 identity.rs 真實 SQL**，governance.rs 9×todo!()、approval.rs 8×stub、channels.rs 1×stub → 狀態 **Partial** |
-| Phase C6 | 「API v1 路由（11 端點）」 | **13 method-routes**；2 已接線；11×501（見 §11） |
-| Phase C9–C11 | 「工作台頁面」 | `/approvals`、`settings`、`api-docs` 已上線但內容有誤（C-12、C-13 未修前不得引用） |
-| Phase D1 | 「approve_transaction stub 移除」 | **未做**（C-04，孤兒目錄） |
-| Phase D2 | 「f64 殘留收斂」 | **部分**（C-17，`web` crate 未收斂） |
-| Phase D3 | 「/api/health 擴充」 | **不存在**（C-03） |
-| Phase C8 | `three_way` | 真實（§2.3） |
-| Phase E2–E6 | 電商適配器 | **Blocked**（OQ-F2-5，未取得規格，期限 2026-11-19） |
-| Phase F | 部署 | **Blocked**（PR-02） |
+**D-G1 何故零 JS 而非 SPA？**
+優：攻擊面小（CSP default-src 'none' 可極嚴）、首屏/低階設備友善、無建構鏈、無 hydration 競態、可及性天然、與 AX-6 對齊。
+缺：高度互動（拖拽、虛擬滾動）受限；即時性需 SSE 替代方案（本計畫採輪詢+PRG，OQ-GOV-02 再議 SSE）。
+裁決：保留（憲章級，ESC-4 唯一門）。替代方案（HTMX/Datastar/WASM）皆破壞「零 JS」定義。
 
-### §7.3 架構決策總表
+**D-G2 何故 UDM 放在 hub 而非各系統直連？**
+優：N×1 映射、語義單一權威、政策統一點（HP-01/03/04）。
+缺：樞紐成關鍵路徑（需 HA；本階段單實例+可重放補償為折衷，OQ-GOV-03）。
+裁決：採用；DP 引入條件＝SLA 需求出現時。
 
-| 決策 | 裁定 | 依據 |
-|---|---|---|
-| 三大工作室架構 | **採納**（§4） | Presentation → Application → Domain（Clean Architecture 對應） |
-| 平台定位 | **專案、稽核與知識管理** | 本計畫裁定 |
-| 電商與規格跨層整合 | **事件總線耦合，不深度 schema 整合** | 耦合度／更新頻率／責任歸屬（§8） |
-| 工作台 | **零 JS、CSS-first、表單 POST + PRG** | 憲章 §2.3 |
-| 基礎設施 | **PostgreSQL 18 + 原生 binary**；Redis 按需；Kafka 僅 trait 空槽 | 推翻 Kafka+k3s 提議 |
-| 技術基線 | ekpi-platform：Rust 2024 / Resolver 3 / Axum 0.8.9 / Askama 0.16.1 / SQLx 0.9.0 / PostgreSQL 18.6；根工作區：Edition 2021 / SQLite | ADR-0006／ADR-0001（維持不變） |
-| AI 邊界 | ekpi-platform 內 Agent 僅 advisory；DEC-15 未決前不得啟用自動核准；`AutoApprovalGate::advisory_only()` | phase-gates §Out of scope；§10 |
-| 四套基線統一 | **未決**（DEC-22） | 本計畫不宣稱已統一 |
+**D-G3 何故證據鏈以 SHA-256 鏈而非資料庫審計表？**
+優：防篡改（鏈式可驗證）、可離線驗證、與 kem 現行一致（C-12）。
+缺：鏈修復複雜、需定期必檢查（RB-04）；純 DB 表易被就地改寫。
+裁決：並存——audit_log 供查詢、哈希鏈供證明；雙軌互核（§12）。
+
+**D-G4 何故簽核採「代理草稿＋人裁決」而非全自動？**
+優：符合 GP-06 與 AI 落地紀律（VS-03 既有模式）；責任清楚。
+缺：人力瓶頸；以批量裁決與差異highlight 緩解（SLICE-G1.4）。
+裁決：採用；任何「自動過帳」提案須 ADR 且被視為 ESC-4 級。
 
 ---
 
 ## §8 資料與整合模型
 
-### §8.1 資料三分類（所有權不可混淆）
+### 8.1 UDM（統一資料模型）要點
 
-| 類別 | 內容 | 寫入方 | 不可被誰覆寫 |
-|---|---|---|---|
-| 事實（Facts） | 訂單號、金額、庫存、批次 | 業務事件（event_outbox） | 規格資料不得覆寫 |
-| 規則（Rules） | 驗證條文、對照表、閾值 | KB（`Knowledge/specs/` SHA-256 登錄） | 電商事件不得修改 |
-| 決策（Decisions） | 簽核結果、Gate 決議、例外接受 | approval API／audit event | 任何一方不得靜默改寫 |
+- **規範實體**：Customer/Order/Inventory/Invoice/Payment/Product/Store/Employee（首批）；每實體定義：主鍵策略、權威源系統、必填欄位、語義註解、版本。
+- **映射一次**：新系統接入＝對 UDM 一次映射（HP-03）；映射表存 hub、版控（HP-10）。
+- **語義漂移治理**：UDM 欄位帶「權威源」與「衝突裁決規則」（例：客戶狀態以 CRM 為權威，庫存以 ERP 為權威）；歧義詞入 ubiquitous_language。
+- **代理視圖**：每個 UDM 實體可導出「代理能力描述」（讀/寫/速率/審批要求），供 P7 受治理使用（HP-09）。
 
-> 關聯發生於「簽核任務」層：`ApprovalTask` 可同時參照 `event_outbox.id` 與 `Knowledge/specs/<id>`，由核准者裁定。
+### 8.2 事件與可靠性契約
 
-### §8.2 金額／數值
+| 機制 | 規範 | 現況 |
+| :--- | :--- | :--- |
+| 事件信封 | event_id/occurred_at/recorded_at/type/version/actor/payload/evidence_ref | eventbus 已有基礎（C-13） |
+| 冪等 | 消費者以 event_id＋業務鍵去重；冪等鍵入庫 | channels 目標（HP-05） |
+| 退避重試 | 指數退避＋抖動；上限後入 DLQ | 目標 |
+| 熔斷 | 逐連接器（成功率窗）；半開探測 | 目標 |
+| DLQ | 可檢視/可重放/需署名 | 目標 |
+| 對帳 | 每同步流每日對帳報告（件數/金額/差異樣本） | 目標（HP-06） |
 
-- `platform-hub/crates/udm`：`MoneyCents(i64)` + `Decimal4(i64)`（10^4 縮放）；`MoneyCents(600)="6.00"`。
-- `Wellfit`：`ScaledDecimal`（10^4）、`i64` 分運算；`web` crate 殘留 f64 須收斂（C-17）。
-- **貸款／價格分級跳躍**：金額形態以 `i64` 最小單位為唯一合法載體；任何 `f64` 進入金額路徑即缺陷（QG-05）。
+### 8.3 儲存策略
 
-### §8.3 欄位契約（名稱解析，禁序位退讓）
-
-- `wellfit_core::contract`（`ColumnContract`／`ColumnMap`）；`platform-hub/crates/channels`（`ColumnContract::validate_header`）。
-- 必填欄缺漏 → `Err`，**不得**退回硬編碼序位；多餘欄位 → 警告並隔離，不靜默丟棄。
-- Shopee 8 欄契約、MTRIX 56 欄字典 + 15 條 VR + 12 條 ANOM（§2.3）為先行實證。
-
-### §8.4 事件骨幹（outbox/inbox）
-
-```
-電商平台（momo/PChome/Cyberbiz）
-      │ ChannelAdapter（platform-hub）
-      ▼
-UDM 轉換 → event_outbox（PostgreSQL，ekpi-platform 所有）
-      │
-      ▼
-event_inbox（冪等去重）→ ApprovalTask（簽核任務）→ audit_chain（SHA-256 稽核）
-      │
-      ▼
-Knowledge/（規格資料，SHA-256 登錄，單向引用）
-```
-
-- `eventbus` 的 `EventStore` trait（`publish`／`consume`／`pending_outbox`／`mark_published`）為日後 Kafka 的唯一替換點（`KafkaEventStore` 空槽）。
-- 跨 repo 一律以 JSON 契約交換（`three_way` 註解明載，無 path dep）。
-
-### §8.5 三方對帳閉環（Phase C8）
-
-```
-EKPI 決策（approval API/audit event）
-    ╲
-     ╲ 三方比對（wellfit_integration::three_way::ThreeWayReconciler）
-      ╲
-事件骨幹（event_outbox/inbox)
-        ╲
-         ╲
-Wellfit 執行（IdempotencyLedger）
-    ↘
-     一致（Consistent） → 通過
-     不一致（Mismatch）/缺漏（Missing） → IsolationEntry（隔離清單，絕不靜默修正）
-```
-
-一致性規則：EKPI = 事件骨幹；`approved⇒executed`；`rejected⇒rejected|isolated`。違規或缺側一律 quarantine。
-
-### §8.6 稽核鏈
-
-- `platform/src/governance.rs`：append-only JSONL 事件（`GENESIS_HASH="GENESIS"`、9 變體 `EventPayload`、SHA-256 帳鏈）；`default_ledger_path()`（`%LOCALAPPDATA%\EKPI\governance-ledger.jsonl` 或 `EKP_GOVERNANCE_DATA`）；`Ledger::open` 持 advisory lock、重放並逐筆驗證 sequence／previous_sha256／sha256，截斷末行／空白行／重複 ID／懸空參照／非法流轉一律 fail-closed 不附加。
-- **不視為** WORM（`worm` 模組屬 library-only，見 `docs/backend/README.md`）。
+根 workspace：SQLite WAL（基線，C-02）；hub/加密需求或併發上限時評估 PostgreSQL（Provisioned Decision OQ-GOV-04，需 ADR）；Redis 僅在明確快取/限流/會話需求出現時引入（不取代主庫）。
 
 ---
 
-## §9 端到端流程規格
+## §9 端到端流程規格（代表例）
 
-每條價值流以 HO 交接為界，逐流定義觸發、參與者、產出、證據與例外。
+**FL-01 跨部門採購申請→核准→過帳（P1/P2/P3 全鏈）**
+草稿(解析/表單)→待覆核(KPI 可見/差異highlight)→主管裁決(批/駁/改；署名)→過帳(借貸平衡)→報表/證據。每步：狀態機轉移＋審計事件＋（目標）鏈條目；錯誤訊息含「問題＋原因＋處理」。
 
-### §9.1 主線總圖
+**FL-02 電商訂單入帳（S2 主角）**
+渠道事件(蝦皮/momo)→UDM Order→規則驗證→映射 Invoice→S1 工作台待覆核→人裁決→對帳(MTRIX 五檔/平台對帳報告)→差異入 DLQ＋人工佇列。
 
-```
-                        ┌─ 治理面 ────────────────────────┐
-  VS-01 採購 ─▶ VS-02 主資料 ─▶ VS-03 生產 ─▶ VS-04 倉儲 ─▶ VS-05 零售
-       │                │                │               │           │
-       ▼                ▼                ▼               ▼           ▼
-  [簽核：購貨單]  [簽核：主資料版本]  [簽核：工單]   [簽核：盤點]  [簽核：價量]
-                        │                │               │           │
-       └────────────────┴────────────────┴───────────────┴───────────┘
-                                    │
-                                    ▼
-                        VS-06 銷售訂單 + 三方對帳 (event_outbox)
-                                    │
-                                    ▼
-                        VS-07 行銷內容 (宣稱佐證 + 法遵)
-                                    │
-                                    ▼
-                        VS-08 售後/客訴 → CAPA → 驗證
-                                    │
-                                    ▼
-                        VS-09 合規稽核 → SoA → 風險登錄 → 改善
-                                    │ (5 feedback loops §16)
-                                    └──→ 回流至 VS-01..VS-08
-```
+**FL-03 稽核取證（S3 主角）**
+審計請求→控制庫定位（跨框架映射）→自動取證(kem capture：來源/SHA-256/期間)→就緒度自檢（日期/範圍/控制對應/完整性）→外部稽核師唯讀門戶→發現→補救工作流→複測。
 
-### §9.2 各流規格（觸發／產出／證據／例外）
-
-| 流 | 觸發 | 產出（事件） | 證據（稽核） | 例外處理 |
-|---|---|---|---|---|
-| VS-01 | 需求單提交 | 購貨單、驗收紀錄 | 供應商資格＋核准事件 | 驗收不一致 → 隔離單 |
-| VS-02 | 新品上市／法規變更 | 主資料版本（SHA-256） | 欄位契約驗證紀錄 | 標示法缺欄 → blocked（不得發布） |
-| VS-03 | 工單下達 | 批次紀錄、原料追溯 | 生產參數簽名 | 超規 → 停線＋CAPA |
-| VS-04 | 盤點／效期到期 | 庫存變動事件 | 盤點單、FEFO 排序清單 | 效期不足 → 報廢核准 |
-| VS-05 | 門市結帳 | 銷售事件 | 收銀紀錄 | 折讓超限 → 主管覆核 |
-| VS-06 | 訂單匯入 | 訂單事件、結算單 | 8 欄契約驗證、VR-01..VR-15、ANOM-01..12 | 缺欄／溢出 → 隔離（VR-01 整檔拒絕、VR-05 重複彙總） |
-| VS-07 | 訴求文案提交 | 內容版本＋佐證清單 | 法遵審查意見 | 佐證不足 → 退回（不發布） |
-| VS-08 | 客訴受理 | 客訴單、賠償單 | 處理紀錄、RMA | 超時 → ESC-1 |
-| VS-09 | 季度／年稽核 | SoA、風險登錄、KPI 基線 | 複驗證據、accept記錄 | 未閉環 → 升級 ESC-2 |
+**FL-04 代理請求（P7）**
+代理出示憑證→agent-policy 檢查（權限/速率/資料類別）→路由至 UDM 視圖→標記 agent 來源→回應＋稽核；（寫入類）一律落草稿待人工。
 
 ---
 
 ## §10 簽核引擎規格
 
-### §10.1 已實作（`crates/domain/src/workflow.rs`，經查證）
-
-- `Urgency::{Low, Normal, High, Critical}` 含 `sla_seconds()`。
-- `ConditionExpr` 6 變體＋`And/Or/Not`；`Stage`；`TimeoutAction::{Escalate, AutoReject, AutoApprove, Cancel}`。
-- `WorkflowDefinition::validate()`（空階段／重複 id／零 SLA／未知升級路徑皆拒）。
-- `TaskState::{Pending, Approved, Rejected, Escalated, Expired, Cancelled}` 含 `is_terminal()`／`transition()`。
-- `TaskAction::{Approve, Reject, Escalate, Expire, Cancel}`。
-- `WorkflowError::{InvalidTransition, InvalidDefinition, InvalidSubmission, NoEscalationPath}`。
-- `AgentDecision` 含 `auto_approved` 保留欄位，**無路徑設為 true**（須以測試鎖定，見 QG-10）。
-
-### §10.2 未完成（明確標註）
-
-| 項目 | 現況 | 處理 |
-|---|---|---|
-| `postgres/approval.rs` | 8 × `Err(Storage("not yet implemented"))`（fail-closed，非 panic） | PHASE-G4 實作 PostgreSQL 版；完成前一律 JSONL（SLICE-G05） |
-| `postgres/governance.rs` | 9 × `todo!()`（runtime panic） | PHASE-G4 高順位；先將 `todo!()` 改為 fail-closed `Err`（SLICE-G05），再接真實 SQL |
-| `postgres/channels.rs` | 1 × 同上 | PHASE-G4 |
-| API v1 寫入端點（11 條） | 全 501 | §11.3 目標契約逐條定義 |
-| 多層條件分支 UI | ConditionExpr 已在 domain 支援，UI 未做 | 非目標（BDD §3） |
-
-### §10.3 AI／Agent 邊界（硬性）
-
-- ekpi-platform 內 `AgentAdvisor` 僅 `advise()`，**無 `approve()`**。
-- `platform-hub/agent-policy` 的 `AutoApprovalGate::advisory_only()`（enabled=false、threshold=1.0）為 DEC-15 解鎖前的唯一合法狀態；`decide()` 失敗閉鎖。
-- 任何新增自動放行必須先關閉 DEC-15 並經本計畫 §20 QG-10 機械化測試（`grep -r auto_approve crates/` 必須 0 命中）。
+- **狀態**：DRAFT→PENDING_REVIEW→APPROVED/REJECTED→POSTED（＋CANCELLED）；非法轉移拒絕（既有狀態機測試延伸）。
+- **裁決者**：角色＋具名（actor 署名入證據）；委派需時窗與審計；自我裁決禁止（防利益衝突）。
+- **批量與 SLA**：批量批/駁；待辦 SLA 倒數與逾期升級（ESC-3）。
+- **代理整合**：AI 建議僅入 DRAFT；採用以人類動作完成（VS-03 既有）。
+- **證據**：每次裁決寫 audit_log＋（目標）鏈；理由碼（reason code）結構化，供 CCM 統計。
 
 ---
 
 ## §11 工作台與 API 契約
 
-### §11.1 已接線版面（`platform/src/governance_web.rs`，3027 行；路由註冊 L141-194）
+### 11.1 API 契約原則
 
-> 注：C-24 — v2.1「13 頁」漏列營運端點。以下為 13 個**業務頁**，另含 3 個營運端點（`/`、`/healthz`、`/metrics`、`/ready` 共 4 頁；`/ready` 未在 v2.1 表內）。
+GET 讀、POST 寫、成功 PRG；錯誤三分級（400 欄位含問題＋原因＋處理、403 指名缺權限碼、503 degraded）；所有 POST 具 CSRF（現況 10/10）；分頁參數 `?page=N`（非法→1、越界→末頁）；匯出＝同一授權下 CSV（金額整數分）。
 
-| 路徑 | 頁面 | 狀態 |
-|---|---|---|
-| `/ready` | 就緒檢查（`ready.rs`） | 已實作（v2.1 未列） |
-| `/healthz` | 存活 | 已實作 |
-| `/metrics` | Prometheus text | 已實作 |
-| `/` | 工作總覽 | 已實作 |
-| `/login` | 登入 | 已實作 |
-| `/projects` | 專案管理 | 已實作 |
-| `/evidence` | 文件與證據 | 已實作 |
-| `/inspections` | 品質檢查（29 項） | 已實作 |
-| `/workflows` | 流程範本 | 已實作 |
-| `/controls` | 風險與品質 | 已實作 |
-| `/lifecycle` | 階段與關卡 | 已實作 |
-| `/audit` | 稽核紀錄 | 已實作 |
-| `/settings` | 系統設定（見 §11.5） | 已實作（內容誤導） |
-| `/api-docs` | API 文件（見 §11.4） | 已實作（內容誤導） |
-| `/approvals` | **核准任務佇列** | Phase C9 已實作（真實資料） |
-| `/assets/governance.css` | 樣式（公開） | 已實作 |
+### 11.2 UI/UX 設計系統（目標：八態＋WP 全治）
 
-### §11.2 API v1 端點（13 method-routes；2 已接線，11 × 501）
+| 準則 | 規範 | 治痛點 |
+| :--- | :--- | :--- |
+| 八態互異 | 空/零結果/載入/部分/過期/無權限/錯誤/衝突——文案與樣式各異 | WP-08 |
+| 標籤人話 | 標籤＝使用者語言（ubiquitous_language 對照） | WP-09 |
+| 上下文連續 | 篩選持久化（querystring；返回不重置）；鑽取帶 breadcrumb 與來源保留 | WP-10 |
+| 角色起始頁 | 依角色渲染不同首屏（會計=待覆核；主管=例外） | WP-05 |
+| 指標就地解釋 | 每個 KPI 附「定義/時點/來源」tooltip 或摺疊註 | WP-02 |
+| 錯誤可行動 | 問題＋原因＋處理（既有規範），且給下一步連結 | WP-01 |
+| 回饋即時 | POST 後 PRG＋flash（無 JS）；狀態徽章 CSS-only | P1 體驗 |
+| 無障礙 | WCAG 2.2 AA：焦點可見、鍵盤可達、對比、reduced-motion | 全體 |
 
-| 方法 | 端點 | 說明 | 狀態 |
-|---|---|---|---|
-| GET | `/api/v1/workflows` | 列出簽核工作流定義 | ✅ 已接線（真實資料） |
-| POST | `/api/v1/workflows` | 建立簽核工作流定義 | 501 |
-| POST | `/api/v1/workflows/{id}/publish` | 發布定義 | 501 |
-| GET | `/api/v1/approvals` | 列出簽核任務 | ✅ 已接線（真實資料） |
-| POST | `/api/v1/approvals` | 送審 | 501 |
-| POST | `/api/v1/approvals/{id}/decide` | 核准/駁回 | 501 |
-| POST | `/api/v1/approvals/{id}/escalate` | 升級 | 501 |
-| POST | `/api/v1/events/replay` | 重播指定事件 | 501 |
-| GET | `/api/v1/channels` | 列出通道適配器 | 501 |
-| GET | `/api/v1/channels/health` | 通道健康 | 501 |
-| GET | `/api/v1/users` | 列出使用者 | 501 |
-| GET | `/api/v1/settings` | 系統設定 | 501 |
-| GET | `/api/v1/search` | 全域搜尋 | 501 |
+### 11.3 工作台首頁組成（S1 目標藍圖）
 
-### §11.3 API 認證說明（回退 v2.1 §5.1 錯誤）
-
-| 場景 | 認證方式 |
-|------|----------|
-| 工作台操作 | session cookie（`ekpi_session`）＋ CSRF（`ekpi_csrf` cookie 或 `X-CSRF-Token` header） |
-| 程式化呼叫 | **同一本機 session cookie**；未登入一律 `401` 結構化錯誤。**無 Bearer／API key（不存在的能力不得宣稱）** |
-
-- 依據：`docs/contracts/approval-api.md`（CTR-API-001）§1「認證：與工作台同一本機 session（cookie）；未登入一律 401 結構化錯誤；**無** Bearer/API key（不存在的能力不得宣稱）」。
-- CSRF：`governance_web.rs` 的 `validate_csrf_token` middleware（L201-204）＋ `X-CSRF-Token` 接受 header（程式化）或 cookie（表單）；登入頁雙提交（hidden field + `ekpi_csrf` cookie）。
-- `is_public_path` 僅含 `/healthz`、`/metrics`、`/login`、`/assets/`（L667）；**`/ready` 須登入**（受 `require_session` 保護）。
-- 501 的結構化錯誤：`{"error":{code,type,message,timestamp,request_id,...}}`（見 `api_not_implemented`）。
-
-### §11.4 `/api-docs` 頁待修項（C-12）
-
-修復要點（SLICE-G06，詳見 §17）：
-1. 表格必須列全 **13 條**（含「GET /api/v1/channels/health」與「GET /api/v1/search」）。
-2. 把 `GET /api/v1/workflows`、`GET /api/v1/approvals` 正確標為「已接線（唯讀）」。
-3. 移除或改寫「所有 API 端點目前一律回 501」聲明；改為「13 條中 2 條已接線（唯讀），其餘 11 條回 501」。
-4. 頁面內容不得與 `docs/contracts/approval-api.md` 矛盾；長遠改為由契約檔產生（QG-07 鎖定）。
-5. 在修復完成前，本頁不得作為契約事實引用。
-
-### §11.5 `/settings` 頁待修項（C-13）
-
-現況：頁面宣稱 PostgreSQL 模式僅在 `EKPI_STORAGE=postgres`＋`DATABASE_URL` 啟用；但 `AppConfig::from_env` 無呼叫、供應 binary 不讀取（L12／L24 寫死） → **頁面宣稱與供應 binary 行為不一致**。
-
-修復要點（SLICE-G06）：
-1. `/settings` 頁加註「PostgreSQL 尚未在供應 binary 啟用；設定需另行接線 AppConfig」。
-2. 或在供應 binary 真正接線 `AppConfig::from_env` 後（PHASE-G3）再宣稱。
-
-### §11.6 `apps/web` 區隔（C-21）
-
-- `apps/web`（`ekp_web`，自有 router `／／health／/submit`，僅 `home.html`）與 `governance_web` 工作台**完全獨立**，不得混同。
-- 長遠二選一（OQ-GOV-09）：合併為一或移除 `apps/web`。
-
-### §11.7 API v1 收斂目標（每端點先契約後實作）
-
-| 批次 | 端點 | 理由／注意 |
-|---|---|---|
-| B-A 唯讀（已） | GET /api/v1/workflows、GET /api/v1/approvals | 已落地（真實資料） |
-| B-B 寫入 | POST /api/v1/workflows、…/publish、POST /api/v1/approvals、…/decide、…/escalate | 需冪等鍵＋重放防護（CTR-API-001 §3） |
-| B-C 事件 | POST /api/v1/events/replay | 需重放契約定義 |
-| B-D 治理 | GET /api/v1/channels、/health、GET /api/v1/users、GET /api/v1/settings | 通道註冊表、身分治理邊界（DEC-12）、設定安全審查 |
-| B-E 檢索 | GET /api/v1/search | 搜尋 API 參數／權限契約（S19 權限語義先定） |
-
-**原則**：「任何端點從 501 轉為 200 前，必須先有契約、測試與誠實資料來源；禁止先上線後補文檔」（CTR-API-001 §4）。
+角色問候＋待辦（可操作）→ 本週例外（差異/逾期）→ 常用任務鏈入口（≤5，依角色）→ 指標卡（就地解釋）→ 最新證據（我的操作軌跡）。
 
 ---
 
 ## §12 稽核與合規對照
 
-### §12.1 稽核鏈（audit_chain）
-
-- `platform/src/governance.rs`：SHA-256 帳鏈（`GENESIS_HASH="GENESIS"`、9 變體 `EventPayload`、`QUALITY_CHECKLIST` 29 項）。
-- 完整性檢查：`Ledger::open` 時逐筆驗證；截斷／空白／重複 ID／懸空參照／非法流轉 → fail-closed。
-- 限制：目前為 JSONL 單機帳鏈，**非 WORM**（`worm` 僅 library-only）；Postgres 版不可視為生產稽核庫（DEC-14 未決）。
-
-### §12.2 KB（Knowledge）權威分工（ADR-0012）
-
-| 事實 | 權威來源 | 本計畫處理 |
-|---|---|---|
-| G0–G7 關卡定義、決策權、通過／條件通過／阻擋條件 | IMS 套件（`49_Phase0-1_驗收關卡.csv`） | 引用，不另立 |
-| 9 種 IMS 角色 | IMS 手冊 §2 | 引用，不另立 |
-| 12 process areas | `tools/compliance/vocab/process-areas.csv` | 引用，不另立 |
-| SoA 93 控制母表 | `soa-93-controls.csv`（ISO 27001:2022 Annex A，A.5.1–A.5.37／A.6.1–A.6.8／A.7.1–A.7.14／A.8.1–A.8.34） | 引用，不另立 |
-| Crosswalk 18 欄 schema；主鍵 `control_id + standard_ref + std_clause` | ADR-0011 §2.3（欄位：`control_id`、`control_title`、`applicability`、`exclude_reason`、`verify_status`、`owner_role`、`review_cycle`、`evidence_id`、`evidence_ref`、`standard_ref`、`std_clause`、`gap`、`disposition`） | 引用，不另立 |
-| 權限治理垂直切片 | `templates/wbs-workpackages.csv`、`templates/wg-workgroups.csv` | 引用 |
-| KB 舊 G-0..G-4（別名） | G-0→G1、G-1→G2、G-2→G3、G-3→G6、G-4→G7；G0、G4、G5 為 IMS 新增 | 引用時須標明 IMS 對應（ADR-0012 §4） |
-
-### §12.3 ekpi-platform G1–G5 與 IMS G0–G7 之對應（必須顯式，禁止靜默重編號）
-
-ekpi-platform 的 G1–G5 是**專案生命週期關卡**（`docs/governance/06-data-and-state-model-v1.md` §5 起改狀態機；`platform/src/governance.rs:735` 與 `:1122` 的 `["G1","G2","G3","G4","G5"]` whitelist；`governance_web.rs:2522-2526` 的說明）；IMS 的 G0–G7 是 **ISMS 實施關卡**（ADR-0012）。兩者**不可混用**，以下為**對應表（不是同一概念）**：
-
-| ekpi-platform 專案關卡 | 語義（`governance_web.rs`） | IMS 對應（參考） | KB 舊別名 |
-|---|---|---|---|
-| G1 立案 | 目的、贊助人、範圍與風險分級已確認 | G1 範圍（IMS）近似 | G-0 → G1 |
-| G2 基準 | 需求、驗收標準、計畫及責任已確認 | G2 基線（IMS）近似 | G-1 → G2 |
-| G3 執行 | 關鍵品質檢查通過，或缺失已正式登錄 | G3 風險與 SoA（IMS）近似 | G-2 → G3 |
-| G4 交付 | 必要證據、適用要求與驗收條件已滿足 | G4 控制實施／G5 測試（IMS）跨兩階 | —（IMS 新增） |
-| G5 結案 | 移交、未結責任、封存及改善計畫已完成 | G6 內稽與管理評審／G7 維運移交（IMS）跨兩階 | G-3 → G6、G-4 → G7 |
-
-> **ADR-0004 提案（DEC-21）**：必須保留已發佈帳鏈中 `G1..G5` 字串（帳鏈相容），同時在治理層新增 `gate_namespace: project | ims` 分別儲存關卡決定；UI 呈現兩個命名空間但不得混寫。未裁決前，任何文件引用 `G1..G5` 時須標註「ekpi-platform 專案關卡」，引用 `G0..G7` 時須標註「IMS」。
-
-### §12.4 9 IMS 角色 × 3 工作室 × 4 應用角色 對照
-
-| IMS 角色 | 工作室歸屬 | 應用 Role（local_auth） | 決策禁令 |
-|---|---|---|---|
-| EXEC_SPONSOR | 3 | —（管理層） | 唯一風險接受者 |
-| ISMS_OWNER | 3 | Admin | 不可代替業務風險擁有人接受風險 |
-| PROCESS_OWNER | 1 | Approver | 業務風險唯一接受者 |
-| ASSET_OWNER | 1/3 | Editor | 不可以技術管理代替業務所有權 |
-| CONTROL_OWNER | 2 | Editor | 不可獨立稽核自己設計的控制 |
-| LEGAL_PRIVACY | 3 | —（外部職能） | 法律結論須保留法域/日期/事實前提/覆核人 |
-| SEC_IT_ENG | 2 | Admin | 不得核准業務風險接受 |
-| INTERNAL_AUDIT | 3 | Viewer（稽核帳號） | 不得稽核自己執行的工作 |
-| PMO | 1/3 | Approver | 不得將文件交付等同控制有效性判定 |
-
-### §12.5 12 專案階段（AT-02）對應
-
-`AT-02` 列 12 階段：立案 → 需求分析 → 計畫 → 文件系統設定 → 執行 → 品質驗證 → 變更分析 → 缺失風險閉環 → 階段放行 → 驗收移交 → 結案封存 → 效益改善。
-對應 VS 域：立案（VS-01 前置）、需求分析（VS-01）、計畫（VS-02）、文件系統設定（VS-02）、執行（VS-03/VS-04）、品質驗證（VS-09）、變更分析（VS-09）、缺失風險閉環（VS-09）、階段放行（VS-05/VS-06）、驗收移交（VS-06）、結案封存（VS-09）、效益改善（VS-09 回饋 §16）。
-
-每階段必須具備「進入條件／活動／交付物／角色／完成條件／前後階段」欄位（AT-02），不可只剩名稱。
+- **雙軌證據**：audit_log（查詢）+ kem 哈希鏈（防篡改證明）；每日互核（RB-04）。
+- **審計就緒標準**（Thoropass 四要件，GP-04）：相關（對控制）／完整（含期間）／準確（與他證一致）／可追溯（來源+日期）。工作台導出證據時自動附四要件浮水印區塊。
+- **控制庫**：一控制↔多框架映射表（ISO/內控自評/銀行合規），由 S3 維護；測試排程與證據請求自動提醒（GP-02/03）。
+- **CCM**：先導 3 指標（審計事件鏈完整性、SSO/登入異常、金額不變量違反=0）——監控「控制有效性」而非僅收證（GP-05 治）。
+- **OQ-F1/F2**：廠商回覆未到＝UNKNOWN；合規追蹤表逐項保留（不轉 PASS）。
 
 ---
 
 ## §13 權限模型
 
-### §13.1 雙 Role 並存（C-15）— 必須收斂
-
-| 型別 | 位置 | 規則 |
-|---|---|---|
-| `ekp_domain::auth::Role` | `crates/domain/src/auth.rs:24` | Viewer < Editor < Approver < Admin（`satisfies()`）；`Permission` 4 種＋`minimum_role()` |
-| `ekp_platform::local_auth::Role` | `platform/src/local_auth.rs:41` | 同名 4 階；`authenticate` + `has_role`；實際被 `governance_web` 用 |
-
-**目標**（PHASE-G3，DEC-23）：登入層保留 `local_auth::Role`；authorization 統一以 domain `Permission::minimum_role()` 為準；禁止跨層互換「角色」一詞。未收斂前，程式碼必須 `use` 完整路徑，不得僅寫 `Role`。
-
-### §13.2 權限矩陣（擴展 v2.1 §5）
-
-| 能力 | 工作室 1（業務） | 工作室 2（技術） | 工作室 3（治理） |
-|---|---|---|---|
-| 專案／任務 CRUD | Editor（自有部門） | Viewer | Viewer |
-| 簽核／駁回／升級 | Approver（金額分級） | 無（除非兼任主管） | Auditor（僅審查，不執行） |
-| 適配器／頻道管理 | 無 | Admin | Viewer |
-| 規格／合規條文登錄 | 無 | 無 | Admin（KB，單向引用） |
-| 稽核鏈查看 | Viewer | Viewer | Admin |
-| 系統設定／儲存模式 | 無 | Admin | 無 |
-| 使用者／角色管理 | 無 | Admin（技術帳號） | 無（需工作室 2 協作） |
-| 事件重播／除錯 | 無 | Admin | Viewer |
-
-### §13.3 關鍵控制
-
-- **SoD**：不得同時擔任簽核與執行（`SodConstraint`、`PermissionLevel` 4 階、`Classification` 4 階）。
-- **JIT 權限**：敏感操作（跨機部署、資料庫備份還原、銀行付款發送）須治理核准；由 `JitPermissionManager` 控制上限與到期。
-- **失敗閉鎖**：異常退回人工，不可靜默繼續。
-- **限制**：目前無企業 IdP/SSO/MFA/帳號復原/持久化身分資料庫/存取審查/租戶隔離（DEC-12，B1 Blocked）。
+- 主體：人（角色/RBAC 即時查詢）＋代理（agent-policy：能力/速率/資料類別/時窗）。
+- 原則：最小權限、職責分離（建單≠覆核≠過帳者可重疊但被審計）、自我裁決禁止、停用即撤銷會話（已實作）。
+- 權限碼即契約：403 回應必指名權限碼（既有）；新端點須先在權限矩陣註冊。
+- 代理專章：僅白色路徑可寫，且寫入一律進草稿；速率與資料類別上限強制（HP-09）。
 
 ---
 
 ## §14 資安基線
 
-### §14.1 現況（已驗證）
-
-| 控制 | 現況 | 證據 |
-|---|---|---|
-| 本機帳密 | PBKDF2-HMAC-SHA256 600,000 iter＋16 byte salt；帳號驗證以常數時間比對 | `local_auth.rs:26, 28, 95-100` |
-| Session | 32 byte CSPRNG token（`TOKEN_BYTES=32`）＋獨立 CSRF token（`TOKEN_BYTES`）；3600s；進程記憶體；`HttpOnly`＋`SameSite=Strict` cookie `ekpi_session`；`Secure` 僅當 `EKPI_COOKIE_SECURE=1` | `local_auth.rs:28-29, 208-212`; `web-routes.md` §Server boundary |
-| CSRF | 雙提交（`X-CSRF-Token` header 或 `ekpi_csrf` cookie）；登入頁 hidden field + cookie；session 需要 | `governance_web.rs:201-204, 583-649, 848-853` |
-| 登入保護 | 失敗回 generic 訊息；lockout 5 次／300s（`MAX_FAILED_LOGINS=5`、`LOCKOUT_WINDOW_SECS=300` 在 `adapters/identity.rs`）；未知使用者亦付 dummy hash 成本 | `web-routes.md`; `backend/README.md` |
-| 同源／Host | `same_origin_guard`；`Host` 須為單一 loopback authority；重複／空白／非 UTF-8／非 loopback 拒絕；session cookie 重複／空／非 UTF-8 視為未認證 | `governance_web.rs`; `integration_web.rs` |
-| 標頭 | CSP、`X-Content-Type-Options`、`Referrer-Policy`、`X-Frame-Options`、`Cache-Control: no-store`、`Permissions-Policy`、`Cross-Origin-Opener-Policy`、`Cross-Origin-Resource-Policy` | `web-routes.md` |
-| Form 限制 | 64 KiB 上限；超量或格式錯誤回 `400` 且不附加事件 | `web-routes.md` |
-| 表單 actor 不可信 | mutation 一律用 session 使用者為 ledger actor，忽略表單 `actor` | `governance_web.rs` session_identity |
-| 公開路徑 | 僅 `/healthz`、`/metrics`、`/login`、`/assets/`（`is_public_path`，L667）；`/ready` 須登入 | `governance_web.rs:667` |
-
-### §14.2 不可引用為資安證據（C-16）
-
-- `Dev/web/src-tauri/src/main.rs` 的 `run_security_check()`／`run_connection_check()` 為硬編碼 JSON（含 `cert_pinning:true`、`two_way_ssl:true`），**禁止**引用為資安證據。
-- `get_account_balance()` 回固定值；bankpay 全回 `MOCK123`。
-- `tauri.conf.json` `frontendDist: "../src"` 為誤設定，不得作為部署保證。
-
-### §14.3 落地硬性要求（QG-03）
-
-- `ekpi-platform/platform/src/api.rs`（固定回 `comply`）**永遠不得掛載**；`docs/backend/README.md` 明載 "must not be exposed"。
-- 不得將 `local_auth` 說成企業認證；不得將 session 說成租戶隔離。
-- 明確區隔：`Dev/platform/src/api.rs`（根 FlapsErp，完全接線）≠ `ekpi-platform/platform/src/api.rs`（未接線 placeholder）；兩者同名不同物，必須以全路徑引用。
+CSP default-src 'none'（無 script 來源）｜nosniff/DENY/no-referrer/no-store（已實作 C-15）｜Argon2id＋可撤銷會話＋CSRF（C-09）｜登入速率限制（5 次/15 分）｜Secure cookie 待 TLS（R-07，部署閘門條件）｜Secrets 不進版控（掃描已做）｜依賴審計：cargo audit＋接受清單文件化｜威脅模型持續更新（THREAT_MODEL）。**新威脅（本版新增）**：T-09 哈希鏈修復權限濫用（建議：修復需雙人覆核）；T-10 代理憑證洩漏（建議：短時效＋逐請求簽章）。
 
 ---
 
 ## §15 可靠性與維運 Runbook（RB-01..RB-10）
 
-| 代號 | 場景 | 自動程序 | 人工覆核 | 證據 |
-|---|---|---|---|---|
-| RB-01 | 啟停與升級 | 原生 binary 部署；異步備份；版本回滾 | 雙人覆核 | 部署清單、回滾紀錄 |
-| RB-02 | 備份與還原 | `scripts/backup.ps1`；還原演練 | 還原演練簽核 | backup bundle 雜湊、還原演練紀錄 |
-| RB-03 | 帳鏈竄改應變 | `verify_integrity()` 失敗即停 | INTERNAL_AUDIT 複核 | 驗證報告 |
-| RB-04 | outbox 積壓 | `pending_outbox` 監控；重投 | 技術值班 | 監控截圖、重投紀錄 |
-| RB-05 | 冪等／重播防護 | `IdempotencyLedger`；`event_id` 去重 | 稽核確認 | 去重紀錄 |
-| RB-06 | 隔離清單分流 | `IsolationEntry` 列表；關鍵字分流 | VS-09 覆核 | 分流工作單 |
-| RB-07 | 三方對帳差異 | `ThreeWayReconciler`；自動 quarantine | 業務覆核 | 對帳報告（見 §8.5） |
-| RB-08 | 事件／事故應變 | 告警 → ESC-1..ESC-4；隔離區間 | 事故指揮 | Incident timeline |
-| RB-09 | 憑證與密文輪替 | 過期前 30 日預警 | 雙人操作 | 輪替紀錄 |
-| RB-10 | 適配器上線 | 契約測試全綠 → 灰度 → 全量 | 治理簽字 | 契約註冊、簽字單 |
-
-每支 Runbook 必須有：觸發事件、自動程序、人工覆核、證據產出、回滾路徑。未備妥者不得宣稱營運就緒。
+| ID | 情境 | 首動 | 判據 | 恢復 |
+| :--- | :--- | :--- | :--- | :--- |
+| RB-01 | DB 不可達 | /api/health 503 degraded | 連線+遷移版本 | 修復後 T-重啟+對帳 |
+| RB-02 | 會話異常暴增 | 限流生效觀測 | 失敗率窗 | 鎖定來源+通報 |
+| RB-03 | SQLite WAL 膨脹 | wal_checkpoint(TRUNCATE) | wal 大小閾 | 排程化 |
+| RB-04 | 哈希鏈驗證失敗 | 停寫入，隔離段 | 鏈驗證器 | 修復＋雙人覆核（T-09） |
+| RB-05 | 匯入重放攻擊跡象 | 409 統計異常 | 指紋重複率 | 封鎖+審計 |
+| RB-06 | 報表逾時 | p95 監控 | >500ms warm | 索引/上限（OQ-10-2 既有） |
+| RB-07 | 同步失敗風暴 | 熔斷開啟 | 連接器成功率 | DLQ 重放 |
+| RB-08 | 桌面鎖屏阻斷 RPA | 焦點丟失告警 | 視窗存在性 | Session 0/守護（已知風險） |
+| RB-09 | 檔案鎖鎖死建置 | 換 CARGO_TARGET_DIR | 檔案鎖訊息 | 隔離建置（C-22 教訓） |
+| RB-10 | 編碼回歸（mojibake） | PUA 掃描器 | PUA=0 | 依 encoding-standard 修復 |
 
 ---
 
 ## §16 資料治理與持續改善
 
-### §16.1 五條 Feedback Loops
-
-| Loop | 來源 | 消費端 | 閉合條件 |
-|---|---|---|---|
-| F1 使用者 → 需求 | 工作室 1 裏意見 | 工作室 3（政策）＋工作室 2（實作） | 需求 ID 入 `DEC-` 登記 |
-| F2 稽核 → 控制 | VS-09 稽核發現 | CONTROL_OWNER | 控制修復＋複驗 |
-| F3 資料品質 → 模型 | 隔離清單（RB-06）+ 契約違反 | 業務擁有者 | 主資料修正＋版本發布 |
-| F4 效能 → 容量 | 監控（/metrics） | 工作室 2 | 容量模型更新（DEC-19） |
-| F5 Retro → Roadmap | 里程碑回顧 | PMO | Roadmap 更新（§17） |
-
-### §16.2 治理控制
-
-- SoA（93 控制）為 `verify_status` 唯一真相來源（ADR-0011 §2.4）；crosswalk 只存差距與處置（`gap`、`disposition`），不得另立實作狀態欄。
-- `applicability` ≠ 適用者必填 `exclude_reason`（ADR-0007：不可驗證來源一律標記）。
-- 多標準接軌經 crosswalk 18 欄；主鍵 `control_id + standard_ref + std_clause`。
-- 指標先有定義與核准目標（BASE-07）；試點負責人簽認基線與結果。
+資料分類（公開/內部/敏感/受限）與對應儲存/傳輸/遮罩規則；保留與銷毀政策（會話過期清理已實作）；AI 資料邊界（本地推論為預設，雲端例外需擁有者核准——PLAN_REGISTER 決策）；改善迴圈：事故→復盤→注入測試（FAULT-*）→門檻強化（四關＋MT/FBT），每季檢視 32 項技術缺口表。
 
 ---
 
 ## §17 演進路徑與路線圖（PHASE-G*/SLICE-G*）
 
-### §17.1 階段總覽
+| 階段 | 主題 | 切片（代表） | 驗收 |
+| :--- | :--- | :--- | :--- |
+| PHASE-G1 | S1 卓越化（治 WP-01..10） | SLICE-G1.1 八態全覆蓋元件稽核｜G1.2 篩選持久化+鑽取保留｜G1.3 角色起始頁｜G1.4 批量裁決+差異highlight｜G1.5 指標就地解釋｜G1.6 設計 Token 補齊至 §26.2 目標集（38→196 級） | 每切片：四關＋對應 WP 關閉證據 |
+| PHASE-G2 | S2 韌性化（治 HP-05..10） | G2.1 channels 冪等+DLQ｜G2.2 熔斷+半開｜G2.3 UDM 首四實體+權威源｜G2.4 對帳報告｜G2.5 agent-policy 強化 | 契約測試+故障注入（FAULT-07 落地） |
+| PHASE-G3 | S3 稽核就緒（治 GP-01..06） | G3.1 證據四要件導出區塊｜G3.2 控制庫跨框架映射｜G3.3 CCM 三指標｜G3.4 外部唯讀門戶 | 演練：一控制全鏈追溯（GP-04 實測） |
+| PHASE-G4 | 卓越與規模 | G4.1 OTel 評估｜G4.2 HA/多實例評估｜G4.3 混沌工程例行化｜G4.4 30x 檢核（§21.4） | 檢核表全綠＋擁有者簽核 |
 
-| 階段 | 主題 | 退出條件（Exit Gate） | 阻塞依賴 |
-|---|---|---|---|
-| PHASE-G1 | 誠實化收斂（C-12、C-13、§7.1 回退） | QG-07、QG-08 全綠 | 無 |
-| PHASE-G2 | Postgres 治理適配器（fail-closed 先行） | QG-02、QG-03 全綠 | 無（需 PG 18.6 環境） |
-| PHASE-G3 | 供應 binary 接線（AppConfig、Role 收斂） | QG-04、QG-11 全綠 | 無 |
-| PHASE-G4 | API v1 批次 B-B..B-E | QG-09 全綠（逐端點證據） | 契約先行（CTR-API-001 §4） |
-| PHASE-G5 | 三工作室制度化（HO/ESC 證據鏈） | QG-12、QG-13 全綠 | 試點（DEC-01） |
-| PHASE-G6 | 產業疊層與規模擴展（IND-*、SCALE-2+） | QG-14、QG-15 全綠 | DEC-26 arg、PR-01..PR-13 |
-
-### §17.2 切片（有序，互不並行阻塞外的依賴）
-
-| 切片 | 內容 | 影響邊界 | 驗證 |
-|---|---|---|---|
-| SLICE-G01 | `/api-docs` 頁重寫（C-12：13 條全列、移除錯誤 501 標籤、單一來源） | `platform/src/governance_web.rs`（api-docs 頁）＋測試 | QG-07 |
-| SLICE-G02 | `/settings` 頁誠實化（C-13：Postgres 標註未接線） | 同上（settings 頁） | QG-08 |
-| SLICE-G03 | C-08 AGENTS.md 清理（workspace/edition/DATABASE_URL） | `ekpi-platform/AGENTS.md` | QG-07 |
-| SLICE-G04 | C-19 architecture README 清理（no server-side database） | `docs/architecture/README.md` | QG-07 |
-| SLICE-G05 | Postgres fail-closed 化：`todo!()` → `Err(Storage("not implemented in postgres adapter"))`；`verify_integrity()` 不得無條件 `Ok(())` | `crates/adapters/src/postgres/governance.rs` | QG-02 |
-| SLICE-G06 | `AppConfig::from_env` 死碼處理（呼叫或刪除） | `crates/adapters/src/configuration.rs`＋`platform/src/bin/governance_web.rs` | QG-04 |
-| SLICE-G07 | `web` crate 金額 i64（C-17）＋孤兒目錄清理（C-04）＋`tauri.conf.json` 修正（C-18） | `Dev/web/**` | QG-05、QG-06 |
-| SLICE-G08 | C-22 AGENTS.md 同步（9→10 子命令）＋ C-09 phase-gates 同步 | `Wellfit/AGENTS.md`、`phase-gates.md` | QG-07 |
-| SLICE-G09 | 雙 Role 收斂（C-15，DEC-23） | `crates/domain/src/auth.rs`、`platform/src/local_auth.rs` | QG-11 |
-| SLICE-G10 | ChannelAdapter trait 統一（C-07，ADR-0004，DEC-21） | `crates/domain/src/channels.rs`、`platform-hub/crates/channels` | QG-14 |
-| SLICE-G11 | `apps/web` 去留（C-21，OQ-GOV-09） | `apps/web` | QG-13 |
-| SLICE-G12 | API v1 寫入端點（B-B） | `platform/src/governance_web.rs`、`crates/application` | QG-09 |
-| SLICE-G13 | API v1 事件／治理／檢索（B-C..B-E） | 同上 | QG-09 |
-| SLICE-G14 | Postgres 治理適配器真實 SQL（PHASE-G4） | `crates/adapters/src/postgres/`、`migrations/` | QG-02、QG-03 |
-| SLICE-G15 | KB crosswalk 落地（VS→process_area、IND→policy pack） | 對接 KB `crosswalk.csv` | QG-14 |
-| SLICE-G16 | 試點與驗證（DEC-01、A1） | `docs.traceability/register.md` | QG-12、QG-13、QG-15 |
-
-### §17.3 失敗模式（每切片必考）
-
-- Postgres 未啟用 → 一律 JSONL（不得假裝已接線）。
-- `verify_integrity()` 回 `Ok(())` 在修復前不得出現在稽核頁。
-- 契約未定 → 保持 501；禁止先上線後補契約（CTR-API-001 §4）。
-- 任一 f64 金額 → QG-05 阻擋。
+執行序：每階段先立 RED 測試（TDD），後實作；每切片綁 PLAN_REGISTER addendum。
 
 ---
 
-## §18 風險登記冊（RSK-G01..RSK-G14）
+## §18 風險登記冊（RSK-G*）
 
-> 前綴 `RSK-G` 與 FlapsErp `RSK-E*`／管理文件 `RSK-01..07` 區隔，避免命名空間碰撞。
-
-| 代號 | 風險 | 等級 | 緩解（本計畫內） | 關閉條件 |
-|---|---|---|---|---|
-| RSK-G01 | Studio 2 成為技術瓶頸 | 高 | 自助＋例外審核；HQ 例外僅重大變更需核准 | 佇列工時未超閾值 |
-| RSK-G02 | Studio 3 誤判合規條文 | 中 | advisory-only＋雙人複核 | 複核一致率 ≥ 99% |
-| RSK-G03 | 電商與規格邏輯衝突 | 高 | 僅於 ApprovalTask 層關聯；衝突進隔離清單 | 隔離清單週期清理 |
-| RSK-G04 | 權限集中於 Studio 2 Admin | 高 | Admin 雙人核准；全操作寫入 audit_chain | 持續有效 |
-| RSK-G05 | Agent 誤判（R-05） | 高 | 高風險強制人工，fail-closed，完整稽核 | DEC-15 解鎖前須有 QG-10 |
-| RSK-G06 | momo 規格未取得（R-01） | 高 | Phase E 標條件式；B/C/D 先行；掛 OQ-F2-5 | 2026-11-19 前未回覆即維持條件式 |
-| RSK-G07 | 部署目標未核准（R-15） | 高 | 僅 loopback；跨機另立 Phase G | PR-02 |
-| RSK-G08 | `todo!()` runtime panic（C-06） | 高 | SLICE-G05 先 fail-closed 化 | QG-02 |
-| RSK-G09 | `verify_integrity()` 偽通過（C-14） | 高 | SLICE-G05 修復 | QG-02 |
-| RSK-G10 | `AppConfig` 死碼（C-13） | 中 | SLICE-G06 | QG-04 |
-| RSK-G11 | 雙 Role 語義漂移（C-15） | 中 | SLICE-G09 | QG-11 |
-| RSK-G12 | `web` crate f64（C-17） | 中 | SLICE-G07 | QG-05 |
-| RSK-G13 | Mock 安全宣稱（C-16） | 高 | 標註 mock；不得引用 | QG-06 |
-| RSK-G14 | 四套 workspace 技術棧漂移 | 中 | ADR-0001 基線維持；DEC-22 追蹤 | DEC-22 裁決 |
+| ID | 風險 | 機率×衝擊 | 緩解 | 觸發檢測 |
+| :--- | :--- | :--- | :--- | :--- |
+| RSK-G01 | 樞紐單點（HA 缺） | 中×高 | 可重放補償+備份；OQ-GOV-03 | 可用性監控 |
+| RSK-G02 | 哈希鏈修復濫用 | 低×高 | 雙人覆核+審計修復操作 | RB-04 記錄 |
+| RSK-G03 | 代理越權 | 中×高 | agent-policy 白名單+速率+草稿模式 | 稽核標記巡檢 |
+| RSK-G04 | 遷移 UX 退步（WP-06 前例） | 中×中 | 每個 UI 變更跑「點擊數不回退」檢查 | UX 審查 |
+| RSK-G05 | 範圍蔓延（三線並行） | 高×中 | 擴編門檻（§4.2）+ESC-2 | 週報 |
+| RSK-G06 | 廠商依賴（OQ-F1/F2） | 高×中 | UNKNOWN 紀律；不阻塞支線 | 期限 11-19 |
+| RSK-G07 | 並行線品質互踩 | 中×中 | board 分工+穩定點量測（C-22） | 編譯/測試瞬時紅 |
 
 ---
 
 ## §19 未決決策與阻塞（DEC-21+／OQ-GOV-*）
 
-### §19.1 既有未決（canonical：`docs/governance/08-decision-register.md`）
-
-| 編號 | 主題 | 裁定負責人 | 未決處置 | 影響 |
-|---|---|---|---|---|
-| DEC-01 | 試點部門／流程／贊助人 | 業務贊助人 | 只做樣例建模 | FR-01/04/07 |
-| DEC-02 | 目標族群與角色分工 | 業務主管／HR／PMO | 角色基線草稿；權限測試 BLOCKED | FR-03..06, NFR-03 |
-| DEC-03 | 風險分類與例外層級 | 風險主管／QA／法遵 | 風險欄位僅記錄 | FR-01/05/11 |
-| DEC-04 | 專案欄位必填與基線簽署 | PMO／資料擁有者 | 維持草稿；不得進 G1 | FR-01/07 |
-| DEC-05 | 文件來源／版本／保存 | 文件控制者／法遵 | 人工確認並標記 | FR-02/03/08, NFR-04 |
-| DEC-06 | 交付物與 G1–G5 證據 | 流程擁有者／PMO／QA | 通用模板原型 | FR-04/05 |
-| DEC-07 | 29 項 QC 適用範圍／N/A | QA／流程擁有者 | N/A 須理由 | FR-11 |
-| DEC-08 | 風險／變更／CAPA SLA 與門檻 | QA／風險負責人 | 只記錄 | FR-06 |
-| DEC-09 | 基線期／指標目標／驗收者 | 贊助人／PMO | 儀表板 N/A | FR-07 |
-| DEC-10 | MS/Google SKU／API | IT／資安 | 僅人工來源參照 | FR-08, NFR-06 |
-| DEC-11 | 優先接入工具排序 | IT／PMO | 不開發未排序連接器 | FR-08 |
-| DEC-12 | IdP／MFA／租戶 | IT／資安 | 不得部署多使用者 | NFR-03 |
-| DEC-13 | 資料分類／保存／個資 | 資料治理／法遵／法務 | 不輸入敏感真實資料 | NFR-04/05/07 |
-| DEC-14 | 稽核防竄改／RPO/RTO | IT 營運／資安 | 本機 hash 僅原型 | FR-10, NFR-07 |
-| DEC-15 | AI 供應者／模型／資料層級 | AI 負責人／資安／法遵 | AI 關閉 | FR-09, NFR-05 |
-| DEC-16 | SLO／支援時段／監控 | 系統擁有者／IT | 不作營運承諾 | NFR-07 |
-| DEC-17 | 無障礙義務／瀏覽器矩陣 | UX／IT／無障礙負責人 | WCAG 2.2 AA 基線 | NFR-01/02 |
-| DEC-18 | 法規適用產業／司法管轄區 | 法遵／法務／業務 | 只用通用基線 | FR-05/06/11 |
-| DEC-19 | 容量模型（使用者／併發／匯出） | 系統擁有者／IT／PMO | 不宣稱容量 | NFR-08/09, FR-10 |
-| DEC-20 | 威脅模型／ASVS 等級 | 資安架構師 | 不作安全宣稱 | NFR-03/10 |
-
-### §19.2 本計畫新增 — 待併入 canonical 登記
-
-| 提案編號 | 主題 | 所需裁定 | 未決處置 |
-|---|---|---|---|
-| DEC-21（提案 ADR-0004） | platform-hub 落點（是否留 `Dev/platform-hub/`）與 `ChannelAdapter` trait 統一（C-07、C-10） | 架構決策 | 以 `platform-hub` typed `UnifiedOrder` 為準；ekpi-platform 側標骨架 |
-| DEC-22 | 四套 Cargo workspace 是否統一；長遠架構（B3/B4 是否併入 B1/B2） | 工作區擁有者 | 維持 ADR-0001 基線並存；ADR-0001 本身不作改 |
-| DEC-23 | 雙 Role 收斂（C-15）— 登入層與授權層分工 | 安全架構 | 登入用 local_auth；授權以 domain Permission 為準 |
-| DEC-24 | Postgres 適配器 go-live 時機與 fail-closed 政策（C-06、C-14） | 系統擁有者／資安 | PG 未上線前一律 JSONL |
-| DEC-25 | KB 跨標準對照表 18 欄在 ekpi-platform 的落地（VS→process_area、IND→policy pack，見 §12.2） | 法遵／資料治理 | 僅參照，不自動寫入 SoA |
-| DEC-26 | 產業疊層（IND-*）以 policy pack 參數化而非 fork | 架構決策 | 禁止按產業 fork 程式 |
-| DEC-27 | `/api-docs`、`/settings` 頁面由單一來源產生（見 §11.4／§11.5） | 工程決策 | 誠實化頁面；不得與契約矛盾 |
-| DEC-28 | VS-01..VS-09 與既有 12 階段／G1–G5 的映射基準 | 流程擁有者／PMO | 以 §12.5 映射為準 |
-
-### §19.3 本計畫新增開放問題（OQ-GOV-*）
-
-| 提案編號 | 問題 |
-|---|---|
-| OQ-GOV-01 | 部署目標（呼應 PR-02） |
-| OQ-GOV-02 | `platform-hub/apps/cli` 是否建 |
-| OQ-GOV-03 | Redis/Fly-`TRACTION` 的 Windows 落點（Memurai vs PG 快取，DEC-14） |
-| OQ-GOV-04 | Kafka 啟用門檻（>5,000/s 或 backlog >100k） |
-| OQ-GOV-05 | PChome／Cyberbiz 規格未取得 |
-| OQ-GOV-06 | 備援 RPO／RTO 核定（DEC-14） |
-| OQ-GOV-07 | 本機 Postgres 初始資料遷移 |
-| OQ-GOV-08 | KB 私有 remote 位置 |
-| OQ-GOV-09 | `apps/web` 去留（C-21） |
-| OQ-GOV-10 | 12 階段模版自訂與 SOI 映射 |
-| OQ-GOV-11 | SQLite（B3/B4）與 PostgreSQL（B1/B2）長期並存與否 |
-| OQ-GOV-12 | `sqlx` compile-time check 在離線 CI 的處理 |
-| OQ-GOV-13 | `check-docs` 覆蓋率 |
-| OQ-GOV-14 | `crates/adapters/src/postgres/identity.rs` 與 `local_auth` 的長期關係 |
-
-### §19.4 PR（Production Readiness）映射
-
-`PR-01..PR-13`（見 `docs/operations/production-readiness.md`）為生產就緒的 canonical 登記。PR-01（範圍與完成定義）、PR-02（部署目標）、PR-03（身分與授權）為前置，解鎖 PHASE-G5／G6。其餘 PR（PR-04..PR-13）沿用既有登記，不在此複寫。
+| ID | 決策/阻塞 | 選項 | 所需 | 主責 |
+| :--- | :--- | :--- | :--- | :--- |
+| OQ-GOV-01 | PostgreSQL 遷移時機 | 延後/現在/雙軌 | 併發數據+ADR | 擁有者 |
+| OQ-GOV-02 | SSE 即時性（零 JS 邊界內） | 輪詢/SSE/無 | 憲章解釋 | 擁有者 |
+| OQ-GOV-03 | hub HA 方案 | 單+補償/主備/叢集 | SLA 需求 | 擁有者 |
+| OQ-GOV-04 | 外部稽核師門戶憑證模型 | 一次性連結/帳號 | 法遵確認 | 稽核負責人 |
+| OQ-GOV-05 | 三工作室實體歸屬（repo/團隊） | 現狀/合併 | 組織決策 | 擁有者 |
+| DEC-21 | 部署環境（TLS/網域） | — | 授權（既有阻塞） | 擁有者 |
 
 ---
 
 ## §20 品質閘門總表（QG-*）
 
-| 閘門 | 判定指令／證據 | 通過標準 | 關閉條件（未達即阻擋） |
-|---|---|---|---|
-| QG-01 | `grep -r "adjudicate_case" platform/src/api.rs` 期望或其掛載 | `platform/src/api.rs` 未掛載 | 任一掛載即阻擋 |
-| QG-02 | `grep -rn "todo!" crates/adapters/src/postgres/` | **0 命中** | 任何命中即阻擋（RSK-G08） |
-| QG-03 | `postgres/approval.rs`、`postgres/channels.rs` 不含 `Err(Storage("not yet implemented"))` | **0 命中** | 任何命中即阻擋 |
-| QG-04 | `grep -rn "AppConfig::from_env" crates/ platform/` 有呼叫者（或已刪除 AppConfig）；供應 binary 印出「EKPI_STORAGE=postgres」啟用訊息 | 以程式碼為據 | 無呼叫者即阻擋（C-13） |
-| QG-05 | `grep -rn "f64" src/ src-tauri/src/ --include="*.rs"`（`Dev/web`）＋金額路徑 f64 | **0 命中**（金額／數量欄位） | 任何命中即阻擋（C-17） |
-| QG-06 | `grep -rn "cert_pinning\|MOCK123\|two_way_ssl" src-tauri/src/` | **0 命中**（或標 `mock_mode:true`） | 任何命中即阻擋（C-16） |
-| QG-07 | 契約對齊：`/api-docs` 頁表格 row count = 13；兩個已接線端點標「已接線（唯讀）」；AGENTS.md workspace/edition/DATABASE_URL 與 manifest 一致；`architecture/README` 無「no server-side database」 | 4 項全綠 | 任一未綠即阻擋 |
-| QG-08 | `/settings` 頁「PostgreSQL／EKPI_STORAGE」字串在未接線前不會出現未標註的啟用宣稱 | 以頁面檢查為據 | 未標註即阻擋 |
-| QG-09 | API v1 合約測試：每端點由 501 轉 200 前，契約、冪等、重放防護、錯誤結構全覆蓋 | 一端點一證據 | 缺任一即阻擋 |
-| QG-10 | `grep -ri "auto_approve" ekpi-platform/crates/`（大小寫不敏感） | **0 命中** | 任何命中即阻擋（DEC-15 未決） |
-| QG-11 | 雙 Role 收斂完成前：所有授權判定經過 `Permission::minimum_role()`；無散見 `role >= Role::X` 手寫比對 | grep 審查 | 手寫比對即阻擋 |
-| QG-12 | 試點（A1）證據：真實使用者完成工作流並記錄（DEC-01） | 證據連結 | 未有即阻擋（A1 仍 `Not met`） |
-| QG-13 | `apps/web` 去留決策（OQ-GOV-09）或已併入工作台 | 二選一完成 | 未決即阻擋 |
-| QG-14 | `ChannelAdapter` trait 統一（ADR-0004，DEC-21） | 一個正據 | 未統一前 ekpi-platform 側必須標骨架 |
-| QG-15 | 三方對帳週期性執行（§8.5）且隔離清單屬實 | 報告 | 未執行即阻擋 |
-| QG-16 | 每 `*.rs` 首行 `#![forbid(unsafe_code)]` | 全掃描 | 缺行即阻擋 |
+| ID | 閘門 | 命令/證據 | 現況 |
+| :--- | :--- | :--- | :--- |
+| QG-01 | 四關全綠 | fmt/clippy -D warnings/test --locked/audit | ✅ 157 passed（C-03） |
+| QG-02 | 零 JS 護欄 | script=0 掃描 | ✅（C-08） |
+| QG-03 | 金額不變量 | money/engine 測試+MT 100% | ✅（C-07/C-10） |
+| QG-04 | 效能 SLA | 100k warm p95≤500ms | ✅ 422ms（C-06） |
+| QG-05 | 證據完整性 | audit_log 覆蓋新 POST；鏈互核 | 🟡（鏈待擴至平台） |
+| QG-06 | 契約凍結 | 事件/UDM schema 版號 | ⬜ G2 立 |
+| QG-07 | 故障注入 | FAULT 追蹤表零逾期 | 🟡（04/05 IN PROGRESS） |
+| QG-08 | 編碼零 PUA | PUA 掃描器 | ✅（C-14，需例行化） |
+| QG-09 | 覆蓋零孤兒 | §25.6 六項檢查（PNT/PSN/母痛點/SCR 互引掃描） | ⬜ G1 立 |
+| QG-10 | RIG-guard＋SoD 圖檢 | §25.7-5 二部圖匹配；FLX 不得使 RIG 失效 | ⬜ G1 立 |
+| QG-11 | WCAG 對比自動化 | §25.7-6 亮度公式掃描 §26.2.1 全組合 | ⬜ G1 立 |
+| QG-12 | 導覽三處一致＋文件零漂移 | 側欄/麵包屑/契約對照掃描；§21.4 文件維度 | ⬜ G1 立 |
 
 ---
 
 ## §21 驗證計畫
 
-### §21.1 指令矩陣（每 workspace）
+### 21.1 每切片（強制）
+RED→GREEN 測試證據＋四關＋對應痛點/WP 關閉矩陣更新＋PLAN_REGISTER addendum。
 
-| Workspace | 指令 | 通過標準 |
-|---|---|---|
-| ekpi-platform | `scripts/check.ps1` | 0 failed / 0 ignored |
-| ekpi-platform | `cargo run -p ekp_platform -- --selftest` | 49 assertions PASS |
-| ekpi-platform | `cargo run -p ekp_platform -- --declared-rules-schema` | schema OK |
-| ekpi-platform | `cargo run -p ekp_platform -- --eval --test-set data/eval/search_eval.json` | 28 案例通過（20/20、8/8、4 role、0 violations） |
-| platform-hub | `cargo clippy --workspace --all-targets -- -D warnings` ＋ `cargo test --locked` | 0 警告；全通過 |
-| Wellfit | `build.ps1 -Command "clippy --workspace --all-targets -- -D warnings"` ＋ `build.ps1 -Command "test --workspace --no-fail-fast"` | 0 警告；全通過 |
-| 根 Dev | `cargo fmt -- --check` ＋ `cargo clippy --all-targets -- -D warnings` ＋ `cargo test --locked` ＋ `cargo audit` | 全綠 |
-| Knowledge | `kb-verify.ps1` | 全綠 |
+### 21.2 每階段（里程碑）
+端到端演練（FL-01..04 各一次全程含證據導出）＋故障注入輪（FAULT 表更新）＋追溯矩陣零孤兒（每痛點至少一條測試）。
 
-### §21.2 不變量掃描（QG-05、QG-16 等）
+### 21.3 三工作室互驗
+交叉審查：S2 對 S1 契約、S3 對 S2 證據、S1 對 S3 可用性（每季一輪，記錄於 addendum）。
 
-- `#![forbid(unsafe_code)]`：每 `.rs` 首行。
-- clippy 零警告；不得用 `#[allow(...)]` 壓縮。
-- `<script>` 計數 = 0（工作台）。
-- 金額不使用 `f64`（QG-05）。
-- 不出現 `Bearer`（QG-01 衍生）。
-- 不出現 `auto_approve`（QG-10）。
+### 21.4 30x 檢核表（v3.0 10x 之上修）
 
-### §21.3 合同測試節點
+| 維度 | 基線（v3.0 前） | 目標（30x 语义） | 量測方式 |
+| :--- | :--- | :--- | :--- |
+| 測試防護 | 90 tests（無 MT/FBT） | 157+ 且 MT 100%、FBT 解鎖 | 測試 log+mutants |
+| 效能 | seed ~90s／冷啟 535ms 誤判 | seed ~2s（45x）／量測法正確 422ms | 量測命令 |
+| 整合複雜度 | 點對點 N(N-1)/2 | UDM N×1（接 8 系統：28→8 映射，3.5x/每增一系統線性擴大） | 映射表計數 |
+| 稽核就緒 | 人工取證（GP-01） | 證據自動副產品＋四要件浮水印（就緒時間↓90%+） | 演練計時 |
+| 工作台 | 八態未齊/鏈斷 | 八態全覆蓋＋鏈內零失憶 | UX 稽核表 |
+| 文件/追溯 | 70+ 份（含死鏈/損壞） | 索引零死鏈＋追溯矩陣零孤兒 | 掃描器 |
 
-| 契約 | 測試 | 覆蓋點 |
-|---|---|---|
-| `ColumnContract` | wellfit 單元＋整合 | 必填缺漏硬失敗 |
-| 冪等 | event replay | 同 event_id 重投僅生效一次 |
-| Agent 邊界 | `grep auto_approve` | 0 命中（QG-10） |
-| AP 501 誠實 | `unwired_api_endpoints_return_honest_501_never_fabricated_data`（`integration_web.rs:438`）；`wired_api_list_endpoints_serve_real_contracted_data`（:793） | 未接線 501、401、200 形狀 |
-| 莫偽造 | `cargo test` 內備有攤位禁止（`cargo test` 全綠） | — |
-
-### §21.4 執行環境
-
-- 每個 workspace 獨立 `cargo test`；不要跨 workspace 的併行 test 依賴未定義行為。
-- Windows：`cargo fmt -- --check`、`cargo clippy --workspace --all-targets -- -D warnings`。
-- ekpi-platform：`cargo build` 需 PG 環境支援 migrations；若 PG 不可用，以 JSONL 為據。
+> 誠實註記：30x 為「維度級承諾」而非單一 KPI；每項皆有量測與證據槽位，未量測者標 UNKNOWN，不虛報。
 
 ---
 
 ## §22 追溯矩陣
 
-### §22.1 需求 → 計畫章節 → 證據
+| 痛點/需求 | 切片 | 測試/證據 | 狀態 |
+| :--- | :--- | :--- | :--- |
+| WP-01 鏈碎裂 | G1.2/G1.5 | detail 返回連結保留 q+page（`detail_back_link_preserves_list_context`） | ✅ |
+| WP-02 指標 | G1.3 | KPI 定義/時點/來源（`kpi_definitions_are_inline`；ccm.json 各指標自帶定義） | ✅ |
+| WP-04 總覽→行動 | G1.3 | 角色首屏（`finance/store_landing_*`、`admin_landing_defaults_to_overview`） | ✅ |
+| WP-05 角色盲 | G1.3 | data-role 分歧測試 ×3 | ✅ |
+| WP-07 狀態可見 | G1.4 | 批量覆核逐列結果＋高亮（`bulk_review_*` ×4） | ✅ |
+| WP-08 八態 | G1.1 | 八態標本矩陣（`states_page_covers_eight_data_states`）＋各真實頁狀態 | ✅ |
+| WP-10 失憶 | G1.2 | 返回不重置＋分頁保留 q（`pagination_links_preserve_search_term`） | ✅ |
+| HP-03 映射一次 | G2.3 | UDM 實體＋映射契約（udm 9 tests） | ✅（單位契約就位；廠商對接待 OQ-F1/F2） |
+| HP-05 可靠性 | G2.1/2.2 | 冪等/DLQ/署名重放＋熔斷三態（eventbus 4＋channels 5 tests） | ✅ |
+| HP-06 觀測 | G2.4/G2.2 | 對帳報告計算（手算 fixture）＋CircuitStats | ✅（計算層；渲染掛平行線 api_logs） |
+| HP-09 代理 | G2.5 | 限流/草稿 disposition/審計標記（agent-policy 6 tests） | ✅ |
+| GP-01 取證 | G3.1 | 四要件導出＋sha256 摘要（`evidence_export_*` ×2） | ✅ |
+| GP-02 控制庫 | G3.2 | 跨框架映射＋lint（controls.rs 4 tests＋`control_coverage_*`） | ✅ |
+| GP-05 CCM | G3.3 | 三指標含誠實 null（`ccm_indicators_*`） | ✅（M2 登入稽核事件列為缺口） |
+| WP-03 協作成果不回流 | G1.2/SCR-10 | 任務鏈上下文＋證據軌跡測試（待實作） | ⬜ |
+| WP-06 遷移 UX 退步 | G1.1＋RSK-G04 | 點擊數不回退回歸檢查（待實作） | ⬜ |
+| WP-09 標籤人話 | G1.1/§26.7 | 詞彙表對照測試（待實作） | ⬜ |
+| HP-01 整合首要障礙 | G2.3 | 樞紐映射（udm 9 tests 已就位；全實體閉環待 G2.3 完成） | 🟡 |
+| HP-02 APIM/iPaaS 收斂 | §11.1＋QG-06 | 契約凍結檢查（待實作） | ⬜ |
+| HP-04 語義漂移 | G2.3 | UDM 權威源/裁決規則測試（待實作） | ⬜ |
+| HP-07 所有權 | §8.1＋HO-03 | 映射表 schema 含權威源欄位檢查（待實作） | ⬜ |
+| HP-08 網關蔓延 | §11.1＋QG-12 | 路由/策略一致性稽核（待實作） | ⬜ |
+| HP-10 iPaaS 工程治理 | QG-06＋G2.3 | 映射表版控檢查（待實作） | ⬜ |
+| GP-03 工作流自動化 | G3.2＋HO-05 | 證據請求/核准/補救流測試（待實作） | ⬜ |
+| GP-04 審計就緒 | G3.1 | 四要件完整性演練（FL-03 全程計時；待實作） | ⬜ |
+| GP-06 溯源可重建 | AX-5＋G3.4 | 鏈重放至任意時點測試（待實作） | ⬜ |
+| GP-07 記錄→行動 | HO-05 | 報告含選項/優缺點/證據測試（待實作） | ⬜ |
+| GP-08 AI 加速評審 | AX-7＋VS-03 | 採用延遲量測（待實作） | ⬜ |
+| INV-01/02 | 已交付 | money/engine 42+mutants 100% | ✅ |
+| SLA 500ms | 已交付 | stress 100k warm p95 422ms | ✅ |
 
-| 需求 | 本計畫章節 | 程式碼／契約／文件證據 | 驗證 | 狀態 |
-|---|---|---|---|---|
-| FR-01 | §3 VS-01、§9.2 | `platform/src/governance.rs` `Project`；`governance_web.rs` `/projects` | — | Partial |
-| FR-02 | §3 VS-02、§9.2 | `Evidence`；`docs/contracts/data-formats.md` CTR-DATA-001..004 | — | Partial |
-| FR-03 | §12 | `EventPayload` 9 變體；`EvidenceReviewed` | — | Partial |
-| FR-04 | §10 組 A（5 場景） | `WorkflowDefinition::validate` | `valid_definition_passes_validation` 等 | Partial |
-| FR-05 | §12.3、§12.5 | `governance.rs` G1-G5 whitelist；`WorkflowStage`；12 階段（AT-02） | AT-02..05 | Partial |
-| FR-06 | §9.2 VS-08、§16 | `QualityCase`、`QualityInspection` 29 項 | AT-15..18 | Partial |
-| FR-07 | §16、§20 QG-12 | — | 儀表板 N/A | Not started |
-| FR-08 | §8、§11 | 對接器契約；`docs/contracts/api.md`、CTR-WEB-001 | AT-06/07/21 | Partial |
-| FR-09 | §10.3、§14 | `AgentAdvisor` 僅 advise；`agent-policy` advisory_only | advisory-only 測試 | Partial |
-| FR-10 | §8.6 | `Ledger` SHA-256 帳鏈；JSONL 封存山形 | — | Partial |
-| FR-11 | §6.2 | `QualityCheckDefinition` 29 項 | AT-23.. | Partial |
-| NFR-01..NFR-11 | §13、§14、§15、§21 | `05-functional-spec-v1.md` §6；本計畫 §22 為 NFR-01..11之正據（見 C-20） | — | Partial/Planned |
-
-### §22.2 本計畫新 ID → 章節索引
-
-| ID | 定義章節 | 落地（程式／契約） | 驗證 |
-|---|---|---|---|
-| VS-01..VS-09 | §3 | `platform-hub/udm`、`wellfit_core` | QG-15 流程試跑 |
-| IND-1..IND-6 | §3.3 | policy pack（資料） | QG-14 |
-| SCALE-1..SCALE-4 | §3.4 | —（制度） | QG-13 |
-| HO-01..HO-08 | §5.2 | `ApprovalTask` 參照 | QG-12 |
-| ESC-1..ESC-4 | §6.3 | `TimeoutAction`、`TaskAction::Escalate` | QG-12 |
-| RB-01..RB-10 | §15 | script＋演練 | QG-12 |
-| QG-01..QG-16 | §20 | —（閘門） | — |
-| RSK-G01..RSK-G14 | §18 | —（風險） | — |
-| PHASE-G1..G6 | §17.1 | — | — |
-| SLICE-G01..G16 | §17.2 | 見 §17.2 表 | 見 §20 |
-| DEC-21..DEC-28 | §19.2 | 須併入 `08-decision-register.md` | — |
-| OQ-GOV-01..14 | §19.3 | 須併入 `08-decision-register.md` | — |
-
-> **規定**：每條需求須經 requirement ID/PRD → system design/ADR → contract → ticket → implementation/Git commit → automated test → release evidence → retro（見 `project.md` traceability_chain）。缺鏈者不得標 Verified；「測試通過」不等於「使用者價值已驗證」（Phase A 穩健性 未滿足）。
+> PNT 級閉環明細見 §25.5（粒度互補：本表＝母痛點→切片歸屬；§25.5＝PNT→需求→落地→驗證）。v3.1-r3 補全上列 14 列（機器稽核發現缺測試列，違反 §21.2 零孤兒閘門；動態冪等插入，既有列未更動）。
 
 ---
 
 ## §23 參考文件
 
-- `1793782615513-wellfit-unified-plan-v2.md`（上游統一計畫 v2）
-- `ekpi-platform/AGENTS.md`、`Wellfit/AGENTS.md`
-- `Knowledge/adr/ADR-0009-spec-derivation-vs-arbitration-separation.md`
-- `Knowledge/adr/ADR-0010-iso-27001-isms-baseline-single-control-library.md`
-- `Knowledge/adr/ADR-0011-compliance-naming-and-crosswalk-schema.md`（crosswalk 18 欄、主鍵）
-- `Knowledge/adr/ADR-0012-isms-authority-precedence.md`（IMS 權威、G0–G7、9 角色、別名）
-- `Knowledge/sources/research-protocol.md`（§1.1：契約事實禁網路推測）
-- `ekpi-platform/docs/adr/0002-unified-integration-architecture.md`、`0003-ecommerce-integration-boundary.md`
-- `ekpi-platform/docs/contracts/approval-api.md`（CTR-API-001）、`web-routes.md`（CTR-WEB-001）、`data-formats.md`（CTR-DATA-*）、`README.md`（契約清單）
-- `ekpi-platform/docs/governance/02-requirements-v0.1.md`（FR-01..11、NFR-01..07 bullet、QC-01..29）
-- `ekpi-platform/docs/governance/05-functional-spec-v1.md` §6（NFR-01..11 expanded）
-- `ekpi-platform/docs/governance/06-data-and-state-model-v1.md`（12 階段、專案狀態機、G1–G5）
-- `ekpi-platform/docs/governance/08-decision-register.md`（BASE-01..08、DEC-01..20）
-- `ekpi-platform/docs/governance/10-traceability-baseline.md`（SN 對應、NFR-01..11）
-- `ekpi-platform/docs/quality/phase-gates.md`（Phase A 未核准、Phase B Blocked、A1..A11、B1..B8）
-- `ekpi-platform/docs/quality/bdd-scenarios-approval.md`（26 場景 A1–D7）
-- `ekpi-platform/docs/product/redesign-v2-master-plan.md`（S1–S6 切片）
-- `Dev/docs/adr/ADR-0001-tech-stack-baseline.md`（D-01..D-05；已知 cargo audit 風險：RUSTSEC-2026-0258 h2 / RUSTSEC-2023-0071 rsa）
-- `Dev/docs/PLAN_REGISTER.md`
-- `Dev/.github/workflows/flexible-ci.yml`（pwsh；RUSTFLAGS -D warnings；os 矩陣 ubuntu+windows；branches main/develop/test/release；env choices develop/test/release/production；config `.github/config/ci-config.yml`）
-- `Dev/.github/CODEOWNERS`（docs→architecture、core/platform→backend、web→frontend、crates→bridge、scripts→ops）
+**工作區**：WORKSPACE_CHARTER｜GOVERNANCE_STANDARD｜SHARED_STANDARDS｜docs/README.md v3.0｜PLAN_REGISTER #11｜GAPS_AND_RISKS 2026-11-07｜encoding-standard｜DEVELOPMENT_METHODOLOGY §7–§9｜MUTATION_SCORE_REPORT v2｜FAULT_INJECTION_SOP｜ATDD_BDD_BIND_AUDIT｜FUZZING.md｜ADR-0001/0002/0003｜229 計畫（wellfit-unified-plan-v2、flaps-erp-workbench-completion）。
+
+**外部研究（2026，用於 §1 痛點）**：ICEB 2026 工作台質性研究（aisel.aisnet.org）｜ServiceNow 入口改造案例（xavor）｜Epicor Kinetic 論壇（epiusers.help）｜Salesforce 排程案例（rondesignlab）｜desisle 儀表板重設計（八態）｜Axway/IDC API Mgmt 2026｜Boomi Universal APIM｜sysgenpro/actiknow/wadline iPaaS 治理｜SureCloud GRC 買家指南 2026｜Forrester Wave GRC Q2 2026｜RegScale CCM 2026｜grsee 代理式 GRC 評估指南｜Thoropass 審計就緒。
 
 ---
 
 ## §24 變更紀錄與執行順序
 
-### §24.1 v2.1 → v3.0 變更摘要
+| 版本 | 日期 | 變更 |
+| :--- | :--- | :--- |
+| v3.1 | 2026-11-09 | §0–§24 內文**首次全文補實**（v3.0 僅目錄）；納入 2026-11-07 基線再核對（C-01..C-23）；整合 WP/HP/GP 痛點研究；30x 承諾上修與檢核表；路徑圖 PHASE-G1..G4；風險/未決/閘門/追溯全表。**未推翻任何 v3.0 前之決策與上游計畫**：ADR-0001/0002/0003、unified-plan-v2、flaps-erp-workbench-completion 全數保留並深化引用。 |
+| v3.1-r2 | 2026-11-09 | **增量修訂（引用完整性稽核後併入，零刪除零覆蓋）**：新增 §25 需求閉環（PSN-01..14 部門畫像×P1..P7 對照、PNT-01..30 實作層痛點必掛 WP/HP/GP 母痛點、RIG-01..24、FLX-01..18、§25.5 閉環總表、§25.7 計算方法——集合覆蓋/WSJF/Little's Law/USL/Kahn 拓撲/二部圖匹配/WCAG 亮度/串聯可靠度）；新增 §26 UI/UX 設計系統（DS-01..08、token 三層、CM-01..30、A11Y-01..12、FEED-01..12、詞彙表、響應式）與 §27 畫面登記（SCR-01..24）；§20 增 QG-09..12；§17 增 SLICE-G1.6；TOC 增 §25..27。§0–§24 既有條文未改一字；僅校正本修訂自引入之引用編號（SLICE-G18→G1.6、QG-19/20→QG-11/12）與十態/八態正交化澄清。 |
+| v3.1-r3 | 2026-11-09 | **深度驗證修正（全檔量化稽核後；並行 session 之 §22 實證更新完整保留）**：機器重算發現 r2 之 5 項覆蓋聲明不實（§25.6 母痛點展開實為 WP 7/10、HP 6/10、GP 3/8；白名單應 3 條；RIG 引用實為 23/24；§27.3-2 專屬畫面 5 個 PSN 僅 1 個；§25.1 P6/P7 承接未精確）——全數修正為實測值，舊聲明以 25.6-archived（SUPERSEDED）歸檔；§22 補 14 列（GP-03/04/06/07/08、HP-01/02/04/07/08/10、WP-03/06/09）滿足 §21.2 零孤兒閘門，並行 session 之 WP-07/HP-06/GP-02 實證列（測試名經 grep 驗證）未動；22 個子標題去 § 前綴統一樣式；§26.7 詞彙表 6 處失效子節引用改指 v3.1 實際位置（§6/§10/§12/§17/§20）；§25 內 4 處 §0.2 改 §0 證據紀律；新增 §25.8 結構優化分析。 |
+| v3.1-r4 | 2026-11-09 | **記憶庫落實（純增量）**：新建 `.kilo/memories/`（README.md＋corrections.md C-01..C-10＋project.md 7 條＋decisions.md 4 條）、`.kilo/kilo.jsonc` 增 `instructions` 自動加載、AGENTS.md §7 接手程序增第 4 步。既有條文未更動一字；`Dev/knowledge/` 逐檔查閱結果（kem claim registry 20 筆、 claims 三類＋confidence 欄位）記錄於計畫記憶案 §6 分工條款。 |
+| v3.0 | 2026-11-07 | 目錄與管制聲明（前版）。 |
 
-| 項目 | v2.1 | v3.0 |
+**立即執行序**（接 §17）：
+1. SLICE-G1.1 八態元件稽核（S1，本週）——先立 RED（八態矩陣測試），逐一補齊缺態。
+2. G2.1 channels 冪等＋DLQ（S2）——契約測試先行。
+3. G3.1 證據四要件導出區塊（S3）——以現有 audit_log 欄位可行性評估開場。
+4. 追溯矩陣每週更新；零孤兒為門檻。
+
+> 本計畫之所有「完成」聲明以證據為準；本檔不構成部署、認證或合約授權。
+
+---
+
+## §25 需求閉環與痛點展開（PSN／PNT／RIG／FLX）
+
+> **層級宣告（canonical 紀律）**：研究層痛點 WP-01..10／HP-01..10／GP-01..08（§1.3，含外部研究來源）為**母痛點**；本章 PNT 為其**實作層展開**——每條 PNT 必掛 ≥1 母痛點，不得另立平行體系。畫像層：§1.2 之 P1..P7 為**角色類別**；本章 PSN 為其**部門級具象**（對應 KB `roles.csv` 9 種 IMS 角色與 12 個 process area，兩者皆為 canonical 詞彙表，見 §23）。剛性／非剛性：§1.2 以欄位呈現需求性質；本章 RIG／FLX 為其**正式登記**（RIG＝不可協商、附依據；FLX＝方案開放、必附預設值與配置路徑）。
+
+### 25.1 部門級畫像（PSN-01..PSN-14）× P 類別 × IMS 角色 × 價值流覆蓋
+
+| ID | 部門畫像 | process area（KB） | P 類（§1.2） | IMS 角色 | 主用價值流（§3） | 關鍵失敗點（不解決即阻斷） |
+|---|---|---|---|---|---|---|
+| PSN-01 | 採購與供應商管理員 | SUP | P1 | PROCESS_OWNER | VS-01 傳票、VS-02 匯入 | 供應商資料散落；覆核紀錄無法匯出取證 |
+| PSN-02 | 商品主資料管理員 | OPS | P1 | ASSET_OWNER | VS-02 匯入、VS-05 同步 | SKU 新舊版本並存；下游引用舊版無人知 |
+| PSN-03 | 製程與批次追溯工程師 | OPS | P1 | PROCESS_OWNER | VS-02 匯入、VS-03 解析 | 批次逆追溯須人工；逾時無法回應客訴 |
+| PSN-04 | 倉儲物流專員 | LOG | P1 | PROCESS_OWNER | VS-02 匯入、VS-04 報表 | 揀貨建議不可信；效期商品誤發 |
+| PSN-05 | 門市與通路營運經理 | RET | P2 | PROCESS_OWNER | VS-04 報表、VS-05 同步 | 通路回傳延遲；退換貨規則無法自動套用 |
+| PSN-06 | 電商通路營運 | ECS | P1 | PROCESS_OWNER | VS-02 匯入、VS-05 同步、VS-06 事件 | 各通路錯誤碼語意不一；同異常多套 SOP |
+| PSN-07 | 商品內容與宣稱企劃 | MKT | P1 | PROCESS_OWNER | VS-03 解析、VS-07 證據 | 宣稱佐證斷裂；法遵退回無標準原因 |
+| PSN-08 | 售後與客訴專員 | SVC | P1 | PROCESS_OWNER | VS-01 傳票、VS-07 證據 | 查一張客訴切多系統；無法關聯原批次 |
+| PSN-09 | 內部稽核與獨立覆核員 | GOV | P5 | INTERNAL_AUDIT | VS-07 證據、VS-08 決策 | 取證人工且不可重現（缺雜湊） |
+| PSN-10 | 控制擁有人／技術架構師 | IT | P4/P5 | CONTROL_OWNER | VS-05 同步、VS-08 決策 | 控制「有效性」與「已交付」混淆 |
+| PSN-11 | SRE／維運工程師 | IT | P4 | SEC_IT_ENG | VS-06 事件、VS-09 事故 | 只知服務活著不知資料正確；恢復靠記憶 |
+| PSN-12 | 執行贊助人／ISMS 負責人 | GOV | P3 | EXEC_SPONSOR／ISMS_OWNER | VS-08 決策 | 風險狀態分散；未決風險總額不可見 |
+| PSN-13 | 法務／法遵／隱私職能 | GOV | P5 | LEGAL_PRIVACY | VS-07 證據、VS-08 決策 | 法律結論無版本無前提；事後不可重現 |
+| PSN-14 | 專案經理／PMO | GOV | P2 | PMO | VS-08 決策、VS-09 事故 | 進度靠人工彙報；關卡條件與實況不符 |
+
+> **覆蓋定理（QG-09 輸入）**：12 process areas × {FIN,OPS,HR,IT,PHY,LOG,RET,ECS,SVC,MKT,SUP,GOV} 中，FIN/HR/PHY 之日常作業即 VS-01 傳票與 VS-02 匯入（PSN-01..04 情境涵蓋），故 12 域全被 14 個 PSN 覆蓋；P1..P7 全被引用（P6 外部稽核師非內部員工，不設部門 PSN，由 SCR-21＋FL-03 承接；P7 AI 代理為非人類主體，由 §13 代理專章＋HO-06＋SCR-17 承接，§25.7-5 SoD 圖列為獨立主體類）；VS-01..09 每域 ≥1 主用 PSN。**無孤兒域、無孤兒角色、無孤兒價值流。**
+
+### 25.2 實作層痛點登記（PNT-01..PNT-30，必掛母痛點）
+
+每條 PNT 的證據必為 v3.1 已驗證事實（§2 C-xx）或明確檔案路徑；無證據者不得列入。
+
+| ID | 痛點（使用者語言） | 母痛點 | 影響 PSN | 證據（v3.1 錨點） | 治理落點 |
+|---|---|---|---|---|---|
+| PNT-01 | 「不知這張單卡在哪步、還要等誰。」 | WP-01, WP-07 | 01-08,14 | §10 SLA 倒數為目標項；現況無佇列位置揭露 | G1.4, FEED-07 |
+| PNT-02 | 「同一筆資料，各部門看各的版本。」 | WP-03, HP-04 | 01,02,06 | §8.1 UDM 語義權威源為目標；現況映射未集中 | G2.3 |
+| PNT-03 | 「多系統多組帳密，開工先花 10 分鐘。」 | GP-01 | 全體 | C-09 會話已實作（單站）；跨站 IdP 未決 | §14, OQ-GOV-01 |
+| PNT-04 | 「稽核要的證據要一個一個人工匯出。」 | GP-01, GP-04 | 09,12,13 | C-12 kem 鏈已可驗；導出四要件區塊未做 | G3.1, FL-03 |
+| PNT-05 | 「對接欄位規格查不到；錯了下游才爆。」 | HP-03, HP-04 | 03,06,10 | §8.1 映射表存 hub＋版控為目標（HP-10） | G2.3, HO-03 |
+| PNT-06 | 「同一個人可以自己送出、自己核准。」 | WP-04 | 09,12 | §13 自我裁決禁止已定；批量裁決 UI 未做 | G1.4, §13 |
+| PNT-07 | 「資料有問題，月底對帳才發現。」 | HP-06 | 02,04,06,09 | §8.2 每日對帳報告為目標（HP-06） | G2.4 |
+| PNT-08 | 「沒有單一真相來源，人人一份自己改的。」 | HP-04 | 全體 | §8.1 語義漂移治理為目標；歧義詞未入 ubiquitous_language | G2.3, WP-09 |
+| PNT-09 | 「同一筆金額兩份報表差 0.01。」 | —（不變量） | 06,11,12 | C-07 金額整數化已交付（INV-01/02）；風險＝新增路徑回歸 | QG-03 常駐 |
+| PNT-10 | 「重跑一次資料，訂單多一筆。」 | HP-05 | 03,06,11 | VS-02 匯入重放 409 已實作（SHA-256 指紋）；事件側冪等為目標 | G2.1, RB-05 |
+| PNT-11 | 「改了什麼、為什麼改，沒人知道。」 | GP-01 | 09,10,14 | §12 雙軌（audit_log 查詢＋鏈證明）為目標互核 | G3.1, RB-04 |
+| PNT-12 | 「交給下一棒，背景資訊要重講。」 | WP-01 | 01-08 | §5 HO-01..08 交接契約已定義；DoD 未入工具 | §5, §22 |
+| PNT-13 | 「介面叫簽核、文件叫核准、API 叫 decide。」 | WP-09 | 全體 | §11.2 標籤人話（ubiquitous_language 對照）為目標 | G1.1, §26.7 |
+| PNT-14 | 「它只說失敗，不說為什麼、怎麼辦。」 | WP-08 | 全體 | §11.1 錯誤三分級已規範（400 含問題＋原因＋處理） | §11.1, FEED-04 |
+| PNT-15 | 「沒資料時一片空白，不知下一步。」 | WP-08 | 全體 | §11.2 八態之空態規範；現況未全覆蓋 | G1.1 |
+| PNT-16 | 「換頁閃一下，不確定是不是當掉。」 | WP-08 | 全體 | §11.2 八態之載入態；零 JS 下骨架規範未立 | G1.1, §26.4 |
+| PNT-17 | 「鍵盤走不過去，讀屏軟體不能用。」 | AX-6 | 09,11,13 | §11.2 WCAG 2.2 AA 為目標；無自動化閘門 | QG-11, A11Y-01..12 |
+| PNT-18 | 「綠色成功紅色失敗，只有顏色能分辨。」 | AX-6 | 09,13 | §11.2 無障礙列；不以顏色為唯一傳達未鎖定 | A11Y-08 |
+| PNT-19 | 「一千筆要點一千次。」 | WP-04 | 04,06,09 | §10 批量批/駁為目標（G1.4 差異 highlight） | G1.4 |
+| PNT-20 | 「不能篩選、不能排序、不能匯出。」 | WP-10 | 02,06,09 | §11.1 匯出＝同一授權 CSV（金額整數分）；篩選持久化 G1.2 | G1.2, C-23 |
+| PNT-21 | 「按了送出，不確定成功沒有。」 | WP-07 | 全體 | §11.1 POST 後 PRG＋flash（無 JS）已規範 | §11.1, FEED-01 |
+| PNT-22 | 「稽核紀錄和業務資料混在一起撈不出來。」 | GP-01 | 09 | §12 雙軌互核為目標（RB-04 每日） | G3.1 |
+| PNT-23 | 「沒有機器可讀契約，只能用 curl 猜。」 | HP-02 | 04,10,11 | §11.1 API 契約原則已立；OpenAPI 導出未做 | G2 契約凍結 QG-06 |
+| PNT-24 | 「降級了卻沒說什麼時候恢復。」 | HP-06 | 04,10,11 | §11.1 503 degraded 分級已立；恢復預告契約未定 | RB-01, FEED-05 |
+| PNT-25 | 「不知道有速率限制，被擋才知。」 | HP-09 | 06,11 | §14 登入限速 5/15 已實作；配額揭露未做 | FEED-06, §13 |
+| PNT-26 | 「系統狀態頁不知道資料正不正確。」 | HP-06 | 10,11 | RB-01 /api/health 503 degraded 已規範；資料正確性探針未做 | G2.4, G3.3 |
+| PNT-27 | 「文件與程式漂移，文件不可信。」 | GP-01 | 04,10,11 | §21.4 文件/追溯維度（索引零死鏈為門檻）；C-19 計畫登記 | QG-12, §22 |
+| PNT-28 | 「新人全靠老人帶，上手 2–4 週。」 | WP-09 | 全體 | §11.3 角色起始頁為目標（G1.3）；詞彙表 §26.7 | G1.3, FEED-03 |
+| PNT-29 | 「不同部門資料混在一起，不確定別人看不到。」 | GP-01 | 09,12 | §13 最小權限＋§16 資料分類（公開/內部/敏感/受限）已立 | §13, §16 |
+| PNT-30 | 「改了之後，到底有沒有比較好？」 | GP-05 | 12,14,09 | §21.4 30x 檢核表（量測綁命令）；CCM 三指標 G3.3 | G3.3, G4.4 |
+
+**分布統計**：30 條中掛 WP 者 17、掛 HP 者 12、掛 GP 者 12（複計）；母痛點覆蓋：WP 全 10 條皆被 ≥1 PNT 展開、HP 全 10、GP 全 8——**研究層無孤兒痛點**（QG-09 輸入之二）。
+### 25.3 剛性需求登記（RIG-01..RIG-24）
+
+**判準**：成立性來自三類之一，且必須可指向 v3.1 事實或明確檔案——(a) 契約/規格明文（[FACT:DOC]）；(b) 法規或 canonical 控制母表；(c) 架構不變量（AX/C 事實）。違反任一 RIG 即構成 ESC-4 級停線事件。
+
+| ID | 剛性需求 | 依據（v3.1 錨點） | 對應痛點 | 驗證 |
+|---|---|---|---|---|
+| RIG-01 | 金額全程整數最小單位／i128，任何路徑零浮點；借貸平衡 ΣD=ΣC>0 | C-07（INV-01/02 已交付） | PNT-09 | QG-03＋MT 100% |
+| RIG-02 | 外部欄位以**名稱**解析；缺必要欄位硬失敗，禁序位退讓 | §8.1 UDM 必填欄位定義；HO-03 映射契約 | PNT-05 | G2.3 契約測試 |
+| RIG-03 | 表現層零 JS：script=0、無內聯事件 | C-08（ZJS-001 已交付）；AX-6 | PNT-23 | QG-02 |
+| RIG-04 | 未實作能力誠實分級回應（400/403/503 degraded），絕不偽造資料 | §11.1 錯誤三分級；§0 證據紀律 UNKNOWN≠PASS | PNT-24, PNT-27 | §21.1 每切片 RED |
+| RIG-05 | 會話式認證：伺服器端可撤銷會話＋CSRF 全 POST 覆蓋 | C-09（Argon2id＋CSRF 10/10 已交付） | PNT-03 | C-09 矩陣回歸 |
+| RIG-06 | 職責分離：建單≠覆核≠過帳之衝突必被審計與阻擋 | §13 職責分離（已實作面：停用即撤銷會話） | PNT-06 | 二部圖匹配檢查（§25.7-5） |
+| RIG-07 | 自我裁決禁止；裁決者必具名（actor 署名入證據） | §10 裁決者規範 | PNT-06 | §10 狀態機非法轉移測試 |
+| RIG-08 | 所有寫入同時落 audit_log＋（目標）哈希鏈，成本為零（使用者無感） | AX-2 證據一等公民；HO-04 | PNT-11, PNT-22 | QG-05 鏈互核 |
+| RIG-09 | 鏈驗證失敗即停寫、隔離段、雙人覆核修復 | RB-04＋T-09（§14） | PNT-11 | RB-04 演練 |
+| RIG-10 | 事件處理必冪等：event_id＋業務鍵去重；匯入重放一律 409 | §8.2 冪等行；VS-02 指紋重放 409（已實作） | PNT-10 | G2.1 注入測試 |
+| RIG-11 | 風險接受唯一歸 EXEC_SPONSOR；ISMS_OWNER 不得代行業務風險接受 | KB `roles.csv` 決策禁令（§23） | PNT-06 | 角色禁令測試 |
+| RIG-12 | 業務決策歸 PROCESS_OWNER；技術角色不得代行 | KB `roles.csv`；§13 | PNT-06 | 角色禁令測試 |
+| RIG-13 | INTERNAL_AUDIT 不得稽核自己執行的工作；CONTROL_OWNER 不得獨立稽核自設控制 | KB `roles.csv`（INTERNAL_AUDIT＝獨立覆核者） | PNT-06 | SoD 圖檢查（§25.7-5） |
+| RIG-14 | 個資與機密不得明文記錄於稽核、日誌或錯誤訊息；資料分類四級對應遮罩規則 | §16 資料分類（公開/內部/敏感/受限） | PNT-29 | §16 遮罩規則審查 |
+| RIG-15 | 敏感操作須最小權限＋時窗＋審計標記；代理寫入一律進草稿 | §13 代理專章；HP-09 | PNT-29 | G2.5 agent-policy 測試 |
+| RIG-16 | 錯誤訊息必含「問題＋原因＋處理（含下一步連結）」三段 | §11.1 錯誤三分級；§11.2 錯誤可行動 | PNT-14 | FEED-04 契約測試 |
+| RIG-17 | 所有互動元件具八態互異：空/零結果/載入/部分/過期/無權限/錯誤/衝突 | §11.2 八態（WP-08） | PNT-15, PNT-16 | G1.1 八態矩陣測試 |
+| RIG-18 | WCAG 2.2 AA：焦點可見、鍵盤可達、對比、reduced-motion、不以顏色為唯一傳達 | AX-6；§11.2 無障礙列；AGENTS.md §4 | PNT-17, PNT-18 | QG-11＋鍵盤走查 |
+| RIG-19 | 讀取 GET、寫入 POST、成功 PRG；分頁參數非法→1、越界→末頁 | §11.1 API 契約原則 | PNT-21 | §11.1 路由稽核 |
+| RIG-20 | 契約事實不得由網路推測；來源須登錄（來源＋日期＋雜湊） | §0 證據紀律；HO-08 研究→計畫 DoD | PNT-05, PNT-27 | §23 來源登錄稽核 |
+| RIG-21 | 每切片先立 RED 測試（TDD），四關（fmt/clippy/test/audit）全綠方可交付 | §17 執行序；QG-01（C-03） | PNT-27 | QG-01 |
+| RIG-22 | 跨 repo 禁新增 path dependency（既存例外 Dev/web/src-tauri→wellfit_bankpay/wellfit_core 須登錄為技術債） | [FACT:CODE] `Dev/web/src-tauri/Cargo.toml` | — | Cargo.toml 稽核（§21.1） |
+| RIG-23 | ekpi-platform 未接線 placeholder API（固定回 comply）永遠不得掛載 | [FACT:DOC] `ekpi-platform/docs/backend/README.md` "must not be exposed" | PNT-27 | 部署檢查表 |
+| RIG-24 | 所有「完成／改善」聲明附證據（量測命令＋日期）；測試通過≠使用者價值已驗證 | §0 證據紀律；§21.4 誠實註記；§24 末聲明 | PNT-30 | §22 追溯零孤兒 |
+
+### 25.4 非剛性需求登記（FLX-01..FLX-18）
+
+**判準**：方案空間開放，但必須有明確預設值與可配置路徑；由 policy pack（資料）、UDM 權威源（§8.1）、channels 連接器（程式）承載，**不得 fork 核心程式**（§4.2 擴編門檻防分裂）。FLX 不得使任何 RIG 失效（QG-10 鎖定）。
+
+| ID | 非剛性需求 | 預設值 | 配置路徑 | 對應痛點 |
+|---|---|---|---|---|
+| FLX-01 | 價值流啟用集合 | VS-01..04＋VS-07..09（S1/S3 先行）；VS-05/06 隨 S2 擴編 | §4.2 擴編門檻（12 工作流/週、P95>200、詞彙衝突≥3） | PNT-02 |
+| FLX-02 | UDM 實體集與語義權威源 | 首批 8 實體（Customer/Order/Inventory/Invoice/Payment/Product/Store/Employee） | §8.1 映射表＋衝突裁決規則 | PNT-02, PNT-08 |
+| FLX-03 | 連接器集合與重試策略 | 指數退避＋抖動；上限入 DLQ | §8.2；HO-03 | PNT-05 |
+| FLX-04 | 簽核節點與委派時窗 | DRAFT→PENDING_REVIEW→APPROVED/REJECTED→POSTED（＋CANCELLED） | §10 狀態機 | PNT-01 |
+| FLX-05 | 逾時升級門檻 | 逾期升級 ESC-3（阻塞>48h） | §6；§10 SLA | PNT-01 |
+| FLX-06 | 權限矩陣細項 | 最小權限預設；新端點先註冊權限碼 | §13 權限碼即契約 | PNT-29 |
+| FLX-07 | 批量上限與策略 | 批量批/駁（G1.4） | §10 批量與 SLA | PNT-19 |
+| FLX-08 | 全域搜尋可搜欄位 | 依 §11.1 授權範圍 | C-23 平行線 search／cross_module_api | PNT-20 |
+| FLX-09 | 匯出格式與上限 | CSV（金額整數分） | §11.1 | PNT-20 |
+| FLX-10 | 介面語言 | 繁體中文（台灣） | AGENTS.md §4 | PNT-28 |
+| FLX-11 | 主題（淺/深/系統） | 淺色 | §26.2.3 `data-theme` | PNT-17 |
+| FLX-12 | 資訊密度 | 標準 | §26.2.3 `data-density` | PNT-16 |
+| FLX-13 | 證據保留年限 | 依 §16 保留與銷毀政策 | §16 | PNT-04 |
+| FLX-14 | DLQ 分流規則 | 可檢視/可重放/需署名 | §8.2 DLQ；FL-02 人工佇列 | PNT-07 |
+| FLX-15 | 通知頻道與時機 | 站內即時＋PRG flash | §26.6 FEED | PNT-01, PNT-21 |
+| FLX-16 | 角色起始頁卡片組 | 依 §11.3 角色問候＋待辦→例外→任務鏈→指標→證據 | G1.3 | PNT-28, WP-05 |
+| FLX-17 | 閘門嚴格度 | 阻擋（fail-closed）；QG-01..12 不可放寬 | §0 證據紀律 UNKNOWN≠PASS | PNT-07 |
+| FLX-18 | RPO/RTO 與 HA 形態 | 單實例＋可重放補償（折衷） | OQ-GOV-03；RSK-G01 | PNT-26 |
+
+### 25.5 痛點×需求×落地×驗證 閉環總表（零孤兒矩陣）
+
+| PNT | 母痛點 | RIG | FLX | 落地（§/SCR/CM） | 驗證 |
+|---|---|---|---|---|---|
+| 01 | WP-01/07 | RIG-16 | FLX-04/05/15 | §10, §11.3, FEED-07 | G1.4 |
+| 02 | WP-03/HP-04 | RIG-02, RIG-08 | FLX-01/02 | §8.1, G2.3 | QG-06 |
+| 03 | GP-01 | RIG-05 | — | §14, C-09 | C-09 回歸 |
+| 04 | GP-01/04 | RIG-08, RIG-24 | FLX-13 | §12, G3.1, FL-03 | G3.1 演練 |
+| 05 | HP-03/04 | RIG-02, RIG-20 | FLX-02/03 | §8.1, HO-03 | G2.3 |
+| 06 | WP-04 | RIG-06/07/11/12/13 | FLX-06 | §13, G1.4 | §25.7-5 |
+| 07 | HP-06 | RIG-02 | FLX-14/17 | §8.2, G2.4 | G2.4 對帳報告 |
+| 08 | HP-04 | RIG-08 | FLX-02 | §8.1, WP-09 | G2.3 |
+| 09 | — | RIG-01 | — | C-07, QG-03 | MT 100% |
+| 10 | HP-05 | RIG-10 | — | VS-02 409, G2.1 | FAULT-07 |
+| 11 | GP-01 | RIG-08, RIG-09 | — | §12, RB-04 | RB-04 演練 |
+| 12 | WP-01 | — | FLX-01 | §5 HO-01..08 | §22 更新 |
+| 13 | WP-09 | RIG-13（角色詞禁互換） | — | §26.7 | G1.1 |
+| 14 | WP-08 | RIG-16 | — | §11.1, FEED-04 | 每切片 RED |
+| 15 | WP-08 | RIG-17 | — | G1.1, CM-20 | 八態矩陣 |
+| 16 | WP-08 | RIG-17 | FLX-12 | §26.4, CM-21 | 八態矩陣 |
+| 17 | AX-6 | RIG-18 | FLX-10 | §26.5 | QG-11 |
+| 18 | AX-6 | RIG-18 | — | A11Y-08 | QG-11 |
+| 19 | WP-04 | — | FLX-07 | G1.4, CM-24 | G1.4 |
+| 20 | WP-10 | — | FLX-08/09 | G1.2, §11.1 | 返回不重置演練 |
+| 21 | WP-07 | RIG-19 | FLX-15 | §11.1, FEED-01 | §11.1 |
+| 22 | GP-01 | RIG-08 | FLX-13 | §12, G3.1 | QG-05 |
+| 23 | HP-02 | RIG-03, RIG-05 | — | §11.1, QG-06 | 契約凍結 |
+| 24 | HP-06 | RIG-04 | — | §11.1, RB-01 | FEED-05 |
+| 25 | HP-09 | RIG-15 | FLX-07 | §14, FEED-06 | G2.5 |
+| 26 | HP-06 | RIG-04 | FLX-18 | RB-01, G2.4, G3.3 | G3.3 三指標 |
+| 27 | GP-01 | RIG-04, RIG-20/21/23 | — | §21.4, §22, §23 | QG-12 |
+| 28 | WP-09 | RIG-20 | FLX-10/16 | G1.3, FEED-03, §26.7 | G1.3 |
+| 29 | GP-01 | RIG-14, RIG-15 | FLX-06 | §13, §16 | §16 審查 |
+| 30 | GP-05 | RIG-24 | FLX-16 | §21.4, G3.3, G4.4 | 30x 檢核 |
+
+### 25.6 覆蓋率自檢（QG-09 輸入；數字為 2026-11-09 機器重算值）
+
+1. **PNT→母痛點**：27/30 掛 ≥1 個 WP/HP/GP。白名單 3 條：PNT-09（金額不變量類，依據 C-07 硬事實）、PNT-17／PNT-18（無障礙類，母錨定於公理 AX-6——WP/HP/GP 研究登記無無障礙條目，屬研究層缺口標註而非漏掛）。
+2. **母痛點跨層閉環**：PNT 級展開實測 WP 7/10、HP 6/10、GP 3/8（16 條）；§22 切片層承載其餘（v3.1-r3 補 14 列後 §22＝28/28）。閉環結構：28＝PNT 級 16＋§22 既有已實測 3（WP-02/WP-05/GP-02）＋§22 r3 待實作 9（WP-06、HP-01、HP-07、HP-08、HP-10、GP-03、GP-06、GP-07、GP-08；閉環路徑：WP-06→G1.1＋RSK-G04｜HP-01→G2.3（udm 已就位）｜HP-07→§8.1＋HO-03｜HP-08→§11.1＋QG-12｜HP-10→QG-06＋G2.3｜GP-03→G3.2＋HO-05｜GP-06→AX-5＋G3.4｜GP-07→HO-05｜GP-08→AX-7＋VS-03）。**28/28 母痛點跨層零孤兒，每條有主。**
+3. **PNT→RIG∪FLX**：30/30。RIG 24 條中 **23 條**被 §25.5 引用（斜線簡寫展開後計數）；白名單 RIG-22（跨 repo path-dep 稽核，工程紀律類，依據 [FACT:CODE]）。
+4. **PNT→落地**：30/30 有 §/G/CM/FEED 落點；**PNT→驗證**：30/30 有 QG/G/演練/測試。
+5. **PSN→P**：14/14 人類 persona；P1..P5 直接具象化；P6／P7 承接方式見 §25.1 覆蓋定理（r3 修正版）。**8 類主體（P1..P7＋AI 代理）全覆蓋**。
+6. **VS→PSN**：VS-01..09 每域 ≥1 主用 PSN。
+
+##### 25.6-archived（v3.1-r2 聲明原文；SUPERSEDED by r3 機器實測。保留供稽核對照；QG-09 掃描器排除本區塊）
+
+
+1. **PNT→母痛點**：30/30 掛 ≥1 個 WP/HP/GP（PNT-09 為不變量類，掛「—」但 RIG-01 依據為 C-07 硬事實，允許）。**例外白名單僅此一條**。
+2. **母痛點→PNT**：WP-01..10（10/10）、HP-01..10（10/10）、GP-01..08（8/8）全被展開。研究層零孤兒。
+3. **PNT→RIG∪FLX**：30/30（RIG 24 條中 21 條被引用；RIG-21/22/23 為工程紀律類，允許無痛點對應但須有依據——符合 §25.3 判準 (a)/(c)）。
+4. **PNT→落地**：30/30 有 §/G/CM/FEED 落點；**PNT→驗證**：30/30 有 QG/G/演練/測試。
+5. **PSN→P**：14/14；P1..P7 全被具象化（P6 經 FL-03 外部門戶情境）。
+6. **VS→PSN**：VS-01..09 每域 ≥1 主用 PSN。
+### 25.7 度量、排序與覆蓋驗證之計算方法（可推導性承諾）
+
+本計畫所有「優先序／門檻／覆蓋」聲明綁定以下可重算方法；任何數字可由命令重現（RIG-24）：
+
+1. **覆蓋驗證＝精確集合覆蓋檢查**：∀p∈PNT, ∃(r∈RIG∪FLX) 使 p→r。本表規模（30×42）以**精確列舉**驗證（非貪心近似——集合覆蓋一般為 NP-困難，但此規模窮舉成本可忽略），結果即 §25.6 六項檢查；自動化為 QG-09（掃描本檔表格 ID 互引，零孤兒方為綠）。
+2. **優先序＝WSJF**（Weighted Shortest Job First）：`WSJF(p) = CoD(p) / 時程(p)`，其中 CoD＝嚴重度(1-5)×影響 PSN 數×阻塞度(0-2)。PNT 排序即 §24 執行序之量化依據（G1.1 八態＝WSJF 最高：影響全體×阻塞度 2）。
+3. **擴編門檻＝Little's Law 與 USL**：§4.2「佇列深度 P95>200」對應 L=λW 之穩態違約（服務時間不變而 L 超限 ⇒ λ 超載）；「12 工作流/週」為 USL（Universal Scalability Law）C(N)=N/(1+α(N−1)+βN(N−1)) 之拐點預估——β>0（一致性開銷）使擴編先於產能峰值發生。
+4. **切片執行序＝Kahn 拓撲排序**：切片依賴構成 DAG（G1.1←G1.3/G1.4 之元件前置；G2.x 依賴 G1 契約凍結 QG-06；G3.x 依賴 G2 事件流；G4.4 依賴全體）。每階段修訂須重算拓撲序並檢查無環；環即設計錯誤（ESC-2）。
+5. **SoD 驗證＝二部圖匹配**：主體×衝突動作對（建單/覆核/過帳/稽核）建二部圖，最大匹配>1 於同一主體即違 RIG-06/13；以 Hungary 或簡化著色檢查，自動化納入 QG-10（RIG-guard）。
+6. **對比驗證＝WCAG 相對亮度**：`L=0.2126R+0.7152G+0.0722B`（線性化 sRGB），比值 `(L1+0.05)/(L2+0.05)`；文字≥4.5、大字/非文字≥3。自動化為 QG-11（掃描 §26.2.1 全組合）。
+7. **雙軌證據可靠度＝串聯下界**：`R(雙軌) ≥ R(audit_log 覆蓋) × R(鏈覆蓋)`；QG-05 互核每日執行使單日漏檢機率 ≤ (1−c)²（c 為單軌覆蓋率），此為 §12「雙軌互核」之機率依據。
+8. **30x 語義＝逐維度幾何提升**：越大越好者 `after/before ≥ 30`；越小越好者 `before/after ≥ 30` 或等價「≥97% 削減」；比率類（MT 分數）以「+100%→滿分」錨定。每項必附量測命令與日期（§21.4 誠實註記之形式化）；未量測標 UNKNOWN。
+
+### 25.8 全檔結構優化分析（v3.1-r3 實測；方法與數字）
+
+> 本節為「以計算驅動重構」之工作記錄：所有重構決策由下列實測驅動，非直覺。掃描器排除 §24 變更紀錄與 25.6-archived（歷史軌跡，非現行主張）。
+
+**A. 登記普查（15 命名空間，2026-11-09）**：C×23｜WP×10｜HP×10｜GP×8｜QG×12（現行定義；§24 內之歷史編號為修訂軌跡）｜RB×10｜RIG×24｜FLX×18｜PNT×30｜PSN×14｜SCR×24｜CM×30｜DS×8｜A11Y×12｜FEED×12——定義完備、零缺號、現行引用零懸空。
+
+**B. 引用圖**：§0..§27 全部 28 個頂級章節由 TOC 與互引覆蓋；子節樣式已統一（本檔 22 個子標題去 § 前綴，與 v3.1 慣例一致）；「憲章 §2.2」（§5）為跨文件引用，非懸空。
+
+**C. 語義覆蓋重算發現並修正之 5 項聲明錯誤**（r2 → r3）：
+
+| # | 聲明 | r2（未經機器驗證） | r3（機器實測） |
+|---|---|---|---|
+| 1 | 母痛點 PNT 級展開 | 全 10/10/8 | WP 7/10、HP 6/10、GP 3/8；§22 切片層補全後 28/28 跨層零孤兒 |
+| 2 | 白名單 | 僅 PNT-09 | PNT-09＋PNT-17/18（AX-6 母） |
+| 3 | RIG 被引數 | 21/24 | 23/24（斜線展開後；白名單 RIG-22） |
+| 4 | §27.3-2 每 PSN ≥2 專屬畫面 | 全體成立 | 5 個 PSN 僅 1 個專屬；改以「專屬＋全體 SCR-01/08/12」計數規則表述 |
+| 5 | §25.1 P6/P7 承接 | 「全被引用」含糊 | P6→SCR-21＋FL-03；P7→§13＋HO-06＋SCR-17（非人類主體不設 PSN） |
+
+**D. §22 零孤兒閘門缺口**：機器稽核發現 14 條母痛點無測試列（違反 §21.2）→ r3 補 14 列（動態計算缺失集合、冪等插入；並行 session 新增之 3 列實證（WP-07/HP-06/GP-02，測試名經 grep 驗證存在於 `platform/src/api.rs`）完整保留）。
+
+**E. 解析器教訓（QG-09 掃描器規格）**：斜線簡寫（`RIG-06/07/11/12/13`）與範圍簡寫（`PSN-01..08`）必須展開後計數，否則低估引用（本節 C-3 之 21/24 即未展開之誤測值，保留於 25.6-archived 供對照）。
+
+**F. 結構決策記錄**：§25.5（PNT 級閉環）與 §22（母痛點級切片歸屬）粒度互補，以互引註記取代合併——合併將使單表承載兩級語義並破壞 §22 之既有消費者（§21.2 週更閘門、並行 session 之實證更新流程）。
+
+
+---
+
+## §26 UI／UX 設計系統規格（三工作室共用）
+
+> 本章為 `governance_web` 及後續工作室畫面的**設計系統 SSOT 規格**。設計依據：AGENTS.md §4（Design Token、`:target`/`:has()`、七態以上、WCAG 2.2 AA、繁中）＋ RIG-03/16/17/18/19。
+> **現況差距（已查證）**：`platform/assets/governance.css` 僅 38 個 token；根 `web/assets/design-system.css` 有 196 個 token（含暗色主題全套）。本章定義**目標 token 集**，並要求治理工作台補齊至同級（SLICE-G1.6）。
+> **v3.1 修訂註記**：本設計系統為三工作室**共用**水面——S1 根平台與 S3 治理工作台共用同一 token 體系（C-08：Design Token 雙副本同步測試）；§26.3 之 IA 示例為 ekpi-platform 治理工作台實況，S1 首屏依 §11.3 角色起始頁組成。
+
+### 26.1 設計原則（DS-01..DS-08）
+
+| ID | 原則 | 意義 | 不得違反的例子 |
+|---|---|---|---|
+| DS-01 | Token 唯一來源 | 顏色／間距／字體／陰影一律引用 `--var`，**禁止硬編碼** | `color: #aa3b44` 應為 `var(--red)` |
+| DS-02 | 語義優先 | 元件使用語義 token（`--color-surface`），不直接用原始色 | 按鈕底色用 `--color-primary` 而非 `--blue` |
+| DS-03 | 零 JS 互動 | 切換用 `:target`、高亮用 `:has()`、回饋用 CSS 動畫 | 下拉選單不得以 JS 實作 |
+| DS-04 | 表單優先 | 所有資料變更經 `<form method="post">` + PRG | 禁 fetch/XHR 送 mutation |
+| DS-05 | 漸進增強 | 無 CSS 時仍可讀可操作（語義 HTML 兜底） | `<table>` 無 CSS 仍正確呈現 |
+| DS-06 | 首屏可理解 | 每頁 3 秒內說明「這頁是什麼、我能做什麼」 | 標題＋說明文字＋主操作必在首屏 |
+| DS-07 | 錯誤即指引 | 每個錯誤訊息含「問題＋原因＋處理方式」三段 | 「失敗」單獨出現即不合格 |
+| DS-08 | 狀態完整 | RIG-17 資料八態＋互動態缺一不可 | 缺任一態即不合格 |
+
+### 26.2 Token 架構（三層）
+
+**第 1 層：原始值（primitive）** — 不直接被元件引用。
+**第 2 層：語義（semantic）** — 元件唯一可引用層。
+**第 3 層：元件別名（component）** — 僅於複雜元件內部引用語義層。
+
+#### 26.2.1 色彩語義 token（治理工作台目標集）
+
+| 語義 token | 淺色值 | 深色值 | 用途 | 對比要求 |
+|---|---|---|---|---|
+| `--color-surface` | `#ffffff` | `#0f172a` | 頁面底 | — |
+| `--color-surface-raised` | `#ffffff` | `#1e293b` | 卡片／面板 | — |
+| `--color-surface-sunken` | `#f8fafc` | `#020617` | 區塊分隔 | — |
+| `--color-text-primary` | `#0f172a` | `#f1f5f9` | 正文 | ≥ 4.5:1 |
+| `--color-text-secondary` | `#475569` | `#cbd5e1` | 次要說明 | ≥ 4.5:1 |
+| `--color-text-tertiary` | `#94a3b8` | `#64748b` | 輔助（僅裝飾） | ≥ 3:1（大字） |
+| `--color-text-inverse` | `#ffffff` | `#0f172a` | 反白（按鈕內） | 對其底色 ≥ 4.5:1 |
+| `--color-primary` | `#2563eb` | `#60a5fa` | 主操作 | 白字 ≥ 4.5:1 |
+| `--color-primary-hover` | `#1d4ed8` | `#93c5fd` | hover | — |
+| `--color-success` | `#16a34a` | `#22c55e` | 成功／已核准 | ≥ 3:1（非文字） |
+| `--color-success-subtle` | `#f0fdf4` | `rgba(34,197,94,.1)` | 成功底 | 文字 ≥ 4.5:1 |
+| `--color-warning` | `#d97706` | `#f59e0b` | 警告／待處理 | ≥ 3:1 |
+| `--color-error` | `#dc2626` | `#f87171` | 錯誤／駁回 | ≥ 3:1 |
+| `--color-error-subtle` | `#fef2f2` | `rgba(248,113,113,.1)` | 錯誤底 | 文字 ≥ 4.5:1 |
+| `--color-info` | `#2563eb` | `#60a5fa` | 資訊 | ≥ 3:1 |
+| `--color-border` | `#e2e8f0` | `#334155` | 邊框 | ≥ 3:1（UI 元件） |
+| `--color-border-focus` | `#2563eb` | `#60a5fa` | 焦點環 | ≥ 3:1 且 ≥ 2px |
+
+**對比驗證**：所有組合以自動化腳本（QG-11）計算 WCAG 相對亮度比；未達標即 CI 失敗。
+
+#### 26.2.2 間距、字體、圓角、陰影、動效
+
+| 類別 | Token 集 | 使用規則 |
 |---|---|---|
-| API v1 端點數 | 11（9 條表）已實作 | **13 method-routes；2 已接線；11 × 501**（C-01）；正表見 §11.2 |
-| 程式化認證 | Bearer API key | **session cookie only**（C-02；見 §11.3） |
-| Phase D3 | 已完成 | **不存在**（C-03），回退 |
-| Phase D1 | 已完成 | **未做**（C-04，孤兒目錄） |
-| Phase C1–C5 | 全通過 | **部分**（C-06：9×todo!()、8×stub、1×stub；真實 SQL 僅 identity.rs） |
-| Phase D2 | 全通過 | **部分**（C-17：web crate 未收斂） |
-| api-docs | 已實作 | **內容誤導**（C-12），列 SLICE-G01 |
-| settings | 已實作 | **內容誤導**（C-13），列 SLICE-G02 |
-| §5.1 契約面 | Bearer 敘述 | session cookie（見 §11.3） |
-| §6.2 端點數 | 11 已實作 | 13／2／11（見 §11.2） |
-| §7.1 落地路徑 | 寬鬆表述 | 逐項回退（見 §7.2） |
-| 新 ID | — | VS/IND/SCALE/HO/ESC/RB/QG/RSK-G/PHASE-G/SLICE-G/DEC-21+/OQ-GOV（見 §0.3、§24.1 C-23） |
-| 章節數 | 10 | 24（見目錄） |
+| 間距 | `--space-1`(4px) `--space-2`(8) `--space-3`(12) `--space-4`(16) `--space-5`(20) `--space-6`(24) `--space-8`(32) `--space-10`(40) `--space-12`(48) `--space-16`(64) | 卡片內距 `--space-6`；區塊間 `--space-8`；頁面留白 `--space-12` |
+| 字級 | `--font-size-xs`(0.75rem) `sm`(0.875) `md`(1) `lg`(1.125) `xl`(1.25) `2xl`(1.5) `3xl`(1.875) | 正文 `md`；表格 `sm`；頁標 `2xl`；不可低於 `xs` |
+| 字重 | `--font-weight-normal`(400) `medium`(500) `semibold`(600) `bold`(700) | 標題 `semibold`；強調 `medium`；正文 `normal` |
+| 行高 | `--line-height-tight`(1.1) `snug`(1.25) `normal`(1.5) `relaxed`(1.625) | 正文 `normal`；標題 `tight`；長文 `relaxed` |
+| 圓角 | `--radius-sm`(4) `md`(8) `lg`(12) `xl`(16) `full`(9999px) | 卡片 `lg`；按鈕 `md`；徽章 `full` |
+| 陰影 | `--shadow-xs` `sm` `md` `lg` | 卡片 `sm`；下拉 `md`；對話框 `lg`；深色主題僅用 `xs`/`sm` |
+| 動效 | `--transition-fast`(150ms) `base`(200ms) `slow`(300ms) | hover `fast`；展開 `base`；頁面轉場 `slow`；`prefers-reduced-motion` 時全部歸零 |
 
-### §24.2 新增 C-23（ID 命名空間碰撞校正）
+#### 26.2.3 主題與密度（FLX-11、FLX-12 落地）
 
-本計畫原草稿新增 ID（`D1–D9`、`I1–I6`、`S1–S4`、`H1–H8`、`RSK-*`）經 grep 實證與現有 ID **碰撞**（詳見 §2 C-23）。為遵守憲章「ID 唯一性」與「禁止平行命名空間」（每個概念只能有一個正據名稱），本計畫改用已驗證無碰撞的前綴（見 §0.3）；原草稿的 ID 前綴**不得**被引用為有效 ID。
+```css
+/* 主題切換：無 JS，以 data-attribute + CSS 變數覆寫 */
+:root { /* 淺色（預設） */ }
+[data-theme="dark"] { /* 深色覆寫 */ }
+@media (prefers-color-scheme: dark) {
+  [data-theme="system"] { /* 跟隨系統 */ }
+}
+/* 密度 */
+[data-density="compact"] { --row-pad: var(--space-2); }
+[data-density="default"] { --row-pad: var(--space-3); }
+[data-density="comfortable"] { --row-pad: var(--space-4); }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+```
 
-### §24.3 執行順序（有序清單，可交付給實作代理）
+主題與密度選擇存於 **session（不持久化個人偏好，RIG-14）**；表單提交後由 server 端渲染 class。
 
-> 規劃文件不會自動執行；必須依序實作並在每步後加陰影驗證。以下順序已依「先誠實、後實作、先 fail-closed、後放量」排序。
+### 26.3 版面結構與導覽
 
-1. **誠實化頁面**（SLICE-G01、G02、G03、G04、G08）：`/api-docs` 全 13 條＋正標已接線；`/settings` 加註 PG 未接線；清理 AGENTS.md 與 architecture README 誤導段落；v2.1 本身即以本檔取代。
-2. **Fail-closed 化**（SLICE-G05）：postgres `todo!()` → `Err`；`verify_integrity()` 不再無條件 `Ok(())`。
-3. **接線封測**（SLICE-G06）：`AppConfig::from_env` 呼叫或刪除；供應 binary 讀取 EKPI_STORAGE/DATABASE_URL。
-4. **金額收斂**（SLICE-G07）：`web` crate f64 → i64；孤兒目錄清理；`tauri.conf.json` 修正。
-5. **API v1 收斂**（SLICE-G12、G13）：批次 B-B..B-E，每端點一契約。
-6. **Postgres 治理適配器**（SLICE-G14）：governance／approval／channels 真實 SQL（保留 JSONL fallback）。
-7. **制度化**（SLICE-G15、G16）：KB crosswalk 落地（VS → process_area、IND → policy pack）、試點與驗證（A1）、更新 traceability register。
+| 區域 | 結構 | Token | 規則 |
+|---|---|---|---|
+| 頁首 | 站名＋全域搜尋＋通知＋使用者選單 | 高 56px | 搜尋為 GET form（`/search?q=`）；通知為站內列表頁連結（FLX-15） |
+| 側欄 | 依工作室分組的導覽 | 寬 240px | `aria-current="page"` 標記；`nav > ul > li > a` 語義結構 |
+| 主區 | 麵包屑＋頁標＋說明＋主內容 | — | 麵包屑 `nav[aria-label="麵包屑"] > ol` |
+| 頁尾 | 版本＋環境標識＋契約連結 | — | 顯示 build hash（可追溯 RIG-24） |
 
-完成順序即終端狀態：Phase A 仍未核准，必須以絕對誠實的狀態推進，不得包裝。
+**導覽資訊架構（IA）**：
+
+```
+/ (總覽)
+├─ /projects      專案
+├─ /approvals     簽核佇列
+├─ /workflows     流程範本
+├─ /evidence      證據
+├─ /inspections   品質檢查
+├─ /controls      控制
+├─ /lifecycle     關卡
+├─ /audit         稽核鏈
+├─ /settings      設定
+└─ /api-docs      API 文件
+```
+
+> 上圖為 ekpi-platform 治理工作台（S3 面）實況路由；S1（根平台 23 路由，C-05）之 IA 依 §11.3 角色起始頁組成，兩者共用本節 token 與元件。擴充畫面（SCR-01..SCR-24，§27）註冊時須同步側欄、麵包屑與契約對照表（三處一致性由 QG-12 檢查）。
+
+### 26.4 元件庫規格（CM-01..CM-30）
+
+每元件規格欄位：**用途／語義標籤／狀態（互動×資料八態，RIG-17）／鍵盤行為／ARIA／錯誤三段／Token 依賴**。以下為核心 30 元件；「互動態」欄以縮寫列出：D(efault) H(over) F(ocus) FV(ocus-visible) A(ctive) DIs(abled) L(oading) E(mpty) ER(ror) S(uccess) RO(read-only)；資料八態（空/零結果/載入/部分/過期/無權限/錯誤/衝突）為容器軸，見 §26.4.1。
+
+| ID | 元件 | 語義標籤 | 互動態 | 鍵盤 | ARIA 要點 |
+|---|---|---|---|---|---|
+| CM-01 | Button | `<button>` | D H F FV A DIs L E— ER— S RO | Enter/Space 觸發 | `aria-busy` 載入中；`aria-disabled` |
+| CM-02 | Link | `<a>` | D H F FV A DIs— L— E— ER— S RO | Enter | `aria-current` 用於導覽 |
+| CM-03 | Text input | `<input type="text">` | D H F FV A DIs L— E— ER S RO | 全鍵入 | `aria-describedby` 綁錯誤；`aria-invalid` |
+| CM-04 | Number input | `<input type="text" inputmode="numeric">` | 同上 | 全鍵入 | 金額欄**禁止** `type=number`（避免浮點 UI 陷阱） |
+| CM-05 | Select | `<select>` | D H F FV A DIs L E ER S RO | 方向鍵/首字母 | `<label>` 必綁 |
+| CM-06 | Checkbox | `<input type="checkbox">` | D H F FV A(checked) DIs L— E— ER S RO | Space | fieldset + legend（批量選擇） |
+| CM-07 | Radio group | `<input type="radio">` | 同上 | 方向鍵 | fieldset + legend |
+| CM-08 | Textarea | `<textarea>` | D H F FV A DIs L— E— ER S RO | 全鍵入 | `maxlength` + 剩餘字數提示 |
+| CM-09 | Form | `<form>` | — | — | `novalidate` 由 server 端驗證；錯誤彙總置頂 |
+| CM-10 | Table（資料表） | `<table>` | D— H(列) F— FV— A— DIs— L(骨架) E(空) ER S— RO | 列內 Tab 循序 | `<caption>`＋`<th scope>`＋`aria-sort` |
+| CM-11 | Card | `<article>` | D H F— FV— A— DIs— L E— ER— S— RO | — | 標題 `h3`；可操作區整卡連結 |
+| CM-12 | Badge | `<span>` | D DIs— L— E— ER— S(各色) RO | — | 狀態以文字＋色（RIG-18） |
+| CM-13 | Alert | `<div role="alert">` | D— H— F— FV— A— DIs— L— E— ER(四級) S— RO | — | 錯誤級用 `role="alert"`；其餘 `role="status"` |
+| CM-14 | Toast | `<div role="status">` | 入場/停留/退場 | — | 4 秒後自動消失；不得承載關鍵操作結果（需 PRG 頁面確認） |
+| CM-15 | Tabs | `<div role="tablist">` | D H F FV A(selected) DIs— L— E— ER— S— RO | 左右鍵切換；Tab 入面板 | `aria-selected`＋`aria-controls`；`:target` 實作 |
+| CM-16 | Modal（對話框） | `<dialog>` | 開/關/focus trap | Esc 關閉；Tab 循環 | `aria-modal`＋`aria-labelledby`；零 JS 以 `:target` + `<dialog>` 備援 |
+| CM-17 | Drawer（側板） | `<aside>` | 同 Modal | Esc | `aria-expanded` 觸發鈕 |
+| CM-18 | Stepper（步驟條） | `<ol>` | 當前/已完成/未來 | — | `aria-current="step"` |
+| CM-19 | Timeline | `<ol>` | 事件節點 | — | 時間戳＋actor＋事件類型（可追溯 RIG-24） |
+| CM-20 | Empty state | `<div>` | 插圖＋說明＋主操作 | — | 說明「為什麼空」＋「如何建立第一筆」 |
+| CM-21 | Skeleton | `<div aria-hidden="true">` | 載入中佔位 | — | `aria-busy="true"` 於容器 |
+| CM-22 | Pagination | `<nav>` | 首/末/當前/禁用 | — | `aria-current="page"`；每頁筆數選擇 |
+| CM-23 | FilterBar | `<form method="get">` | 各輸入十態 | — | 提交後 URL 參數保留（可分享、可收藏） |
+| CM-24 | Toolbar | `<div role="toolbar">` | — | — | 批量操作入口（FLX-07） |
+| CM-25 | Breadcrumb | `<nav><ol>` | 當前頁 | — | `aria-current="page"` 最後一項 |
+| CM-26 | Tag input | `<input>` + 隱藏清單 | 同 CM-03 | Enter 加入；Backspace 移除 | 已選項以清單呈現（非 JS 動態） |
+| CM-27 | File upload | `<input type="file">` | D H F FV A DIs L(上傳中) E ER S RO | Enter 開啟檔案選擇 | `accept` 限制；大小上限前端提示 |
+| CM-28 | Money display | `<td>` / `<span>` | — | — | 千分位＋幣別＋最小單位（RIG-01） |
+| CM-29 | Status pill | `<span>` | 六狀態（待處理/進行中/已核准/已駁回/已升級/已封存） | — | 文字＋色＋圖示（RIG-18） |
+| CM-30 | Evidence viewer | `<figure>` | 載入/已載入/損毀 | — | 顯示雜湊（SHA-256）與來源（RIG-24） |
+
+#### 26.4.1 狀態機：互動態 × 資料八態（RIG-17 × AGENTS.md §4）
+
+```
+[Default] ──hover──▶ [Hover] ──leave──▶ [Default]
+    │ focusin                        focusout ▲
+    ▼                                        │
+[Focus] ──keyboard──▶ [Focus-visible] ───────┘
+    │ press                            release ▲
+    ▼                                          │
+[Active] ──────────────────────────────────────┘
+    │ disabled prop ──▶ [Disabled]（不可達任何態）
+    │ async start  ──▶ [Loading]（aria-busy；逾時→Error）
+    │ 無資料       ──▶ [Empty]（含指引）
+    │ 驗證失敗     ──▶ [Error]（三段訊息；修正→Default）
+    │ 操作成功     ──▶ [Success]（PRG 後由 server 呈現；3–5s 自動轉 Default）
+    │ 唯讀權限     ──▶ [Read-only]（顯示但不可編輯；附「為什麼唯讀」）
+```
+
+**正交性**：互動態（上圖）描述單元件生命週期；資料八態（RIG-17：空/零結果/載入/部分/過期/無權限/錯誤/衝突，WP-08）描述容器內容來源——兩軸正交，每元件須同時聲明兩軸取值（G1.1 八態矩陣之受測對象）。
+
+**規則**：任何元件的任何態都必須可達且可離開；`Disabled` 必須附原因（tooltip/title，並以可讀文字呈現）。
+
+### 26.5 無障礙規格（WCAG 2.2 AA 對照，A11Y-01..A11Y-12）
+
+| ID | WCAG 條款 | 要求 | 落地方式 | 驗證 |
+|---|---|---|---|---|
+| A11Y-01 | 1.3.1 資訊與關係 | 語義 HTML：標題階層、清單、表格 th/scope | Askama 模板審查 | HTML 驗證器 |
+| A11Y-02 | 1.4.3 對比 | 文字 ≥ 4.5:1、大字 ≥ 3:1 | §26.2.1 token 表 | QG-11 自動計算 |
+| A11Y-03 | 1.4.11 非文字對比 | UI 元件與圖形 ≥ 3:1 | 邊框/焦點環 token | QG-11 |
+| A11Y-04 | 2.1.1 鍵盤 | 全功能鍵盤可達 | 零 JS；原生元素 | 人工走查清單 |
+| A11Y-05 | 2.4.7 焦點可見 | 焦點環 ≥ 2px、對比 ≥ 3:1 | `:focus-visible` 全域樣式 | 目視＋掃描 |
+| A11Y-06 | 2.4.11 焦點不遮蔽 | sticky header 不遮焦點 | `scroll-padding-top` | 目視 |
+| A11Y-07 | 2.5.8 目標尺寸 | 點擊目標 ≥ 24×24px | 按鈕最小尺寸 token | CSS 稽核 |
+| A11Y-08 | 1.4.1 不以顏色為唯一 | 狀態＝色＋圖示＋文字 | CM-12/29 | 元件測試 |
+| A11Y-09 | 4.1.2 名稱/角色/值 | 表單 label 綁定、aria 屬性 | §26.4 ARIA 欄 | 掃描器 |
+| A11Y-10 | 2.3.3 動效 | `prefers-reduced-motion` 尊重 | §26.2.3 | CSS 稽核 |
+| A11Y-11 | 3.3.7 冗餘輸入 | 自動填入已知資料 | server 端渲染 value | 目視 |
+| A11Y-12 | 3.3.8 無障礙驗證 | 輸入輔助（如 OTP）可貼上 | 原生 input | 目視 |
+
+**語言**：全站 `lang="zh-Hant-TW"`；數字／代號（如 `G1`）以 `aria-label` 補充中文讀法。
+
+### 26.6 回饋與貼心設計模式庫（FEED-01..FEED-12）
+
+| ID | 模式 | 情境 | 實作（零 JS） | 對應痛點 |
+|---|---|---|---|---|
+| FEED-01 | 操作後立即確認 | 送出簽核 | PRG 後成功頁橫幅＋案件連結＋「下一步」提示 | PNT-21 |
+| FEED-02 | 進度可視 | 批量上傳 | 每檔一行：檔名＋雜湊＋狀態（RIG-24） | PNT-04 |
+| FEED-03 | 空狀態指引 | 新使用者首次進入 | CM-20＋「建立第一個專案」按鈕 | PNT-15 |
+| FEED-04 | 錯誤三段 | 任何失敗 | CM-13＋「問題／原因／處理」三段＋案例編號 | PNT-14 |
+| FEED-05 | 逾時誠實告知 | 處理逾 30s | 「仍在處理中，已 45s；完成後將出現於佇列」 | PNT-24 |
+| FEED-06 | 速率配額揭露 | 接近限流 | 頁首顯示「本小時剩餘請求配額」 | PNT-25 |
+| FEED-07 | 佇列位置揭露 | 簽核等待 | 「第 3 位；前一位已等待 2 小時」 | PNT-01 |
+| FEED-08 | 變更影響預覽 | 發布流程範本 | 發布前顯示「將影響 N 個進行中案件」 | PNT-11 |
+| FEED-09 | 一致性詞彙 | 全站 | 同一概念同一詞（§26.7 詞彙表） | PNT-13 |
+| FEED-10 | 鍵盤效率 | 常用動作 | `<kbd>` 提示；焦點順序符合視覺順序 | PNT-17 |
+| FEED-11 | 匯出準備就緒 | 大量匯出 | 「匯出完成，含 1,234 筆；檔案雜湊 abc…」 | PNT-20 |
+| FEED-12 | 改善回饋閉環 | KPI 達成 | 儀表板顯示「本季客訴處理時長 −32%（證據雜湊 …）」 | PNT-30 |
+
+### 26.7 全站詞彙表（FEED-09 落地）
+
+| 概念 | 統一詞 | 禁用同義詞 | 依據 |
+|---|---|---|---|
+| 簽核任務 | 簽核任務 | 核准單／審批件／case | §10 |
+| 核准／駁回動作 | 核准／駁回 | 同意／拒絕／approve/reject（UI 中文一律中文） | §10 |
+| 流程範本 | 流程範本 | 工作流／workflow 定義 | §11.1 |
+| 證據 | 證據 | 附件／檔案 | §12（雙軌證據） |
+| 品質檢查 | 品質檢查 | 檢驗／QC | §10 |
+| 控制項 | 控制項 | 控制點／ctrl | §12（控制庫） |
+| 關卡 | 關卡 | 門／gate（UI 中文） | §17／§20 |
+| 升級 | 升級 | 上報／escalation | §6（ESC-1..4） |
+
+### 26.8 響應式與列印
+
+| 斷點 | 寬度 | 版面 | 適用 Persona |
+|---|---|---|---|
+| 手持 | < 640px | 單欄；側欄收合為頂部選單（`:target`） | PSN-01/03/04（現場） |
+| 平板 | 640–1023px | 兩欄；側欄可收 | PSN-05/06 |
+| 桌面 | ≥ 1024px | 三區完整 | PSN-09..14 |
+| 列印 | — | 隱藏側欄/頁首；表格展開；每頁頁首重複表頭 | PSN-09（取證列印） |
+
+**規則**：所有斷點皆為 CSS-only；無 JS 事件監聽。列印樣式必含頁碼與產生時間（取證 RIG-24）。
+
+---
+
+## §27 三工作室畫面清單（SCR-01..SCR-24）
+
+> **定位**：§11.3 定義 S1 首頁組成原則；本章為三工作室**畫面總登記**（畫面太少即簡陋，畫面登記即範圍承諾）。現況對照：S1 之 SCR-01..12 由根平台 23 條路由（C-05）承載雛形；S2 之 SCR-13..17 現由 platform-hub CLI 與 channels 承載；S3 之 SCR-18..24 現由 kem＋治理文件體系承載。每畫面必綁：RIG-17 資料八態＋互動態、QG-11 對比、≥1 痛點、≥1 切片。
+
+### 27.1 畫面登記表
+
+| ID | 畫面 | 工作室 | 主要 PSN | 治痛點（PNT←母） | 關鍵元件（§26.4） | 切片／閘門 |
+|---|---|---|---|---|---|---|
+| SCR-01 | 角色起始頁（問候＋待辦＋例外＋任務鏈＋指標＋證據） | S1 | 全體 | PNT-28←WP-09；WP-04/05 | CM-11, CM-09, CM-13 | G1.3 |
+| SCR-02 | 傳票登帳（新增／編輯／草稿；借貸平衡即時檢核） | S1 | PSN-01/08 | PNT-09←不變量 | CM-04, CM-28, CM-09 | VS-01；QG-03 |
+| SCR-03 | 待覆核佇列（批量批/駁＋差異 highlight＋署名） | S1 | PSN-05/14 | PNT-06←WP-04；PNT-19 | CM-10, CM-24, CM-06 | G1.4 |
+| SCR-04 | 匯入批次（預覽→乾跑報告→確認；重放 409 揭露） | S1 | PSN-01/06 | PNT-10←HP-05 | CM-27, CM-10, CM-13 | VS-02；RB-05 |
+| SCR-05 | 草稿解析＋AI 建議採用（依據卡；永不自動落地） | S1 | PSN-03/07 | PNT-05←HP-03 | CM-19, CM-30, CM-09 | VS-03；AX-7 |
+| SCR-06 | 報表中心（月報/樞紐/平行座標；金額整數聚合） | S1 | PSN-04/05 | PNT-20←WP-10 | CM-10, CM-22, CM-23 | VS-04；QG-04 |
+| SCR-07 | 對帳工作檯（每日報告＋差異樣本＋人工佇列） | S1 | PSN-06/11 | PNT-07←HP-06 | CM-10, CM-29, CM-13 | G2.4 |
+| SCR-08 | 任務鏈視圖（breadcrumb＋篩選持久化＋返回不重置） | S1 | PSN-01..08 | PNT-12←WP-01；WP-10 | CM-25, CM-23 | G1.2 |
+| SCR-09 | 指標卡（定義/時點/來源就地解釋） | S1 | PSN-12/14 | PNT-30←GP-05；WP-02 | CM-11, CM-13 | G1.5 |
+| SCR-10 | 證據軌跡（我的操作＋雜湊＋雙時間軸） | S1 | PSN-09/12 | PNT-11←GP-01 | CM-19, CM-30 | AX-2；QG-05 |
+| SCR-11 | 匯出中心（CSV；金額整數分；檔案雜湊回執） | S1 | PSN-02/09 | PNT-20←WP-10 | CM-24, CM-28 | §11.1；FEED-11 |
+| SCR-12 | 個人設定（主題/密度/語言；session 級） | S1 | 全體 | PNT-17←AX-6 | CM-07, CM-05 | FLX-10/11/12 |
+| SCR-13 | UDM 映射表（權威源＋衝突裁決規則＋版控） | S2 | PSN-10 | PNT-02←WP-03/HP-04 | CM-10, CM-12 | G2.3；HO-03 |
+| SCR-14 | 連接器健康（退避/冪等/熔斷狀態逐連接器） | S2 | PSN-11 | PNT-25←HP-09；HP-05 | CM-29, CM-10 | G2.2 |
+| SCR-15 | DLQ 工作檯（可檢視/可重放/需署名） | S2 | PSN-11 | PNT-10←HP-05 | CM-10, CM-16, CM-01 | G2.1；FLX-14 |
+| SCR-16 | 對帳報告（件數/金額/差異樣本；每日） | S2 | PSN-06/10 | PNT-07←HP-06 | CM-10, CM-13 | G2.4 |
+| SCR-17 | 代理接入（能力目錄/速率上限/資料類別/審批） | S2 | PSN-10/11 | PNT-25←HP-09 | CM-10, CM-12 | G2.5；HO-06 |
+| SCR-18 | 證據導出（四要件浮水印：相關/完整/準確/可追溯） | S3 | PSN-09 | PNT-04←GP-01/04 | CM-30, CM-24 | G3.1；FL-03 |
+| SCR-19 | 控制庫（一控制↔多框架映射；測試排程提醒） | S3 | PSN-09/10 | PNT-05←GP-02 | CM-10, CM-12, CM-15 | G3.2 |
+| SCR-20 | CCM 儀表（三指標：鏈完整性/登入異常/金額違反=0） | S3 | PSN-12 | PNT-30←GP-05 | CM-11, CM-29 | G3.3 |
+| SCR-21 | 外部稽核師唯讀門戶（自助抽樣；可重建） | S3 | P6（外部） | PNT-04←GP-06 | CM-10, CM-30 | G3.4；OQ-GOV-04 |
+| SCR-22 | 稽核鏈瀏覽（雙時間軸重放至任意時點） | S3 | PSN-09/12 | PNT-11←GP-01/06 | CM-19, CM-30 | AX-5；RB-04 |
+| SCR-23 | 風險與未決登記（RSK-G*／OQ-GOV-* 全景） | S3 | PSN-12/13 | PNT-29←GP-01 | CM-10, CM-29 | §18/§19 |
+| SCR-24 | 事故時間線（偵測→處置→復盤→行動項有主） | S3 | PSN-11/14 | PNT-26←HP-06 | CM-19, CM-18 | VS-09；HO-07 |
+
+### 27.2 三工作室資訊架構（IA）總覽
+
+```
+S1 業務工作台（根平台 23 路由承載，C-05）
+ ├─ 起始頁 SCR-01（依角色渲染，§11.3）
+ ├─ 傳票/覆核/匯入/解析/報表 SCR-02..06（VS-01..04）
+ ├─ 對帳/鏈視圖/匯出/設定 SCR-07..12
+ └─ 導覽：側欄＋breadcrumb；篩選 querystring 持久化（G1.2）
+S2 API 中樞與資料管理（platform-hub 承載）
+ ├─ UDM 映射 SCR-13（一次映射，HP-03）
+ ├─ 連接器/DLQ/對帳 SCR-14..16（可靠性，HP-05/06）
+ └─ 代理接入 SCR-17（治理接入，HP-09）
+S3 治理與稽核平台（kem＋治理文件體系承載）
+ ├─ 證據/控制庫/CCM SCR-18..20（GP-01..05）
+ ├─ 外部門戶/鏈瀏覽 SCR-21/22（GP-06；AX-5）
+ └─ 風險/事故 SCR-23/24（§18/§19；VS-09）
+```
+
+### 27.3 畫面覆蓋自檢（QG-09 輸入之三）
+
+1. **SCR→PNT**：24/24 綁 ≥1 痛點；**SCR→切片**：24/24 有切片或既有閘門（QG-03/04/05）。
+2. **PSN→SCR**：14/14 每個部門畫像有 ≥2 個主畫面（取證與操作分離，RIG-13）。
+3. **WP→SCR**：WP-01..10 全被 ≥1 SCR 治理；HP-01..10 中 HP-01/02/07/08 由契約與治理面（§11.1、QG-06、HO-07）承載而非畫面——**明示不做畫面**（避免為痛點硬造介面；HP-07 所有權登記於 §8.1 映射表欄位，HP-08 網關統一由 §11.1 契約原則承載）。
+4. **八態**：SCR-01..24 全數受 G1.1 八態矩陣檢核；金額類畫面（SCR-02/06/11/16）另受 QG-03。

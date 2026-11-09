@@ -1,175 +1,35 @@
-//! E.Sun BankPay API 客戶端。
+//! E.Sun BankPay 客戶端（port 層）。
 //!
-//! 負責與 E.Sun 銀行系統通訊，支援模擬模式 (Mock) 與生產模式。
-//! 在模擬模式下不進行實際網路請求，適合開發與測試環境。
+//! 雙模式設計（治理 P7：不將不可驗證的模擬呈現為真實）：
+//!
+//! - **模擬模式（Mock，預設）**：確定性模擬器——無網路、無隨機、無合成金額。
+//!   `esun_ref` 由 `batch_id` 決定性推導（可重放、可測試）；匯入仍真實解析
+//!   檔案內容並回報實際筆數，不虛構匹配數。
+//! - **生產模式**：明確 fail-closed。E.Sun V2.8 契約（`rqHeader`/`rqData`
+//!   信封、mTLS、CP950/Big5 媒體編碼、`rsStatus` 代碼語意）之權威實作位於
+//!   `Wellfit/crates/wellfit_bankpay`（8 端點、17 測試、冪等帳本、ReleaseGate）。
+//!   本平台在取得經驗證的端點規格與憑證前，不得自行猜測端點或信封——
+//!   因此生產模式回傳明確錯誤，而非向虛構端點發送請求。
 
-use crate::bankpay::model::{EsunConfig, ExportRequest, ImportRequest, QueryRequest};
-use serde::{Deserialize, Serialize};
-use std::time::Duration;
+use crate::bankpay::model::{
+    EsunConfig, ExportRequest, ExportResponse, ImportRequest, ImportResponse, QueryRequest,
+    QueryResponse,
+};
 
-/// E.Sun 銀行付款請求（內部格式）。
-#[derive(Debug, Serialize)]
-struct EsunPaymentRequest {
-    pub source_system_id: String,
-    pub customer_id: String,
-    pub payer_account: String,
-    pub payee_account: String,
-    pub amount_minor: i64,
-    pub currency: String,
-    pub batch_id: String,
-    pub remark: Option<String>,
-}
-
-/// E.Sun 銀行付款回應（內部格式）。
-#[derive(Debug, Deserialize)]
-struct EsunPaymentResponse {
-    pub esun_ref: String,
-    pub status: String,
-    pub message: Option<String>,
-}
-
-/// E.Sun 銀行查詢回應（內部格式）。
-#[derive(Debug, Deserialize)]
-struct EsunQueryResponse {
-    pub esun_ref: String,
-    pub status: String,
-    pub amount_minor: Option<i64>,
-    pub currency: Option<String>,
-}
+/// 生產模式未啟用的統一說明（問題＋原因＋處理方式）。
+const PRODUCTION_UNAVAILABLE: &str = "生產模式尚未啟用。問題：平台內建 E.Sun 客戶端僅含模擬器，未串接真實銀行通道；可能原因：E.Sun V2.8 契約需 mTLS 憑證與經驗證端點規格，權威實作位於 Wellfit/crates/wellfit_bankpay；處理方式：請保持模擬模式作業，或改用 wellfit bankpay CLI（export/import/query）執行真實支付，並由系統管理員完成憑證設定後再切換。";
 
 /// E.Sun BankPay 客戶端。
+///
+/// 模擬模式下不持有任何網路資源（零 TLS 連線池、零每請求重建開銷）。
 pub struct EsunClient {
     config: EsunConfig,
-    http_client: reqwest::Client,
 }
 
 impl EsunClient {
-    /// 建立新的 E.Sun 客戶端。
+    /// 建立客戶端（不進行任何 I/O，不會 panic）。
     pub fn new(config: EsunConfig) -> Self {
-        Self {
-            config,
-            http_client: reqwest::Client::builder()
-                .timeout(Duration::from_secs(30))
-                .build()
-                .expect("HTTP client 建立失敗"),
-        }
-    }
-
-    /// 匯出付款批次至 E.Sun。
-    pub async fn export(&self, req: &ExportRequest) -> Result<ExportResponse, String> {
-        if self.config.esun_mock_mode {
-            return self.mock_export(req);
-        }
-
-        let payment_req = EsunPaymentRequest {
-            source_system_id: self
-                .config
-                .source_system_id
-                .clone()
-                .unwrap_or_else(|| "DEFAULT".to_string()),
-            customer_id: self
-                .config
-                .customer_id
-                .clone()
-                .unwrap_or_else(|| "DEFAULT".to_string()),
-            payer_account: self
-                .config
-                .payer_account
-                .clone()
-                .unwrap_or_else(|| "DEFAULT".to_string()),
-            payee_account: "DEFAULT".to_string(),
-            amount_minor: req.amount_minor,
-            currency: req.currency.clone(),
-            batch_id: req.batch_id.clone(),
-            remark: Some(format!("Batch {}", req.batch_id)),
-        };
-
-        let resp: EsunPaymentResponse = self
-            .http_client
-            .post(format!("{}/v1/payment/export", self.config.esun_url))
-            .json(&payment_req)
-            .send()
-            .await
-            .map_err(|e| format!("E.Sun 匯出請求失敗：{}", e))?
-            .json()
-            .await
-            .map_err(|e| format!("E.Sun 匯出回應解析失敗：{}", e))?;
-
-        Ok(ExportResponse {
-            status: resp.status,
-            batch_id: req.batch_id.clone(),
-            esun_ref: Some(resp.esun_ref),
-        })
-    }
-
-    /// 匯入銀行回應檔。
-    pub async fn import(&self, req: &ImportRequest) -> Result<ImportResponse, String> {
-        if self.config.esun_mock_mode {
-            return self.mock_import(req);
-        }
-
-        // 讀取檔案並上傳
-        let file_content =
-            std::fs::read(&req.file_path).map_err(|e| format!("檔案讀取失敗：{}", e))?;
-
-        let form = reqwest::multipart::Part::bytes(file_content).file_name(
-            std::path::Path::new(&req.file_path)
-                .file_name()
-                .unwrap_or_default()
-                .to_string_lossy()
-                .to_string(),
-        );
-
-        let form = reqwest::multipart::Form::new().part("file", form);
-
-        let _resp: serde_json::Value = self
-            .http_client
-            .post(format!("{}/v1/payment/import", self.config.esun_url))
-            .multipart(form)
-            .send()
-            .await
-            .map_err(|e| format!("E.Sun 匯入請求失敗：{}", e))?
-            .json()
-            .await
-            .map_err(|e| format!("E.Sun 匯入回應解析失敗：{}", e))?;
-
-        // 簡化：假設匯入成功
-        Ok(ImportResponse {
-            status: "processed".to_string(),
-            matched: 0,
-            mismatched: 0,
-        })
-    }
-
-    /// 查詢銀行交易狀態。
-    pub async fn query(&self, req: &QueryRequest) -> Result<QueryResponse, String> {
-        if self.config.esun_mock_mode {
-            return self.mock_query(req);
-        }
-
-        let resp: EsunQueryResponse = self
-            .http_client
-            .get(format!(
-                "{}/v1/payment/query?esun_ref={}",
-                self.config.esun_url, req.esun_ref
-            ))
-            .send()
-            .await
-            .map_err(|e| format!("E.Sun 查詢請求失敗：{}", e))?
-            .json()
-            .await
-            .map_err(|e| format!("E.Sun 查詢回應解析失敗：{}", e))?;
-
-        Ok(QueryResponse {
-            status: resp.status,
-            amount_minor: resp.amount_minor,
-            currency: resp.currency,
-        })
-    }
-
-    /// 獲取 E.Sun 連線配置。
-    pub fn config(&self) -> &EsunConfig {
-        &self.config
+        Self { config }
     }
 
     /// 檢查是否為模擬模式。
@@ -177,38 +37,76 @@ impl EsunClient {
         self.config.esun_mock_mode
     }
 
-    // ----- 模擬模式實作 -----
+    /// 獲取 E.Sun 連線配置。
+    pub fn config(&self) -> &EsunConfig {
+        &self.config
+    }
 
-    fn mock_export(&self, req: &ExportRequest) -> Result<ExportResponse, String> {
-        // 模擬網路延遲
-        std::thread::sleep(Duration::from_millis(100));
-
-        let esun_ref = format!("ESUN-{}-{}", req.batch_id, chrono::Utc::now().timestamp());
-
+    /// 匯出付款批次至 E.Sun。
+    pub async fn export(&self, req: &ExportRequest) -> Result<ExportResponse, String> {
+        if !self.config.esun_mock_mode {
+            return Err(PRODUCTION_UNAVAILABLE.to_string());
+        }
+        // 確定性模擬：esun_ref 由 batch_id 推導；同 batch_id 重放得到同參照，
+        // 與資料庫唯一索引共同構成端到端冪等。
         Ok(ExportResponse {
             status: "SUBMITTED".to_string(),
             batch_id: req.batch_id.clone(),
-            esun_ref: Some(esun_ref),
+            esun_ref: Some(format!("ESUN-MOCK-{}", req.batch_id)),
         })
     }
 
-    fn mock_import(&self, _req: &ImportRequest) -> Result<ImportResponse, String> {
-        std::thread::sleep(Duration::from_millis(150));
+    /// 匯入銀行回應檔。
+    ///
+    /// 模擬模式仍**真實讀取並解析**檔案：以 CSV 資料列計算 matched/mismatched，
+    /// 絕不回傳捏造的固定筆數。檔案讀取失敗會如實回報錯誤。
+    pub async fn import(&self, req: &ImportRequest) -> Result<ImportResponse, String> {
+        if !self.config.esun_mock_mode {
+            return Err(PRODUCTION_UNAVAILABLE.to_string());
+        }
+        let content = tokio::fs::read_to_string(&req.file_path)
+            .await
+            .map_err(|e| {
+                format!(
+                    "檔案讀取失敗：{e}。問題：無法讀取「{}」；可能原因：檔案不存在、編碼非 UTF-8 或權限不足；處理方式：確認檔案已放置於匯入目錄且為 UTF-8 CSV 後重試。",
+                    req.file_path
+                )
+            })?;
+
+        let mut matched = 0usize;
+        let mut mismatched = 0usize;
+        // 格式：首行表頭；資料列至少需 4 欄且首欄（參照編號）非空。
+        for (idx, line) in content.lines().enumerate() {
+            if idx == 0 || line.trim().is_empty() {
+                continue;
+            }
+            let cols: Vec<&str> = line.split(',').collect();
+            if cols.len() >= 4 && !cols[0].trim().is_empty() {
+                matched += 1;
+            } else {
+                mismatched += 1;
+            }
+        }
 
         Ok(ImportResponse {
             status: "processed".to_string(),
-            matched: 5,
-            mismatched: 0,
+            matched,
+            mismatched,
         })
     }
 
-    fn mock_query(&self, req: &QueryRequest) -> Result<QueryResponse, String> {
-        std::thread::sleep(Duration::from_millis(80));
-
+    /// 查詢銀行交易狀態。
+    ///
+    /// 模擬模式回傳 `COMPLETED` 與 `None` 金額——金額/幣別由 API 層自
+    /// `bankpay_batches`（本地批次帳）補入，客戶端不虛構任何財務數值。
+    pub async fn query(&self, _req: &QueryRequest) -> Result<QueryResponse, String> {
+        if !self.config.esun_mock_mode {
+            return Err(PRODUCTION_UNAVAILABLE.to_string());
+        }
         Ok(QueryResponse {
-            status: "completed".to_string(),
-            amount_minor: Some(50000),
-            currency: Some("TWD".to_string()),
+            status: "COMPLETED".to_string(),
+            amount_minor: None,
+            currency: None,
         })
     }
 }
@@ -217,17 +115,86 @@ impl EsunClient {
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_mock_config_default() {
-        let config = EsunConfig::default();
-        assert!(config.esun_mock_mode);
-        assert!(!config.esun_url.is_empty());
+    fn mock_config() -> EsunConfig {
+        EsunConfig::default()
     }
 
     #[test]
-    fn test_client_creation() {
-        let config = EsunConfig::default();
-        let client = EsunClient::new(config);
+    fn test_mock_config_default() {
+        let config = mock_config();
+        assert!(config.esun_mock_mode);
+        // 誠實預設：未驗證前不猜測銀行端點 URL。
+        assert!(config.esun_url.is_empty());
+    }
+
+    #[test]
+    fn test_client_creation_no_panic() {
+        let client = EsunClient::new(mock_config());
         assert!(client.is_mock_mode());
+    }
+
+    #[test]
+    fn test_production_mode_fails_closed() {
+        let mut config = mock_config();
+        config.esun_mock_mode = false;
+        config.esun_url = "https://example.invalid".to_string();
+        let client = EsunClient::new(config);
+        let rt = tokio::runtime::Runtime::new().expect("rt");
+        let err = rt
+            .block_on(client.export(&ExportRequest {
+                batch_id: "B1".to_string(),
+                amount_minor: 100,
+                currency: "TWD".to_string(),
+            }))
+            .expect_err("production mode must fail closed");
+        assert!(err.contains("生產模式尚未啟用"));
+    }
+
+    #[tokio::test]
+    async fn test_mock_export_is_deterministic() {
+        let client = EsunClient::new(mock_config());
+        let req = ExportRequest {
+            batch_id: "BATCH-001".to_string(),
+            amount_minor: 50000,
+            currency: "TWD".to_string(),
+        };
+        let r1 = client.export(&req).await.expect("export 1");
+        let r2 = client.export(&req).await.expect("export 2");
+        assert_eq!(r1.esun_ref, r2.esun_ref, "same batch must derive same ref");
+        assert_eq!(r1.esun_ref.as_deref(), Some("ESUN-MOCK-BATCH-001"));
+    }
+
+    #[tokio::test]
+    async fn test_mock_import_parses_real_file() {
+        let dir = std::env::temp_dir().join("bankpay-client-test");
+        tokio::fs::create_dir_all(&dir).await.expect("mkdir");
+        let path = dir.join("responses.csv");
+        tokio::fs::write(
+            &path,
+            "ref,status,amount,currency\nR1,OK,100,TWD\nR2,OK,200,TWD\nBAD\n",
+        )
+        .await
+        .expect("write csv");
+        let client = EsunClient::new(mock_config());
+        let resp = client
+            .import(&ImportRequest {
+                file_path: path.to_string_lossy().to_string(),
+            })
+            .await
+            .expect("import");
+        assert_eq!(resp.matched, 2, "two valid data rows");
+        assert_eq!(resp.mismatched, 1, "one malformed row");
+    }
+
+    #[tokio::test]
+    async fn test_mock_import_missing_file_is_error() {
+        let client = EsunClient::new(mock_config());
+        let err = client
+            .import(&ImportRequest {
+                file_path: "Z:/definitely/not/here.csv".to_string(),
+            })
+            .await
+            .expect_err("missing file must error");
+        assert!(err.contains("檔案讀取失敗"));
     }
 }

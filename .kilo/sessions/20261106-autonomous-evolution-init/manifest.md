@@ -77,3 +77,12 @@
   - Live runs: claim-016 votes from 5 DISTINCT models (durability 1-5, agreement 0.40 -> queued); claim-012 5 models (agreement 0.60 at floor). Cross-model disagreement visible, not masked - Kitchen Loop drift control at vetting layer.
   - Dashboard gov panel now shows latest ensemble (models_used, agreement bar, majority) - regenerated 19,027 chars, script count 0.
   - Residual mojibake sweep via [IO.File]+[regex] only (Select-String GBK verification was unreliable - lesson recorded).
+- E2E smoke (2026-11-09, isolated temp KB) found+fixed 2 more defects, full lifecycle now verified live:
+  - Defect #6: ingest rejected BOM-prefixed batch JSON (PS5.1 Set-Content default) -> filing::strip_bom on all JSON inputs + test.
+  - Defect #7: Claim.id lacked serde(default) breaking the ingest draft contract (id auto-assign) -> default + V-A01 guard intact.
+  - Full cycle PASS: seed(20) -> capture -> ingest(1 accept + 1 review via batch-internal dup detection - Fix #2 verified) -> ask -> eval 20/20 -> sync -> supersede(v2, old retrievable-but-demoted) -> review defer -> lint 0 -> doctor chain_ok -> dashboard script=0.
+  - T1 fail-closed verified: fabricated quote rejected on sight (groundedness gate works against invented evidence).
+- P2b vector retrieval SHIPPED (2026-11-09): embed.rs (OVH bge-m3 batched 1024-dim keyless -> Ollama fallback; body-hash staleness guard), hybrid_fuse (alpha-BM25 + (1-alpha)-vector, max-normalized; missing-vector claims degrade to BM25-only via-tagged), semantic refusal floor 0.55 evidence-calibrated via examples/calibrate.rs (max refusal cosine 0.4872 measured; floor above it).
+  - Live: kem embed -> 20 vectors; eval [hybrid] 20/20 top-1; cross-lingual ask (Chinese query -> English claim-007 top-1 score 1.0) - capability BM25 cannot deliver.
+  - Gates: 58 tests green, clippy clean, fmt clean. Roadmap: only G4 distillation (needs >=500 reviews) and ekpi Phase A (external) remain.
+- Attribution fix + 429 degrade evidence (2026-11-09): embed_batch returns EmbedResult{vecs, used_label, used_model}; vectors.json now records the ACTUAL producing model (was always pool-head bge-m3 - attribution bug). Live: embed via bge-m3 -> eval [hybrid[bge-m3]] 20/20; ask hit OVH 429 (quota) + Ollama down -> BM25-only with via=bm25 tag, Chinese query still hit claim-007 via topics (3.57) - degradation chain proven live. KEM doc section 11 updated (P2b/floor/E2E/degrade rows + LIMIT list).

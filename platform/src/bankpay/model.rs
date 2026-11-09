@@ -2,9 +2,8 @@
 //!
 //! 定義銀行支付批次記錄與稽核記錄的結構，所有金額使用 i64 整數分 (INV-01)。
 
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use time::OffsetDateTime;
 
 /// 銀行支付批次狀態機。
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -42,8 +41,8 @@ pub struct BankPayBatch {
     pub currency: String,
     pub status: BankPayStatus,
     pub created_by: String,
-    pub created_at: OffsetDateTime,
-    pub completed_at: Option<OffsetDateTime>,
+    pub created_at: DateTime<Utc>,
+    pub completed_at: Option<DateTime<Utc>>,
 }
 
 /// 銀行支付稽核記錄。
@@ -53,14 +52,14 @@ pub struct BankPayAudit {
     pub batch_id: String,
     pub event_type: String,
     pub performed_by: String,
-    pub performed_at: OffsetDateTime,
+    pub performed_at: DateTime<Utc>,
     pub request_payload: Option<String>,
     pub response_payload: Option<String>,
     pub status_code: u16,
 }
 
 /// 匯出請求。
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct ExportRequest {
     pub batch_id: String,
     pub amount_minor: i64,
@@ -68,15 +67,56 @@ pub struct ExportRequest {
 }
 
 /// 匯入請求。
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct ImportRequest {
     pub file_path: String,
 }
 
 /// 查詢請求。
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct QueryRequest {
     pub esun_ref: String,
+}
+
+/// 批次 ID／esun_ref 的格式約束：1–64 個英數、底線或連字號。
+///
+/// 防止路徑分隔字元、SQL 片段或控制字元經由識別碼欄位進入系統。
+pub fn validate_identifier(value: &str, field: &str) -> Result<(), String> {
+    let ok = !value.is_empty()
+        && value.len() <= 64
+        && value
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-');
+    if ok {
+        Ok(())
+    } else {
+        Err(format!(
+            "驗證失敗：{field}「{value}」格式無效。問題：僅接受 1–64 個英數字、底線或連字號；可能原因：含空白、路徑分隔字元或控制字元；處理方式：請使用如 BATCH-001 的識別碼後重新提交。"
+        ))
+    }
+}
+
+/// 幣別約束：三個大寫英文字母（ISO 4217）。
+pub fn validate_currency(currency: &str) -> Result<(), String> {
+    let ok = currency.len() == 3 && currency.chars().all(|c| c.is_ascii_uppercase());
+    if ok {
+        Ok(())
+    } else {
+        Err(format!(
+            "驗證失敗：幣別「{currency}」無效。問題：幣別須為 3 個大寫英文字母（ISO 4217，如 TWD、USD）；可能原因：輸入小寫或長度錯誤；處理方式：修正後重新提交。"
+        ))
+    }
+}
+
+/// 金額約束：正整數分（INV-01，禁用浮點）。
+pub fn validate_amount(amount_minor: i64) -> Result<(), String> {
+    if amount_minor > 0 {
+        Ok(())
+    } else {
+        Err(format!(
+            "驗證失敗：金額 {amount_minor} 無效。問題：匯出金額必須為正整數（單位：分）；可能原因：金額為零、負值或溢位；處理方式：確認分錄金額後重新提交。"
+        ))
+    }
 }
 
 /// 匯出回應。
@@ -128,7 +168,9 @@ impl Default for EsunConfig {
     fn default() -> Self {
         Self {
             esun_mock_mode: true,
-            esun_url: "https://esunbank.com.tw/bankpay".to_string(),
+            // 誠實預設：未取得經驗證的端點規格與憑證前不猜測 URL（治理 P7；
+            // 權威 V2.8 契約實作位於 Wellfit/crates/wellfit_bankpay）。
+            esun_url: String::new(),
             source_system_id: None,
             customer_id: None,
             payer_account: None,

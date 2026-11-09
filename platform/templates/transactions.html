@@ -71,7 +71,7 @@
                         {% else %}
                         {% for row in rows %}
                         <tr>
-                            <td><a href="/transactions/{{ row.id }}">{{ row.code }}</a></td>
+                            <td><a href="{{ row.detail_href }}">{{ row.code }}</a></td>
                             <td>{{ row.description }}</td>
                             <td>{{ row.date }}</td>
                             <td>{{ row.amount_display }}</td>

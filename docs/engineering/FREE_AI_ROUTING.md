@@ -148,7 +148,7 @@ These providers offer free tiers but require account creation and API key. They 
 | L1 OVHcloud | oai.endpoints.kepler.ai.cloud.ovh.net/v1（免 key，2/min/IP） | Qwen3.8-27B(262K)、gpt-oss-120b、gpt-oss-20b、Qwen3.6-27B、Qwen3.5-397B-A17B(262K)、Llama-3.3-70B、Mistral-Small-3.2-24B、Qwen3Guard-Gen-8B（護欄）、bge-m3/Qwen3-Embedding-8B（嵌入） | check 直接通過 |
 | L1 LLM7.io | api.llm7.io/v1（匿名，tier=turbo 免費） | gpt-oss:20b(128K, JSON)、codestral-latest、mistral-Nemo、nemotron-3-nano:30b(1M) | check 直接通過 |
 | L1 Pollinations | text.pollinations.ai/openai（匿名） | openai-fast=GPT-OSS-20B（reasoning、tools） | check 直接通過 |
-| L2 Groq/OpenRouter/Gemini 等 | 需免費註冊 | 見 §8.4 | 未實測（無金鑰） |
+| L2 Groq/OpenRouter/Gemini 等 | 需免費註冊 | 見 §9.4 | 未實測（無金鑰） |
 
 ### 8.0.1 聯合裁決（Ensemble）— 已上線
 
@@ -164,14 +164,14 @@ kem vet2 的 SCS k 票改為**跨模型輪換**：每票依 pick_entry 於模型
 | embed（向量檢索） | OVH bge-m3 / Qwen3-Embedding-8B（免 key） | Ollama 本地嵌入 | P2b 向量檢索待接線 |
 | guard（敏感度護欄） | OVH Qwen3Guard-Gen-8B（免 key 護欄模型） | T1 規則 | 專職護欄 |
 
-以下 §8.1–§8.5 為 v2.0 查證記錄（保留）。
-## 8.1 四層資源池（v2.0 查證記錄，2026-11-06–07）
+以下 §9.1–§9.5 為 v2.0 查證記錄（保留）。
+## 9. v2.0 查證記錄（2026-11-06–07，已被 §8.0 實測取代的部分保留於此）
 
-### 8.1 四層資源池（全部零付費；§2.2/§7 保留為 2026-11-06 實測記錄）
+### 9.1 四層資源池（全部零付費；§2.2/§7 保留為 2026-11-06 實測記錄）
 
 | 層 | 池 | 端點/來源 | 限額 | 驗證狀態 |
 |----|----|-----------|------|----------|
-| **L0 本地** | Ollama（qwen3.5:4b 現役；升級候選見 §8.3） | `http://localhost:11434` | 無限（受硬體限制） | ✅ 2026-11-06 實測 |
+| **L0 本地** | Ollama（qwen3.5:4b 現役；升級候選見 §9.3） | `http://localhost:11434` | 無限（受硬體限制） | ✅ 2026-11-06 實測 |
 | **L1 無金鑰雲** | OVHcloud AI Endpoints（EU/GDPR，40+ 開源模型） | `https://oai.endpoints.kepler.ai.cloud.ovh.net/v1` | 2/min/IP | ⏳ 未實測 |
 | | Pollinations | OpenAI 相容 | 匿名 IP 限流 | ⏳ 未實測 |
 | | LLM7.io | `https://api.llm7.io/v1` | 匿名 30–60/hr（可選 key 提升至 120 RPM） | ⏳ 未實測 |
@@ -185,7 +185,7 @@ kem vet2 的 SCS k 票改為**跨模型輪換**：每票依 pick_entry 於模型
 | | Ollama Cloud | 雲端原生權重（GLM-5.2 1M ctx、Kimi K2.7 Code、DeepSeek V4 Pro） | 免費層 1 並發 | ⏳ 未實測 |
 | **L3 無 AI** | 規則引擎（T1） | — | — | ✅ kem crate 已實作 |
 
-### 8.2 動態路由規則（決策矩陣）
+### 9.2 動態路由規則（決策矩陣）
 
 路由＝ f(任務型別, 資料敏感度, 配額狀態, 延遲需求)，規則：
 
@@ -200,7 +200,7 @@ kem vet2 的 SCS k 票改為**跨模型輪換**：每票依 pick_entry 於模型
 | R7 | SCS k=5 投票 → L0 為主；L0 過載時分散到 L1（不同供應商投票可提升多樣性，但需記錄模型版本） |
 | R8 | 每次呼叫記錄：池、供應商、模型、延遲、結果 → `.kem/ai-ledger.jsonl`（配額與健康追蹤） |
 
-### 8.3 本地模型升級候選（Ollama；全部開源可本地）
+### 9.3 本地模型升級候選（Ollama；全部開源可本地）
 
 | 模型 | 授權 | 規模 | 顯示卡/記憶體 | 亮點 |
 |------|------|------|----------------|------|
@@ -210,9 +210,9 @@ kem vet2 的 SCS k 票改為**跨模型輪換**：每票依 pick_entry 於模型
 | **qwen3-coder-next** | Apache-2.0 | 80B/3B 活化 | 46GB（2-bit 30GB） | 70.6% SWE-V、單機最強開源編碼 |
 | **gpt-oss-20b** | Apache-2.0 | 21B | 16GB | 單卡單用戶最清晰選擇 |
 
-**升級路徑**: 現役 qwen3.5:4b 供 SCS 與輕量裁決；待硬體確認後以 qwen3.8-27b（或 qwen3.6-35b-a3b）升級 T2 主力——升級需重跑金標集（§8.2 R8 記錄）對比，不盲升。
+**升級路徑**: 現役 qwen3.5:4b 供 SCS 與輕量裁決；待硬體確認後以 qwen3.8-27b（或 qwen3.6-35b-a3b）升級 T2 主力——升級需重跑金標集（§9.2 R8 記錄）對比，不盲升。
 
-### 8.4 免費強大模型目錄亮點（2026-11-07 查證）
+### 9.4 免費強大模型目錄亮點（2026-11-07 查證）
 
 | 類別 | 模型 | 取得管道 | 備註 |
 |------|------|----------|------|
@@ -224,7 +224,7 @@ kem vet2 的 SCS k 票改為**跨模型輪換**：每票依 pick_entry 於模型
 | **決策模型** | **Jev 1.13 Free** | **OpenCode Zen（keyless，需 opt-in）** | JEV 免費版存在→零付費約束下仍可用；採用前需驗證目錄啟用狀態 |
 | 嵌入 | BGE 系列 / Ollama local embed | Cloudflare（neurons）/ Ollama | 向量檢索用 |
 
-### 8.5 配額狀態追蹤（實作契約）
+### 9.5 配額狀態追蹤（實作契約）
 
 `.ai-state/quota.json`（gitignored）：每供應商 `{rpm_used, day_used, day_reset_utc, last_error, cooldown_until}`；`ai-ledger.jsonl` 記錄每次呼叫。路由器讀狀態決定 R4/R5。狀態檔可隨時刪除重建（衍生性）。
 

@@ -2,29 +2,24 @@
 //!
 //! 定義銀行支付批次的狀態轉換規則，確保狀態變更可追溯、可驗證。
 
-use crate::bankpay::model::BankPayStatus;
-use std::collections::HashMap;
+pub use crate::bankpay::model::BankPayStatus;
 
-/// 銀行支付狀態轉換規則。
+/// 銀行支付狀態轉換規則（靜態切片，零堆積；`const` 中 `vec!` 不可 const 求值）。
 ///
 /// 每個狀態定義允許轉換到的下一個狀態集合，防止非法狀態跳轉。
-const TRANSITION_RULES: &[(BankPayStatus, Vec<BankPayStatus>)] = &[
-    (
-        BankPayStatus::Pending,
-        vec![BankPayStatus::Submitted, BankPayStatus::Failed],
-    ),
-    (
-        BankPayStatus::Submitted,
-        vec![
+fn allowed_targets(from: &BankPayStatus) -> &'static [BankPayStatus] {
+    match from {
+        BankPayStatus::Pending => &[BankPayStatus::Submitted, BankPayStatus::Failed],
+        BankPayStatus::Submitted => &[
             BankPayStatus::Completed,
             BankPayStatus::Failed,
             BankPayStatus::Rejected,
         ],
-    ),
-    (BankPayStatus::Completed, vec![]),
-    (BankPayStatus::Failed, vec![BankPayStatus::Pending]),
-    (BankPayStatus::Rejected, vec![BankPayStatus::Pending]),
-];
+        BankPayStatus::Completed => &[],
+        BankPayStatus::Failed => &[BankPayStatus::Pending],
+        BankPayStatus::Rejected => &[BankPayStatus::Pending],
+    }
+}
 
 /// 驗證狀態轉換是否合法。
 ///
@@ -35,10 +30,8 @@ const TRANSITION_RULES: &[(BankPayStatus, Vec<BankPayStatus>)] = &[
 /// # 返回
 /// 若轉換合法則返回 `Ok(())`，否則返回錯誤訊息字串。
 pub fn validate_transition(from: &BankPayStatus, to: &BankPayStatus) -> Result<(), String> {
-    for (source, targets) in TRANSITION_RULES {
-        if source == from && targets.contains(to) {
-            return Ok(());
-        }
+    if allowed_targets(from).contains(to) {
+        return Ok(());
     }
     Err(format!("無效的狀態轉換：{:?} -> {:?}", from, to))
 }

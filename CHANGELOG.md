@@ -3,6 +3,45 @@
 本檔記錄根 workspace（`core/`、`platform/`、`web/`、`crates/flaps_bridge`）的實際變更。格式參考 Keep a Changelog。子專案（ekpi-platform、Wellfit、SyncMesh）各自有變更記錄。
 
 
+## [Unreleased] — 2026-11-09（第十三輪：安全驅動 sqlx 0.9 升級＋RUSTSEC-2026-0459 處置）
+
+### Security
+- **sqlx 0.8.6 → 0.9.0**（根 workspace、core、platform 三處 manifest 統一）：回應 RUSTSEC-2026-0459（CVE-2026-119375，severity 6.8 medium）——libsqlite3-sys 0.30.1 內建 SQLite < 3.54.0，特製 .db＋頁大小不符之 -wal 檔對可致未初始化頁快取記憶體洩漏（僅本地向量）。首次升級曾造成雙版本共存（core 仍鎖 0.8，兩個 `Pool<Sqlite>` 型別衝突＋FromRow/audit-lint 連鎖錯誤），以 `cargo tree -i sqlx` 根因定位後統一三處 manifest 解決。
+- **RUSTSEC-2026-0459 有紀錄接受**：修復需 libsqlite3-sys ≥0.39.0，但 sqlx-sqlite 0.9.0（最新發布）釘選 `>=0.30.1, <0.38.0`——上游無範圍內修復。依 GOVERNANCE P2/P7 於 `.cargo/audit.toml` 記錄處置：本地向量、應用僅開啟 data\ 下操作者自建檔、單機桌面部署、每日備份限縮暴露；重審觸發＝sqlx 放寬範圍或應用開啟第三方 DB 檔。
+
+### Verified
+- 四關全綠（2026-11-09）：fmt EXIT=0／clippy -D warnings EXIT=0／test --locked **235 passed 0 failed**（整工作區，kem 線由並行 session 恢復：58 lib tests 綠）／audit EXIT=0（2 個已文件化處置）。
+- 詳細證據：`docs/PLAN_REGISTER.md` addendum #14。
+
+## [Unreleased] — 2026-11-09（第十二輪：三大工作室切片 G1.1–G1.4＋G2.1–G2.5＋G3.1–G3.3）
+
+依 `.kilo/plans/1793787631643-three-studio-slice-execution-plan.md`（v4，含重構判定框架）執行；上位架構 SSOT：`.kilo/plans/1792865422970-three-studio-governance-platform.md` v3.1。
+
+### Added
+- **S1 工作台（G1.1–G1.4）**：
+  - 八資料態全覆蓋（WP-08）：`states.html` 增 零結果/過期/無權限/衝突 標本（`data-state-*` 錨點＋下一步連結）；`design-system.css`（含 docs 快照）新增 `.zero-state/.stale-state/.denied-state/.conflict-state`（Design Token 驅動、深色模式自動適配）。
+  - 上下文連續（WP-10）：交易詳情連結攜帶 `from_page`+`q`，詳情頁返回連結還原精確篩選視圖（CJK 百分比編碼；敵意輸入截斷降級、永不 500）；分頁保留搜尋詞（PIN）。
+  - 角色起始頁（WP-05/04）：`/` 依 role_code 渲染落地面板（FINANCE→待覆核佇列；STORE/VIEWER→報表入口；其餘→總覽；`data-role` 錨點），角色即時查詢 user_roles。
+  - KPI 就地解釋（WP-02）：四張 KPI 卡附 定義/時點/來源（`title`＋可見 `data-kpi-definitions` 註）。
+  - 批量覆核（WP-07）：`POST /reviews/bulk`——單一 POST、逐列審計（REVIEW_BULK＋簽名者）、逐列結果含規則名（SELF_ADJUDICATION_FORBIDDEN/NOT_PENDING/NOT_FOUND/STATE_CHANGED）、失敗列高亮（`tr.outcome-failed`）、重送安全（逐列重檢 PENDING_REVIEW，永不重複入帳）、100 筆上限、CSRF＋LEDGER_WRITE 閘門；`bulk_review.html`＋index 表單。
+- **S2 中樞（platform-hub，G2.1–G2.5）**：
+  - eventbus：`RetryPolicy`（指數退避＋±20% 有界確定性抖動）、`DeliveryOutcome`、`DeadLetterStore`（記錄/列表/署名重放，重放記錄 actor）＋記憶體實作；Kafka stub 不動。
+  - channels：`CircuitBreakerAdapter`（Closed→Open→HalfOpen→Closed；探測失敗立即重開）、`ChannelError::CircuitOpen`、`CircuitStats`；可注入時鐘做確定性故障注入（FAULT-07）。
+  - udm：`CustomerRecord`/`InvoiceRecord`/`PaymentRecord`（各帶 `authoritative_system`）；MoneyCents↔根線 minor 單位契約（明確、檢查、拒絕截斷的轉換；合併依 §0.5 裁決不做）；`reconcile_orders`→`ReconciliationReport`（確定性排序、樣本上限 10、i128 分總額、JSON 可序列化）。
+  - agent-policy：`AgentRateLimiter`（滑動窗、呼叫方時鐘）、`WriteDisposition::DraftRequired`（DEC-15 fail-closed 對所有風險等級成立）、`AgentAuditMarker.audit_event()`。
+- **S3 治理稽核（G3.1–G3.3）**：
+  - `platform/src/controls.rs`：單一控制庫（CTRL-POST/IMPORT/REVIEW/CRED/AI）×框架映射（ISO-27001 附錄/內控 IC/銀行 FSC）；`lint_control_coverage` 復用 kem gov.rs Finding 模式（UNMAPPED_EVENT/INACTIVE_CONTROL）。
+  - `GET /admin/audit_evidence.csv`（ROLE_MANAGE）：審計就緒四要件標頭（控制相關/涵蓋期間/完整性 sha256 匯出摘要/來源）＋RFC 4180 CSV 資料列；期間格式 fail-closed。
+  - `GET /admin/control_coverage.json`：控制庫＋觀察事件 lint 結果。
+  - `GET /admin/ccm.json`：三指標（M1 金額不變量違反、M2 登入異常＝誠實 null＋缺口註記（登入稽核未實作，假零即假綠）、M3 簽名完整性違反），各附 定義/時點/來源。
+
+### Verified
+- 本線門檻（2026-11-09）：fmt 0／clippy -D warnings 0／platform lib **77 passed 0 failed**／合併線 **141 passed 0 failed**（bridge 7＋core 42＋platform 77＋characterization 6＋close_out 4＋slice12 2＋misc 3）／audit EXIT=0（1 個已接受警告）。
+- platform-hub 門檻：fmt 0／clippy 0／**22 passed 0 failed**。
+- 零 JS 護欄：新模板（bulk_review.html）與 index 修改均 script=0、無內聯事件。
+- kem（並行線）in-flight 重構中，整工作區門檻待其穩定點重跑（隔離紀律見 PROJECT_STATUS）。
+- 詳細逐切片證據：`docs/PLAN_REGISTER.md` addendum #12/#13。
+
 ## [Unreleased] — 2026-11-07（第十一輪：編碼根因修復＋驗證方法論補全＋效能量測法修正）
 
 ### Fixed

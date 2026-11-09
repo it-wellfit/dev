@@ -22,7 +22,7 @@ struct Args {
 }
 
 fn parse_args() -> Result<Args, String> {
-    const VALUE_FLAGS: [&str; 13] = [
+    const VALUE_FLAGS: [&str; 14] = [
         "root",
         "topic",
         "name",
@@ -36,6 +36,7 @@ fn parse_args() -> Result<Args, String> {
         "votes",
         "disposition",
         "reviewer",
+        "note",
     ];
     let mut argv = std::env::args().skip(1);
     let mut root = PathBuf::from("knowledge");
@@ -95,6 +96,7 @@ fn run() -> Result<(), KemError> {
         "finalize" => cmd_finalize(&root, &ledger),
         "ask" => cmd_ask(&root, &args.flags),
         "eval" => cmd_eval(&root, &args.flags),
+        "embed" => cmd_embed(&root, &ledger, &args.flags),
         "sync" => cmd_sync(&root, &ledger),
         "supersede" => cmd_supersede(&root, &ledger, &args.flags),
         "vet2" => cmd_vet2(&root, &ledger, &args.flags),
@@ -242,12 +244,14 @@ fn cmd_capture(
 fn cmd_ingest(root: &Path, ledger: &Path, batch_file: String) -> Result<(), KemError> {
     let text = std::fs::read_to_string(&batch_file)
         .map_err(|e| KemError::InvalidInput(format!("cannot read {batch_file}: {e}")))?;
-    let drafts: Vec<Claim> = serde_json::from_str(&text)?;
+    // BOM tolerance: Windows-originated JSON files carry a UTF-8 BOM that
+    // serde_json rejects (review defect #6, found by E2E smoke).
+    let drafts: Vec<Claim> = serde_json::from_str(kem::filing::strip_bom(&text))?;
     if drafts.is_empty() {
         return Err(KemError::InvalidInput("batch is empty".into()));
     }
     let existing = load_claims(&root.join("claims"))?;
-    let ctx = VetContext::new(PathBuf::from("."), existing.clone());
+    let mut ctx = VetContext::new(PathBuf::from("."), existing.clone());
     let mut known = known_ids_of(existing.iter());
     let queue = root.join(".kem/review-queue.jsonl");
     let now = Utc::now();
@@ -270,6 +274,11 @@ fn cmd_ingest(root: &Path, ledger: &Path, batch_file: String) -> Result<(), KemE
                     serde_json::json!({"status": format!("{:?}", claim.status).to_lowercase()}),
                     now,
                 )?;
+                // Batch-internal visibility: later drafts in the same batch
+                // must see this claim for duplicate detection (review
+                // defect #2, 2026-11-09) and supersede reference checks.
+                ctx.existing.push(claim.clone());
+                ctx.known_ids.insert(claim.id.clone());
                 acc += 1;
             }
             Outcome::Review => {
@@ -297,43 +306,35 @@ fn cmd_ingest(root: &Path, ledger: &Path, batch_file: String) -> Result<(), KemE
 /// Shared view regeneration: index.md + log.md + dashboard.html.
 /// Returns (claims, findings, queue items) for reporting.
 #[allow(clippy::type_complexity)]
-fn finalize_views(
-    root: &Path,
-    ledger: &Path,
-) -> Result<(Vec<Claim>, usize, Vec<(String, Vec<String>)>), KemError> {
+/// Zip golden cases with their embeddings in input order.
+fn qs_zip_map(
+    cases: &[kem::search::GoldenCase],
+    vecs: &[Vec<f32>],
+) -> std::collections::HashMap<String, Vec<f32>> {
+    cases
+        .iter()
+        .zip(vecs.iter())
+        .map(|(c, v)| (c.query.clone(), v.clone()))
+        .collect()
+}
+
+/// finalize_views 的回傳：宣告、lint 發現數、待審佇列項目。
+pub struct FinalizedViews {
+    pub claims: Vec<Claim>,
+    pub findings: usize,
+    pub queue: Vec<(String, Vec<String>)>,
+}
+
+fn finalize_views(root: &Path, ledger: &Path) -> Result<FinalizedViews, KemError> {
     let claims = load_claims(&root.join("claims"))?;
     let findings = kem::gov::lint(&claims, Utc::now());
     let findings_count = findings.len();
     write_index(root, &claims)?;
     write_log(root, ledger)?;
-    // Review queue: unresolved items (claim_id + reasons per line).
+    // Review queue: unresolved items only (shared reader — single source
+    // of truth with kem doctor; review defect #3 fix).
     let queue_path = root.join(".kem/review-queue.jsonl");
-    let mut queue_items: Vec<(String, Vec<String>)> = Vec::new();
-    if queue_path.exists() {
-        let text = std::fs::read_to_string(&queue_path)?;
-        for line in text.lines().filter(|l| !l.trim().is_empty()) {
-            if let Ok(v) = serde_json::from_str::<serde_json::Value>(line) {
-                if v.get("disposition").is_some() {
-                    continue; // resolved entries are history, not pending
-                }
-                let id = v
-                    .get("claim_id")
-                    .and_then(|x| x.as_str())
-                    .unwrap_or_default()
-                    .to_string();
-                let reasons = v
-                    .get("reasons")
-                    .and_then(|x| x.as_array())
-                    .map(|a| {
-                        a.iter()
-                            .filter_map(|r| r.as_str().map(String::from))
-                            .collect()
-                    })
-                    .unwrap_or_default();
-                queue_items.push((id, reasons));
-            }
-        }
-    }
+    let queue_items = kem::gov::pending_queue(&queue_path)?;
     let ledger_entries = if ledger.exists() {
         kem::ledger::read_all(ledger)?
     } else {
@@ -384,12 +385,17 @@ fn finalize_views(
         &ledger_tail,
         ensemble,
     )?;
-    Ok((claims, findings_count, queue_items))
+    Ok(FinalizedViews {
+        claims,
+        findings: findings_count,
+        queue: queue_items,
+    })
 }
 
 /// P1 M4: regenerate all views from the SSOT.
 fn cmd_finalize(root: &Path, ledger: &Path) -> Result<(), KemError> {
-    let (claims, findings, queue) = finalize_views(root, ledger)?;
+    let views = finalize_views(root, ledger)?;
+    let (claims, findings, queue) = (views.claims, views.findings, views.queue);
     println!(
         "finalize: index.md + log.md + dashboard.html（{} claims, {} findings, {} queued）",
         claims.len(),
@@ -403,28 +409,129 @@ fn cmd_finalize(root: &Path, ledger: &Path) -> Result<(), KemError> {
     }
 }
 
-/// P2 M5: BM25 ask — lifecycle filter BEFORE ranking, top-N with scores.
+/// P2 M5 + P2b: ask — hybrid retrieval (α·BM25 + (1−α)·vector). Degrades to
+/// BM25-only honestly when vectors/embedder are unavailable.
 fn cmd_ask(root: &Path, flags: &std::collections::HashMap<String, String>) -> Result<(), KemError> {
     let query = flag(flags, "query")?;
     let top: usize = flags.get("top").and_then(|v| v.parse().ok()).unwrap_or(5);
+    let bm25_only = flags.contains_key("bm25-only");
     let claims = load_claims(&root.join("claims"))?;
     let visible = kem::search::visible_at(&claims, None);
     let index = kem::search::Index::build(&visible);
-    let hits = index.search(&visible, &query, top);
+
+    let vectors = if bm25_only {
+        None
+    } else {
+        kem::embed::load_vectors(&root.join(".kem/vectors.json"))?
+    };
+    let (hits, mode) = match vectors {
+        Some(v) if !v.entries.is_empty() => {
+            let rt = tokio::runtime::Runtime::new()
+                .map_err(|e| KemError::InvalidInput(format!("tokio runtime: {e}")))?;
+            let res = rt.block_on(kem::embed::embed_batch(
+                &kem::embed::default_pool(),
+                std::slice::from_ref(&query),
+            ));
+            match res {
+                Ok(res) => {
+                    let vs = &res.vecs;
+                    let lookup: std::collections::HashMap<String, Vec<f32>> =
+                        kem::embed::fresh_lookup(&v, &visible)
+                            .into_iter()
+                            .map(|(k, vec)| (k.to_string(), vec.to_vec()))
+                            .collect();
+                    let bm25 = index.scores_all(&visible, &query);
+                    let alpha: f32 = flags
+                        .get("alpha")
+                        .and_then(|a| a.parse().ok())
+                        .unwrap_or(0.5);
+                    let floor: f32 = flags
+                        .get("refusal-floor")
+                        .and_then(|a| a.parse().ok())
+                        .unwrap_or(kem::search::REFUSAL_FLOOR);
+                    let hits = kem::search::hybrid_fuse(
+                        &visible,
+                        &bm25,
+                        Some(&lookup),
+                        Some(vs[0].as_slice()),
+                        top,
+                        alpha,
+                        floor,
+                    );
+                    (hits, format!("hybrid(α={alpha}, floor={floor})"))
+                }
+                Err(e) => {
+                    eprintln!("ask note: embedder unavailable — BM25-only ({e})");
+                    (index.search(&visible, &query, top), "bm25-only".to_string())
+                }
+            }
+        }
+        _ => (index.search(&visible, &query, top), "bm25-only".to_string()),
+    };
+    println!("retrieval mode: {mode}");
     if hits.is_empty() {
         println!("no results (honest refusal — query outside current knowledge)");
         return Ok(());
     }
     for h in &hits {
         println!(
-            "{:.4}  {}  [{}] conf={:.2}  {}",
+            "{:.4}  {}  [{}] via={} conf={:.2}  {}",
             h.score,
             h.id,
             format!("{:?}", h.status).to_lowercase(),
+            h.via,
             h.confidence,
             h.title
         );
     }
+    Ok(())
+}
+
+/// P2b: rebuild the vector index (one batched embed call over all claims).
+fn cmd_embed(
+    root: &Path,
+    _ledger: &Path,
+    _flags: &std::collections::HashMap<String, String>,
+) -> Result<(), KemError> {
+    let claims = load_claims(&root.join("claims"))?;
+    let visible = kem::search::visible_at(&claims, None);
+    if visible.is_empty() {
+        return Err(KemError::InvalidInput("no claims to embed".into()));
+    }
+    let texts: Vec<String> = visible
+        .iter()
+        .map(|c| format!("{}\n{}\n{}", c.title, c.body, c.topics.join(", ")))
+        .collect();
+    let rt = tokio::runtime::Runtime::new()
+        .map_err(|e| KemError::InvalidInput(format!("tokio runtime: {e}")))?;
+    let res = rt
+        .block_on(kem::embed::embed_batch(&kem::embed::default_pool(), &texts))
+        .map_err(KemError::InvalidInput)?;
+    let vecs = res.vecs;
+    let dim = vecs.first().map(|v| v.len()).unwrap_or(0);
+    // Provenance: record the model that ACTUALLY produced the vectors,
+    // not the pool head (review 2026-11-09 — attribution bug).
+    let model = res.used_model.clone();
+    let index = kem::embed::VectorIndexFile {
+        model: model.clone(),
+        dim,
+        entries: visible
+            .iter()
+            .zip(vecs.iter())
+            .map(|(c, v)| kem::embed::VectorEntry {
+                id: c.id.clone(),
+                body_sha: kem::capture::sha256_hex(c.body.as_bytes()),
+                vec: v.clone(),
+            })
+            .collect(),
+    };
+    let path = root.join(".kem/vectors.json");
+    let n = index.entries.len();
+    kem::embed::save_vectors(&path, &index)?;
+    println!(
+        "embed: {n} vectors ({model}, dim {dim}) -> {}",
+        path.display()
+    );
     Ok(())
 }
 
@@ -441,11 +548,42 @@ fn cmd_eval(
     let claims = load_claims(&root.join("claims"))?;
     let visible = kem::search::visible_at(&claims, None);
     let index = kem::search::Index::build(&visible);
-    let (pass, total, failures) = kem::search::run_golden(&index, &claims, &cases)?;
+    let vectors = kem::embed::load_vectors(&root.join(".kem/vectors.json"))?;
+    // Embed all golden queries in ONE batch (quota-friendly); embedder down
+    // → BM25-only run, marked honestly in the output.
+    let embedded = match &vectors {
+        Some(v) if !v.entries.is_empty() => {
+            let rt = tokio::runtime::Runtime::new()
+                .map_err(|e| KemError::InvalidInput(format!("tokio runtime: {e}")))?;
+            let qs: Vec<String> = cases.iter().map(|c| c.query.clone()).collect();
+            let res = rt.block_on(kem::embed::embed_batch(&kem::embed::default_pool(), &qs));
+            match res {
+                Ok(res) => Some((res.vecs, res.used_model)),
+                Err(e) => {
+                    eprintln!("eval note: embedder unavailable — BM25-only golden run ({e})");
+                    None
+                }
+            }
+        }
+        _ => None,
+    };
+    let qvecs: Option<std::collections::HashMap<String, Vec<f32>>> = embedded
+        .as_ref()
+        .map(|(vecs, _model)| qs_zip_map(&cases, vecs));
+    let eval_model = embedded.as_ref().map(|(_, m)| m.clone());
+    let (pass, total, failures) =
+        kem::search::run_golden(&index, &claims, &cases, vectors.as_ref(), qvecs.as_ref())?;
     for f in &failures {
         eprintln!("FAIL {f}");
     }
-    println!("eval: {pass}/{total} top-1 pass ({} golden cases)", total);
+    let mode = match (&qvecs, &eval_model) {
+        (Some(_), Some(m)) => format!("hybrid[{m}]"),
+        _ => "bm25-only".to_string(),
+    };
+    println!(
+        "eval [{mode}]: {pass}/{total} top-1 pass ({} golden cases)",
+        total
+    );
     if pass == total {
         Ok(())
     } else {

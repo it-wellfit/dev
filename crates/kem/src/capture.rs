@@ -5,7 +5,7 @@
 //! refused (immutability), and every capture is hashed into the ledger so
 //! later `sync` can detect source drift.
 
-use chrono::{DateTime, Local, Utc};
+use chrono::{DateTime, TimeZone, Utc};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::path::Path;
@@ -48,13 +48,23 @@ pub fn capture_source(
         ));
     }
     // Sanitize path components (no traversal, no separators inside parts).
-    for part in [topic, name] {
+    for part in [topic, name, ext] {
         if part.contains(['/', '\\', ':']) || part.contains("..") {
             return Err(KemError::InvalidInput(format!("illegal path part: {part}")));
         }
     }
-    let date = Local::now().format("%Y-%m-%d"); // filename date uses local day
-    let _ = now; // ledger timestamp stays UTC
+    // Extension must be a bare alphanumeric word — blocks traversal via
+    // `--ext` (review defect #1, 2026-11-09).
+    if ext.trim().is_empty() || !ext.bytes().all(|b| b.is_ascii_alphanumeric()) {
+        return Err(KemError::InvalidInput(format!(
+            "extension must be alphanumeric: {ext}"
+        )));
+    }
+    // Filename date uses the local calendar day derived from the UTC instant
+    // (no second clock read → no midnight race between date and ledger ts).
+    let date = chrono::Local
+        .from_utc_datetime(&now.naive_utc())
+        .format("%Y-%m-%d");
     let rel = format!("raw/{topic}/{date}-{name}.{ext}");
     let abs = root.join(&rel);
     let captured = CapturedSource {

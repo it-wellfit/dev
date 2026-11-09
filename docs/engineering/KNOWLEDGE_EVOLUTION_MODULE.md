@@ -65,7 +65,7 @@
 1. **採用 A 的管線設計**作為藍圖（生命週期最完整、審計性最強）。
 2. **裁決層可插拔**：預設＝確定性規則（程式碼擁有所有門檻，pi-jev-wiki 哲學）→ 第二層＝本地 LLM（qwen3.5:4b）＋自一致性投票 → 第三層＝自研蒸餾決策模型。**付費 AI（含 JEV）全面排除**——零成本是硬性約束，非加權項（2026-11-07 使用者裁定）；JEV 僅作為模式來源。這正是 `FREE_AI_ROUTING.md` §3.2 fallback 鏈的知識版。
 3. **補上 A 缺少的兩項**：雙時間軸（取自 B/Graphiti）與兩軌治理（取自 eli.ai/Wikidata）。
-4. **檢索**：BM25（tantivy，工作區既有技術）＋向量（Ollama embeddings）為主；PPR 多跳列為 Phase 5 選配（GraphRAG 社群摘要索引成本不合本地優先）。
+4. **檢索**：BM25（自研倒排，零新依賴）＋向量（OVH bge-m3 免 key 首選→Ollama 備援）混合融和（α=0.5，語義拒答地板 0.55 證據校準）；PPR 多跳列為 Phase 5 選配（GraphRAG 社群摘要索引成本不合本地優先）。
 
 ---
 
@@ -383,7 +383,13 @@ draft → pending_review → published ──→ superseded ──┐
 | P4 治理 | ✅ 完成 | `kem lint` → 0 findings/20 claims；`kem doctor` → 67 entries chain_ok=true；`kem review` 处置記錄；`kem status` |
 | 儀表板 | ✅ 完成 | `knowledge/dashboard.html`：18,115 字元、`<script>` 計數 **0**、4 面板、20 信心長條、深色模式、:target 導航、:focus-visible、空/錯誤狀態 |
 | 四關（工作區） | ✅/⚠️ | fmt EXIT=0（含 api.rs:4169 機械修復）；clippy --all-targets -D warnings EXIT=0；audit EXIT=0（1 預接受）；測試：kem 50✓ flaps_core 42✓ flaps_bridge 7✓ web 0✓ **platform 46✓＋stress_10000 FAIL（114.27s）——誠實記錄，非懸掛** |
-| SCS 實測 | 📊 | claim-016: durability=4 agreement=0.40（<0.60 → 入隊規則已實作）；claim-007: durability=1 agreement=0.60（恰在地板）——4B 模型校準極限如實顯現，佐證 G4 蒸餾必要性 |
+| SCS 單模型實測 | 📊 | claim-016: durability=4 agreement=0.40；claim-007: durability=1 agreement=0.60——4B 模型校準極限如實顯現，佐證聯合裁決必要性 |
+| **聯合裁決（ensemble）** | ✅ 完成（2026-11-09 複審） | vet2 五票跨模型輪換（pick_entry＋配額護欄＋每票歸因）：claim-016 五票來自 **5 個不同模型**（durability 1–5，agreement 0.40 → 入隊）、claim-012 五模型（0.60 恰在地板）；儀表板治理面板顯示最新聯合狀態；情境路由表（vet/code/longctx/embed/guard）落於 FREE_AI_ROUTING §8.0.2 |
+| 複審修復（2026-11-09） | ✅ | 5 項缺陷根治：#1 capture ext 路徑穿越（--ext 限英數）；#2 ingest 批次內重複/同批取代參照可見性；#3 doctor 與 finalize 佇列語義統一（gov::pending_queue 單一事實來源，resolved 行不計 pending）；#4 概念類信心保留歷史最高（不衰減不重置）；#5 FREE_AI_ROUTING 章節編號重整（§9 = v2.0 記錄） |
+| **P2b 向量檢索** | ✅ 完成（2026-11-09） | embed.rs：OVH bge-m3 批次（1024 維，免 key）→ Ollama 備援；`.kem/vectors.json` 帶 body-sha 陳舊防護；`hybrid_fuse` α 融合＋缺向量退回 BM25-only（via 標記）；`kem embed` → 20 vectors；`eval [hybrid[bge-m3]]` → **20/20 top-1**；**跨語言實證**：中文查詢「不變量 禁止 unsafe」→ 英文主張 claim-007 top-1（BM25 無此能力） |
+| 語義拒答地板 | ✅ 校準 | `REFUSAL_FLOOR=0.55`：examples/calibrate.rs 實測 4 拒答查詢最大餘弦 0.4872 → 地板分離兩群體；eval 16/20→**20/20** 且正向案例存活；`--refusal-floor` 可調 |
+| **E2E 生命週期冒煙** | ✅ 完成（隔離暫存庫） | seed(20)→capture→ingest（T1 攔截捏造引證＋BOM 容忍＋批次內重複攔截）→ask→eval→sync→supersede（降級可檢索實證）→review defer→lint→doctor→儀表板；缺陷 #6（BOM）、#7（id default）修復＋測試鎖定 |
+| **降級鏈實測** | ✅ | OVH 429 限流→Ollama 不可達→**BM25-only＋via=bm25 如實標記**，中文查詢經主題詞仍命中（KEM §8.2 R4/R5 live 證明） |
 | P5 遠期 | ⏳ | 帳本量驅動（≥500 筆複核後啟動蒸餾） |
 
-**已知限制**（`[LIMIT]`）: platform stress 測試在此機器 p95 超標（TOS §2.2 案例分析：需獨立 perf job＋時間預算，主閘門維持快速測試）；T2 信心未校準（帳本回饋後校準）。
+**已知限制**（`[LIMIT]`）: platform stress 測試在此機器 p95 超標（TOS §2.2 案例分析：需獨立 perf job＋時間預算，主閘門維持快速測試）；T2 信心未校準（帳本回饋後校準）；Ollama 備援嵌入品質不保證（qwen3.5:4b 為 chat 模型，其 /api/embeddings 非專職嵌入——bge-m3 不可用時向量增益降級，誠實標記）；ledger append 為全檔讀取 O(n²)（現行 82 條無虞，>10K 條需索引頭）。

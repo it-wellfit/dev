@@ -59,4 +59,5 @@ cargo audit                                           ; # 依賴安全（.cargo/
 1. 讀 `WORKSPACE_CHARTER.md` → `docs/standards/GOVERNANCE_STANDARD.md` §4.5 六步。
 2. 查 `docs/PLAN_REGISTER.md` 與相關 ADR（`docs/adr/`）。
 3. 執行 §2 快速命令確認當前基線（結果綁定 session 記錄，見 GOVERNANCE §2）。
-4. 之後才讀程式碼。
+4. 讀 `.kilo/memories/corrections.md`（強制規則）→ `.kilo/memories/project.md`（事實索引）→ `.kilo/memories/decisions.md`（決策記錄）。
+5. 之後才讀程式碼。

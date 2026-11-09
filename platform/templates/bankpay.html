@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>銀行支付 — Flaps ERP 工作台</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%230b5cab'/%3E%3Ctext x='8' y='12' font-size='10' text-anchor='middle' fill='white'%3EF%3C/text%3E%3C/svg%3E">
+    <link rel="stylesheet" href="/assets/design-system.css">
+</head>
+<body>
+    <a class="skip-link" href="#main">跳至主要內容</a>
+
+    <header class="app-header">
+        <div class="container">
+            <div>
+                <h1>銀行支付（玉山 BankPay 工作室）</h1>
+                <p class="app-subtitle">匯出付款批次 · 匯入銀行回應檔 · 查詢交易狀態 · 連線設定</p>
+            </div>
+            <p class="app-subtitle">
+                使用者：<strong>{{ acting_user }}</strong>
+                ｜
+                <a href="/">返回工作台</a>
+                ｜
+                <form method="post" action="/logout" class="form-inline">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <button class="btn btn-secondary" type="submit">登出</button>
+                </form>
+            </p>
+        </div>
+    </header>
+
+    <nav class="site-nav" aria-label="主導覽">
+        <div class="container">
+            <a href="/">總覽</a>
+            <a href="/transactions">交易</a>
+            <a href="/new">新增交易</a>
+            <a href="/import">快速匯入</a>
+            <a href="/bankpay">銀行支付</a>
+            <a href="/drafts">草稿解析</a>
+            <a href="/reports/monthly">月報表</a>
+            <a href="/reports/pivot?rows=account&cols=month&measure=debit">樞紐分析</a>
+            <a href="/reports/parallel?months=6">平行座標投影</a>
+        </div>
+    </nav>
+
+    {# 全域狀態列：與首頁 /api/status 同源即時探測（單次探測，chips 與 overall 一致） #}
+    <div id="status-bar" class="status-bar status-{{ sys_status_overall }}" role="status" aria-label="系統狀態">
+        <div class="container status-bar-inner">
+            <span class="status-dot status-dot-{{ sys_status_overall }}" aria-hidden="true"></span>
+            <strong>系統狀態：</strong>
+            {% if sys_status_overall == "healthy" %}
+            <span>正常</span>
+            {% else if sys_status_overall == "degraded" %}
+            <span>降級（部分模組需注意）</span>
+            {% else %}
+            <span>異常</span>
+            {% endif %}
+            {% for chip in status_chips %}
+            <span class="status-chip status-chip-{{ chip.status }}">{{ chip.label }}：<span class="status-chip-text" title="{{ chip.status }}">{{ chip.status_label }}</span></span>
+            {% endfor %}
+            <a class="btn btn-secondary status-detail-toggle" href="/#status-panel">詳情（工作台）</a>
+        </div>
+    </div>
+
+    <main id="main" class="container">
+
+        {# ── 橫幅區：錯誤／PRG 結果（問題＋可能原因＋處理方式） ── #}
+        {% if let Some(err) = error %}
+        <div class="panel" role="alert">
+            <h3>操作失敗</h3>
+            <p class="badge badge-error">{{ err }}</p>
+        </div>
+        {% endif %}
+        {% if saved_banner %}
+        <div class="panel" role="status">
+            <h3>設定已儲存</h3>
+            <p class="section-note">連線設定已寫入 erp_config（冪等 UPSERT），並記錄稽核事件 BANKPAY_CONFIG_UPDATE。</p>
+        </div>
+        {% endif %}
+        {% if let Some(m) = imported_matched %}
+        {% if let Some(n) = imported_mismatched %}
+        <div class="panel" role="status">
+            <h3>匯入完成</h3>
+            <p class="section-note">實際解析結果：匹配 {{ m }} 筆、未匹配 {{ n }} 筆（以檔案內容計數，非預估值）。</p>
+        </div>
+        {% endif %}
+        {% endif %}
+
+        {# ── 模式與連線狀態 ── #}
+        <section class="panel" aria-labelledby="mode-title">
+            <div class="status-panel-head">
+                <h3 id="mode-title">連線模式</h3>
+                {% if mock_mode %}
+                <span class="badge badge-warning">模擬模式（資料非真實銀行交易）</span>
+                {% else %}
+                <span class="badge badge-success">生產模式</span>
+                {% endif %}
+            </div>
+            <p class="section-note">
+                {% if mock_mode %}
+                目前為<strong>模擬模式</strong>：回應為確定性模擬（esun_ref = ESUN-MOCK-{batch_id}），匯入仍真實解析檔案內容。生產模式需完成 E.Sun V2.8 mTLS 憑證與經驗證端點設定（詳見 ADR-0012）；權威契約實作位於 Wellfit/crates/wellfit_bankpay。
+                {% else if configured %}
+                生產模式且連線要件完整（source_system_id、customer_id 已設定）。
+                {% else %}
+                <strong class="status-row-error">生產模式但連線要件不完整</strong>：請於下方設定區補齊 source_system_id 與 customer_id，否則作業將回報錯誤。
+                {% endif %}
+            </p>
+        </section>
+
+        {# ── KPI ── #}
+        {% if let Some(card) = card %}
+        <section class="panel" aria-labelledby="kpi-title">
+            <h3 id="kpi-title">批次統計</h3>
+            <dl class="kpi-grid">
+                <div class="kpi"><dt>進行中批次</dt><dd>{{ card.active_batches }}</dd></div>
+                <div class="kpi"><dt>已完成批次</dt><dd>{{ card.completed_batches }}</dd></div>
+                <div class="kpi"><dt>失敗批次</dt><dd>{{ card.failed_batches }}</dd></div>
+                <div class="kpi"><dt>退件批次</dt><dd>{{ card.rejected_batches }}</dd></div>
+                <div class="kpi"><dt>已完成金額</dt><dd>{{ card.completed_amount_display }}</dd></div>
+            </dl>
+        </section>
+        {% endif %}
+
+        {# ── 匯出 ── #}
+        <section class="panel form-panel" aria-labelledby="export-title">
+            <h3 id="export-title">匯出付款批次</h3>
+            <p class="section-note">冪等：同 batch_id 重放不會重複送銀行，直接回傳既有狀態（資料庫唯一索引保證）。</p>
+            <form method="post" action="/bankpay/export">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <div class="form-row">
+                    <label for="export-batch">批次 ID（1–64 個英數、底線或連字號）</label>
+                    <input class="input" type="text" id="export-batch" name="batch_id" required placeholder="BATCH-001">
+                </div>
+                <div class="form-row">
+                    <label for="export-amount">金額（小數；例 500.00 = 50000 分）</label>
+                    <input class="input" type="text" id="export-amount" name="amount" required placeholder="500.00" inputmode="decimal">
+                </div>
+                <div class="form-row">
+                    <label for="export-currency">幣別（ISO 4217）</label>
+                    <select class="input" id="export-currency" name="currency">
+                        <option value="TWD">TWD（新台幣）</option>
+                        <option value="USD">USD（美元）</option>
+                        <option value="EUR">EUR（歐元）</option>
+                        <option value="JPY">JPY（日圓）</option>
+                    </select>
+                </div>
+                <div class="form-actions">
+                    <button class="btn btn-primary" type="submit">匯出至銀行</button>
+                </div>
+            </form>
+        </section>
+
+        {# ── 匯入 ── #}
+        <section class="panel form-panel" aria-labelledby="import-title">
+            <h3 id="import-title">匯入銀行回應檔</h3>
+            <p class="section-note">檔案須位於伺服器 <code>data/bankpay/inbound/</code> 目錄且為 UTF-8 CSV（防路徑穿越）；系統真實解析內容並回報筆數。</p>
+            <form method="post" action="/bankpay/import">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <div class="form-row">
+                    <label for="import-file">檔名（相對於匯入目錄；例 responses.csv）</label>
+                    <input class="input" type="text" id="import-file" name="file_name" required placeholder="responses.csv">
+                </div>
+                <div class="form-actions">
+                    <button class="btn btn-primary" type="submit">匯入並解析</button>
+                </div>
+            </form>
+        </section>
+
+        {# ── 查詢 ── #}
+        <section class="panel form-panel" aria-labelledby="query-title">
+            <h3 id="query-title">查詢交易狀態</h3>
+            <p class="section-note">以銀行參照查詢；本地批次將依狀態機推進（SUBMITTED → COMPLETED）。</p>
+            <form method="get" action="/bankpay">
+                <div class="form-row">
+                    <label for="query-ref">銀行參照（esun_ref）</label>
+                    <input class="input" type="text" id="query-ref" name="q" required placeholder="ESUN-MOCK-BATCH-001">
+                </div>
+                <div class="form-actions">
+                    <button class="btn btn-primary" type="submit">查詢</button>
+                </div>
+            </form>
+            {% if let Some(qr) = query_result %}
+            <div class="table-wrap">
+                <table>
+                    <caption>查詢結果</caption>
+                    <tbody>
+                        <tr><th scope="row">銀行參照</th><td>{{ qr.esun_ref }}</td></tr>
+                        <tr><th scope="row">狀態</th><td><span class="badge badge-success">{{ qr.status }}</span></td></tr>
+                        <tr><th scope="row">金額</th><td>{{ qr.amount_display }}</td></tr>
+                        <tr><th scope="row">幣別</th><td>{{ qr.currency }}</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            {% endif %}
+        </section>
+
+        {# ── PRG 聚焦批次 ── #}
+        {% if let Some(b) = focus_batch %}
+        <section class="panel" aria-labelledby="focus-title">
+            <h3 id="focus-title">匯出結果（批次 {{ b.batch_id }}）</h3>
+            <div class="table-wrap">
+                <table>
+                    <tbody>
+                        <tr><th scope="row">銀行參照</th><td>{{ b.esun_ref.as_deref().unwrap_or("—") }}</td></tr>
+                        <tr><th scope="row">金額（分）</th><td>{{ b.amount_minor }}</td></tr>
+                        <tr><th scope="row">幣別</th><td>{{ b.currency }}</td></tr>
+                        <tr><th scope="row">狀態</th><td>{% if b.status == "COMPLETED" %}<span class="badge badge-success">已完成</span>{% else if b.status == "SUBMITTED" %}<span class="badge badge-warning">處理中</span>{% else if b.status == "FAILED" %}<span class="badge badge-error">失敗</span>{% else if b.status == "REJECTED" %}<span class="badge badge-warning">退件</span>{% else %}<span class="badge badge-info">等待提交</span>{% endif %}</td></tr>
+                        <tr><th scope="row">建立時間</th><td>{{ b.created_at }}</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <p class="section-note">後續：以查詢表單輸入 esun_ref 取得銀行結果；批次將推進至 COMPLETED。</p>
+        </section>
+        {% endif %}
+
+        {# ── 批次清單 ── #}
+        <section id="batches" class="panel" aria-labelledby="batches-title">
+            <h3 id="batches-title">批次清單（最近 20 筆）</h3>
+            <div class="table-wrap">
+                <table>
+                    <caption>bankpay_batches</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col">批次 ID</th>
+                            <th scope="col">銀行參照</th>
+                            <th scope="col">金額（分）</th>
+                            <th scope="col">幣別</th>
+                            <th scope="col">狀態</th>
+                            <th scope="col">建立時間</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for b in batches %}
+                        <tr>
+                            <td>{{ b.batch_id }}</td>
+                            <td>{{ b.esun_ref.as_deref().unwrap_or("—") }}</td>
+                            <td>{{ b.amount_minor }}</td>
+                            <td>{{ b.currency }}</td>
+                            <td>{% if b.status == "COMPLETED" %}<span class="badge badge-success">已完成</span>{% else if b.status == "SUBMITTED" %}<span class="badge badge-warning">處理中</span>{% else if b.status == "FAILED" %}<span class="badge badge-error">失敗</span>{% else if b.status == "REJECTED" %}<span class="badge badge-warning">退件</span>{% else %}<span class="badge badge-info">等待提交</span>{% endif %}</td>
+                            <td>{{ b.created_at }}</td>
+                        </tr>
+                        {% endfor %}
+                        {% if batches.is_empty() %}
+                        <tr><td colspan="6" class="status-empty-note">目前無批次；請於上方「匯出付款批次」建立第一筆。</td></tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        {# ── 設定（ROLE_MANAGE） ── #}
+        {% if can_manage %}
+        <section id="config" class="panel form-panel" aria-labelledby="config-title">
+            <h3 id="config-title">連線設定（ROLE_MANAGE）</h3>
+            <p class="section-note">持久層為 erp_config（冪等 UPSERT）；空欄位＝保留現值。模擬模式取消勾選即切換生產模式（生產模式需完整憑證與端點，否則作業將如實回報不可用）。</p>
+            <form method="post" action="/bankpay/config">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <div class="form-row">
+                    <label>
+                        <input type="checkbox" name="esun_mock_mode" {% if config.esun_mock_mode %}checked{% endif %}>
+                        模擬模式（Mock；取消勾選＝生產模式）
+                    </label>
+                </div>
+                <div class="form-row">
+                    <label for="cfg-url">E.Sun API 端點（https:// 開頭；留空＝保留現值）</label>
+                    <input class="input" type="url" id="cfg-url" name="esun_url" value="{{ config.esun_url }}" placeholder="https://…">
+                </div>
+                <div class="form-row">
+                    <label for="cfg-ss">source_system_id（留空＝保留現值）</label>
+                    <input class="input" type="text" id="cfg-ss" name="source_system_id" value="{{ config.source_system_id.as_deref().unwrap_or("") }}" placeholder="SRC-ERP">
+                </div>
+                <div class="form-row">
+                    <label for="cfg-cust">customer_id（留空＝保留現值）</label>
+                    <input class="input" type="text" id="cfg-cust" name="customer_id" value="{{ config.customer_id.as_deref().unwrap_or("") }}" placeholder="CUST-001">
+                </div>
+                <div class="form-row">
+                    <label for="cfg-pay">payer_account（留空＝保留現值）</label>
+                    <input class="input" type="text" id="cfg-pay" name="payer_account" value="{{ config.payer_account.as_deref().unwrap_or("") }}" placeholder="012345678901">
+                </div>
+                <div class="form-actions">
+                    <button class="btn btn-primary" type="submit">儲存設定</button>
+                </div>
+            </form>
+        </section>
+        {% endif %}
+
+    </main>
+
+    <footer class="app-footer">
+        <div class="container">
+            <p class="section-note">
+                API 對照：POST /api/bankpay/export｜POST /api/bankpay/import｜GET /api/bankpay/query｜GET|POST /api/bankpay/config（JSON，需 X-CSRF-Token）·
+                治理：ADR-0012 ·
+                <a href="/admin/api/catalog">API 目錄</a>
+            </p>
+        </div>
+    </footer>
+</body>
+</html>

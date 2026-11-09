@@ -1,71 +1,148 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="zh-Hant-TW">
 <head>
     <meta charset="UTF-8">
-    <title>API 服務目錄 | Flaps ERP</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API 服務目錄 — Flaps ERP</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%23005fcc'/%3E%3Ctext x='8' y='12' font-size='10' font-family='sans-serif' fill='white' text-anchor='middle' font-weight='bold'%3EF%3C/text%3E%3C/svg%3E">
     <link rel="stylesheet" href="/assets/design-system.css">
 </head>
-<body class="bg-base">
-    <nav class="nav-main">
-        <a href="/" class="nav-logo">Flaps ERP</a>
-        <div class="nav-links">
-            <a href="/#transactions">交易明細</a>
-            <a href="/admin/users">使用者管理</a>
-            <a href="/admin/api/catalog" class="active">API 目錄</a>
-            <a href="/admin/api/logs">API 稽核</a>
-            <a href="/admin/api/config">API 設定</a>
-        </div>
-    </nav>
+<body>
+    <a class="skip-link" href="#main">跳至主要內容</a>
 
-    <main class="container">
-        <header class="page-header">
-            <div class="header-content">
-                <h1>API 服務目錄</h1>
-                <p class="subtitle">玉山銀行網銀串接 V2.8 介面定義與規格</p>
+    <header class="app-header">
+        <div class="container">
+            <div>
+                <h1>API 中樞 · 服務目錄</h1>
+                <p class="app-subtitle">E.Sun V2.8 契約端點 ＋ 平台原生 API — 由伺服端 registry 產生（單一事實來源），零 JavaScript</p>
             </div>
-            <div class="header-actions">
-                <span class="badge badge-info">v2.8-stable</span>
-            </div>
-        </header>
-
-        <div class="grid grid-cols-1 gap-6">
-            {% for endpoint in endpoints %}
-            <div class="card card-border">
-                <div class="card-header">
-                    <div class="flex items-center gap-2">
-                        <span class="method-badge {{ endpoint.method }}"> {{ endpoint.method }} </span>
-                        <code class="endpoint-path">{{ endpoint.path }}</code>
-                    </div>
-                    <span class="status-badge status-ok">Active</span>
-                </div>
-                <div class="card-body">
-                    <p class="description">{{ endpoint.description }}</p>
-                    <div class="params-section">
-                        <h4 class="section-title">請求參數</h4>
-                        <table class="table-minimal">
-                            <thead>
-                                <tr>
-                                    <th>參數名稱</th>
-                                    <th>說明</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for param in endpoint.parameters %}
-                                <tr>
-                                    <td><code>{{ param.0 }}</code></td>
-                                    <td>{{ param.1 }}</td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                    <div class="card-footer">
-                        <a href="/admin/api/test?endpoint={{ endpoint.path }}" class="btn btn-secondary btn-sm">測試此端點</a>
-                    </div>
-                </div>
-            </div>
-            {% endfor %}
+            <p class="app-subtitle">
+                使用者：<strong>{{ acting_user }}</strong>
+                ｜
+                <a class="btn btn-secondary" href="/admin/api/test">測試工作台</a>
+                <a class="btn btn-secondary" href="/admin/api/logs">稽核日誌</a>
+                <a class="btn btn-secondary" href="/admin/api/config">銀行設定</a>
+                <a class="btn btn-secondary" href="/bankpay">銀行支付作業</a>
+                <a class="btn btn-secondary" href="/">返回工作台</a>
+            </p>
         </div>
+    </header>
+
+    <main id="main" class="container">
+
+        <section class="panel" aria-labelledby="catalog-kpi-title">
+            <h3 id="catalog-kpi-title">目錄總覽</h3>
+            <dl class="kpi-grid">
+                <div class="kpi">
+                    <dt title="定義：E.Sun BankPay V2.8 官方契約端點數｜時點：registry 載入當下｜來源：Wellfit/docs/bankpay/04-interface-specification.md">契約端點（V2.8）</dt>
+                    <dd>{{ esun_total }}</dd>
+                </div>
+                <div class="kpi">
+                    <dt title="定義：平台原生 API 端點數（registry 對應實際路由註冊）｜時點：registry 載入當下｜來源：apihub.rs">平台原生端點</dt>
+                    <dd>{{ native_total }}</dd>
+                </div>
+                <div class="kpi">
+                    <dt title="定義：V2.8 端點中已由平台模擬器對應者（誠實標示，非真實銀行通道）｜時點：registry 載入當下">已模擬對應</dt>
+                    <dd>3</dd>
+                </div>
+                <div class="kpi">
+                    <dt title="定義：V2.8 端點中尚未串接者（需 mTLS 憑證與經驗證端點規格，見 ADR-0012）">未串接</dt>
+                    <dd>5</dd>
+                </div>
+            </dl>
+            <p class="section-note">
+                誠實原則（治理 P7）：本目錄與 <code>apihub.rs</code> registry 一對一對應，並與 <code>api.rs</code>／<code>cross_module_api.rs</code>
+                的實際路由註冊同步維護；未串接的契約端點如實標示，不偽稱可用。
+            </p>
+        </section>
+
+        <section class="panel" aria-labelledby="esun-title">
+            <h3 id="esun-title">E.Sun BankPay V2.8 契約端點（{{ esun_total }}）</h3>
+            <p class="preview-note">
+                權威契約實作位於 <code>Wellfit/crates/wellfit_bankpay</code>；本平台對應狀態見「平台對應」欄。
+                串接狀態：模擬對應＝平台以確定性模擬器提供同形作業（資料非真實銀行交易）；未串接＝需 mTLS 憑證與經驗證端點（ADR-0012）。
+            </p>
+            <div class="table-wrap">
+                <table>
+                    <caption>E.Sun BankPay V2.8 官方契約端點</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col">官方路徑（皆為 POST）</th>
+                            <th scope="col">名稱</th>
+                            <th scope="col">用途</th>
+                            <th scope="col">平台對應</th>
+                            <th scope="col">狀態</th>
+                            <th scope="col">規格</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for e in esun_endpoints %}
+                        <tr>
+                            <td><code>{{ e.path }}</code></td>
+                            <td>{{ e.name }}</td>
+                            <td>{{ e.description }}</td>
+                            <td>
+                                {% if !e.mapping.is_empty() %}
+                                <a href="{{ e.mapping | safe }}">{% endif %}<code>{{ e.mapping }}</code>{% if !e.mapping.is_empty() %}</a>{% endif %}
+                            </td>
+                            <td><span class="badge {{ e.mode_class }}">{{ e.mode }}</span></td>
+                            <td><span class="badge badge-neutral" title="Wellfit/docs/bankpay/04-interface-specification.md">{{ e.contract_ref }}</span></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="panel" aria-labelledby="native-title">
+            <h3 id="native-title">平台原生 API（{{ native_total }}）</h3>
+            <p class="preview-note">
+                每個端點的規格、授權要求與參數如下；可即時探測的端點附測試台連結（僅無副作用 GET 代執行，變更類提供 curl 範例——fail-closed）。
+            </p>
+        </section>
+
+        {% for e in endpoints %}
+        <section class="panel" aria-labelledby="ep-{{ loop.index }}">
+            <h3 id="ep-{{ loop.index }}">
+                <span class="badge {{ e.method_class }}">{{ e.method }}</span>
+                <code>{{ e.path }}</code>
+            </h3>
+            <p>{{ e.description }}</p>
+            <p>授權：<span class="badge badge-neutral">{{ e.auth }}</span>
+                {% if e.live %}
+                <a class="btn btn-secondary" href="/admin/api/test?endpoint={{ e.path }}">在測試台檢視即時回應</a>
+                {% endif %}
+            </p>
+            {% if !e.params.is_empty() %}
+            <div class="table-wrap">
+                <table>
+                    <caption>{{ e.method }} {{ e.path }} 參數</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col">參數</th>
+                            <th scope="col">說明</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for p in e.params %}
+                        <tr>
+                            <td><code>{{ p.name }}</code></td>
+                            <td>{{ p.description }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endif %}
+        </section>
+        {% endfor %}
     </main>
+
+    <footer class="app-footer">
+        <div class="container">
+            <p>Flaps ERP 工作台 · API 中樞（零 JavaScript，WCAG 2.2 AA 方向）</p>
+            <p>契約規格：Wellfit/docs/bankpay/04-interface-specification.md · 決策：docs/adr/ADR-0012 · 設計系統：web/assets/design-system.css</p>
+        </div>
+    </footer>
 </body>
 </html>
