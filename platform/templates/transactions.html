@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>交易清單 — Flaps ERP 工作台</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%23005fcc'/%3E%3Ctext x='8' y='12' font-size='10' font-family='sans-serif' fill='white' text-anchor='middle' font-weight='bold'%3EF%3C/text%3E%3C/svg%3E">
+    <link rel="stylesheet" href="/assets/design-system.css">
+</head>
+<body>
+    <a class="skip-link" href="#main">跳至主要內容</a>
+
+    <header class="app-header">
+        <div class="container">
+            <div>
+                <h1>交易清單</h1>
+                <p class="app-subtitle">搜尋、分頁與詳情檢視（零 JavaScript；讀取使用 GET）</p>
+            </div>
+            <p class="app-subtitle">
+                使用者：<strong>{{ acting_user }}</strong>
+                ｜
+                <a class="btn btn-secondary" href="/">返回工作台</a>
+            </p>
+        </div>
+    </header>
+
+    <main id="main" class="container">
+        <section class="panel" aria-labelledby="search-title">
+            <h2 id="search-title">搜尋</h2>
+            <form method="get" action="/transactions" role="search">
+                <div class="form-row">
+                    <label for="tx-q">關鍵字（交易編號或摘要）</label>
+                    <input class="input" type="text" id="tx-q" name="q" value="{{ query }}" placeholder="例如：TX-SEED 或 文具">
+                </div>
+                <div class="form-actions">
+                    <button class="btn btn-primary" type="submit">搜尋</button>
+                    {% if !query.is_empty() %}
+                    <a class="btn btn-secondary" href="/transactions">清除搜尋</a>
+                    {% endif %}
+                </div>
+            </form>
+            <p class="section-note">結果共 {{ total }} 筆{% if !query.is_empty() %}（符合「{{ query }}」）{% endif %}；關鍵字以參數綁定查詢，不拼接 SQL。</p>
+        </section>
+
+        <section class="panel" aria-labelledby="list-title">
+            <h2 id="list-title">結果</h2>
+            <div class="table-wrap">
+                <table>
+                    <caption>交易清單（每頁 20 筆）</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col">交易編號</th>
+                            <th scope="col">摘要</th>
+                            <th scope="col">日期</th>
+                            <th scope="col">金額</th>
+                            <th scope="col">幣別</th>
+                            <th scope="col">狀態</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if rows.is_empty() %}
+                        <tr>
+                            <td colspan="6">
+                                <p class="empty-state">
+                                    <strong>查無交易</strong>
+                                    {% if !query.is_empty() %}沒有符合「{{ query }}」的紀錄；請調整關鍵字或{% endif %}
+                                    <a href="/transactions">檢視全部交易</a>。
+                                </p>
+                            </td>
+                        </tr>
+                        {% else %}
+                        {% for row in rows %}
+                        <tr>
+                            <td><a href="/transactions/{{ row.id }}">{{ row.code }}</a></td>
+                            <td>{{ row.description }}</td>
+                            <td>{{ row.date }}</td>
+                            <td>{{ row.amount_display }}</td>
+                            <td>{{ row.currency }}</td>
+                            <td><span class="badge {{ row.status_badge }}">{{ row.status }}</span></td>
+                        </tr>
+                        {% endfor %}
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+
+            <nav class="pagination" aria-label="交易清單分頁">
+                {% if let Some(p) = prev_page %}
+                <a href="{{ p }}">← 上一頁</a>
+                {% else %}
+                <span class="is-disabled" aria-disabled="true">← 上一頁</span>
+                {% endif %}
+                <span class="page-status">第 {{ page }} / {{ total_pages }} 頁・共 {{ total }} 筆</span>
+                {% if let Some(p) = next_page %}
+                <a href="{{ p }}">下一頁 →</a>
+                {% else %}
+                <span class="is-disabled" aria-disabled="true">下一頁 →</span>
+                {% endif %}
+            </nav>
+            <p class="section-note">點選交易編號可檢視分錄詳情；金額為借方合計（整數分還原為兩位小數）。</p>
+        </section>
+    </main>
+
+    <footer class="site-footer">
+        <div class="container">
+            <p>Flaps ERP 工作台 · 交易清單（零 JavaScript，WCAG 2.2 AA 方向）</p>
+            <p>規格：docs/ux/UI-UX_需求規格.md §E3.4 · 設計系統：web/assets/design-system.css</p>
+        </div>
+    </footer>
+</body>
+</html>

@@ -12,7 +12,7 @@
 //!   THREAT_MODEL T-07).
 
 use askama::Template;
-use axum::extract::{Form, Query, State};
+use axum::extract::{Form, Path, Query, State};
 use axum::http::{header, StatusCode};
 use axum::response::{Html, IntoResponse, Redirect, Response};
 use axum::routing::{get, post};
@@ -270,7 +270,11 @@ pub fn router(state: AppState) -> Router {
 
     let protected = Router::new()
         .route("/", get(index))
-        .route("/transactions", post(create_transaction))
+        .route(
+            "/transactions",
+            get(transactions_page).post(create_transaction),
+        )
+        .route("/transactions/:id", get(transaction_detail_page))
         .route("/admin/users", get(admin_users).post(admin_create_user))
         .route("/admin/users/toggle", post(admin_toggle_user))
         .route("/admin/users/reset_password", post(admin_reset_password))
@@ -1323,6 +1327,313 @@ pub struct StatesTemplate {
 async fn states_page(session: Extension<Session>) -> Response {
     render_or_500(StatesTemplate {
         acting_user: session.user_id.clone(),
+    })
+}
+
+/// Minimal RFC 3986 percent-encoding for query values (unreserved characters
+/// pass through; everything else, including every UTF-8 byte of CJK text, is
+/// percent-encoded). Used when building search-preserving pagination links.
+fn percent_encode(value: &str) -> String {
+    let mut out = String::with_capacity(value.len());
+    for byte in value.as_bytes() {
+        match *byte {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'.' | b'_' | b'~' => {
+                out.push(*byte as char);
+            }
+            other => out.push_str(&format!("%{other:02X}")),
+        }
+    }
+    out
+}
+
+/// Map a transaction status to a badge class. Colour and text are always shown
+/// together (WCAG 2.2 AA Use of Color).
+fn status_badge(status: &str) -> &'static str {
+    match status {
+        "POSTED" | "COMPLETED" | "DONE" => "badge-success",
+        "PENDING_REVIEW" | "PENDING" => "badge-warning",
+        "VOID" | "VOIDED" | "REJECTED" | "FAILED" => "badge-error",
+        "DRAFT" => "badge-neutral",
+        _ => "badge-info",
+    }
+}
+
+/// Search-aware paged transaction rows for the /transactions list (P1). The
+/// unfiltered path reuses the engine helper; search uses bound LIKE
+/// parameters (never concatenated SQL).
+async fn query_transactions_for_list(
+    state: &AppState,
+    search: &str,
+    limit: i64,
+    offset: i64,
+) -> Vec<flaps_core::ledger::engine::TransactionSummary> {
+    if search.is_empty() {
+        return state
+            .engine
+            .query_transaction_summaries_paged(limit, offset)
+            .await
+            .unwrap_or_default();
+    }
+    let pattern = format!("%{search}%");
+    sqlx::query_as::<_, flaps_core::ledger::engine::TransactionSummary>(
+        "SELECT t.transaction_id, t.transaction_code, t.transaction_date, t.description, \
+         t.reference_number, t.status, t.source_type, t.created_by, t.created_at, t.updated_at, \
+         COALESCE(SUM(CASE WHEN i.item_type = 'DEBIT' THEN i.amount_minor ELSE 0 END), 0) AS total_amount_minor, \
+         COALESCE(MIN(i.currency), 'TWD') AS currency \
+         FROM transactions t LEFT JOIN transaction_items i ON i.transaction_id = t.transaction_id \
+         WHERE t.transaction_code LIKE ? OR t.description LIKE ? \
+         GROUP BY t.transaction_id \
+         ORDER BY t.transaction_date DESC, t.created_at DESC LIMIT ? OFFSET ?",
+    )
+    .bind(&pattern)
+    .bind(&pattern)
+    .bind(limit)
+    .bind(offset)
+    .fetch_all(&state.pool)
+    .await
+    .unwrap_or_default()
+}
+
+/// Count of transactions matching the search term (P1 pagination math).
+async fn count_transactions(state: &AppState, search: &str) -> i64 {
+    if search.is_empty() {
+        return sqlx::query_scalar("SELECT COUNT(*) FROM transactions")
+            .fetch_one(&state.pool)
+            .await
+            .unwrap_or(0);
+    }
+    let pattern = format!("%{search}%");
+    sqlx::query_scalar(
+        "SELECT COUNT(*) FROM transactions WHERE transaction_code LIKE ? OR description LIKE ?",
+    )
+    .bind(&pattern)
+    .bind(&pattern)
+    .fetch_one(&state.pool)
+    .await
+    .unwrap_or(0)
+}
+
+#[derive(Deserialize)]
+pub struct TransactionsQuery {
+    pub page: Option<String>,
+    pub q: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct TxListRow {
+    pub id: String,
+    pub code: String,
+    pub description: String,
+    pub date: String,
+    pub amount_display: String,
+    pub currency: String,
+    pub status: String,
+    pub status_badge: String,
+}
+
+#[derive(Template)]
+#[template(path = "transactions.html")]
+pub struct TransactionsTemplate {
+    pub acting_user: String,
+    pub query: String,
+    pub rows: Vec<TxListRow>,
+    pub total: i64,
+    pub page: u32,
+    pub total_pages: u32,
+    pub prev_page: Option<String>,
+    pub next_page: Option<String>,
+}
+
+/// GET /transactions - dedicated list page (P1, UI-UX E3.4): search + paging +
+/// links to detail. Read-only; the search term is a bound parameter.
+async fn transactions_page(
+    State(state): State<AppState>,
+    session: Extension<Session>,
+    Query(params): Query<TransactionsQuery>,
+) -> Response {
+    let search = params.q.unwrap_or_default().trim().to_string();
+    let total = count_transactions(&state, &search).await;
+    let total_pages = ((total + LIST_PAGE_SIZE - 1) / LIST_PAGE_SIZE).max(1);
+    let page = clamp_page(parse_page_param(params.page.as_deref()), total_pages);
+    let offset = (page - 1) * LIST_PAGE_SIZE;
+
+    let rows: Vec<TxListRow> = query_transactions_for_list(&state, &search, LIST_PAGE_SIZE, offset)
+        .await
+        .iter()
+        .map(|s| TxListRow {
+            id: s.transaction.transaction_id.clone(),
+            code: s.transaction.transaction_code.clone(),
+            description: s.transaction.description.clone(),
+            date: s.transaction.transaction_date.to_string(),
+            amount_display: format_minor(s.total_amount_minor, 2),
+            currency: s.currency.clone(),
+            status: s.transaction.status.clone(),
+            status_badge: status_badge(&s.transaction.status).to_string(),
+        })
+        .collect();
+
+    let page_link = |p: i64| -> String {
+        if search.is_empty() {
+            format!("/transactions?page={p}")
+        } else {
+            format!("/transactions?page={p}&q={}", percent_encode(&search))
+        }
+    };
+    let prev_page = (page > 1).then(|| page_link(page - 1));
+    let next_page = (page < total_pages).then(|| page_link(page + 1));
+
+    render_or_500(TransactionsTemplate {
+        acting_user: session.user_id.clone(),
+        query: search,
+        rows,
+        total,
+        page: page as u32,
+        total_pages: total_pages as u32,
+        prev_page,
+        next_page,
+    })
+}
+
+#[derive(Debug, Clone)]
+pub struct TxItemRow {
+    pub kind: String,
+    pub kind_badge: String,
+    pub account: String,
+    pub amount_display: String,
+    pub currency: String,
+    pub rate_display: String,
+}
+
+#[derive(Template)]
+#[template(path = "transaction_detail.html")]
+pub struct TransactionDetailTemplate {
+    pub acting_user: String,
+    pub not_found: bool,
+    pub tx_id: String,
+    pub code: String,
+    pub description: String,
+    pub date: String,
+    pub status: String,
+    pub status_badge: String,
+    pub created_by: String,
+    pub created_at: String,
+    pub reference: String,
+    pub source: String,
+    pub items: Vec<TxItemRow>,
+    pub debit_total: String,
+    pub credit_total: String,
+    pub balanced: bool,
+}
+
+/// GET /transactions/:id - detail view (P2, UI-UX E3.4): header, entry legs and
+/// the debit=credit check. Missing ids render the three-part not-found state
+/// with HTTP 404 (FR-004 message shape).
+async fn transaction_detail_page(
+    State(state): State<AppState>,
+    session: Extension<Session>,
+    Path(id): Path<String>,
+) -> Response {
+    // (id, code, date, description, status, created_by, created_at,
+    // reference, source) — the header fields of the detail view.
+    type TxHeaderRow = (
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+    );
+
+    let header: Option<TxHeaderRow> = sqlx::query_as(
+        "SELECT transaction_id, transaction_code, transaction_date, description, status, \
+             created_by, created_at, COALESCE(reference_number, ''), COALESCE(source_type, '') \
+             FROM transactions WHERE transaction_id = ? LIMIT 1",
+    )
+    .bind(&id)
+    .fetch_optional(&state.pool)
+    .await
+    .unwrap_or(None);
+
+    let Some((tx_id, code, date, description, status, created_by, created_at, reference, source)) =
+        header
+    else {
+        let not_found = TransactionDetailTemplate {
+            acting_user: session.user_id.clone(),
+            not_found: true,
+            tx_id: id,
+            code: String::new(),
+            description: String::new(),
+            date: String::new(),
+            status: String::new(),
+            status_badge: "badge-neutral".to_string(),
+            created_by: String::new(),
+            created_at: String::new(),
+            reference: String::new(),
+            source: String::new(),
+            items: Vec::new(),
+            debit_total: "—".to_string(),
+            credit_total: "—".to_string(),
+            balanced: false,
+        };
+        return (StatusCode::NOT_FOUND, render_or_500(not_found)).into_response();
+    };
+
+    let raw_items: Vec<(String, String, i64, String, i64)> = sqlx::query_as(
+        "SELECT item_type, account_id, amount_minor, currency, exchange_rate \
+         FROM transaction_items WHERE transaction_id = ? ORDER BY item_type DESC, item_id",
+    )
+    .bind(&tx_id)
+    .fetch_all(&state.pool)
+    .await
+    .unwrap_or_default();
+
+    let mut debit_sum: i128 = 0;
+    let mut credit_sum: i128 = 0;
+    let items: Vec<TxItemRow> = raw_items
+        .iter()
+        .map(|(kind, account, amount, currency, rate)| {
+            if kind == "DEBIT" {
+                debit_sum += i128::from(*amount);
+            } else {
+                credit_sum += i128::from(*amount);
+            }
+            TxItemRow {
+                kind: if kind == "DEBIT" { "借方" } else { "貸方" }.to_string(),
+                kind_badge: if kind == "DEBIT" {
+                    "badge-primary"
+                } else {
+                    "badge-info"
+                }
+                .to_string(),
+                account: account.clone(),
+                amount_display: format_minor(*amount, 2),
+                currency: currency.clone(),
+                rate_display: format_minor(*rate, 4),
+            }
+        })
+        .collect();
+    let balanced = debit_sum == credit_sum;
+
+    render_or_500(TransactionDetailTemplate {
+        acting_user: session.user_id.clone(),
+        not_found: false,
+        tx_id,
+        code,
+        description,
+        date,
+        status: status.clone(),
+        status_badge: status_badge(&status).to_string(),
+        created_by,
+        created_at,
+        reference,
+        source,
+        items,
+        debit_total: flaps_core::money::format_minor_i128(debit_sum, 2),
+        credit_total: flaps_core::money::format_minor_i128(credit_sum, 2),
+        balanced,
     })
 }
 
@@ -3421,6 +3732,146 @@ mod tests {
         assert!(
             body.contains("id=\"kpi-pending-review\">2</dd>"),
             "KPI must show the real pending-review count, never a dash (M3)"
+        );
+    }
+
+    /// Seed two balanced legs (debit + credit) against known accounts.
+    async fn seed_transaction_items(pool: &SqlitePool, tx_id: &str, amount_minor: i64) {
+        for (account, name, kind) in [
+            ("BANK-001", "Bank Account", "DEBIT"),
+            ("SUPPLIES-EXP", "Supplies Expense", "CREDIT"),
+        ] {
+            sqlx::query(
+                "INSERT OR IGNORE INTO accounts (account_id, account_code, account_name, account_type, currency, is_active) \
+                 VALUES (?, ?, ?, 'ASSETS', 'TWD', 1)",
+            )
+            .bind(account)
+            .bind(account)
+            .bind(name)
+            .execute(pool)
+            .await
+            .expect("seed account");
+            sqlx::query(
+                "INSERT INTO transaction_items (item_id, transaction_id, account_id, item_type, amount_minor, currency, exchange_rate) \
+                 VALUES (?, ?, ?, ?, ?, 'TWD', 10000)",
+            )
+            .bind(format!("it-{}-{}", tx_id, kind.to_lowercase()))
+            .bind(tx_id)
+            .bind(account)
+            .bind(kind)
+            .bind(amount_minor)
+            .execute(pool)
+            .await
+            .expect("seed item");
+        }
+    }
+
+    #[test]
+    fn percent_encode_handles_cjk_and_spaces() {
+        assert_eq!(percent_encode("TX 2026"), "TX%202026");
+        assert_eq!(percent_encode("文具"), "%E6%96%87%E5%85%B7");
+        assert_eq!(percent_encode("a-b_c.d~e"), "a-b_c.d~e");
+    }
+
+    #[test]
+    fn status_badge_maps_known_statuses() {
+        assert_eq!(status_badge("POSTED"), "badge-success");
+        assert_eq!(status_badge("PENDING_REVIEW"), "badge-warning");
+        assert_eq!(status_badge("VOID"), "badge-error");
+        assert_eq!(status_badge("SOMETHING_ELSE"), "badge-info");
+    }
+
+    #[tokio::test]
+    async fn transactions_list_searches_and_paginates() {
+        let (app, pool) = test_app().await;
+        seed_credentials(&pool).await;
+        let (cookie, _) = login(&app, &pool, "admin", TEST_ADMIN_PASSWORD).await;
+        seed_transactions(&pool, 25, "POSTED").await;
+
+        let request = Request::builder()
+            .uri("/transactions")
+            .header(header::COOKIE, cookie.clone())
+            .body(Body::empty())
+            .unwrap();
+        let (status, body, _) = send(app.clone(), request).await;
+        assert_eq!(status, StatusCode::OK, "list page must render");
+        assert!(body.contains("第 1 / 2 頁・共 25 筆"), "list status line");
+        assert!(
+            body.contains("/transactions/tx-seed-"),
+            "rows must link to detail pages"
+        );
+
+        // Search narrows to the 11 codes containing 'TX-SEED-1'.
+        let request = Request::builder()
+            .uri("/transactions?q=TX-SEED-1")
+            .header(header::COOKIE, cookie.clone())
+            .body(Body::empty())
+            .unwrap();
+        let (status, body, _) = send(app.clone(), request).await;
+        assert_eq!(status, StatusCode::OK);
+        assert!(body.contains("共 11 筆"), "search must narrow the count");
+
+        // A term matching everything keeps two pages; links preserve `q`.
+        let request = Request::builder()
+            .uri("/transactions?q=seed")
+            .header(header::COOKIE, cookie)
+            .body(Body::empty())
+            .unwrap();
+        let (status, body, _) = send(app, request).await;
+        assert_eq!(status, StatusCode::OK);
+        assert!(body.contains("共 25 筆"), "bare term matches all rows");
+        assert!(
+            body.contains("q=seed"),
+            "pagination links must preserve the search term"
+        );
+    }
+
+    #[tokio::test]
+    async fn transaction_detail_renders_items_and_404() {
+        let (app, pool) = test_app().await;
+        seed_credentials(&pool).await;
+        let (cookie, _) = login(&app, &pool, "admin", TEST_ADMIN_PASSWORD).await;
+        sqlx::query(
+            "INSERT INTO transactions (transaction_id, transaction_code, transaction_date, description, status, created_by) \
+             VALUES ('tx-detail-1', 'TX-DETAIL-1', '2026-11-05', 'detail test', 'POSTED', 'tester')",
+        )
+        .execute(&pool)
+        .await
+        .expect("seed detail tx");
+        seed_transaction_items(&pool, "tx-detail-1", 12_345).await;
+
+        let request = Request::builder()
+            .uri("/transactions/tx-detail-1")
+            .header(header::COOKIE, cookie.clone())
+            .body(Body::empty())
+            .unwrap();
+        let (status, body, _) = send(app.clone(), request).await;
+        assert_eq!(status, StatusCode::OK, "detail page must render");
+        assert!(
+            body.contains("借方") && body.contains("貸方"),
+            "legs render"
+        );
+        assert!(body.contains("123.45"), "amounts render from minor units");
+        assert!(
+            body.contains("badge badge-success\">平衡</span>"),
+            "balanced entries must show the balance badge"
+        );
+        assert!(body.contains("1.0000"), "exchange rate renders at 4 dp");
+
+        let request = Request::builder()
+            .uri("/transactions/tx-missing-999")
+            .header(header::COOKIE, cookie)
+            .body(Body::empty())
+            .unwrap();
+        let (status, body, _) = send(app, request).await;
+        assert_eq!(status, StatusCode::NOT_FOUND, "missing tx must 404");
+        assert!(
+            body.contains("找不到交易"),
+            "three-part not-found state (FR-004)"
+        );
+        assert!(
+            body.contains("返回交易清單"),
+            "recovery path must be offered"
         );
     }
 

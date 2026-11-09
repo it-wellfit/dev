@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>交易詳情 — Flaps ERP 工作台</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%23005fcc'/%3E%3Ctext x='8' y='12' font-size='10' font-family='sans-serif' fill='white' text-anchor='middle' font-weight='bold'%3EF%3C/text%3E%3C/svg%3E">
+    <link rel="stylesheet" href="/assets/design-system.css">
+</head>
+<body>
+    <a class="skip-link" href="#main">跳至主要內容</a>
+
+    <header class="app-header">
+        <div class="container">
+            <div>
+                <h1>交易詳情</h1>
+                <p class="app-subtitle">分錄明細與借貸平衡檢核（零 JavaScript）</p>
+            </div>
+            <p class="app-subtitle">
+                使用者：<strong>{{ acting_user }}</strong>
+                ｜
+                <a class="btn btn-secondary" href="/transactions">返回交易清單</a>
+            </p>
+        </div>
+    </header>
+
+    <main id="main" class="container">
+        {% if not_found %}
+        <div class="error-state" role="alert">
+            <strong>找不到交易（{{ tx_id }}）</strong>
+            <p>問題：查無此交易編號。可能原因：連結過期、紀錄不存在或編號輸入有誤。處理方式：回到交易清單重新選擇。</p>
+            <p><a class="btn btn-secondary" href="/transactions">返回交易清單</a></p>
+        </div>
+        {% else %}
+        <section class="panel" aria-labelledby="header-title">
+            <h2 id="header-title">交易資訊</h2>
+            <dl class="kpi-grid">
+                <div class="kpi">
+                    <dt>交易編號</dt>
+                    <dd>{{ code }}</dd>
+                </div>
+                <div class="kpi">
+                    <dt>交易日期</dt>
+                    <dd>{{ date }}</dd>
+                </div>
+                <div class="kpi">
+                    <dt>狀態</dt>
+                    <dd><span class="badge {{ status_badge }}">{{ status }}</span></dd>
+                </div>
+                <div class="kpi">
+                    <dt>借貸平衡</dt>
+                    <dd>
+                        {% if balanced %}
+                        <span class="badge badge-success">平衡</span>
+                        {% else %}
+                        <span class="badge badge-error">不平衡</span>
+                        {% endif %}
+                    </dd>
+                </div>
+            </dl>
+            <p class="preview-note">
+                摘要：{{ description }}
+                {% if !reference.is_empty() %}｜參考號：{{ reference }}{% endif %}
+                {% if !source.is_empty() %}｜來源：{{ source }}{% endif %}
+            </p>
+            <p class="section-note">建立者：{{ created_by }}｜建立時間：{{ created_at }}</p>
+        </section>
+
+        <section class="panel" aria-labelledby="items-title">
+            <h2 id="items-title">分錄明細</h2>
+            <div class="table-wrap">
+                <table>
+                    <caption>借貸分錄（傳票視角；正式簽核欄見 M5）</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col">分錄</th>
+                            <th scope="col">科目</th>
+                            <th scope="col">金額</th>
+                            <th scope="col">幣別</th>
+                            <th scope="col">匯率</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if items.is_empty() %}
+                        <tr>
+                            <td colspan="5">
+                                <p class="empty-state">
+                                    <strong>尚無分錄</strong>
+                                    此交易沒有分錄明細；請聯絡系統管理員確認資料完整性。
+                                </p>
+                            </td>
+                        </tr>
+                        {% else %}
+                        {% for item in items %}
+                        <tr>
+                            <td><span class="badge {{ item.kind_badge }}">{{ item.kind }}</span></td>
+                            <td>{{ item.account }}</td>
+                            <td>{{ item.amount_display }}</td>
+                            <td>{{ item.currency }}</td>
+                            <td>{{ item.rate_display }}</td>
+                        </tr>
+                        {% endfor %}
+                        {% endif %}
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <th scope="row">借方合計</th>
+                            <td></td>
+                            <td>{{ debit_total }}</td>
+                            <td></td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <th scope="row">貸方合計</th>
+                            <td></td>
+                            <td>{{ credit_total }}</td>
+                            <td></td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            <p class="section-note">列印友好：瀏覽器列印時自動隱藏導覽與按鈕；金額以整數分（i64）儲存、i128 中間值累加顯示。</p>
+        </section>
+        {% endif %}
+    </main>
+
+    <footer class="site-footer">
+        <div class="container">
+            <p>Flaps ERP 工作台 · 交易詳情（零 JavaScript，WCAG 2.2 AA 方向）</p>
+            <p>規格：docs/ux/UI-UX_需求規格.md §E3.4 · 設計系統：web/assets/design-system.css</p>
+        </div>
+    </footer>
+</body>
+</html>
