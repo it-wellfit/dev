@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>稽核軌跡 — Flaps ERP</title>
+    <link rel="stylesheet" href="/assets/design-system.css">
+</head>
+<body>
+    <a class="skip-link" href="#main">跳至主要內容</a>
+    <header class="app-header">
+        <div class="container">
+            <div>
+                <h1>稽核軌跡</h1>
+                <p class="app-subtitle">全部作業事件（分頁＋篩選）；CSV 匯出供合規審查 — 零 JavaScript</p>
+            </div>
+            <p class="app-subtitle">
+                使用者：<strong>{{ acting_user }}</strong>
+                ｜ <a class="btn btn-secondary" href="/api/audit/export">匯出 CSV</a>
+                <a class="btn btn-secondary" href="/">返回工作台</a>
+            </p>
+        </div>
+    </header>
+    <main id="main" class="container">
+        <section class="panel" aria-labelledby="a-filter">
+            <h2 id="a-filter">篩選條件</h2>
+            <form method="get" action="/admin/audit">
+                <div class="form-row">
+                    <label for="f-action">事件類型</label>
+                    <input class="input" type="text" id="f-action" name="action" value="{{ filter_action }}" placeholder="例如：TRANSACTION_POSTED">
+                </div>
+                <div class="form-row">
+                    <label for="f-user">操作者 ID</label>
+                    <input class="input" type="text" id="f-user" name="user_id" value="{{ filter_user }}" placeholder="留空＝全部">
+                </div>
+                <div class="form-actions">
+                    <button class="btn btn-primary" type="submit">套用篩選</button>
+                    <a class="btn btn-secondary" href="/admin/audit">清除</a>
+                </div>
+            </form>
+        </section>
+        <section class="panel" aria-labelledby="a-list">
+            <h2 id="a-list">事件列表</h2>
+            {% if rows.is_empty() %}
+            <p class="empty-state" data-state-empty>
+                <strong>目前篩選條件下無事件</strong>
+                可能原因：條件過嚴或該期間無作業；處理方式：清除篩選後重試。
+            </p>
+            {% else %}
+            <p class="page-status">第 {{ page }} / {{ total_pages }} 頁・共 {{ total }} 筆</p>
+            <div class="table-wrap">
+                <table>
+                    <caption>稽核事件（新→舊，每頁 20 筆）</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col">時間</th>
+                            <th scope="col">事件</th>
+                            <th scope="col">操作者</th>
+                            <th scope="col">資源</th>
+                            <th scope="col">詳細資料</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for r in rows %}
+                        <tr>
+                            <td><code>{{ r.performed_at }}</code></td>
+                            <td><span class="badge {{ r.action_class }}">{{ r.action_label }}</span></td>
+                            <td>{{ r.username }}</td>
+                            <td><code>{{ r.resource }}</code></td>
+                            <td>{{ r.details_snippet }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <nav class="pagination" aria-label="分頁">
+                {% if has_prev %}
+                <a class="btn btn-secondary" href="{{ prev_url }}">← 上一頁</a>
+                {% else %}
+                <span class="btn btn-secondary is-disabled" aria-disabled="true">← 上一頁</span>
+                {% endif %}
+                <span class="page-status">第 {{ page }} / {{ total_pages }} 頁</span>
+                {% if has_next %}
+                <a class="btn btn-secondary" href="{{ next_url }}">下一頁 →</a>
+                {% else %}
+                <span class="btn btn-secondary is-disabled" aria-disabled="true">下一頁 →</span>
+                {% endif %}
+            </nav>
+            {% endif %}
+            <p class="section-note">稽核寫入為 fail-closed：作業成功但稽核失敗時系統回報錯誤，本頁資料即全域稽核 SSOT（audit_log）。</p>
+        </section>
+    </main>
+    <footer class="site-footer">
+        <div class="container">
+            <p>Flaps ERP 工作台（零 JavaScript，WCAG 2.2 AA 方向）</p>
+        </div>
+    </footer>
+</body>
+</html>

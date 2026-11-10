@@ -58,6 +58,26 @@
 - Residual: `--features bankpay` build still carries the partner's in-flight gaps (response-type bindings, config binding, BankPayStatus visibility) — theirs to finish; default build unaffected.
 - Metrics: api.rs 5,161 lines (awaiting R1 split) | bankpay/ 918 | status.rs 253 | templates 18 | platform tests 58+4+3 green.
 
+## Parked-state note (2026-11-09 ~13:17Z snapshots)
+
+- `platform-test-only`: Kem semver entry has a duplicate `dependencies` KEY in crates/kem/Cargo.toml — duplicates are rejected by Cargo; when fixed, the suite will reflect.
+- Records/snapshots of the above are retained in-session for the owner stream; not silently "fixed" to avoid clobbering concurrent edits.
+
+## P3/P4 — /accounts + /ai-decisions (2026-11-09)
+
+- `/accounts` (UI-UX §E3.5): type-grouped tree, toggle, create form; RBAC via `can_manage_users`; fail-closed validation; audit events. Tests: list/empty, create→toggle round-trip (+real row), non-admin 403.
+- `/ai-decisions` (UI-UX §E3.6): draft review surface — visible sources, deterministic completeness risk score, adopt via `/drafts/adopt`, reject with PRG + audit. Test: draft queue with risk bands + reject round-trip. NOTE: partner's "8 data states" workstream also sketches this page (converging; their call).
+- Verification at capture: lib 112 passed / 0 failed; clippy EXIT=0; partner's bankpay_api/bankpay_persistence suites green too.
+- MISSING FEATURE EVIDENCE (to not lose): partner already implemented P3's audit logging surface; my accounts list does not yet show audit entries. Tracked as follow-up (wire `recent_audit_logs` into /accounts page or its own /admin/audit view), not as an error.
+- Note (open item): partner's `bankpay_page` handler routes are ungated in api.rs — `/bankpay` HTML page serves on the default build. Flagged for the partner stream (or next integration pass) to either gate or split; not touched to avoid clobbering their live work.
+
+## P3/P4 — /accounts + /ai-decisions (2026-11-09)
+
+- `/accounts` (UI-UX §E3.5): type-grouped tree, toggle, create form; RBAC via `can_manage_users` for writes; fail-closed validation (code/type/currency whitelists) with three-part error re-render; audit events `ACCOUNT_CREATE`/`ACCOUNT_TOGGLE`. Tests: list/empty (1), create→toggle round-trip + real row counts (1), non-admin 403 (1).
+- `/ai-decisions` (UI-UX §E3.6): pending drafts review surface — source always visible, deterministic completeness risk score (low/med/high + `meter`), adopt via the existing `/drafts/adopt` form path (never direct posting), `/ai-decisions/reject` (PRG + audit). Test: draft queue with risk bands + reject round-trip (1).
+- Verification at capture: lib 112 passed / 0 failed; clippy EXIT=0; partner's bankpay_api/bankpay_persistence suites green too.
+- Note (open item): partner's `bankpay_page` handler routes are ungated in api.rs — `/bankpay` HTML page serves on the default build. Flagged for the partner stream (or next integration pass) to either gate or split; not touched to avoid clobbering their live work.
+
 ## PRE-R1a — route characterization (PIN) suite (2026-11-09)
 
 - New `platform/tests/characterization.rs` (6 tests, 27 endpoints): public contract (login/health/css); anonymous protected GETs → 303 /login (12 routes); authenticated GET markers (7 pages) + report pages + CSV (`?ym=YYYY-MM`); detail 404; anonymous POSTs → 303 (10 routes); bad-CSRF behavior (exact 403 for /transactions with a complete form; 4xx for the other 9); logout never-5xx.

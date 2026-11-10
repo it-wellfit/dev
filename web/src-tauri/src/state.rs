@@ -1,5 +1,7 @@
-﻿#![allow(dead_code)]
-// Application State for Flaps ERP Web
+#![allow(dead_code)]
+// Application State for Flaps ERP
+// INV-01 對齊（2026-11-09）：金額一律 i64 minor（整數分），禁用浮點；
+// 資料鏡射自 V2.8／domain 模型，供作者面工具使用（UI SSOT 為 platform 伺服器）。 Web
 // Tauri 2.0 State Management
 
 use serde::{Deserialize, Serialize};
@@ -36,10 +38,10 @@ impl AppState {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DashboardData {
     pub total_transactions: i32,
-    pub total_amount: f64,
+    pub total_amount_minor: i64,
     pub active_accounts: i32,
     pub pending_transactions: i32,
-    pub avg_processing_time: f64,
+    pub avg_processing_time_ms: u64,
     pub system_health: SystemHealth,
 }
 
@@ -98,7 +100,7 @@ pub struct Account {
     pub name: String,
     pub account_type: String,
     pub currency: String,
-    pub balance: f64,
+    pub balance_minor: i64,
     pub is_active: bool,
 }
 
@@ -106,7 +108,7 @@ pub struct Account {
 pub struct Transaction {
     pub id: String,
     pub account_id: String,
-    pub amount: f64,
+    pub amount_minor: i64,
     pub currency: String,
     pub description: String,
     pub date: String,

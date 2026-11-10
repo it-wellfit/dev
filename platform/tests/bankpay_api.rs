@@ -709,6 +709,36 @@ async fn bankpay_config_form_requires_manage_and_saves() {
     assert_eq!(url_in_db, "https://esun.example.test");
 }
 
+// ── 桌面版（Tauri）UI 整合 ──
+
+#[tokio::test]
+async fn tauri_preview_serves_desktop_ui_with_cross_nav() {
+    let (app, pool) = in_memory_app().await;
+    seed_admin(&pool).await;
+    // 未登入 → 303（HTML 群組）。
+    let (status, _, _) = send(app.clone(), get("/tauri-preview", None)).await;
+    assert_eq!(status, StatusCode::SEE_OTHER);
+
+    let cookie = login(&app).await;
+    let (status, body, _) = send(app.clone(), get("/tauri-preview", Some(&cookie))).await;
+    assert_eq!(status, StatusCode::OK, "desktop UI served verbatim");
+    assert!(
+        body.contains("Flaps ERP 工作台"),
+        "desktop shell title present"
+    );
+    // 雙向整合連結：桌面版頁內可回伺服器工作台。
+    assert!(
+        body.contains("工作台（伺服器版）"),
+        "cross-link back to platform must exist"
+    );
+    // 平台導航「不得」出現開發紀錄入口（使用者優先；路由仍存在供開發）。
+    let (_, index_body, _) = send(app.clone(), get("/", Some(&cookie))).await;
+    assert!(
+        !index_body.contains(r#"href="/tauri-preview""#),
+        "dev artifact must not appear in user-facing nav"
+    );
+}
+
 /// 極簡百分號編碼（測試用；權杖字元集為 URL 安全字元，僅防禦性處理）。
 fn urlencode(input: &str) -> String {
     let mut out = String::with_capacity(input.len());

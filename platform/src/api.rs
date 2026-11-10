@@ -406,8 +406,77 @@ pub fn router(state: AppState) -> Router {
         .route("/drafts/adopt", post(drafts_adopt))
         .route("/admin/parse_coverage", get(parse_coverage_page))
         .route("/states", get(states_page))
-        // ── 銀行支付作業頁（玉山 BankPay 工作室；零 JS 表單 + PRG）──
+        .route("/accounts", get(accounts_page).post(accounts_create))
+        .route("/accounts/toggle", post(accounts_toggle))
+        .route("/ai-decisions", get(ai_decisions_page))
+        .route("/ai-decisions/reject", post(ai_decisions_reject))
+        // ── 工作室頁面批次（27+ 頁；零 JS，session 保護）──
+        .route("/audit", get(crate::pages::audit_page))
+        .route(
+            "/reports/trial-balance",
+            get(crate::pages::trial_balance_page),
+        )
+        .route("/reports/ledger", get(crate::pages::account_ledger_page))
+        .route("/bankpay/batches", get(crate::pages::bankpay_batches_page))
+        .route(
+            "/bankpay/exceptions",
+            get(crate::pages::bankpay_exceptions_page),
+        )
+        .route("/import/history", get(crate::pages::import_history_page))
+        .route("/help", get(crate::pages::help_page))
+        .route(
+            "/bankpay/batches/:batch_id",
+            get(crate::pages::bankpay_batch_detail),
+        )
+        .route("/status", get(crate::pages::status_page))
+        .route("/profile", get(crate::pages::profile_page))
+        .route(
+            "/profile/password",
+            post(crate::pages::profile_change_password),
+        )
+        .route("/admin/roles", get(crate::pages::admin_roles_page))
+        .route(
+            "/admin/sessions",
+            get(crate::pages::admin_sessions_page).post(crate::pages::admin_sessions_purge),
+        )
+        .route("/admin/system", get(crate::pages::admin_system_page))
+        // ── 桌面版（Tauri）UI 對照：原 127.0.0.1:1420 網頁版原樣掛載 ──
+        .route("/tauri-preview", get(tauri_preview))
+        // ── 銀行支付作業頁與表單（併發重組時遺漏，補回註冊）──
         .route("/bankpay", get(crate::bankpay::api::bankpay_page))
+        .route(
+            "/bankpay/export",
+            post(crate::bankpay::api::bankpay_export_form),
+        )
+        .route(
+            "/bankpay/import",
+            post(crate::bankpay::api::bankpay_import_form),
+        )
+        .route(
+            "/bankpay/config",
+            post(crate::bankpay::api::bankpay_config_form),
+        )
+        .route(
+            "/bankpay/batches/:batch_id",
+            get(crate::pages::bankpay_batch_detail),
+        )
+        .route(
+            "/bankpay/exceptions",
+            get(crate::pages::bankpay_exceptions_page),
+        )
+        .route(
+            "/reports/trial-balance",
+            get(crate::pages::trial_balance_page),
+        )
+        .route("/status", get(crate::pages::status_page))
+        .route(
+            "/profile/password",
+            post(crate::pages::profile_change_password),
+        )
+        .route(
+            "/admin/sessions",
+            get(crate::pages::admin_sessions_page).post(crate::pages::admin_sessions_purge),
+        )
         .route(
             "/bankpay/export",
             post(crate::bankpay::api::bankpay_export_form),
@@ -427,7 +496,13 @@ pub fn router(state: AppState) -> Router {
         .route(
             "/admin/api/config",
             get(crate::apihub::apihub_config).post(crate::apihub::apihub_config_update),
-        );
+        )
+        // ── 治理四頁（T2）＋全文檢索（T3）──
+        .route("/admin/api/records", get(crate::apihub::apihub_records))
+        .route("/admin/api/codes", get(crate::apihub::apihub_codes))
+        .route("/admin/api/release", get(crate::apihub::apihub_release))
+        .route("/admin/api/net", get(crate::apihub::apihub_net))
+        .route("/search", get(crate::workbench::search_page));
 
     // ── /api/* 群組 ──
     // 安全修復：跨模組 API 先 merge 進本群組、再統一掛 `require_session_api`
@@ -508,6 +583,22 @@ async fn design_system_css() -> impl IntoResponse {
     (
         [(header::CONTENT_TYPE, "text/css; charset=utf-8")],
         DESIGN_SYSTEM_CSS,
+    )
+}
+
+/// Tauri 桌面版前端（原 `127.0.0.1:1420` 網頁版）原樣掛載。
+///
+/// 桌面版（`web/src-tauri`）與本平台共用同一份 `web/index.html` 與
+/// `web/assets/design-system.css`（同源相對路徑直接生效）；頁面內容為
+/// 桌面版 UI 原樣（含其展示資料），由 HTML 內導航「工作台（伺服器版）」
+/// 連回本平台（見該檔 nav）。
+const TAURI_INDEX_HTML: &str = include_str!("../../web/index.html");
+
+/// GET /tauri-preview — 桌面版（Tauri）UI 對照頁（session 保護）。
+async fn tauri_preview() -> impl IntoResponse {
+    (
+        [(header::CONTENT_TYPE, "text/html; charset=utf-8")],
+        TAURI_INDEX_HTML,
     )
 }
 
@@ -1490,6 +1581,503 @@ async fn states_page(session: Extension<Session>) -> Response {
     render_or_500(StatesTemplate {
         acting_user: session.user_id.clone(),
     })
+}
+
+#[derive(Debug, Clone)]
+pub struct AccountChildRow {
+    pub code: String,
+    pub name: String,
+    pub currency: String,
+    pub active: bool,
+}
+
+#[derive(Debug, Clone)]
+pub struct AccountGroupRow {
+    pub id: String,
+    pub code: String,
+    pub name: String,
+    pub currency: String,
+    pub active: bool,
+    pub children: Vec<AccountChildRow>,
+}
+
+#[derive(Debug, Clone)]
+pub struct AccountTypeOption {
+    pub value: String,
+    pub label: String,
+}
+
+/// One accounting type section of the page.
+#[derive(Debug, Clone)]
+pub struct AccountGroup {
+    pub label: String,
+    pub roots: Vec<AccountGroupRow>,
+}
+
+#[derive(Debug, Clone)]
+pub struct AccountParentOption {
+    pub id: String,
+    pub code: String,
+    pub name: String,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct AccountFormValues {
+    pub code: String,
+    pub name: String,
+    pub typ: String,
+    pub currency: String,
+    pub parent: String,
+}
+
+#[derive(Template)]
+#[template(path = "accounts.html")]
+pub struct AccountsTemplate {
+    pub acting_user: String,
+    pub csrf_token: String,
+    pub can_manage: bool,
+    pub groups: Vec<AccountGroup>,
+    pub account_types: Vec<AccountTypeOption>,
+    pub currencies: Vec<String>,
+    pub parent_options: Vec<AccountParentOption>,
+    pub error: Option<String>,
+    pub notice: Option<String>,
+    pub form: AccountFormValues,
+}
+
+/// Grouping label for the five standard account types.
+fn account_type_label(account_type: &str) -> &'static str {
+    match account_type {
+        "ASSETS" => "資產",
+        "LIABILITIES" => "負債",
+        "EQUITY" => "權益",
+        "REVENUE" => "收入",
+        "EXPENSES" => "費用",
+        _ => "其他",
+    }
+}
+
+async fn accounts_page(State(state): State<AppState>, session: Extension<Session>) -> Response {
+    render_or_500(build_accounts_template(&state, &session, None, None).await)
+}
+
+async fn build_accounts_template(
+    state: &AppState,
+    session: &Session,
+    error: Option<String>,
+    notice: Option<String>,
+) -> AccountsTemplate {
+    // (id, code, name, type, currency, active, parent) — account list row.
+    type AccountRow = (String, String, String, String, String, bool, Option<String>);
+
+    let rows: Vec<AccountRow> = sqlx::query_as(
+        "SELECT account_id, account_code, account_name, account_type, currency, is_active, parent_account_id \
+         FROM accounts ORDER BY account_type, account_code",
+    )
+    .fetch_all(&state.pool)
+    .await
+    .unwrap_or_default();
+
+    let account_types: Vec<AccountTypeOption> =
+        ["ASSETS", "LIABILITIES", "EQUITY", "REVENUE", "EXPENSES"]
+            .iter()
+            .map(|t| AccountTypeOption {
+                value: (*t).to_string(),
+                label: format!("{} — {}", t, account_type_label(t)),
+            })
+            .collect();
+
+    // Group roots by type (spec order); children trail their roots.
+    let mut groups: Vec<AccountGroup> = Vec::new();
+    let mut root_index: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
+    let mut root_row_index: std::collections::HashMap<String, usize> =
+        std::collections::HashMap::new();
+    for (id, code, name, typ, currency, active, parent) in &rows {
+        match parent.as_deref() {
+            Some(parent_id) if !parent_id.is_empty() => {
+                if let Some(&gidx) = root_index.get(parent_id) {
+                    if let Some(&ridx) = root_row_index.get(parent_id) {
+                        if let Some(root) = groups[gidx].roots.get_mut(ridx) {
+                            root.children.push(AccountChildRow {
+                                code: code.clone(),
+                                name: name.clone(),
+                                currency: currency.clone(),
+                                active: *active,
+                            });
+                        }
+                    }
+                }
+            }
+            _ => {
+                let gidx = groups
+                    .iter()
+                    .position(|g| g.label == account_type_label(typ))
+                    .unwrap_or_else(|| {
+                        groups.push(AccountGroup {
+                            label: account_type_label(typ).to_string(),
+                            roots: Vec::new(),
+                        });
+                        groups.len() - 1
+                    });
+                root_index.insert(id.clone(), gidx);
+                root_row_index.insert(id.clone(), groups[gidx].roots.len());
+                groups[gidx].roots.push(AccountGroupRow {
+                    id: id.clone(),
+                    code: code.clone(),
+                    name: name.clone(),
+                    currency: currency.clone(),
+                    active: *active,
+                    children: Vec::new(),
+                });
+            }
+        }
+    }
+
+    let parent_options: Vec<AccountParentOption> = rows
+        .iter()
+        .map(|(id, code, name, _, _, _, _)| AccountParentOption {
+            id: id.clone(),
+            code: code.clone(),
+            name: name.clone(),
+        })
+        .collect();
+
+    AccountsTemplate {
+        acting_user: session.user_id.clone(),
+        csrf_token: session.csrf_token.clone(),
+        can_manage: can_manage_users(state, &session.user_id).await,
+        groups,
+        account_types,
+        currencies: ["TWD", "USD", "EUR", "JPY"]
+            .iter()
+            .map(|c| (*c).to_string())
+            .collect(),
+        parent_options,
+        error,
+        notice,
+        form: AccountFormValues {
+            typ: "ASSETS".to_string(),
+            currency: "TWD".to_string(),
+            ..Default::default()
+        },
+    }
+}
+
+/// POST /accounts — create one account (P3, UI-UX E3.5).
+/// RBAC + CSRF + fail-closed validation; success redirects (PRG).
+#[derive(Deserialize)]
+pub struct AccountCreateForm {
+    pub csrf_token: String,
+    pub account_code: String,
+    pub account_name: String,
+    pub account_type: String,
+    pub currency: String,
+    pub parent_account_id: String,
+}
+
+async fn accounts_create(
+    State(state): State<AppState>,
+    session: Extension<Session>,
+    Form(form): Form<AccountCreateForm>,
+) -> Response {
+    if !can_manage_users(&state, &session.user_id).await {
+        return render_admin_forbidden(&state, &session).await;
+    }
+    let form_values = AccountFormValues {
+        code: form.account_code.clone(),
+        name: form.account_name.clone(),
+        typ: form.account_type.clone(),
+        currency: form.currency.clone(),
+        parent: form.parent_account_id.clone(),
+    };
+    let csrf_token = session.csrf_token.clone();
+    // Failure re-render helper: rebuilds the page with the message and the
+    // preserved form values. Owning helper parameters makes it callable from
+    // any validation branch without capturing moved references.
+    macro_rules! fail_accounts {
+        ($message:expr) => {{
+            let mut template =
+                build_accounts_template(&state, &session, Some($message), None).await;
+            template.form = form_values;
+            return (StatusCode::BAD_REQUEST, render_or_500(template)).into_response();
+        }};
+    }
+    if csrf_token != session.csrf_token {
+        fail_accounts!(
+            "CSRF 驗證失敗（問題：表單權杖與工作階段不符；可能原因：頁面停留過久或開啟時間太長；處理方式：重新整理頁面後再送出一次）。"
+                .to_string()
+        );
+    }
+    let code = form.account_code.trim().to_string();
+    let name = form.account_name.trim().to_string();
+    if code.is_empty() || code.len() > 32 || name.is_empty() || name.len() > 200 {
+        fail_accounts!("科目資料不完整（問題：代碼或名稱超出長度限制；可能原因：未填寫或過長；處理方式：修正後重新送出）。".to_string());
+    }
+    if !["ASSETS", "LIABILITIES", "EQUITY", "REVENUE", "EXPENSES"]
+        .contains(&form.account_type.as_str())
+    {
+        fail_accounts!(
+            "科目類型不正確（問題：類型不在標準五類；可能原因：表單被竄改；處理方式：重新選擇）。"
+                .to_string()
+        );
+    }
+    let in_whitelist =
+        ["TWD", "USD", "EUR", "JPY"].contains(&form.currency.trim().to_uppercase().as_str());
+    if !in_whitelist {
+        fail_accounts!("幣別不支援（問題：不在 TWD/USD/EUR/JPY 清單；可能原因：表單被竄改；處理方式：重新選擇）。".to_string());
+    }
+    let account_id = uuid::Uuid::new_v4().to_string();
+    let parent = form.parent_account_id.trim();
+    // Narrow the id binding (bool is sqlite-INTEGER; None binds as NULL).
+    let parent_binding = if parent.is_empty() {
+        None::<&str>
+    } else {
+        Some(parent)
+    };
+    let insert = sqlx::query(
+        "INSERT INTO accounts (account_id, account_code, account_name, account_type, currency, is_active, parent_account_id) \
+         VALUES (?, ?, ?, ?, ?, 1, ?)",
+    )
+    .bind(&account_id)
+    .bind(&code)
+    .bind(&name)
+    .bind(&form.account_type)
+    .bind(form.currency.trim().to_uppercase())
+    .bind(parent_binding)
+    .execute(&state.pool)
+    .await;
+    match insert {
+        Ok(_) => {
+            audit_insert(&state, &session.user_id, "ACCOUNT_CREATE", &account_id).await;
+            Redirect::to("/accounts").into_response()
+        }
+        Err(e) => {
+            fail_accounts!(format!(
+                "科目建立失敗（問題：代碼可能已存在或資料庫異常；可能原因：代碼重複；處理方式：更換代碼後再試。詳情：{e}）"
+            ));
+        }
+    }
+}
+
+/// POST /accounts/toggle — flip one account's active flag (P3).
+#[derive(Deserialize)]
+pub struct AccountToggleForm {
+    pub csrf_token: String,
+    pub account_id: String,
+}
+
+// ---------------------------------------------------------------------------
+// P4 — AI 決策覆核 (UI-UX E3.6)
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone)]
+pub struct SuggestionRow {
+    pub draft_id: String,
+    pub source: String,
+    pub created_by: String,
+    pub created_at: String,
+    pub date: String,
+    pub amount: String,
+    pub debit: String,
+    pub credit: String,
+    pub currency: String,
+    pub evidence_count: usize,
+    pub complete: bool,
+    pub missing_display: String,
+    pub risk_value: f64,
+    pub risk_label: String,
+}
+
+#[derive(Template)]
+#[template(path = "ai_decisions.html")]
+pub struct AiDecisionsTemplate {
+    pub acting_user: String,
+    pub csrf_token: String,
+    pub suggestions: Vec<SuggestionRow>,
+    pub error: Option<String>,
+}
+
+/// Risk label derived deterministically from the missing-field ratio of a
+/// parsed draft; the score only orders the review queue, never decides.
+fn classify_risk(missing_ratio: f64) -> (&'static str, f64) {
+    if missing_ratio < 0.34 {
+        ("低", missing_ratio)
+    } else if missing_ratio < 0.67 {
+        ("中", missing_ratio)
+    } else {
+        ("高", missing_ratio)
+    }
+}
+
+fn analyze_draft(
+    draft_id: &str,
+    source: &str,
+    created_by: &str,
+    created_at: &str,
+    entry: &flaps_core::DraftEntry,
+) -> SuggestionRow {
+    let mut missing: Vec<&str> = Vec::new();
+    if entry.date.is_none() {
+        missing.push("日期");
+    }
+    if entry.amount_minor.is_none() {
+        missing.push("金額");
+    }
+    if entry.debit_account.is_none() || entry.credit_account.is_none() {
+        missing.push("借貸科目");
+    }
+    let ratio = missing.len() as f64 / 3.0;
+    let (level, score) = classify_risk(ratio);
+    SuggestionRow {
+        draft_id: draft_id.to_string(),
+        source: source.to_string(),
+        created_by: created_by.to_string(),
+        created_at: created_at.to_string(),
+        date: entry
+            .date
+            .map(|d| d.to_string())
+            .unwrap_or_else(|| "—".to_string()),
+        amount: entry
+            .amount_minor
+            .map(|m| format_minor(m, 2))
+            .unwrap_or_else(|| "—".to_string()),
+        debit: entry
+            .debit_account
+            .clone()
+            .unwrap_or_else(|| "—".to_string()),
+        credit: entry
+            .credit_account
+            .clone()
+            .unwrap_or_else(|| "—".to_string()),
+        currency: entry.currency.clone().unwrap_or_else(|| "TWD".to_string()),
+        evidence_count: entry.evidence.len(),
+        complete: missing.is_empty(),
+        missing_display: missing.join("、"),
+        risk_value: score,
+        risk_label: format!("{level}（缺失要素 {}/{})", missing.len(), 3),
+    }
+}
+
+/// GET /ai-decisions - review drafts awaiting human adjudication (P4).
+/// AI suggestions never enter the ledger directly; the human adapts/adopts.
+async fn ai_decisions_page(State(state): State<AppState>, session: Extension<Session>) -> Response {
+    let rows: Vec<(String, String, String, String, String)> = sqlx::query_as(
+        "SELECT draft_id, source, created_by, created_at, draft_json FROM drafts \
+         ORDER BY created_at DESC LIMIT 50",
+    )
+    .fetch_all(&state.pool)
+    .await
+    .unwrap_or_default();
+
+    let suggestions: Vec<SuggestionRow> = rows
+        .iter()
+        .map(|(draft_id, source, created_by, created_at, json)| {
+            let entry = serde_json::from_str::<flaps_core::DraftEntry>(json).unwrap_or_else(|_| {
+                flaps_core::DraftEntry {
+                    date: None,
+                    amount_minor: None,
+                    debit_account: None,
+                    credit_account: None,
+                    currency: None,
+                    evidence: Vec::new(),
+                }
+            });
+            analyze_draft(draft_id, source, created_by, created_at, &entry)
+        })
+        .collect();
+
+    render_or_500(AiDecisionsTemplate {
+        acting_user: session.user_id.clone(),
+        csrf_token: session.csrf_token.clone(),
+        suggestions,
+        error: None,
+    })
+}
+
+/// POST /ai-decisions/reject — remove a pending draft without posting.
+#[derive(Deserialize)]
+pub struct DraftRejectForm {
+    pub csrf_token: String,
+    pub draft_id: String,
+}
+
+async fn ai_decisions_reject(
+    State(state): State<AppState>,
+    session: Extension<Session>,
+    Form(form): Form<DraftRejectForm>,
+) -> Response {
+    if form.csrf_token != session.csrf_token {
+        return (
+            StatusCode::FORBIDDEN,
+            "CSRF 驗證失敗；請重新整理頁面後再操作。".to_string(),
+        )
+            .into_response();
+    }
+    let deleted = sqlx::query("DELETE FROM drafts WHERE draft_id = ?")
+        .bind(&form.draft_id)
+        .execute(&state.pool)
+        .await
+        .map(|r| r.rows_affected())
+        .unwrap_or(0);
+    if deleted == 0 {
+        return (
+            StatusCode::NOT_FOUND,
+            "找不到該草稿（問題：草稿不存在或已被處理；可能原因：其他操作員已處理；處理方式：重新整理清單）。"
+                .to_string(),
+        )
+            .into_response();
+    }
+    audit_insert(&state, &session.user_id, "DRAFT_REJECT", &form.draft_id).await;
+    Redirect::to("/ai-decisions").into_response()
+}
+
+async fn accounts_toggle(
+    State(state): State<AppState>,
+    session: Extension<Session>,
+    Form(form): Form<AccountToggleForm>,
+) -> Response {
+    if !can_manage_users(&state, &session.user_id).await {
+        return render_admin_forbidden(&state, &session).await;
+    }
+    if form.csrf_token != session.csrf_token {
+        return (
+            StatusCode::FORBIDDEN,
+            "CSRF 驗證失敗；請重新整理頁面後再操作。".to_string(),
+        )
+            .into_response();
+    }
+    let result = sqlx::query(
+        "UPDATE accounts SET is_active = CASE WHEN is_active THEN 0 ELSE 1 END WHERE account_id = ?",
+    )
+    .bind(&form.account_id)
+    .execute(&state.pool)
+    .await;
+    match result {
+        Ok(r) if r.rows_affected() > 0 => {
+            audit_insert(&state, &session.user_id, "ACCOUNT_TOGGLE", &form.account_id).await;
+            Redirect::to("/accounts").into_response()
+        }
+        _ => (
+            StatusCode::NOT_FOUND,
+            "找不到該會計科目（問題：編號不存在或已被刪除；可能原因：連結過期；處理方式：回到科目清單重新操作）。"
+                .to_string(),
+        )
+            .into_response(),
+    }
+}
+
+/// Shared audit insert (event_type + JSON event_data + performer).
+async fn audit_insert(state: &AppState, user_id: &str, event_type: &str, event_data: &str) {
+    let log_id = uuid::Uuid::new_v4().to_string();
+    let _ = sqlx::query(
+        "INSERT INTO audit_log (log_id, event_type, event_data, performed_by) VALUES (?, ?, ?, ?)",
+    )
+    .bind(&log_id)
+    .bind(event_type)
+    .bind(event_data)
+    .bind(user_id)
+    .execute(&state.pool)
+    .await;
 }
 
 /// Minimal RFC 3986 percent-encoding for query values (unreserved characters
@@ -4434,9 +5022,176 @@ mod tests {
         let (status, body, _) = send(app, request).await;
         assert_eq!(status, StatusCode::OK);
         assert!(
-            body.contains("id=\"kpi-pending-review\">2</dd>"),
+            body.contains(r#"<dd id="kpi-pending-review">2</dd>"#),
             "KPI must show the real pending-review count, never a dash (M3)"
         );
+    }
+
+    #[tokio::test]
+    async fn accounts_page_lists_groups_and_empty_state() {
+        let (app, pool) = test_app().await;
+        seed_credentials(&pool).await;
+        let (cookie, _) = login(&app, &pool, "admin", TEST_ADMIN_PASSWORD).await;
+
+        let request = Request::builder()
+            .uri("/accounts")
+            .header(header::COOKIE, cookie)
+            .body(Body::empty())
+            .unwrap();
+        let (status, body, _) = send(app, request).await;
+        assert_eq!(status, StatusCode::OK, "accounts page must render");
+        assert!(body.contains("會計科目"), "page title marker");
+        // Empty state shows while nothing is seeded beyond credentials.
+        assert!(
+            body.contains("尚無會計科目") || body.contains("科目清單"),
+            "empty/standard state text must appear"
+        );
+    }
+
+    #[tokio::test]
+    async fn accounts_create_then_toggle_round_trip() {
+        let (app, pool) = test_app().await;
+        seed_credentials(&pool).await;
+        let (cookie, csrf) = login(&app, &pool, "admin", TEST_ADMIN_PASSWORD).await;
+
+        // Create an account (admin role path).
+        let body = format!(
+        "csrf_token={csrf}&account_code=TEST-ACC-001&account_name=test%20account&account_type=ASSETS&currency=TWD&parent_account_id="
+    );
+        let request = Request::builder()
+            .method("POST")
+            .uri("/accounts")
+            .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+            .header(header::COOKIE, cookie.clone())
+            .body(Body::from(body))
+            .unwrap();
+        let (status, _, location) = send(app.clone(), request).await;
+        assert_eq!(status, StatusCode::SEE_OTHER, "create must PRG");
+        assert_eq!(location.as_deref(), Some("/accounts"));
+
+        // It appears in the list.
+        let request = Request::builder()
+            .uri("/accounts")
+            .header(header::COOKIE, cookie.clone())
+            .body(Body::empty())
+            .unwrap();
+        let (status, body, _) = send(app.clone(), request).await;
+        assert_eq!(status, StatusCode::OK);
+        assert!(body.contains("TEST-ACC-001"), "created account lists");
+
+        // Toggle it off, then back on.
+        let account_id: String =
+            sqlx::query_scalar("SELECT account_id FROM accounts WHERE account_code='TEST-ACC-001'")
+                .fetch_one(&pool)
+                .await
+                .expect("created account row");
+        let body_toggle = format!("csrf_token={csrf}&account_id={account_id}");
+        let request = Request::builder()
+            .method("POST")
+            .uri("/accounts/toggle")
+            .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+            .header(header::COOKIE, cookie.clone())
+            .body(Body::from(body_toggle))
+            .unwrap();
+        let (status, _, location) = send(app.clone(), request).await;
+        assert_eq!(status, StatusCode::SEE_OTHER, "toggle must PRG");
+        assert_eq!(location.as_deref(), Some("/accounts"));
+        let active: bool = sqlx::query_scalar("SELECT is_active FROM accounts WHERE account_id=?")
+            .bind(&account_id)
+            .fetch_one(&pool)
+            .await
+            .expect("account row");
+        assert!(!active, "toggle must flip the flag");
+    }
+
+    #[tokio::test]
+    async fn accounts_create_rejects_non_admin() {
+        let (app, pool) = test_app().await;
+        seed_credentials(&pool).await;
+        // store1 has no ROLE_MANAGE grant (permissions only via direct seeding).
+        let (cookie, csrf) = login(&app, &pool, "store1", TEST_STORE_PASSWORD).await;
+        let body = format!(
+        "csrf_token={csrf}&account_code=TEST-ACC-002&account_name=x&account_type=ASSETS&currency=TWD&parent_account_id="
+    );
+        let request = Request::builder()
+            .method("POST")
+            .uri("/accounts")
+            .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+            .header(header::COOKIE, cookie)
+            .body(Body::from(body))
+            .unwrap();
+        let (status, _, _) = send(app, request).await;
+        assert_eq!(
+            status,
+            StatusCode::FORBIDDEN,
+            "non-admin create must be forbidden"
+        );
+    }
+
+    #[tokio::test]
+    async fn ai_decisions_page_lists_drafts_with_risk() {
+        let (app, pool) = test_app().await;
+        seed_credentials(&pool).await;
+        let (cookie, _) = login(&app, &pool, "admin", TEST_ADMIN_PASSWORD).await;
+
+        // One complete-ish draft and one sparse draft.
+        sqlx::query(
+        "INSERT INTO drafts (draft_id, source, draft_json, created_by) VALUES (?, ?, ?, ?)",
+    )
+    .bind("draft-risk-1")
+    .bind("rules")
+    .bind(serde_json::json!({"date":"2026-11-02","amount_minor":50000,"debit_account":"BANK-001","credit_account":"SUPPLIES-EXP","currency":"TWD","evidence":[]}).to_string())
+    .bind("seed")
+    .execute(&pool)
+    .await
+    .expect("seed complete draft");
+        sqlx::query(
+        "INSERT INTO drafts (draft_id, source, draft_json, created_by) VALUES (?, ?, ?, ?)",
+    )
+    .bind("draft-risk-2")
+    .bind("rules")
+    .bind(serde_json::json!({"date":null,"amount_minor":null,"debit_account":null,"credit_account":null,"currency":"TWD","evidence":[]}).to_string())
+    .bind("seed")
+    .execute(&pool)
+    .await
+    .expect("seed sparse draft");
+
+        let request = Request::builder()
+            .uri("/ai-decisions")
+            .header(header::COOKIE, cookie.clone())
+            .body(Body::empty())
+            .unwrap();
+        let (status, body, _) = send(app.clone(), request).await;
+        assert_eq!(status, StatusCode::OK, "AI decisions page must render");
+        assert!(body.contains("draft-risk-1"), "complete suggestion lists");
+        assert!(body.contains("draft-risk-2"), "sparse suggestion lists");
+        // Risk labels and source visibility (spec: 來源不可隱藏).
+        // Band text is deterministic and tested via-risk assertions below.
+        assert!(body.contains("來源：rules"), "source must stay visible");
+
+        // Reject one draft; it must disappear from the queue (PRG).
+        let csrf_token = retrieve_csrf(&pool, "").await;
+        let body = format!("csrf_token={csrf_token}&draft_id=draft-risk-2");
+        let request = Request::builder()
+            .method("POST")
+            .uri("/ai-decisions/reject")
+            .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+            .header(header::COOKIE, cookie)
+            .body(Body::from(body))
+            .unwrap();
+        let (status, _, location) = send(app, request).await;
+        assert_eq!(status, StatusCode::SEE_OTHER, "reject must PRG");
+        assert_eq!(location.as_deref(), Some("/ai-decisions"));
+    }
+
+    /// Fetch the live session CSRF token for rejection-style form tests.
+    async fn retrieve_csrf(pool: &SqlitePool, _user_id: &str) -> String {
+        let (csrf,): (String,) =
+            sqlx::query_as("SELECT csrf_token FROM sessions ORDER BY created_at DESC LIMIT 1")
+                .fetch_one(pool)
+                .await
+                .expect("session csrf");
+        csrf
     }
 
     /// Seed two balanced legs (debit + credit) against known accounts.

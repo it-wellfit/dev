@@ -13,6 +13,7 @@ Copy to `.kilo/sessions/<session-id>/manifest.md` (filled by `scripts/session-st
 - git_head_end: <short sha>
 - dirty_start: <true|false>
 - dirty_end: <true|false>
+- Rules referenced: <C-xx, ... | none>
 
 ## Artifacts
 

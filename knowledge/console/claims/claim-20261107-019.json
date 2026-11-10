@@ -1,0 +1,26 @@
+{
+  "id": "claim-20261107-019",
+  "claim_type": "invariant",
+  "status": "published",
+  "track": "b",
+  "confidence": 0.7941171494891214,
+  "valid_from": "2026-11-07",
+  "valid_to": null,
+  "recorded_at": "2026-11-07T11:03:14.290755500Z",
+  "supersedes": [],
+  "superseded_by": null,
+  "evidence": [
+    {
+      "path": "docs/engineering/KNOWLEDGE_EVOLUTION_MODULE.md",
+      "rev": "working-tree",
+      "quote": "- `retired`：完全出庫；歷史保留於 raw/ 與帳本，供稽核"
+    }
+  ],
+  "topics": [
+    "kem",
+    "lifecycle"
+  ],
+  "source": "raw/kem/2026-11-07-seed.md",
+  "title": "retired 為唯一終態且完全出庫",
+  "body": "Retired claims leave the serving path entirely; history stays in raw/ and the ledger for audit, and superseded claims remain retrievable but demoted."
+}

@@ -1,0 +1,17 @@
+# cargo audit configuration for the platform-hub workspace
+# Evidence rule (GOVERNANCE_STANDARD P2/P7): every ignored advisory must carry
+# a written disposition. Re-review quarterly or when the dependency graph
+# changes. Mirrors the root workspace `.cargo/audit.toml` dispositions.
+
+[advisories]
+ignore = [
+    # RUSTSEC-2026-0459 (CVE-2026-119375, severity 6.8 medium, 2026-11-09)
+    # Same advisory and same disposition as the root workspace: sqlx-sqlite
+    # pins libsqlite3-sys ">=0.30.1, <0.38.0" (hub lock resolves 0.37.0),
+    # while the fix ships in >=0.39.0 — no in-range upgrade exists upstream.
+    # Exposure is LOCAL-only (crafted .db + mismatched-page-size -wal pair);
+    # hub artifacts serve internal operator flows and never open third-party
+    # database files. Revisit if: (a) sqlx widens the range to >=0.39, or
+    # (b) the hub ever processes external database files.
+    "RUSTSEC-2026-0459",
+]

@@ -1,0 +1,26 @@
+{
+  "id": "claim-20261107-020",
+  "claim_type": "fact",
+  "status": "published",
+  "track": "b",
+  "confidence": 0.7882775588909094,
+  "valid_from": "2026-11-07",
+  "valid_to": null,
+  "recorded_at": "2026-11-07T11:03:14.290758500Z",
+  "supersedes": [],
+  "superseded_by": null,
+  "evidence": [
+    {
+      "path": ".kilo/plans/1793033512795-flaps-erp-workbench-completion.md",
+      "rev": "working-tree",
+      "quote": "| `/transactions`（分頁） | P99 < 50ms |"
+    }
+  ],
+  "topics": [
+    "flaps-erp",
+    "slo"
+  ],
+  "source": "raw/flaps-erp/2026-11-07-seed.md",
+  "title": "交易分頁頁面 P99 門檻 50ms",
+  "body": "The Flaps ERP workbench sets an SLO of P99 < 50ms for the paginated /transactions page, measured in performance tests."
+}

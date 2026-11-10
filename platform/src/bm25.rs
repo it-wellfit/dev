@@ -73,8 +73,7 @@ impl BM25Index {
     /// Add one raw document; maintains df and length statistics.
     pub fn add_text(&mut self, text: &str) {
         let tokens = tokenize(text);
-        let mut tf: std::collections::HashMap<String, f64> =
-            std::collections::HashMap::new();
+        let mut tf: std::collections::HashMap<String, f64> = std::collections::HashMap::new();
         for token in &tokens {
             *tf.entry(token.clone()).or_insert(0.0) += 1.0;
         }
@@ -102,14 +101,17 @@ impl BM25Index {
         }
     }
 
-    /// Robertson IDF with +0.5 smoothing, floored at 0 (never negative).
+    /// Robertson IDF, identical to kem (`crates/kem/src/search.rs:128`): the
+    /// +1.0 inside the logarithm keeps the value positive for every df ≤ n,
+    /// so a term present in all documents still ranks by term frequency
+    /// (no floor needed — a floor would zero out ubiquitous terms).
     fn idf(&self, term: &str) -> f64 {
         let df = self.df.get(term).copied().unwrap_or(0.0);
         if df <= 0.0 {
             return 0.0;
         }
         let n = self.n_docs;
-        (((n - df - 0.5) / (df + 0.5)) + 1.0).ln().max(0.0)
+        ((n - df + 0.5) / (df + 0.5) + 1.0).ln()
     }
 
     /// BM25 score of one document (by position) against tokenized query terms.
@@ -127,6 +129,12 @@ impl BM25Index {
             score += idf * (tf * (K1 + 1.0) / denom);
         }
         score
+    }
+
+    /// Score one document (by position) against tokenized query terms —
+    /// used by the fusion engine (terms tokenized once per query).
+    pub fn score_at(&self, pos: usize, query_terms: &[String]) -> f64 {
+        self.score_doc(pos, query_terms)
     }
 
     /// Score every document against the query; returns `(position, score)`

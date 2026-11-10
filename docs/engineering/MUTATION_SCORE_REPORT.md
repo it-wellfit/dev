@@ -51,4 +51,4 @@ Monthly: all MoneyError variants render non-empty Display
 - `cargo test -p flaps_core --lib` → **42 passed, 0 failed**
 - `cargo fmt --all -- --check` → **PASS（2026-11-07 全工作區）**；先前 v2 記錄之 api.rs 編碼損壞已由三方合併根因修復（見 docs/encoding-standard.md）
 - `cargo clippy --workspace --all-targets -- -D warnings` → PASS
-- 工作區門檻基線：157 passed / 0 failed（含 stress 100k tx warm p95 422ms ≤ 500ms）
+- 工作區門檻基線：**246 passed / 0 failed**（2026-11-09，sqlx 0.9＋PHASE-R 混合檢索後；含 stress 100k tx warm p95 422ms ≤ 500ms）

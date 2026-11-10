@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>銀行支付設定 — Flaps ERP</title>
+    <title>API 設定 — Flaps ERP 工作台</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%23005fcc'/%3E%3Ctext x='8' y='12' font-size='10' font-family='sans-serif' fill='white' text-anchor='middle' font-weight='bold'%3EF%3C/text%3E%3C/svg%3E">
     <link rel="stylesheet" href="/assets/design-system.css">
 </head>
@@ -13,125 +13,109 @@
     <header class="app-header">
         <div class="container">
             <div>
-                <h1>銀行支付設定</h1>
-                <p class="app-subtitle">玉山銀行企業 ERP 銀企直連 — 設定以 erp_config 為持久層 SSOT</p>
+                <h1>API 設定</h1>
+                <p class="app-subtitle">玉山銀行連線設定（管理員；零 JavaScript）</p>
             </div>
             <p class="app-subtitle">
                 使用者：<strong>{{ acting_user }}</strong>
                 ｜
-                <a class="btn btn-secondary" href="/admin/api/catalog">服務目錄</a>
-                <a class="btn btn-secondary" href="/">返回工作台</a>
+                <a class="btn btn-secondary" href="/admin/api/catalog">返回服務目錄</a>
             </p>
         </div>
     </header>
 
     <main id="main" class="container">
-        <section class="panel" aria-labelledby="cfg-current">
-            <h2 id="cfg-current">現行設定（記憶體＝啟動時由 erp_config 載入）</h2>
-            <div class="table-wrap">
-                <table>
-                    <caption>現行銀行連線設定</caption>
-                    <thead>
-                        <tr>
-                            <th scope="col">設定項</th>
-                            <th scope="col">值</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>運作模式</td>
-                            <td>
-                                {% if esun_mock_mode %}
-                                <span class="badge badge-warning">模擬模式（Mock）— 非真實銀行交易</span>
-                                {% else %}
-                                <span class="badge badge-success">正式模式</span>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        <tr><td>銀行端點 URL</td><td><code>{{ esun_url }}</code></td></tr>
-                        <tr><td>來源系統識別</td><td>{{ source_system_id }}</td></tr>
-                        <tr><td>客戶識別</td><td>{{ customer_id }}</td></tr>
-                        <tr><td>付款帳號</td><td>{{ payer_account }}</td></tr>
-                    </tbody>
-                </table>
-            </div>
-            <p class="section-note">空值顯示為空白（不偽裝成已設定）；模擬模式於全域狀態列以「警告」明示。</p>
-        </section>
-
-        <section class="panel" aria-labelledby="cfg-form">
-            <h2 id="cfg-form">更新設定（零 JS 表單；成功後 303 導回）</h2>
+        <section class="panel" aria-labelledby="config-title">
+            <h2 id="config-title">連線設定</h2>
             <form method="post" action="/admin/api/config">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                 <div class="form-row">
-                    <label for="f-mock">運作模式</label>
-                    <select class="input" id="f-mock" name="esun_mock_mode">
-                        <option value="1" {% if esun_mock_mode %}selected{% endif %}>模擬模式（Mock）— 確定性模擬資料</option>
-                        <option value="0" {% if !esun_mock_mode %}selected{% endif %}>正式模式 — 需完整設定（來源系統＋客戶識別）</option>
-                    </select>
-                    <p class="hint">切換模式影響所有銀行支付端點；正式模式設定不完整時狀態列維持警告。</p>
+                    <label for="cfg-mock">模擬模式（勾選＝確定性模擬，非真實交易）</label>
+                    <input class="input" type="checkbox" id="cfg-mock" name="esun_mock_mode" value="1" {% if esun_mock_mode %}checked{% endif %}>
                 </div>
                 <div class="form-row">
-                    <label for="f-url">銀行端點 URL<span aria-hidden="true"> *</span></label>
-                    <input class="input" type="url" id="f-url" name="esun_url" value="{{ esun_url }}" required>
-                    <p class="hint">留空＝保留現行值；格式須為 https URL。</p>
+                    <label for="cfg-url">玉山匯出端點 URL</label>
+                    <input class="input" type="text" id="cfg-url" name="esun_url" value="{{ esun_url }}">
                 </div>
                 <div class="form-row">
-                    <label for="f-src">來源系統識別</label>
-                    <input class="input" type="text" id="f-src" name="source_system_id" value="{{ source_system_id }}" placeholder="例如：FLAPS-ERP">
+                    <label for="cfg-source">來源系統識別碼</label>
+                    <input class="input" type="text" id="cfg-source" name="source_system_id" value="{{ source_system_id }}">
                 </div>
                 <div class="form-row">
-                    <label for="f-cust">客戶識別</label>
-                    <input class="input" type="text" id="f-cust" name="customer_id" value="{{ customer_id }}" placeholder="例如：89210">
+                    <label for="cfg-customer">客戶識別碼</label>
+                    <input class="input" type="text" id="cfg-customer" name="customer_id" value="{{ customer_id }}">
                 </div>
                 <div class="form-row">
-                    <label for="f-payer">付款帳號</label>
-                    <input class="input" type="text" id="f-payer" name="payer_account" value="{{ payer_account }}" placeholder="例如：0012345678901">
+                    <label for="cfg-payer">付款帳號</label>
+                    <input class="input" type="text" id="cfg-payer" name="payer_account" value="{{ payer_account }}">
                 </div>
                 <div class="form-actions">
-                    <button class="btn btn-primary" type="submit">儲存設定（持久化至 erp_config）</button>
+                    <button class="btn btn-primary" type="submit">保存設定</button>
                 </div>
             </form>
-            <p class="section-note">儲存順序：先持久化（冪等 UPSERT），成功後才更新記憶體；稽核事件 BANKPAY_CONFIG_UPDATE 採 fail-closed 寫入。</p>
-        </section>
-
-        <section class="panel" aria-labelledby="cfg-rows">
-            <h2 id="cfg-rows">erp_config 持久列（{{ rows.len() }} 列）</h2>
-            {% if rows.is_empty() %}
-            <p class="empty-state" data-state-empty>
-                <strong>尚無持久化設定</strong>
-                首次儲存後，五個設定鍵將以決定性 config_id（bankpay:鍵）寫入此表。
-            </p>
-            {% else %}
+            <h3>持久設定列（erp_config）</h3>
             <div class="table-wrap">
                 <table>
-                    <caption>erp_config（config_category = bankpay）</caption>
+                    <caption>bankpay 設定鍵值（持久證據）</caption>
                     <thead>
                         <tr>
-                            <th scope="col">設定鍵</th>
-                            <th scope="col">設定值</th>
+                            <th scope="col">鍵</th>
+                            <th scope="col">值</th>
                             <th scope="col">更新時間</th>
                         </tr>
                     </thead>
                     <tbody>
+                        {% if rows.is_empty() %}
+                        <tr>
+                            <td colspan="3"><p class="empty-state"><strong>尚無持久設定</strong>儲存設定後，此處會出現鍵值列。</p></td>
+                        </tr>
+                        {% else %}
                         {% for r in rows %}
                         <tr>
-                            <td><code>{{ r.key }}</code></td>
+                            <td>{{ r.key }}</td>
                             <td>{{ r.value }}</td>
-                            <td><code>{{ r.updated_at }}</code></td>
+                            <td>{{ r.updated_at }}</td>
                         </tr>
                         {% endfor %}
+                        {% endif %}
                     </tbody>
                 </table>
             </div>
-            {% endif %}
-            <p class="section-note">機器對機器介面：<code>GET/POST /api/bankpay/config</code>（JSON；POST 需 <code>X-CSRF-Token</code>）。</p>
+            <p class="section-note">憑證路徑（mTLS）與 Sandbox 正式通道由維運流程配置，不於本頁呈現密鑰。</p>
+            <div class="table-wrap">
+                <table>
+                    <caption>bankpay 設定鍵值（持久證據）</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col">鍵</th>
+                            <th scope="col">值</th>
+                            <th scope="col">更新時間</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if rows.is_empty() %}
+                        <tr>
+                            <td colspan="3"><p class="empty-state"><strong>尚無持久設定</strong>儲存設定後，此處會出現鍵值列。</p></td>
+                        </tr>
+                        {% else %}
+                        {% for r in rows %}
+                        <tr>
+                            <td>{{ r.key }}</td>
+                            <td>{{ r.value }}</td>
+                            <td>{{ r.updated_at }}</td>
+                        </tr>
+                        {% endfor %}
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+            <p class="section-note">憑證路徑（mTLS）與 Sandbox 正式通道由維運流程配置，不於本頁呈現密鑰。</p>
         </section>
     </main>
 
     <footer class="site-footer">
         <div class="container">
-            <p>Flaps ERP 工作台 · API 資料管理平台（零 JavaScript，WCAG 2.2 AA 方向）</p>
-            <p>規格：docs/ux/UI-UX_需求規格.md · 設計系統：web/assets/design-system.css</p>
+            <p>Flaps ERP 工作台 · API 設定（零 JavaScript，WCAG 2.2 AA 方向）</p>
         </div>
     </footer>
 </body>

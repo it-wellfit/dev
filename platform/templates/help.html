@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>操作指引 — Flaps ERP 工作台</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%23005fcc'/%3E%3Ctext x='8' y='12' font-size='10' font-family='sans-serif' fill='white' text-anchor='middle' font-weight='bold'%3EF%3C/text%3E%3C/svg%3E">
+    <link rel="stylesheet" href="/assets/design-system.css">
+</head>
+<body>
+    <a class="skip-link" href="#main">跳至主要內容</a>
+
+    <header class="app-header">
+        <div class="container">
+            <div>
+                <h1>操作指引</h1>
+                <p class="app-subtitle">依您的角色呈現對應工作流程（零 JavaScript）</p>
+            </div>
+            <p class="app-subtitle">
+                使用者：<strong>{{ acting_user }}</strong>
+                ｜
+                <a class="btn btn-secondary" href="/">返回工作台</a>
+            </p>
+        </div>
+    </header>
+
+    <main id="main" class="container">
+        <section class="panel" aria-labelledby="role-title">
+            <h2 id="role-title">您的角色</h2>
+            <dl class="kpi-grid">
+                <div class="kpi">
+                    <dt>主要角色</dt>
+                    <dd>{{ role_code }}</dd>
+                </div>
+            </dl>
+            <p class="section-note">權限由系統角色決定；未知角色回退為唯讀預設總覽。</p>
+        </section>
+
+        <section class="panel" aria-labelledby="flow-title">
+            <h2 id="flow-title">標準工作流程</h2>
+            <ol>
+                <li><strong>登入 → 總覽</strong>：登入後先看總覽 KPI（交易總數、總金額、待覆核）。</li>
+                <li><strong>新增交易</strong>：精靈三步驟（表頭→分錄→確認）建立平衡交易。</li>
+                <li><strong>快速匯入</strong>：CSV 批次上傳；預覽後確認，錯誤列可下載重試。</li>
+                <li><strong>覆核與草稿</strong>：AI 建議僅供參考；人工覆核後採納或拒絕。</li>
+                <li><strong>報表彙總</strong>：月報表、樞紐分析、平行投影；試算與總分類帳驗證平衡。</li>
+                <li><strong>稽核追溯</strong>：稽核軌跡可按使用者／動作／期間查索。</li>
+            </ol>
+        </section>
+
+        <section class="panel" aria-labelledby="shortcuts-title">
+            <h2 id="shortcuts-title">常用入口</h2>
+            <div class="form-actions">
+                <a class="btn btn-primary" href="/new">新增交易</a>
+                <a class="btn btn-secondary" href="/import">快速匯入</a>
+                <a class="btn btn-secondary" href="/transactions">交易清單</a>
+                <a class="btn btn-secondary" href="/audit">稽核軌跡</a>
+                <a class="btn btn-secondary" href="/states">介面狀態</a>
+            </div>
+            <p class="section-note">所有頁面均遵循同一套狀態矩陣；鍵盤 Tab 可巡覽全部功能。</p>
+        </section>
+    </main>
+
+    <footer class="site-footer">
+        <div class="container">
+            <p>Flaps ERP 工作台 · 操作指引（零 JavaScript，WCAG 2.2 AA 方向）</p>
+        </div>
+    </footer>
+</body>
+</html>

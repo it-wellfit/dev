@@ -1,0 +1,26 @@
+{
+  "id": "claim-20261107-012",
+  "claim_type": "decision",
+  "status": "published",
+  "track": "b",
+  "confidence": 0.7943720237442898,
+  "valid_from": "2026-11-07",
+  "valid_to": null,
+  "recorded_at": "2026-11-07T11:03:14.290710300Z",
+  "supersedes": [],
+  "superseded_by": null,
+  "evidence": [
+    {
+      "path": "docs/engineering/FREE_AI_ROUTING.md",
+      "rev": "working-tree",
+      "quote": "1. Ollama local (qwen3.5:4b) — PRIMARY"
+    }
+  ],
+  "topics": [
+    "free-ai",
+    "routing"
+  ],
+  "source": "raw/free-ai/2026-11-07-seed.md",
+  "title": "AI 路由以本機 Ollama 為主",
+  "body": "The AI fallback chain uses local Ollama (qwen3.5:4b) as PRIMARY, with keyless remote endpoints only as fallback."
+}

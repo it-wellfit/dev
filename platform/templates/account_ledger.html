@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>總分類帳 — Flaps ERP 工作台</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%23005fcc'/%3E%3Ctext x='8' y='12' font-size='10' font-family='sans-serif' fill='white' text-anchor='middle' font-weight='bold'%3EF%3C/text%3E%3C/svg%3E">
+    <link rel="stylesheet" href="/assets/design-system.css">
+</head>
+<body>
+    <a class="skip-link" href="#main">跳至主要內容</a>
+
+    <header class="app-header">
+        <div class="container">
+            <div>
+                <h1>總分類帳</h1>
+                <p class="app-subtitle">單科分明細與累計餘額（零 JavaScript）</p>
+            </div>
+            <p class="app-subtitle">
+                使用者：<strong>{{ acting_user }}</strong>
+                ｜
+                <a class="btn btn-secondary" href="/">返回工作台</a>
+            </p>
+        </div>
+    </header>
+
+    <main id="main" class="container">
+        <section class="panel" aria-labelledby="pick-title">
+            <h2 id="pick-title">選擇科目</h2>
+            <form method="get" action="/reports/ledger" class="form-inline" role="search">
+                <div class="form-row">
+                    <label for="ledger-account">科目</label>
+                    <select class="input" id="ledger-account" name="account">
+                        <option value="">全部科目</option>
+                        {% for a in accounts %}
+                        <option value="{{ a.account_id }}" {% if selected == a.account_id %}selected{% endif %}>{{ a.account_code }} {{ a.account_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-actions">
+                    <button class="btn btn-primary" type="submit">查詢</button>
+                </div>
+            </form>
+        </section>
+
+        <section class="panel" aria-labelledby="ledger-title">
+            <h2 id="ledger-title">分類帳明細</h2>
+            <div class="table-wrap">
+                <table>
+                    <caption>總分類帳</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col">日期</th>
+                            <th scope="col">摘要</th>
+                            <th scope="col">借貸</th>
+                            <th scope="col">金額</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if entries.is_empty() %}
+                        <tr>
+                            <td colspan="4">
+                                <p class="empty-state">
+                                    <strong>尚無分明細</strong>
+                                    請先選擇科目；尚未查詢時此處不顯示明細。
+                                </p>
+                            </td>
+                        </tr>
+                        {% else %}
+                        {% for e in entries %}
+                        <tr>
+                            <td>{{ e.transaction_date }}</td>
+                            <td>{{ e.description }}</td>
+                            <td>{{ e.item_type }}</td>
+                            <td>{{ e.amount_display }}</td>
+                        </tr>
+                        {% endfor %}
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+            <p class="section-note">累計餘額＝Σ借方 − Σ貸方；金額先以最小單位累計、顯示時才還原。</p>
+        </section>
+    </main>
+
+    <footer class="site-footer">
+        <div class="container">
+            <p>Flaps ERP 工作台 · 總分類帳（零 JavaScript，WCAG 2.2 AA 方向）</p>
+        </div>
+    </footer>
+</body>
+</html>

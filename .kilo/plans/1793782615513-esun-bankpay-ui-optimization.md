@@ -427,8 +427,9 @@ pub struct BankPayAudit {
 | R8 | 匯入路徑白名單（CWE-22） | 原實作讀取任意伺服器 `file_path`（任意檔讀→外洩） | 僅接受 `data/bankpay/inbound/*.csv`（canonicalize 前綴比對） | 整合測試 `bankpay_import_rejects_path_traversal` |
 | R9 | 狀態探測 derive 不快取 | 原實作快取 Unknown → `overall` 恆 `degraded`；儀表板硬編碼「AI 3 模型」 | `status::probe_modules` 即時探測；sync/com/ai 誠實標 Idle；AI 模型數 0 | 整合測試 `status_endpoint_shape_and_mock_warning` |
 | R10 | UI（T8/T10/T11/T13） | 計畫 §六 | 導航移除 `/states`（路由保留）；sticky 全域狀態列 + `:target` 詳情面板；BankPay 卡片（模擬模式徽章）；稽核篩選改真實 GET 表單（原為需 JS 的死控制） | 整合測試 `index_renders_bankpay_card_and_status_bar` |
+| R11 | 雙作品比較與整合：Tauri 桌面版（`web/src-tauri`，Enterprise Bank Integration Frontend）↔ 平台 Web 伺服器 | 桌面版 `bankpay_get_api_status()` 含 8 個 V2.8 API 紀錄、連線設定模型（mTLS 三件套/外部沙盒 URL/逾時）、連線檢查/安全檢查/Release 檢查清單——但**全部為寫死 mock 字串**（無實際行為，使用者實測「沒什麼反應」）；伺服器版為真實實作（P7 反模擬） | 判定：**伺服器版為單一事實來源與主力**；萃取桌面版資產入伺服器版——(1) `EsunConfig` 擴充 5 連線欄位（`esun_external_url`/`client_cert_path`/`client_key_path`/`ca_cert_path`/`timeout_secs`，erp_config 10 鍵持久化）；(2) `/bankpay` 新增**誠實連線就緒檢查卡**（V2.8 信封契約、910000、Source-System 標頭、msgId 格式、mTLS 要件——由實際設定狀態推導，非捏造檢查結果）；(3) API 中樞目錄收錄 8 個 V2.8 官方端點＋對應狀態（模擬對應 3/未串接 5）。桌面版未來定位：**平台的桌面殼**（對接 `http://127.0.0.1:8090` API），其 UI 概念持續反向萃取 | Live smoke：就緒卡渲染✓、10 鍵持久化✓、設定 PRG✓；`cargo test -p platform` bankpay 17 unit + 15 integration ✓ |
 
-**後續切片（本計畫未完結項）**：T14 效能基準（10k P95）、T16 UAT 四角色、真實通道啟用（mTLS 憑證 + V2.8 契約一致性測試 pin）、`bankpay_audits` 寫入接點（目前稽核主寫 `audit_log`；`bankpay_audits` 表已建，供對帳明細用）。
+**後續切片（本計畫未完結項）**：T14 效能基準（10k P95）、T16 UAT 四角色、真實通道啟用（mTLS 憑證 + V2.8 契約一致性測試 pin，使用就緒檢查卡為啟用閘門）、`bankpay_audits` 寫入接點（目前稽核主寫 `audit_log`；`bankpay_audits` 表已建，供對帳明細用）、桌面殼（Tauri）對接平台 API 的整合切片。
 
 ---
 

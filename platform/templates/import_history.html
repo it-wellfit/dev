@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>匯入歷史 — Flaps ERP 工作台</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%23005fcc'/%3E%3Ctext x='8' y='12' font-size='10' font-family='sans-serif' fill='white' text-anchor='middle' font-weight='bold'%3EF%3C/text%3E%3C/svg%3E">
+    <link rel="stylesheet" href="/assets/design-system.css">
+</head>
+<body>
+    <a class="skip-link" href="#main">跳至主要內容</a>
+
+    <header class="app-header">
+        <div class="container">
+            <div>
+                <h1>匯入歷史</h1>
+                <p class="app-subtitle">匯入相關稽核歷史（IMPORT 事件；零 JavaScript）</p>
+            </div>
+            <p class="app-subtitle">
+                使用者：<strong>{{ acting_user }}</strong>
+                ｜
+                <a class="btn btn-secondary" href="/import">返回快速匯入</a>
+            </p>
+        </div>
+    </header>
+
+    <main id="main" class="container">
+        <section class="panel" aria-labelledby="history-title">
+            <h2 id="history-title">匯入稽核軌跡</h2>
+            <div class="table-wrap">
+                <table>
+                    <caption>匯入歷史（最近 100 筆）</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col">編號</th>
+                            <th scope="col">使用者</th>
+                            <th scope="col">動作</th>
+                            <th scope="col">資源</th>
+                            <th scope="col">詳細內容</th>
+                            <th scope="col">時間</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if rows.is_empty() %}
+                        <tr>
+                            <td colspan="6">
+                                <p class="empty-state">
+                                    <strong>尚無匯入歷史</strong>
+                                    使用快速匯入上傳 CSV 後，此處會出現批次紀錄。
+                                </p>
+                            </td>
+                        </tr>
+                        {% else %}
+                        {% for row in rows %}
+                        <tr>
+                            <td>{{ row.log_id }}</td>
+                            <td>{{ row.user_id }}</td>
+                            <td>{{ row.event_label }}</td>
+                            <td>{{ row.resource }}</td>
+                            <td>{{ row.details }}</td>
+                            <td>{{ row.time }}</td>
+                        </tr>
+                        {% endfor %}
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+            <p class="section-note">批次指紋（SHA-256）與重放防護見既有匯入稽核紀錄。</p>
+        </section>
+    </main>
+
+    <footer class="site-footer">
+        <div class="container">
+            <p>Flaps ERP 工作台 · 匯入歷史（零 JavaScript，WCAG 2.2 AA 方向）</p>
+        </div>
+    </footer>
+</body>
+</html>

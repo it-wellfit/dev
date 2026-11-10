@@ -1043,17 +1043,11 @@ main:not(:has(:target)) a[href="#dashboard"] {
    Components — Panel (Section)
    ============================================================ */
 .panel {
-  display: none;
   animation: fadeIn var(--transition-base);
 }
 
-.panel:target {
-  display: block;
-}
-
-main:not(:has(:target)) #dashboard {
-  display: block;
-}
+/* 舊單頁原型的 :target 分區切換已移除：平台為多頁式應用，所有面板
+   常駐顯示；僅 .status-panel（詳情面板）保留 :target 開合語義。 */
 
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(8px); }
@@ -1540,6 +1534,99 @@ legend {
   }
 }
 
+/* ═══ 導航分組選單（零 JS：<details> 原生互動，鍵盤/觸控可用） ═══ */
+
+.site-nav details.nav-menu {
+  display: inline-block;
+  position: relative;
+}
+
+.site-nav details.nav-menu > summary {
+  list-style: none;
+  cursor: pointer;
+  color: inherit;
+}
+
+.site-nav details.nav-menu > summary::-webkit-details-marker {
+  display: none;
+}
+
+/* 下拉指標：以內容提示開合狀態（不依賴顏色）。 */
+.site-nav details.nav-menu > summary::after {
+  content: " ▾";
+  font-size: var(--font-size-xs);
+}
+
+.site-nav details.nav-menu[open] > summary::after {
+  content: " ▴";
+}
+
+.site-nav details.nav-menu .nav-menu-items {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 50;
+  min-width: 12rem;
+  display: none;
+  flex-direction: column;
+  background: var(--color-surface-raised, var(--color-surface));
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-lg, none);
+  padding: var(--space-2);
+}
+
+.site-nav details.nav-menu[open] .nav-menu-items {
+  display: flex;
+}
+
+.site-nav details.nav-menu .nav-menu-items a {
+  display: block;
+  padding: var(--space-2) var(--space-3);
+  white-space: nowrap;
+  border-radius: var(--radius-sm);
+}
+
+/* 點選項目後收合（零 JS：連結導航即離開；本規則供同錨點情境）。 */
+.site-nav details.nav-menu .nav-menu-items a:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
+}
+
+/* ═══ 登入頁（使用者第一印象；單欄置中、主 CTA 全寬收於面板內） ═══ */
+
+.login-brand {
+  text-align: center;
+  margin: var(--space-8) 0 var(--space-6);
+}
+
+.login-panel {
+  max-width: 26rem;
+  margin-inline: auto;
+}
+
+.login-panel h2 {
+  margin-bottom: var(--space-4);
+}
+
+.login-panel .form-actions {
+  margin-top: var(--space-4);
+}
+
+.login-note {
+  border-top: 1px solid var(--color-border);
+  margin-top: var(--space-4);
+  padding-top: var(--space-3);
+}
+
+.login-footer {
+  margin-top: var(--space-8);
+}
+
+.btn-block {
+  width: 100%;
+}
+
 /* ═══ 頁尾與行內表單（工作平台 v1.1） ═══ */
 
 .app-footer {
@@ -1650,18 +1737,8 @@ legend {
 /* ============================================================
    Section Switching (Zero-JS, :target-based)
    ============================================================ */
-.panel {
-  display: none;
-  animation: fadeInUp var(--transition-base);
-}
-
-.panel:target {
-  display: block;
-}
-
-main:not(:has(:target)) #dashboard {
-  display: block;
-}
+/* 舊單頁原型的 :target 全域切換規則已移除（多頁式平台面板常駐顯示）；
+   僅 .status-panel 保留 :target 開合（見上方全域狀態列區段）。 */
 
 @keyframes fadeInUp {
   from { opacity: 0; transform: translateY(12px); }

@@ -1,8 +1,7 @@
 # PROJECT_STATUS — 專案現況
 
-> 更新：2026-11-09｜真實狀態以測試 log 為準，不以本檔宣稱。
-> 品質閘門本輪結果（本線）：**fmt EXIT=0｜clippy -D warnings EXIT=0｜platform 77 passed / 0 failed｜合併線 141 passed / 0 failed｜platform-hub 22 passed / 0 failed｜audit EXIT=0**（1 個已接受警告 RUSTSEC-2026-0374 basic-toml unmaintained）。
-> kem 線（並行 session）in-flight 重構中，整工作區門檻待其穩定點重跑（隔離 `CARGO_TARGET_DIR` 紀律）。
+> 更新：2026-11-09（PHASE-R RAG 後）｜真實狀態以測試 log 為準，不以本檔宣稱。
+> 品質閘門本輪結果（全工作區）：**fmt EXIT=0｜clippy -D warnings EXIT=0｜246 passed / 0 failed｜platform-hub 10 passed / 0 failed｜audit EXIT=0 兩工作區**（2 個已文件化處置：RUSTSEC-2026-0374 basic-toml、RUSTSEC-2026-0459 libsqlite3-sys——見各 `.cargo/audit.toml`）。
 
 ## 目前階段
 
@@ -23,8 +22,8 @@
 
 | 指標 | 值 |
 |------|-----|
-| 自動化測試 | **157 passed / 0 failed / 0 ignored**（bridge 7＋core 42＋kem 53＋platform 48＋close_out 4＋ledger_slice12 3） |
-| 路由 | 23 條（`platform/src/api.rs` 路由表為 SSOT；含 `/api/health`、search 橋接） |
+| 自動化測試 | **246 passed / 0 failed / 0 ignored**（bridge 7＋core 42＋kem 58＋platform 108＋kem-int 15＋bankpay_persistence 1＋characterization 6＋close_out 4＋slice12 2＋misc 3） |
+| 路由 | **60 條**（api.rs 48＋cross_module_api 12；原始碼路由表為 SSOT） |
 | 效能 SLA | 100,000 交易 stress：**warm p95 422ms ≤ 500ms**（量測法：預熱趟＋21 樣本 p95；seed 批次化 500 rows/statement，從 ~90s 降至 ~13s 全測時長） |
 | 突變測試 | cargo-mutants 27.1：money/engine 得分 **≥94.7%**（missed 清零於 money；exclude 設計見 MUTATION_SCORE_REPORT v2） |
 | Migrations | 3（0001-0003） |

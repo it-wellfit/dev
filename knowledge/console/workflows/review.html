@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>工作流 review — KEM 操作主控台</title>
+<link rel="stylesheet" href="../assets/console.css">
+</head>
+<body>
+<header><h1>KEM 操作主控台</h1><p class="sub">零 JavaScript｜系統與流程操作介面｜知識演進模組 v1</p><nav aria-label="主導航"><a href="../index.html">首頁</a><a href="../index.html#roles">角色</a><a class="active" href="../workflows/capture.html">工作流</a><a href="../claims/index.html">主張</a><a href="../ledger-1.html">帳本</a><a href="../queue.html">治理</a><a href="../maintenance.html">維運</a></nav></header>
+<main>
+<section class="panel"><h2>工作流：review</h2><table><tbody><tr><th scope="row">命令</th><td><code class="cmd">kem review --claim ID --disposition accept|reject|supersede|defer [--reviewer R] [--note N]</code></td></tr><tr><th scope="row">主要角色</th><td>審查者</td></tr><tr><th scope="row">目的</th><td>M7 審查处置：佇列 append-only（resolved 行不計 pending）</td></tr><tr><th scope="row">輸入</th><td>佇列 pending 項</td></tr><tr><th scope="row">產出</th><td>佇列处置行（歷史保留）</td></tr><tr><th scope="row">失敗模式／防護</th><td>处置後 pending 計數即降（doctor 對帳）</td></tr><tr><th scope="row">其他工作流</th><td><a href="../workflows/capture.html">capture</a> · <a href="../workflows/ingest.html">ingest</a> · <a href="../workflows/ask.html">ask</a> · <a href="../workflows/eval.html">eval</a> · <a href="../workflows/embed.html">embed</a> · <a href="../workflows/sync.html">sync</a> · <a href="../workflows/supersede.html">supersede</a> · <a href="../workflows/vet2.html">vet2</a> · <a href="../workflows/lint.html">lint</a> · <a href="../workflows/doctor.html">doctor</a> · <a href="../workflows/status.html">status</a> · <a href="../workflows/finalize.html">finalize</a></td></tr></tbody></table></section></main>
+<footer>由 <code>kem console</code> 生成｜2026-11-09T13:09:07.297846600+00:00｜純靜態零 JavaScript｜資料來源：claims SSOT＋帳本＋佇列</footer>
+</body>
+</html>

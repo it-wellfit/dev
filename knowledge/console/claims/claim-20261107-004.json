@@ -1,0 +1,26 @@
+{
+  "id": "claim-20261107-004",
+  "claim_type": "invariant",
+  "status": "published",
+  "track": "b",
+  "confidence": 0.7941171494891214,
+  "valid_from": "2026-11-07",
+  "valid_to": null,
+  "recorded_at": "2026-11-07T11:03:14.290688300Z",
+  "supersedes": [],
+  "superseded_by": null,
+  "evidence": [
+    {
+      "path": "ekpi-platform/AGENTS.md",
+      "rev": "a268319",
+      "quote": "No JavaScript in browser - only HTML, CSS, SVG, images, fonts"
+    }
+  ],
+  "topics": [
+    "ekpi-platform",
+    "zero-js"
+  ],
+  "source": "raw/ekpi/2026-11-07-seed.md",
+  "title": "ekpi 展示層零 JavaScript",
+  "body": "ekpi-platform 的瀏覽器展示層只允許 HTML、CSS、SVG、圖片與字型，不含任何 JavaScript。"
+}

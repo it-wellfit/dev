@@ -145,6 +145,8 @@ SSOT 場景註冊表：docs/testing/BDD_SCENARIOS.feature（Gherkin）。
 
 > 【執行紀錄 2026-11-07】修復 `.cargo/mutants.toml` (schema: examine_globs / exclude_re / additional_cargo_test_args)，補 `amount_at_cap_posts_successfully` (engine.rs) + `parse_i128_overflow_boundary_kills_boundary_mutants` (money.rs)，重跑 money 69/73=94.5 %、engine 21/22=95.5 %，TOTAL 94.7 % ≥80 % PASS。報告見 `docs/engineering/MUTATION_SCORE_REPORT.md`。TDD 僅作回饋迴圈，不作生產力宣稱。
 
+> 【執行紀錄 2026-11-09】**MT 全綠收口**：money 73/73、engine 22/22＝100 %（Missed 清零；Display mutant 由 `money_error_display_is_not_empty` 補殺；報告 v2）。同輪 **RAG 混合檢索落地**（PHASE-R，addendum #17）：BM25（CJK 改進）＋重用 kem embedder 池＋α-融合＋誠實降級 via 溯源——檢索品質測試 15 項（稀有詞 IDF、詞頻有序、拒絕地板、降級路徑）。工作區測試基線 246/0。TDD 僅作回饋迴圈，不作生產力宣稱。
+
 ## 9. Skills 使用修補(你指出的問題)
 
 | Skill | 最近一個月使用率 | 行動 |

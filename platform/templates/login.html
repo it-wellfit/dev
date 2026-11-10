@@ -4,45 +4,50 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>登入 — Flaps ERP 工作台</title>
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%23005fcc'/%3E%3C/svg%3E">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%23005fcc'/%3E%3Ctext x='8' y='12' font-size='10' font-family='sans-serif' fill='white' text-anchor='middle' font-weight='bold'%3EF%3C/text%3E%3C/svg%3E">
     <link rel="stylesheet" href="/assets/design-system.css">
 </head>
 <body>
     <main id="main" class="container container-narrow">
-        <h1>Flaps ERP 工作台</h1>
-        <p class="app-subtitle">請登入以繼續操作。</p>
+        <header class="login-brand">
+            <h1>Flaps ERP 工作台</h1>
+            <p class="app-subtitle">請登入以繼續操作。</p>
+        </header>
 
         {% if let Some(e) = error %}
-        <div class="error-state" role="alert">
-            <strong>無法登入</strong>
+        <div class="panel error-state" role="alert">
+            <h2>無法登入</h2>
             <p>{{ e }}</p>
+            <p class="section-note">問題：帳號或密碼不正確，或連續失敗已暫時鎖定；處理方式：確認帳密後稍候再試，或聯絡系統管理員重設。</p>
         </div>
         {% endif %}
 
-        <form method="post" action="/login">
-            <fieldset>
-                <legend>帳號登入</legend>
+        <form method="post" action="/login" class="panel login-panel" aria-labelledby="login-title">
+            <h2 id="login-title">帳號登入</h2>
 
-                <div class="form-row">
-                    <label for="username">帳號 <span aria-hidden="true">*</span></label>
-                    <input class="input" type="text" id="username" name="username" autocomplete="username" value="{{ username }}" required>
-                </div>
+            <div class="form-row">
+                <label for="username">帳號 <span aria-hidden="true">*</span></label>
+                <input class="input" type="text" id="username" name="username" autocomplete="username" value="{{ username }}" required>
+            </div>
 
-                <div class="form-row">
-                    <label for="password">密碼 <span aria-hidden="true">*</span></label>
-                    <input class="input" type="password" id="password" name="password" autocomplete="current-password" required>
-                    <p class="hint">密碼以 Argon2id 雜湊儲存；連續失敗請聯絡系統管理員。</p>
-                </div>
-            </fieldset>
+            <div class="form-row">
+                <label for="password">密碼 <span aria-hidden="true">*</span></label>
+                <input class="input" type="password" id="password" name="password" autocomplete="current-password" required>
+                <p class="form-hint">密碼以 Argon2id 雜湊儲存；連續失敗將暫時鎖定（防暴力破解）。</p>
+            </div>
 
             <div class="form-actions">
-                <button class="btn btn-primary" type="submit">登入</button>
+                <button class="btn btn-primary btn-block" type="submit">登入</button>
             </div>
+
+            <p class="section-note login-note">
+                本系統所有寫入操作均經伺服器端權限檢查並寫入稽核軌跡。
+            </p>
         </form>
 
-        <p class="section-note">
-            本系統所有寫入操作均經伺服器端權限檢查並寫入稽核軌跡。
-        </p>
+        <footer class="app-footer login-footer">
+            <p>Flaps ERP 工作台 · 零 JavaScript（WCAG 2.2 AA 方向）</p>
+        </footer>
     </main>
 </body>
 </html>

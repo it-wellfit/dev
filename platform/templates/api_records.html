@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BankPay 作業紀錄 — Flaps ERP</title>
+    <link rel="stylesheet" href="/assets/design-system.css">
+</head>
+<body>
+    <a class="skip-link" href="#main">跳至主要內容</a>
+    <header class="app-header">
+        <div class="container">
+            <div>
+                <h1>BankPay 作業與批次紀錄</h1>
+                <p class="app-subtitle">源：bankpay_audits（HTTP 狀態碼實錄）＋ bankpay_batches（批次帳 SSOT）— 零 JavaScript</p>
+            </div>
+            <p class="app-subtitle">
+                使用者：<strong>{{ acting_user }}</strong>
+                ｜ <a class="btn btn-secondary" href="/admin/api/catalog">服務目錄</a>
+                <a class="btn btn-secondary" href="/admin/api/net">連線檢查</a>
+                <a class="btn btn-secondary" href="/">返回工作台</a>
+            </p>
+        </div>
+    </header>
+    <main id="main" class="container">
+        <section class="panel" aria-labelledby="rec-title">
+            <h2 id="rec-title">作業紀錄（最近 {{ records.len() }} 筆）</h2>
+            {% if records.is_empty() %}
+            <p class="empty-state" data-state-empty>
+                <strong>尚無 BankPay 作業紀錄</strong>
+                於銀行支付工作室執行匯出／匯入／查詢後，作業事件將顯示於此（含實際 HTTP 狀態碼）。
+            </p>
+            {% else %}
+            <div class="table-wrap">
+                <table>
+                    <caption>bankpay_audits（新→舊，50 筆）</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col">時間</th>
+                            <th scope="col">事件</th>
+                            <th scope="col">批次</th>
+                            <th scope="col">操作者</th>
+                            <th scope="col">HTTP</th>
+                            <th scope="col">結果</th>
+                            <th scope="col">回應片段</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for r in records %}
+                        <tr>
+                            <td><code>{{ r.performed_at }}</code></td>
+                            <td><span class="badge badge-info">{{ r.action }}</span></td>
+                            <td><code>{{ r.batch_id }}</code></td>
+                            <td>{{ r.performed_by }}</td>
+                            <td><code>{{ r.status_code }}</code></td>
+                            <td><span class="badge {{ r.result_class }}">{{ r.result_label }}</span></td>
+                            <td>{{ r.payload_snippet }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endif %}
+        </section>
+        <section class="panel" aria-labelledby="bat-title">
+            <h2 id="bat-title">批次帳（{{ batches.len() }} 筆）</h2>
+            {% if batches.is_empty() %}
+            <p class="empty-state" data-state-empty>
+                <strong>尚無付款批次</strong>
+                首次匯出後，批次與其銀行參照號將顯示於此。
+            </p>
+            {% else %}
+            <div class="table-wrap">
+                <table>
+                    <caption>bankpay_batches（新→舊，20 筆）</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col">批次</th>
+                            <th scope="col">銀行參照</th>
+                            <th scope="col">金額</th>
+                            <th scope="col">幣別</th>
+                            <th scope="col">狀態</th>
+                            <th scope="col">建立</th>
+                            <th scope="col">完成</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for b in batches %}
+                        <tr>
+                            <td><code>{{ b.batch_id }}</code></td>
+                            <td><code>{{ b.esun_ref }}</code></td>
+                            <td>{{ b.amount_display }}</td>
+                            <td>{{ b.currency }}</td>
+                            <td><span class="badge {{ b.status_class }}">{{ b.status }}</span></td>
+                            <td><code>{{ b.created_at }}</code></td>
+                            <td><code>{{ b.completed_at }}</code></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endif %}
+        </section>
+    </main>
+    <footer class="site-footer">
+        <div class="container">
+            <p>Flaps ERP · API 中樞 · 治理紀錄（零 JavaScript，WCAG 2.2 AA 方向）</p>
+            <p>契約：Wellfit/docs/bankpay/04-interface-specification.md · 決策：docs/adr/ADR-0012</p>
+        </div>
+    </footer>
+</body>
+</html>

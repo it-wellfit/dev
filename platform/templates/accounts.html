@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>會計科目 — Flaps ERP 工作台</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%23005fcc'/%3E%3Ctext x='8' y='12' font-size='10' font-family='sans-serif' fill='white' text-anchor='middle' font-weight='bold'%3EF%3C/text%3E%3C/svg%3E">
+    <link rel="stylesheet" href="/assets/design-system.css">
+</head>
+<body>
+    <a class="skip-link" href="#main">跳至主要內容</a>
+
+    <header class="app-header">
+        <div class="container">
+            <div>
+                <h1>會計科目</h1>
+                <p class="app-subtitle">科目樹、啟用狀態與新增（零 JavaScript；寫入操作 POST＋CSRF＋PRG）</p>
+            </div>
+            <p class="app-subtitle">
+                使用者：<strong>{{ acting_user }}</strong>
+                ｜
+                <a class="btn btn-secondary" href="/">返回工作台</a>
+            </p>
+        </div>
+    </header>
+
+    <main id="main" class="container">
+        {% if let Some(e) = error %}
+        <div class="error-state" role="alert">
+            <strong>操作未完成</strong>
+            <p>{{ e }}</p>
+            <p class="hint">請修正後重新送出；已填寫的欄位值已保留。</p>
+        </div>
+        {% endif %}
+        {% if let Some(n) = notice %}
+        <p class="preview-note" role="status">{{ n }}</p>
+        {% endif %}
+
+        {% if can_manage %}
+        <section class="panel" aria-labelledby="create-title">
+            <h2 id="create-title">新增科目</h2>
+            <form method="post" action="/accounts">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <div class="form-row">
+                    <label for="acc-key">科目鍵值 <span aria-hidden="true">*</span></label>
+                    <input class="input" type="text" id="acc-key" name="account_key" value="{{ form.code }}" required maxlength="32" placeholder="例如：BANK-001">
+                    <p class="hint">代碼必須唯一；首次使用的代碼才會新增（重複代碼送出會被拒絕）。</p>
+                </div>
+                <div class="form-row">
+                    <label for="acc-name">科目名稱 <span aria-hidden="true">*</span></label>
+                    <input class="input" type="text" id="acc-name" name="account_name" value="{{ form.name }}" required maxlength="200" placeholder="例如：銀行存款－台新">
+                </div>
+                <div class="form-row">
+                    <label for="acc-type">類型 <span aria-hidden="true">*</span></label>
+                    <select class="input" id="acc-type" name="account_type" required>
+                        {% for t in account_types %}
+                        <option value="{{ t.value }}" {% if form.typ.as_str() == t.value.as_str() %}selected{% endif %}>{{ t.label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-row">
+                    <label for="acc-currency">幣別 <span aria-hidden="true">*</span></label>
+                    <select class="input" id="acc-currency" name="currency" required>
+                        {% for c in currencies %}
+                        <option value="{{ c }}" {% if form.currency.as_str() == c.as_str() %}selected{% endif %}>{{ c }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-row">
+                    <label for="acc-parent">上層科目（可留空）</label>
+                    <select class="input" id="acc-parent" name="parent_account_id" required>
+                        <option value="" {% if form.parent == "" %}selected{% endif %}>（頂層科目）</option>
+                        {% for a in parent_options %}
+                        <option value="{{ a.id }}" {% if form.parent.as_str() == a.id.as_str() %}selected{% endif %}>{{ a.code }} {{ a.name }}</option>
+                        {% endfor %}
+                    </select>
+                    <p class="hint">選擇上層科目後，本科目將顯示在其子科目清單中。</p>
+                </div>
+                <div class="form-actions">
+                    <button class="btn btn-primary" type="submit">新增科目</button>
+                </div>
+            </form>
+        </section>
+        {% endif %}
+
+        <section class="panel" aria-labelledby="list-title">
+            <h2 id="list-title">科目清單</h2>
+            {% if groups.is_empty() %}
+            <p class="empty-state">
+                <strong>尚無會計科目</strong>
+                {% if can_manage %}請先以右上表單新增第一個科目。{% else %}請聯絡有管理權限者建立科目。{% endif %}
+            </p>
+            {% else %}
+            {% for g in groups %}
+            <h3>{{ g.label }}（{{ g.roots.len() }} 主科目）</h3>
+            <div class="table-wrap">
+                <table>
+                    <caption>{{ g.label }} 科目</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col">科目代碼</th>
+                            <th scope="col">科目名稱</th>
+                            <th scope="col">幣別</th>
+                            <th scope="col">狀態</th>
+                            <th scope="col">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for a in g.roots %}
+                        <tr>
+                            <td>{{ a.code }}</td>
+                            <td>
+                                {{ a.name }}
+                                {% if !a.children.is_empty() %}
+                                <details>
+                                    <summary>{{ a.children.len() }} 子科目</summary>
+                                    <ul>
+                                        {% for child in a.children %}
+                                        <li>{{ child.code }} {{ child.name }}（{{ child.currency }}）{% if child.active %} · 啟用{% else %} · <span class="badge badge-neutral">停用</span>{% endif %}</li>
+                                        {% endfor %}
+                                    </ul>
+                                </details>
+                                {% endif %}
+                            </td>
+                            <td>{{ a.currency }}</td>
+                            <td>{% if a.active %}<span class="badge badge-success">啟用</span>{% else %}<span class="badge badge-neutral">停用</span>{% endif %}</td>
+                            <td>
+                                {% if can_manage %}
+                                <form method="post" action="/accounts/toggle" class="form-inline">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                                    <input type="hidden" name="account_id" value="{{ a.id }}">
+                                    {% if a.active %}
+                                    <button class="btn btn-secondary btn-sm" type="submit">停用</button>
+                                    {% else %}
+                                    <button class="btn btn-primary btn-sm" type="submit">啟用</button>
+                                    {% endif %}
+                                </form>
+                                {% else %}
+                                <span class="hint">無管理權限</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endfor %}
+            {% endif %}
+            <p class="section-note">科目樹依「類型＋層級」排列；啟用／停用即時生效並寫入稽核軌跡。</p>
+        </section>
+    </main>
+
+    <footer class="site-footer">
+        <div class="container">
+            <p>Flaps ERP 工作台 · 會計科目（零 JavaScript，WCAG 2.2 AA 方向）</p>
+            <p>規格：docs/ux/UI-UX_需求規格.md §E3.5 · 設計系統：web/assets/design-system.css</p>
+        </div>
+    </footer>
+</body>
+</html>

@@ -40,6 +40,15 @@ pub async fn load_config(pool: &SqlitePool) -> EsunConfig {
             "source_system_id" if !value.is_empty() => config.source_system_id = Some(value),
             "customer_id" if !value.is_empty() => config.customer_id = Some(value),
             "payer_account" if !value.is_empty() => config.payer_account = Some(value),
+            "esun_external_url" if !value.is_empty() => config.esun_external_url = value,
+            "client_cert_path" if !value.is_empty() => config.client_cert_path = Some(value),
+            "client_key_path" if !value.is_empty() => config.client_key_path = Some(value),
+            "ca_cert_path" if !value.is_empty() => config.ca_cert_path = Some(value),
+            "timeout_secs" => {
+                if let Ok(v) = value.parse::<u64>() {
+                    config.timeout_secs = v;
+                }
+            }
             _ => {}
         }
     }
@@ -51,7 +60,7 @@ pub async fn load_config(pool: &SqlitePool) -> EsunConfig {
 /// 冪等性：`config_id` 以「分類:鍵」決定性建構，同鍵重存為 UPSERT
 /// （不新增列）。schema 為 SSOT，本函式不變更 schema。
 pub async fn save_config(pool: &SqlitePool, config: &EsunConfig) -> Result<(), sqlx::Error> {
-    let pairs: [(&str, String); 5] = [
+    let pairs: [(&str, String); 10] = [
         (
             "esun_mock_mode",
             if config.esun_mock_mode { "1" } else { "0" }.to_string(),
@@ -69,6 +78,20 @@ pub async fn save_config(pool: &SqlitePool, config: &EsunConfig) -> Result<(), s
             "payer_account",
             config.payer_account.clone().unwrap_or_default(),
         ),
+        ("esun_external_url", config.esun_external_url.clone()),
+        (
+            "client_cert_path",
+            config.client_cert_path.clone().unwrap_or_default(),
+        ),
+        (
+            "client_key_path",
+            config.client_key_path.clone().unwrap_or_default(),
+        ),
+        (
+            "ca_cert_path",
+            config.ca_cert_path.clone().unwrap_or_default(),
+        ),
+        ("timeout_secs", config.timeout_secs.to_string()),
     ];
     for (key, value) in pairs {
         let config_id = format!("bankpay:{key}");
@@ -116,6 +139,11 @@ mod tests {
             source_system_id: Some("SRC-ERP".to_string()),
             customer_id: Some("CUST-001".to_string()),
             payer_account: Some("012345678901".to_string()),
+            esun_external_url: "https://eospt.testesunbank.com.tw:9443".to_string(),
+            client_cert_path: Some("certs/client.crt".to_string()),
+            client_key_path: Some("certs/client.key".to_string()),
+            ca_cert_path: Some("certs/esun-ca.crt".to_string()),
+            timeout_secs: 30,
         }
     }
 
@@ -147,7 +175,7 @@ mod tests {
                 .fetch_one(&pool)
                 .await
                 .expect("count");
-        assert_eq!(rows, 5, "UPSERT must not duplicate rows");
+        assert_eq!(rows, 10, "UPSERT must not duplicate rows (10 config keys)");
     }
 
     #[tokio::test]

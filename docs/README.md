@@ -117,7 +117,8 @@
 | :--- | :--- | :--- |
 | [`research/輔翼ERP逆向分析與最佳化方案_v1.0.md`](research/輔翼ERP逆向分析與最佳化方案_v1.0.md) | 逆向分析主報告 | 現行 |
 | [`research/輔翼ERP優化多階段執行藍圖_v1.0.md`](research/輔翼ERP優化多階段執行藍圖_v1.0.md) | 多階段藍圖 | 現行 |
-| [`research/FlapsErp效能基線報告_v1.0.md`](research/FlapsErp效能基線報告_v1.0.md) | 效能基線 | 現行 |
+| [`research/FlapsErp效能基線報告_v1.0.md`](research/FlapsErp效能基線報告_v1.0.md) | 產品效能基線（2026-11-03） | 現行（對照基準） |
+| [`research/FlapsErp效能評估進度報告_v2.0.md`](research/FlapsErp效能評估進度報告_v2.0.md) | **全程進度報告（2026-11-09）**：開發至今時間軸、246 測試、SLA 422ms、RAG、安全處置 | 現行 |
 | [`research/FlapsErp優化_合規風險追蹤表.md`](research/FlapsErp優化_合規風險追蹤表.md) | 合規風險 | 現行 |
 | [`research/A1檔案通道端到端操作手冊_v1.0.md`](research/A1檔案通道端到端操作手冊_v1.0.md)、[`research/CDP自動化Playbook_A3軌道_v0.1.md`](research/CDP自動化Playbook_A3軌道_v0.1.md) | 操作手冊 | 現行 |
 | [`research/flaps_bridge測試規格_v1.0.md`](research/flaps_bridge測試規格_v1.0.md) | bridge 測試規格 | 現行 |
@@ -153,7 +154,7 @@
 * **後端服務**：Axum 0.7 REST API + Tokio 異步運行時；讀取 GET／寫入 POST／成功後 PRG。
 * **持久化層**：SQLx 0.8（SQLite WAL，冪等事務；金額一律 i128 minor 單位，禁浮點）。
 * **自動化核心**：Win32 / Windows COM 0.58 STA 線程隔離，驅動輔翼 ERP、哈瓦士 MTRIX 與蝦皮訂單流。
-* **品質閘門**（每次交付必過）：`cargo fmt -- --check`；`cargo clippy --all-targets -- -D warnings`；`cargo test --locked`（當前 157 passed / 0 failed，含 100k 交易 stress p95 ≤500ms）；`cargo audit`。
+* **品質閘門**（每次交付必過）：`cargo fmt -- --check`；`cargo clippy --all-targets -- -D warnings`；`cargo test --locked`（當前 **246 passed / 0 failed**，含 100k 交易 stress warm p95 422ms ≤500ms）；`cargo audit`（2 個已文件化處置）。
 
 ---
 

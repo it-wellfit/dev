@@ -33,13 +33,22 @@
         <div class="container">
             <a href="/">總覽</a>
             <a href="/transactions">交易</a>
-            <a href="/new">新增交易</a>
-            <a href="/import">快速匯入</a>
-            <a href="/bankpay">銀行支付</a>
-            <a href="/drafts">草稿解析</a>
-            <a href="/reports/monthly">月報表</a>
-            <a href="/reports/pivot?rows=account&cols=month&measure=debit">樞紐分析</a>
-            <a href="/reports/parallel?months=6">平行座標投影</a>
+            <a href="/bankpay" aria-current="page">銀行支付</a>
+            <details class="nav-menu">
+                <summary>匯入與草稿</summary>
+                <div class="nav-menu-items">
+                    <a href="/import">快速匯入</a>
+                    <a href="/drafts">草稿解析</a>
+                </div>
+            </details>
+            <details class="nav-menu">
+                <summary>報表分析</summary>
+                <div class="nav-menu-items">
+                    <a href="/reports/monthly">月報表</a>
+                    <a href="/reports/pivot?rows=account&cols=month&measure=debit">樞紐分析</a>
+                    <a href="/reports/parallel?months=6">平行座標投影</a>
+                </div>
+            </details>
         </div>
     </nav>
 
@@ -86,10 +95,10 @@
         {% endif %}
         {% endif %}
 
-        {# ── 模式與連線狀態 ── #}
+        {# ── 模式與連線就緒檢查（誠實：由實際設定狀態推導，非捏造檢查結果） ── #}
         <section class="panel" aria-labelledby="mode-title">
             <div class="status-panel-head">
-                <h3 id="mode-title">連線模式</h3>
+                <h3 id="mode-title">連線模式與就緒檢查</h3>
                 {% if mock_mode %}
                 <span class="badge badge-warning">模擬模式（資料非真實銀行交易）</span>
                 {% else %}
@@ -98,13 +107,62 @@
             </div>
             <p class="section-note">
                 {% if mock_mode %}
-                目前為<strong>模擬模式</strong>：回應為確定性模擬（esun_ref = ESUN-MOCK-{batch_id}），匯入仍真實解析檔案內容。生產模式需完成 E.Sun V2.8 mTLS 憑證與經驗證端點設定（詳見 ADR-0012）；權威契約實作位於 Wellfit/crates/wellfit_bankpay。
+                目前為<strong>模擬模式</strong>：回應為確定性模擬（esun_ref = ESUN-MOCK-{batch_id}），匯入仍真實解析檔案內容。生產模式需完成下方就緒檢查的全部要件（ADR-0012）；權威契約實作位於 Wellfit/crates/wellfit_bankpay。
                 {% else if configured %}
-                生產模式且連線要件完整（source_system_id、customer_id 已設定）。
+                生產模式且核心要件完整（source_system_id、customer_id 已設定）。
                 {% else %}
                 <strong class="status-row-error">生產模式但連線要件不完整</strong>：請於下方設定區補齊 source_system_id 與 customer_id，否則作業將回報錯誤。
                 {% endif %}
             </p>
+            <div class="table-wrap">
+                <table>
+                    <caption>E.Sun V2.8 連線就緒檢查（依實際設定狀態推導）</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col">檢查項</th>
+                            <th scope="col">狀態</th>
+                            <th scope="col">說明與處理</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <th scope="row">契約版本</th>
+                            <td><span class="badge badge-success">已鎖定</span></td>
+                            <td>E.Sun 技術文件 V2.8（8 端點）；權威實作 <code>Wellfit/crates/wellfit_bankpay</code>。</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">內部端點（esun_url）</th>
+                            <td>{% if !config.esun_url.is_empty() %}<span class="badge badge-success">已設定</span>{% else %}<span class="badge badge-info">未設定</span>{% endif %}</td>
+                            <td>內部 dev/test 為 <code>http://<IP>:8080</code>、正式為 <code>:8443</code>；模擬模式不需要。</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">外部沙盒端點（esun_external_url）</th>
+                            <td>{% if !config.esun_external_url.is_empty() %}<span class="badge badge-success">已設定</span>{% else %}<span class="badge badge-info">未設定</span>{% endif %}</td>
+                            <td>外部沙盒參考 <code>https://eospt.testesunbank.com.tw:9443</code>；須為 https://。</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">SourceSystemId</th>
+                            <td>{% if let Some(v) = config.source_system_id %}<span class="badge badge-success">已設定（{{ v }}）</span>{% else %}<span class="badge badge-warning">未設定</span>{% endif %}</td>
+                            <td>V2.8 要求每請求附 <code>Source-System</code> 標頭。</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">customerIxd（企業集團統編）</th>
+                            <td>{% if let Some(v) = config.customer_id %}<span class="badge badge-success">已設定（{{ v }}）</span>{% else %}<span class="badge badge-warning">未設定</span>{% endif %}</td>
+                            <td>rqHeader.customerIxd（8–10 碼統編）；msgId 亦由統編組成。</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">mTLS 憑證（cert/key/CA）</th>
+                            <td>{% if config.client_cert_path.is_some() && config.client_key_path.is_some() && config.ca_cert_path.is_some() %}<span class="badge badge-success">三件套已設定</span>{% else if config.client_cert_path.is_some() || config.client_key_path.is_some() || config.ca_cert_path.is_some() %}<span class="badge badge-warning">部分設定</span>{% else %}<span class="badge badge-info">未設定</span>{% endif %}</td>
+                            <td>雙向 SSL 必要；路徑指向憑證檔，正式串接時由傳輸層載入。</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">rsStatus 代碼語意</th>
+                            <td><span class="badge badge-success">已定義</span></td>
+                            <td><code>910000</code> = 成功；信封：rqHeader（msgId=統編+YYYYMMDD+7碼流水、requestTime、customerIxd、sourceSystem）、回應 rsHeader.msgId 回拋。</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         </section>
 
         {# ── KPI ── #}
@@ -276,6 +334,26 @@
                 <div class="form-row">
                     <label for="cfg-pay">payer_account（留空＝保留現值）</label>
                     <input class="input" type="text" id="cfg-pay" name="payer_account" value="{{ config.payer_account.as_deref().unwrap_or("") }}" placeholder="012345678901">
+                </div>
+                <div class="form-row">
+                    <label for="cfg-ext">外部沙盒/正式端點（https:// 開頭；留空＝保留現值）</label>
+                    <input class="input" type="url" id="cfg-ext" name="esun_external_url" value="{{ config.esun_external_url }}" placeholder="https://eospt.testesunbank.com.tw:9443">
+                </div>
+                <div class="form-row">
+                    <label for="cfg-cert">mTLS 用戶端憑證路徑（留空＝保留現值）</label>
+                    <input class="input" type="text" id="cfg-cert" name="client_cert_path" value="{{ config.client_cert_path.as_deref().unwrap_or("") }}" placeholder="certs\client.crt">
+                </div>
+                <div class="form-row">
+                    <label for="cfg-key">mTLS 用戶端私鑰路徑（留空＝保留現值）</label>
+                    <input class="input" type="text" id="cfg-key" name="client_key_path" value="{{ config.client_key_path.as_deref().unwrap_or("") }}" placeholder="certs\client.key">
+                </div>
+                <div class="form-row">
+                    <label for="cfg-ca">E.Sun CA 憑證路徑（留空＝保留現值）</label>
+                    <input class="input" type="text" id="cfg-ca" name="ca_cert_path" value="{{ config.ca_cert_path.as_deref().unwrap_or("") }}" placeholder="certs\esun-ca.crt">
+                </div>
+                <div class="form-row">
+                    <label for="cfg-timeout">HTTP 逾時秒數（1–300；留空＝保留現值）</label>
+                    <input class="input" type="number" id="cfg-timeout" name="timeout_secs" value="{{ config.timeout_secs }}" min="1" max="300">
                 </div>
                 <div class="form-actions">
                     <button class="btn btn-primary" type="submit">儲存設定</button>

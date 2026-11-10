@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>個人設定 — Flaps ERP 工作台</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%23005fcc'/%3E%3Ctext x='8' y='12' font-size='10' font-family='sans-serif' fill='white' text-anchor='middle' font-weight='bold'%3EF%3C/text%3E%3C/svg%3E">
+    <link rel="stylesheet" href="/assets/design-system.css">
+</head>
+<body>
+    <a class="skip-link" href="#main">跳至主要內容</a>
+
+    <header class="app-header">
+        <div class="container">
+            <div>
+                <h1>個人設定</h1>
+                <p class="app-subtitle">帳號資訊與密碼變更（零 JavaScript）</p>
+            </div>
+            <p class="app-subtitle">
+                使用者：<strong>{{ acting_user }}</strong>
+                ｜
+                <a class="btn btn-secondary" href="/">返回工作台</a>
+            </p>
+        </div>
+    </header>
+
+    <main id="main" class="container">
+        {% if let Some(e) = error %}
+        <div class="error-state" role="alert">
+            <strong>變更未完成</strong>
+            <p>{{ e }}</p>
+            <p class="hint">請修正後重新送出；您的舊密碼仍然有效。</p>
+        </div>
+        {% endif %}
+        {% if saved %}
+        <p class="preview-note" role="status">密碼已變更；下次登入請使用新密碼。</p>
+        {% endif %}
+
+        <section class="panel" aria-labelledby="info-title">
+            <h2 id="info-title">帳號資訊</h2>
+            <dl class="kpi-grid">
+                <div class="kpi">
+                    <dt>帳號</dt>
+                    <dd>{{ acting_user }}</dd>
+                </div>
+                <div class="kpi">
+                    <dt>角色</dt>
+                    <dd>{% if roles.is_empty() %}（無）{% else %}{{ roles|join("、") }}{% endif %}</dd>
+                </div>
+            </dl>
+        </section>
+
+        <section class="panel" aria-labelledby="password-title">
+            <h2 id="password-title">變更密碼</h2>
+            <form method="post" action="/profile/password">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <div class="form-row">
+                    <label for="cur-pw">目前密碼 <span aria-hidden="true">*</span></label>
+                    <input class="input" type="password" id="cur-pw" name="current_password" required autocomplete="current-password">
+                </div>
+                <div class="form-row">
+                    <label for="new-pw">新密碼 <span aria-hidden="true">*</span></label>
+                    <input class="input" type="password" id="new-pw" name="new_password" required minlength="8" autocomplete="new-password">
+                    <p class="hint">至少 8 個字元（Argon2id 雜湊保存）。</p>
+                </div>
+                <div class="form-row">
+                    <label for="confirm-pw">確認新密碼 <span aria-hidden="true">*</span></label>
+                    <input class="input" type="password" id="confirm-pw" name="confirm_password" required minlength="8" autocomplete="new-password">
+                </div>
+                <div class="form-actions">
+                    <button class="btn btn-primary" type="submit">變更密碼</button>
+                </div>
+            </form>
+        </section>
+    </main>
+
+    <footer class="site-footer">
+        <div class="container">
+            <p>Flaps ERP 工作台 · 個人設定（零 JavaScript，WCAG 2.2 AA 方向）</p>
+        </div>
+    </footer>
+</body>
+</html>

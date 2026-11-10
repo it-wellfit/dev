@@ -3,6 +3,21 @@
 本檔記錄根 workspace（`core/`、`platform/`、`web/`、`crates/flaps_bridge`）的實際變更。格式參考 Keep a Changelog。子專案（ekpi-platform、Wellfit、SyncMesh）各自有變更記錄。
 
 
+## [Unreleased] — 2026-11-09（第十四輪：PHASE-R — S1 檢索面 RAG 升級）
+
+### Added
+- **混合檢索（RAG）落地於工作台**（`1793787631643` PHASE-R；addendum #17）：
+  - `platform/src/bm25.rs`（新）：std-only BM25（K1=1.2、B=0.75、Robertson IDF 與 kem 同式）＋CJK 感知 tokenizer（單一漢字 token——改進 kem `w.len()>1` 過濾丟字的限制）；零新外部依賴（Tantivy 教訓）。
+  - `platform/Cargo.toml`：`kem = { path = "../crates/kem" }`——**重用**已驗證的 embedder 池（OVH bge-m3 免金鑰 → Ollama 本地 fallback）與 cosine；kem 依賴為 platform 依賴子集，零新增外部 crate。
+  - `search.rs`：`SearchEngine` 升級為混合引擎——BM25 索引（變更即重建，doc_id 排序定位）＋新鮮度戳記向量（`sha256(content)`，kem §8 規則，失配視同缺失）＋`search_ranked()`（α·norm(BM25)+(1−α)·norm(cosine)，α=0.5、語義拒絕地板 0.55 對齊 kem 校準）＋`via` 溯源（"hybrid"/"bm25"）；embedder 不可達→確定性 BM25-only 降級，**永不捏造向量分數**；舊 `search()` 簽名不變（相容）。
+  - `cross_module_api.rs`：`/api/search` 回真實融合分數；`SearchResult.via` 加法欄位；直取標 `via="direct"`。
+- **跨線 stale fixture 修復**：`bankpay_persistence.rs` 期望鍵數 5→10（並行線 EsunConfig mTLS 欄位擴增），附理由註解。
+
+### Verified
+- 四關全綠（2026-11-09）：fmt 0／clippy 0／test --locked **246 passed 0 failed**（bridge 7＋core 42＋kem 58＋platform 108＋kem-int 15＋bankpay_persistence 1＋characterization 6＋close_out 4＋slice12 2＋misc 3）／audit 0（兩工作區；platform-hub 新增自有 `.cargo/audit.toml` 鏡像 RUSTSEC-2026-0459 處置——hub 鎖 0.37.0，同受範圍限制）。
+- RAG 測試 15 項新增：bm25 5＋search 混合 6＋降級/排序整合。
+- 證據：`docs/PLAN_REGISTER.md` addendum #16/#17。
+
 ## [Unreleased] — 2026-11-09（第十三輪：安全驅動 sqlx 0.9 升級＋RUSTSEC-2026-0459 處置）
 
 ### Security

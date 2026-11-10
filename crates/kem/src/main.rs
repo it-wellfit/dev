@@ -97,6 +97,7 @@ fn run() -> Result<(), KemError> {
         "ask" => cmd_ask(&root, &args.flags),
         "eval" => cmd_eval(&root, &args.flags),
         "embed" => cmd_embed(&root, &ledger, &args.flags),
+        "console" => cmd_console(&root, &ledger),
         "sync" => cmd_sync(&root, &ledger),
         "supersede" => cmd_supersede(&root, &ledger, &args.flags),
         "vet2" => cmd_vet2(&root, &ledger, &args.flags),
@@ -407,6 +408,24 @@ fn cmd_finalize(root: &Path, ledger: &Path) -> Result<(), KemError> {
     } else {
         Err(KemError::SchemaViolation(format!("{findings} findings")))
     }
+}
+
+/// P2b+: 零 JS 多頁操作主控台（console/ 目錄，頁數隨 KB 有機成長）。
+fn cmd_console(root: &Path, ledger: &Path) -> Result<(), KemError> {
+    let claims = load_claims(&root.join("claims"))?;
+    let entries = if ledger.exists() {
+        kem::ledger::read_all(ledger)?
+    } else {
+        Vec::new()
+    };
+    let queue = kem::gov::pending_queue(&root.join(".kem/review-queue.jsonl"))?;
+    let vectors = kem::embed::load_vectors(&root.join(".kem/vectors.json"))?;
+    let pages = kem::console::generate(root, &claims, &entries, &queue, vectors.as_ref())?;
+    println!(
+        "console: {pages} pages generated under {}/console/",
+        root.display()
+    );
+    Ok(())
 }
 
 /// P2 M5 + P2b: ask — hybrid retrieval (α·BM25 + (1−α)·vector). Degrades to

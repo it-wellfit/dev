@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>批次詳情 — Flaps ERP 工作台</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%23005fcc'/%3E%3Ctext x='8' y='12' font-size='10' font-family='sans-serif' fill='white' text-anchor='middle' font-weight='bold'%3EF%3C/text%3E%3C/svg%3E">
+    <link rel="stylesheet" href="/assets/design-system.css">
+</head>
+<body>
+    <a class="skip-link" href="#main">跳至主要內容</a>
+
+    <header class="app-header">
+        <div class="container">
+            <div>
+                <h1>批次詳情</h1>
+                <p class="app-subtitle">狀態與相關稽核事件（零 JavaScript）</p>
+            </div>
+            <p class="app-subtitle">
+                使用者：<strong>{{ acting_user }}</strong>
+                ｜
+                <a class="btn btn-secondary" href="/bankpay/batches">返回批次總覽</a>
+            </p>
+        </div>
+    </header>
+
+    <main id="main" class="container">
+        {% if not_found %}
+        <div class="error-state" role="alert">
+            <strong>找不到該批次</strong>
+            <p>問題：查無此批次編號。可能原因：連結過期或編號輸入有誤。處理方式：回到批次總覽重新選擇。</p>
+        </div>
+        {% else %}
+        {% if let Some(b) = batch %}
+        <section class="panel" aria-labelledby="batch-title">
+            <h2 id="batch-title">批次資訊</h2>
+            <dl class="kpi-grid">
+                <div class="kpi">
+                    <dt>批次編號</dt>
+                    <dd>{{ b.batch_id }}</dd>
+                </div>
+                <div class="kpi">
+                    <dt>銀行參考</dt>
+                    <dd>{{ b.esun_ref }}</dd>
+                </div>
+                <div class="kpi">
+                    <dt>金額</dt>
+                    <dd>{{ b.amount_display }} {{ b.currency }}</dd>
+                </div>
+                <div class="kpi">
+                    <dt>狀態</dt>
+                    <dd>{% if b.status == "COMPLETED" %}<span class="badge badge-success">已完成</span>{% else %}<span class="badge badge-info">{{ b.status }}</span>{% endif %}</dd>
+                </div>
+            </dl>
+            <p class="section-note">建立者：{{ b.created_by }}｜建立時間：{{ b.created_at }}{% if b.completed_at != "—" %}｜完成時間：{{ b.completed_at }}{% endif %}</p>
+        </section>
+        {% endif %}
+
+        <section class="panel" aria-labelledby="audits-title">
+            <h2 id="audits-title">相關稽核事件</h2>
+            <div class="table-wrap">
+                <table>
+                    <caption>批次稽核軌跡</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col">編號</th>
+                            <th scope="col">使用者</th>
+                            <th scope="col">動作</th>
+                            <th scope="col">資源</th>
+                            <th scope="col">詳細內容</th>
+                            <th scope="col">時間</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if audits.is_empty() %}
+                        <tr>
+                            <td colspan="6">
+                                <p class="empty-state">
+                                    <strong>尚無稽核事件</strong>
+                                    該批次尚無匯出／匯入／查詢稽核紀錄。
+                                </p>
+                            </td>
+                        </tr>
+                        {% else %}
+                        {% for row in audits %}
+                        <tr>
+                            <td>{{ row.log_id }}</td>
+                            <td>{{ row.user_id }}</td>
+                            <td>{{ row.event_label }}</td>
+                            <td>{{ row.resource }}</td>
+                            <td>{{ row.details }}</td>
+                            <td>{{ row.time }}</td>
+                        </tr>
+                        {% endfor %}
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+        {% endif %}
+    </main>
+
+    <footer class="site-footer">
+        <div class="container">
+            <p>Flaps ERP 工作台 · 批次詳情（零 JavaScript，WCAG 2.2 AA 方向）</p>
+        </div>
+    </footer>
+</body>
+</html>

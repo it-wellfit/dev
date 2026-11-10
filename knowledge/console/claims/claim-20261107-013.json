@@ -1,0 +1,26 @@
+{
+  "id": "claim-20261107-013",
+  "claim_type": "fact",
+  "status": "published",
+  "track": "b",
+  "confidence": 0.7882775588909094,
+  "valid_from": "2026-11-07",
+  "valid_to": null,
+  "recorded_at": "2026-11-07T11:03:14.290735900Z",
+  "supersedes": [],
+  "superseded_by": null,
+  "evidence": [
+    {
+      "path": "docs/engineering/FREE_AI_ROUTING.md",
+      "rev": "working-tree",
+      "quote": "| 2026-11-06 | OpenRouter | `https://openrouter.ai/api/v1/chat/completions` | FAIL | 401 — requires API key |"
+    }
+  ],
+  "topics": [
+    "free-ai",
+    "endpoints"
+  ],
+  "source": "raw/free-ai/2026-11-07-seed.md",
+  "title": "遠端免費端點需金鑰（實測 401/403）",
+  "body": "Remote free endpoints (OpenRouter, Z.ai, Cloudflare) returned 401/403 without API keys in the 2026-11-06 smoke test, so the workspace has no keyless LLM endpoint today."
+}

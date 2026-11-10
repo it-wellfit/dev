@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>全文檢索 — Flaps ERP</title>
+    <link rel="stylesheet" href="/assets/design-system.css">
+</head>
+<body>
+    <a class="skip-link" href="#main">跳至主要內容</a>
+    <header class="app-header">
+        <div class="container">
+            <div>
+                <h1>全文檢索</h1>
+                <p class="app-subtitle">跨交易與知識文件快速查找 — 零 JavaScript</p>
+            </div>
+            <p class="app-subtitle">
+                使用者：<strong>{{ acting_user }}</strong>
+                ｜ <a class="btn btn-secondary" href="/">返回工作台</a>
+            </p>
+        </div>
+    </header>
+    <main id="main" class="container">
+        <section class="panel" aria-labelledby="s-form">
+            <h2 id="s-form">檢索條件</h2>
+            <form method="get" action="/search">
+                <div class="form-row">
+                    <label for="q">關鍵字</label>
+                    <input class="input" type="search" id="q" name="q" value="{{ q }}" placeholder="輸入交易摘要或文件關鍵字">
+                    <p class="hint">支援部分字詞比對；結果最多顯示 50 筆。</p>
+                </div>
+                <div class="form-actions">
+                    <button class="btn btn-primary" type="submit">檢索</button>
+                </div>
+            </form>
+        </section>
+        <section class="panel" aria-labelledby="s-res">
+            <h2 id="s-res">檢索結果</h2>
+            {% if !has_q %}
+            <p class="empty-state" data-state-empty>
+                <strong>輸入關鍵字開始檢索</strong>
+                例如：供應商名稱、交易摘要、文件標題。
+            </p>
+            {% else %}
+            {% if results.is_empty() %}
+            <p class="empty-state" data-state-empty>
+                <strong>查無符合「{{ q }}」的資料</strong>
+                可能原因：索引尚未建立該內容；處理方式：調整關鍵字，或稍後再試（索引隨作業更新）。
+            </p>
+            {% else %}
+            <div class="table-wrap">
+                <table>
+                    <caption>符合「{{ q }}」的結果（{{ results.len() }} 筆）</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col">文件</th>
+                            <th scope="col">內容</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for r in results %}
+                        <tr>
+                            <td><code>{{ r.doc_id }}</code></td>
+                            <td>{{ r.content }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endif %}
+            {% endif %}
+        </section>
+    </main>
+    <footer class="site-footer">
+        <div class="container">
+            <p>Flaps ERP 工作台（零 JavaScript，WCAG 2.2 AA 方向）</p>
+        </div>
+    </footer>
+</body>
+</html>

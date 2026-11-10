@@ -20,9 +20,9 @@
 
 | 項目 | 事實 | 證據 |
 | :--- | :--- | :--- |
-| 品質門檻 | fmt/clippy/test/audit 四關 EXIT=0；**157 passed / 0 failed** | `cargo test --locked --workspace`（2026-11-07 log） |
+| 品質門檻 | fmt/clippy/test/audit 四關 EXIT=0；**246 passed / 0 failed**（2026-11-09 log；含 RAG 混合檢索與安全升級後） | `cargo test --locked --workspace` |
 | 效能 SLA | 100k 交易 warm p95 **422ms ≤ 500ms**（預熱趟＋21 樣本量測法） | `platform/src/api.rs` stress 測試 |
-| 路由 | 23 條（SSOT：api.rs 路由表） | `[FACT:CODE]` |
+| 路由 | 60 條（api.rs 48＋cross_module_api 12；SSOT：原始碼路由表） | `[FACT:CODE]` 2026-11-09 計數 |
 | COM 橋接 | windows 0.58（Win32_Foundation＋Win32_System_Com），STA 線程隔離 | 根 Cargo.toml |
 | 效能基線報告 | `docs/research/FlapsErp效能基線報告_v1.0.md`；深度驗證報告與安裝最佳化指南 v6.0 已交付 | research/ |
 | 廠商通道 | OQ-F1/F2 正式提案 **v2.1 已提交**（v1.0 superseded）；廠商回覆期限 2026-11-19；回覆未到 → 相關項目狀態一律 **UNKNOWN（非 PASS）** | research/proposals/ |

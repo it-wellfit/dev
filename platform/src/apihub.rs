@@ -899,4 +899,337 @@ pub fn router() -> Router<AppState> {
             "/admin/api/config",
             get(apihub_config).post(apihub_config_update),
         )
+        // ── 治理四頁（T2；技術人員受眾）──
+        .route("/admin/api/records", get(apihub_records))
+        .route("/admin/api/codes", get(apihub_codes))
+        .route("/admin/api/release", get(apihub_release))
+        .route("/admin/api/net", get(apihub_net))
+}
+
+// ---------------------------------------------------------------------------
+// 治理四頁（T2：records／codes／release／net）— 技術人員受眾（Tier 3）
+// ---------------------------------------------------------------------------
+
+/// 測試紀錄列（源：bankpay_audits；status_code 為實際 HTTP 狀態，非常數）。
+pub struct BankpayRecordRow {
+    pub performed_at: String,
+    pub action: String,
+    pub batch_id: String,
+    pub performed_by: String,
+    pub status_code: String,
+    pub result_label: String,
+    pub result_class: String,
+    pub payload_snippet: String,
+}
+
+pub struct BankpayBatchRow {
+    pub batch_id: String,
+    pub esun_ref: String,
+    pub amount_display: String,
+    pub currency: String,
+    pub status: String,
+    pub status_class: String,
+    pub created_at: String,
+    pub completed_at: String,
+}
+
+#[derive(Template)]
+#[template(path = "api_records.html")]
+pub struct ApiRecordsTemplate {
+    pub acting_user: String,
+    pub records: Vec<BankpayRecordRow>,
+    pub batches: Vec<BankpayBatchRow>,
+}
+
+#[derive(Template)]
+#[template(path = "api_codes.html")]
+pub struct ApiCodesTemplate {
+    pub acting_user: String,
+    pub codes: Vec<ErrorCodeRow>,
+}
+
+pub struct ErrorCodeRow {
+    pub code: String,
+    pub meaning: String,
+    pub semantics: String,
+    pub action: String,
+}
+
+#[derive(Template)]
+#[template(path = "api_release.html")]
+pub struct ApiReleaseTemplate {
+    pub acting_user: String,
+    pub items: Vec<ReleaseItemRow>,
+}
+
+pub struct ReleaseItemRow {
+    pub id: String,
+    pub category: String,
+    pub item: String,
+    pub evidence: String,
+    pub status: String,
+    pub status_class: String,
+}
+
+#[derive(Template)]
+#[template(path = "api_net.html")]
+pub struct ApiNetTemplate {
+    pub acting_user: String,
+    pub checks: Vec<NetCheckRow>,
+}
+
+pub struct NetCheckRow {
+    pub item: String,
+    pub value: String,
+    pub status: String,
+    pub status_class: String,
+    pub note: String,
+}
+
+/// GET /admin/api/records — BankPay 作業與批次紀錄（真實資料；零常數）。
+pub async fn apihub_records(
+    State(state): State<AppState>,
+    session: Extension<Session>,
+) -> Response {
+    if let Some(resp) = require_admin(&state, &session).await {
+        return resp;
+    }
+    let raw: Vec<(String, String, String, String, i64, String)> = sqlx::query_as(
+        "SELECT performed_at, event_type, COALESCE(batch_id, ''), performed_by, status_code, \
+         COALESCE(response_payload, '') FROM bankpay_audits ORDER BY performed_at DESC LIMIT 50",
+    )
+    .fetch_all(&state.pool)
+    .await
+    .unwrap_or_default();
+    let records: Vec<BankpayRecordRow> = raw
+        .into_iter()
+        .map(
+            |(performed_at, action, batch_id, performed_by, status_code, payload)| {
+                let (result_label, result_class) = if status_code == 200 {
+                    ("成功", "badge-success")
+                } else if status_code == 0 {
+                    ("未知", "badge-neutral")
+                } else {
+                    ("失敗", "badge-error")
+                };
+                let char_count = payload.chars().count();
+                let mut snippet: String = payload.chars().take(120).collect();
+                if char_count > 120 {
+                    snippet.push('…');
+                }
+                BankpayRecordRow {
+                    performed_at,
+                    action,
+                    batch_id,
+                    performed_by,
+                    status_code: status_code.to_string(),
+                    result_label: result_label.to_string(),
+                    result_class: result_class.to_string(),
+                    payload_snippet: snippet,
+                }
+            },
+        )
+        .collect();
+    /// raw 查詢列（type_complexity 拆解：批次 → 顯示列的中間 tuple）。
+    type RawBatchRow = (String, String, i64, String, String, String, Option<String>);
+    let raw_batches: Vec<RawBatchRow> = sqlx::query_as(
+        "SELECT batch_id, COALESCE(esun_ref, ''), amount_minor, currency, status, created_at, completed_at \
+         FROM bankpay_batches ORDER BY created_at DESC LIMIT 20",
+    )
+    .fetch_all(&state.pool)
+    .await
+    .unwrap_or_default();
+    let batches: Vec<BankpayBatchRow> = raw_batches
+        .into_iter()
+        .map(
+            |(batch_id, esun_ref, amount_minor, currency, status, created_at, completed_at)| {
+                let status_class = match status.as_str() {
+                    "COMPLETED" => "badge-success",
+                    "SUBMITTED" => "badge-info",
+                    "FAILED" => "badge-error",
+                    "REJECTED" => "badge-warning",
+                    _ => "badge-neutral",
+                };
+                BankpayBatchRow {
+                    batch_id,
+                    esun_ref,
+                    amount_display: flaps_core::format_minor(amount_minor, 2),
+                    currency,
+                    status: status.clone(),
+                    status_class: status_class.to_string(),
+                    created_at,
+                    completed_at: completed_at.unwrap_or_else(|| "—".to_string()),
+                }
+            },
+        )
+        .collect();
+    render_or_500(ApiRecordsTemplate {
+        acting_user: session.user_id.clone(),
+        records,
+        batches,
+    })
+}
+
+/// GET /admin/api/codes — V2.8 錯誤碼對照（僅列已驗證項；完整表見官方文件）。
+pub async fn apihub_codes(State(state): State<AppState>, session: Extension<Session>) -> Response {
+    if let Some(resp) = require_admin(&state, &session).await {
+        return resp;
+    }
+    let codes = vec![ErrorCodeRow {
+        code: "910000".to_string(),
+        meaning: "成功（Success）".to_string(),
+        semantics:
+            "rsStatus.code = 910000 時 rsData 才存在；逐筆錯誤細節於 rsStatus.moreInfo（分號分隔）"
+                .to_string(),
+        action: "正常處理".to_string(),
+    }];
+    render_or_500(ApiCodesTemplate {
+        acting_user: session.user_id.clone(),
+        codes,
+    })
+}
+
+/// GET /admin/api/release — Release checklist（誠實狀態；未驗證不標 Pass）。
+pub async fn apihub_release(
+    State(state): State<AppState>,
+    session: Extension<Session>,
+) -> Response {
+    if let Some(resp) = require_admin(&state, &session).await {
+        return resp;
+    }
+    let items = vec![
+        ReleaseItemRow {
+            id: "RC-01".to_string(),
+            category: "規格".to_string(),
+            item: "V2.8 契約 8 端點盤點（rqHeader/rqData 信封、錯誤碼、mTLS）".to_string(),
+            evidence: "Wellfit/docs/bankpay/04-interface-specification.md".to_string(),
+            status: "已驗證".to_string(),
+            status_class: "badge-success".to_string(),
+        },
+        ReleaseItemRow {
+            id: "RC-02".to_string(),
+            category: "實作".to_string(),
+            item: "權威實作 wellfit_bankpay（8 端點、測試覆蓋）".to_string(),
+            evidence: "Wellfit/crates/wellfit_bankpay".to_string(),
+            status: "已驗證".to_string(),
+            status_class: "badge-success".to_string(),
+        },
+        ReleaseItemRow {
+            id: "RC-03".to_string(),
+            category: "平台整合".to_string(),
+            item: "模擬對應 3 端點＋冪等＋稽核 fail-closed（ADR-0012）".to_string(),
+            evidence: "platform/tests/bankpay_api.rs".to_string(),
+            status: "已驗證".to_string(),
+            status_class: "badge-success".to_string(),
+        },
+        ReleaseItemRow {
+            id: "RC-04".to_string(),
+            category: "資安".to_string(),
+            item: "玉山 Sandbox mTLS 憑證申請與配置".to_string(),
+            evidence: "OQ-E3（待憑證）".to_string(),
+            status: "未驗證".to_string(),
+            status_class: "badge-warning".to_string(),
+        },
+        ReleaseItemRow {
+            id: "RC-05".to_string(),
+            category: "驗收".to_string(),
+            item: "正式通道端對端驗收（09-sandbox-acceptance-runbook）".to_string(),
+            evidence: "OQ-E3 阻塞".to_string(),
+            status: "未驗證".to_string(),
+            status_class: "badge-warning".to_string(),
+        },
+        ReleaseItemRow {
+            id: "RC-06".to_string(),
+            category: "維運".to_string(),
+            item: "ReleaseGate 自動串接（部署前檢核）".to_string(),
+            evidence: "follow-up（尚未串接）".to_string(),
+            status: "未串接".to_string(),
+            status_class: "badge-neutral".to_string(),
+        },
+    ];
+    render_or_500(ApiReleaseTemplate {
+        acting_user: session.user_id.clone(),
+        items,
+    })
+}
+
+/// GET /admin/api/net — 連線與資安姿態（本地設定與程式面檢查；不做網路探測）。
+pub async fn apihub_net(State(state): State<AppState>, session: Extension<Session>) -> Response {
+    if let Some(resp) = require_admin(&state, &session).await {
+        return resp;
+    }
+    let config = state.bankpay_config.lock().await.clone();
+    let mut checks: Vec<NetCheckRow> = Vec::new();
+    if config.esun_mock_mode {
+        checks.push(NetCheckRow {
+            item: "運作模式".to_string(),
+            value: "模擬模式（Mock）— 確定性模擬，非真實銀行交易".to_string(),
+            status: "警告".to_string(),
+            status_class: "badge-warning".to_string(),
+            note: "全域狀態列同步標示；切換需於設定頁操作".to_string(),
+        });
+    } else {
+        checks.push(NetCheckRow {
+            item: "運作模式".to_string(),
+            value: "正式模式".to_string(),
+            status: "注意".to_string(),
+            status_class: "badge-info".to_string(),
+            note: "正式通道需 OQ-E3 憑證；未配置前呼叫將 fail-closed 回 500".to_string(),
+        });
+    }
+    let url_ok = config.esun_url.starts_with("https://");
+    checks.push(NetCheckRow {
+        item: "銀行端點 URL".to_string(),
+        value: config.esun_url.clone(),
+        status: if url_ok { "符合" } else { "不符合" }.to_string(),
+        status_class: if url_ok {
+            "badge-success"
+        } else {
+            "badge-error"
+        }
+        .to_string(),
+        note: "須為 https（V2.8 傳輸安全基線）".to_string(),
+    });
+    let configured = config.source_system_id.is_some() && config.customer_id.is_some();
+    checks.push(NetCheckRow {
+        item: "連線設定完整度".to_string(),
+        value: if configured {
+            "來源系統＋客戶識別已配置".to_string()
+        } else {
+            "未完整（缺來源系統或客戶識別）".to_string()
+        },
+        status: if configured { "完整" } else { "未完整" }.to_string(),
+        status_class: if configured {
+            "badge-success"
+        } else {
+            "badge-warning"
+        }
+        .to_string(),
+        note: "正式模式必要欄位".to_string(),
+    });
+    checks.push(NetCheckRow {
+        item: "CSRF 防護".to_string(),
+        value: "啟用（X-CSRF-Token 同步器權杖）".to_string(),
+        status: "啟用".to_string(),
+        status_class: "badge-success".to_string(),
+        note: "證據：platform/tests/bankpay_api.rs（缺漏/錯誤皆 403 且不產生批次）".to_string(),
+    });
+    checks.push(NetCheckRow {
+        item: "mTLS 憑證".to_string(),
+        value: "本平台不持有憑證；協議層由 wellfit_bankpay 管理".to_string(),
+        status: "未配置".to_string(),
+        status_class: "badge-warning".to_string(),
+        note: "OQ-E3：玉山 Sandbox 憑證申請中；取得前不猜測端點（ADR-0012 D1）".to_string(),
+    });
+    checks.push(NetCheckRow {
+        item: "V2.8 規格埠".to_string(),
+        value: "8443（內部）/ 9443（外部 eospt.testesunbank.com.tw）".to_string(),
+        status: "規格值".to_string(),
+        status_class: "badge-neutral".to_string(),
+        note: "遠端連通性測試需憑證；本頁不做網路探測（零副作用）".to_string(),
+    });
+    render_or_500(ApiNetTemplate {
+        acting_user: session.user_id.clone(),
+        checks,
+    })
 }

@@ -82,6 +82,7 @@ if (-not (Test-Path $manifestPath)) {
     $lines += "- git_head_end: (pending)"
     $lines += "- dirty_start: $dirty"
     $lines += "- dirty_end: (pending)"
+    $lines += "- Rules referenced: (pending)"
     $lines += ""
     $lines += "## Artifacts"
     $lines += ""

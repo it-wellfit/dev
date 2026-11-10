@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>API 測試工作台 — Flaps ERP</title>
+    <title>API 測試台 — Flaps ERP 工作台</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%23005fcc'/%3E%3Ctext x='8' y='12' font-size='10' font-family='sans-serif' fill='white' text-anchor='middle' font-weight='bold'%3EF%3C/text%3E%3C/svg%3E">
     <link rel="stylesheet" href="/assets/design-system.css">
 </head>
@@ -13,79 +13,75 @@
     <header class="app-header">
         <div class="container">
             <div>
-                <h1>API 測試工作台</h1>
-                <p class="app-subtitle">安全 GET 端點以伺服端同一程式路徑即時探測；變更類端點提供執行規格 — 零 JavaScript</p>
+                <h1>API 測試台</h1>
+                <p class="app-subtitle">端點規格測試與呼叫範例（唯讀；零 JavaScript）</p>
             </div>
             <p class="app-subtitle">
                 使用者：<strong>{{ acting_user }}</strong>
                 ｜
-                <a class="btn btn-secondary" href="/admin/api/catalog">服務目錄</a>
-                <a class="btn btn-secondary" href="/">返回工作台</a>
+                <a class="btn btn-secondary" href="/admin/api/catalog">返回服務目錄</a>
             </p>
         </div>
     </header>
 
     <main id="main" class="container">
-        <section class="panel" aria-labelledby="t-select">
-            <h2 id="t-select">選擇端點</h2>
-            <form method="get" action="/admin/api/test">
+        <section class="panel" aria-labelledby="test-title">
+            <h2 id="test-title">端點測試</h2>
+            <form method="get" action="/admin/api/test" class="form-inline" role="search">
                 <div class="form-row">
-                    <label for="endpoint">端點（{{ endpoints.len() }} 項）</label>
-                    <select class="input" id="endpoint" name="endpoint">
-                        <option value="">— 請選擇 —</option>
+                    <label for="api-endpoint">選擇端點</label>
+                    <select class="input" id="api-endpoint" name="endpoint">
                         {% for e in endpoints %}
-                        <option value="{{ e.path }}" {% if e.path == selected %}selected{% endif %}>{{ e.method }} {{ e.path }} — {{ e.description }}</option>
+                        <option value="{{ e.path }}" {% if selected == e.path %}selected{% endif %}>{{ e.method }} {{ e.path }}</option>
                         {% endfor %}
                     </select>
-                    <p class="hint">讀取（GET）端點：送出後即時顯示回應。變更類端點：顯示 curl 執行規格，不代執行寫入（fail-closed）。</p>
                 </div>
-                {% if !params.is_empty() %}
-                <div class="form-row">
-                    <label>參數（由 registry 定義；綁定送出）</label>
-                    {% for p in params %}
-                    <div class="form-row">
-                        <label for="tp-{{ p.name }}">{{ p.name }}</label>
-                        <input class="input" type="text" id="tp-{{ p.name }}" name="{{ p.name }}" value="{{ p.value }}">
-                    </div>
-                    {% endfor %}
-                </div>
-                {% endif %}                <div class="form-actions">
-                    <button class="btn btn-primary" type="submit">即時探測</button>
+                <div class="form-actions">
+                    <button class="btn btn-primary" type="submit">載入範例</button>
                 </div>
             </form>
-        </section>
 
-        {% if has_response %}
-        <section class="panel" aria-labelledby="t-resp">
-            <h2 id="t-resp">即時回應 <span class="badge badge-success">{{ response_status }}</span></h2>
-            <pre>{{ response_display }}</pre>
-            <p class="section-note">此回應由伺服端以與正式端點相同的程式路徑即時產生（derive，非快取）；內容含模組訊息時會如實標示資料來源與限制。</p>
-        </section>
-        {% endif %}
+            {% if !params.is_empty() %}
+            <h3>參數</h3>
+            <div class="table-wrap">
+                <table>
+                    <caption>端點參數</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col">名稱</th>
+                            <th scope="col">說明</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for p in params %}
+                        <tr>
+                            <td>{{ p.name }}</td>
+                            <td>{{ p.value }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endif %}
 
-        {% if has_curl %}
-        <section class="panel" aria-labelledby="t-curl">
-            <h2 id="t-curl">執行規格（curl）</h2>
-            <pre>{{ curl_example }}</pre>
-            <p class="section-note">變更類端點需登入 Cookie 與 <code>X-CSRF-Token</code>；本工作台不代執行寫入操作，避免由文件頁誤觸資金／帳務動作。</p>
-        </section>
-        {% endif %}
+            {% if has_response %}
+            <h3>執行結果</h3>
+            <div class="error-state" role="status">
+                <strong>狀態：{{ response_status }}</strong>
+                <p>{{ response_display }}</p>
+            </div>
+            {% endif %}
 
-        {% if !has_response && !has_curl %}
-        <section class="panel" aria-labelledby="t-empty">
-            <h2 id="t-empty">尚未選擇</h2>
-            <p class="empty-state" data-state-empty>
-                <strong>請先於上方選擇一個端點</strong>
-                選擇後：GET 端點顯示即時回應；POST 端點顯示可複製的執行規格。
-            </p>
+            {% if has_curl %}
+            <h3>呼叫範例</h3>
+            <p class="preview-note">{{ curl_example }}</p>
+            {% endif %}
         </section>
-        {% endif %}
     </main>
 
     <footer class="site-footer">
         <div class="container">
-            <p>Flaps ERP 工作台 · API 資料管理平台（零 JavaScript，WCAG 2.2 AA 方向）</p>
-            <p>規格：docs/ux/UI-UX_需求規格.md · 設計系統：web/assets/design-system.css</p>
+            <p>Flaps ERP 工作台 · API 測試台（零 JavaScript，WCAG 2.2 AA 方向）</p>
         </div>
     </footer>
 </body>

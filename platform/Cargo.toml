@@ -31,6 +31,11 @@ sha2 = "0.10"
 # Core crate dependency
 flaps_core = { path = "../core" }
 
+# PHASE-R (RAG-S2): reuse the proven embedder pool + cosine from the
+# knowledge module. Path dependency — zero new external crates (kem's deps
+# are a subset of platform's).
+kem = { path = "../crates/kem" }
+
 # Database
 sqlx = { version = "0.9", features = ["runtime-tokio", "macros", "sqlite", "chrono"] }
 

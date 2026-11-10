@@ -17,9 +17,9 @@
 | **Windows COM RPA 支援** | `Cargo.toml#L28` | `windows 0.58`（Win32_Foundation & Win32_System_Com）原生桌面自動化。 |
 | **Tauri 2.0 桌面集成** | `Cargo.toml#L19` | 客戶端跨平台桌面殼。 |
 | **發布編譯最佳化** | `Cargo.toml#L36-L42` | `opt-level = 3`, `lto = true`。 |
-| **測試基線 235/0** | `cargo test --locked --workspace`（2026-11-09，sqlx 0.9 後） | bridge 7＋core 42＋kem 58＋platform 97＋close_out 4＋slice12 2＋kem-int 15＋characterization 6＋misc 3，全綠。 |
+| **測試基線 246/0** | `cargo test --locked --workspace`（2026-11-09，sqlx 0.9＋RAG 後） | bridge 7＋core 42＋kem 58＋platform 108＋close_out 4＋slice12 2＋kem-int 15＋bankpay_persistence 1＋characterization 6＋misc 3，全綠。 |
 | **效能 SLA 成立** | `platform/src/api.rs` stress 測試 | 100k 交易 warm p95 422ms ≤ 500ms（預熱趟＋21 樣本量測法）。 |
-| **路由 SSOT 23 條** | `platform/src/api.rs` `.route(` 計數 | 新增路由必同步 docs/design/INFORMATION_ARCHITECTURE.md。 |
+| **路由 SSOT 60 條** | `platform/src/api.rs`（48）＋`cross_module_api.rs`（12）`.route(` 計數（2026-11-09） | 新增路由必同步 docs/design/INFORMATION_ARCHITECTURE.md 與 docs/architecture/API_DESIGN.md。 |
 | **編碼根因已修** | `dc414ac` 三方合併＋`encoding-standard.md` | api.rs/config.rs/kem main.rs PUA 清零；防制規範就位。 |
 | **突變測試就位** | `.cargo/mutants.toml`＋MUTATION_SCORE_REPORT v2 | money 73/engine 22 viable，得分 ≥94.7%，mutants.out/ 已 gitignore。 |
 

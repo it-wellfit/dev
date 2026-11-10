@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>開發者視角 — KEM 操作主控台</title>
+<link rel="stylesheet" href="../assets/console.css">
+</head>
+<body>
+<header><h1>KEM 操作主控台</h1><p class="sub">零 JavaScript｜系統與流程操作介面｜知識演進模組 v1</p><nav aria-label="主導航"><a href="../index.html">首頁</a><a href="../index.html#roles">角色</a><a href="../workflows/capture.html">工作流</a><a href="../claims/index.html">主張</a><a href="../ledger-1.html">帳本</a><a href="../queue.html">治理</a><a href="../maintenance.html">維運</a></nav></header>
+<main>
+<section class="panel"><h2>開發者視角</h2><p>日常知識生產：擷取來源、裁決入庫、混合檢索、演化維護</p><p class="mono">相關工作流：capture, ingest, ask, sync, supersede, embed</p></section><section class="panel"><h2>此角色的工作流</h2><table><thead><tr><th>命令</th><th>目的</th></tr></thead><tbody><tr><td><a href="../workflows/capture.html"><code>capture</code></a></td><td>L0 擷取：來源檔不可變入庫 raw/（SHA-256 鎖定、同內容冪等、異內容拒絕）</td></tr><tr><td><a href="../workflows/ingest.html"><code>ingest</code></a></td><td>L1 原子化＋T1 裁決：逐字引證/重複/機密三閘；批次內可見性（Fix #2）</td></tr><tr><td><a href="../workflows/ask.html"><code>ask</code></a></td><td>P2b 混合檢索：α·BM25＋(1−α)·向量；語義拒答地板 0.55；誠實拒答</td></tr><tr><td><a href="../workflows/sync.html"><code>sync</code></a></td><td>M6 演進：引證逐字重驗證＋信心衰減/再確認＋問題入佇列</td></tr><tr><td><a href="../workflows/supersede.html"><code>supersede</code></a></td><td>M6 結構取代：繼任者 published、前任 superseded 降級可檢索</td></tr><tr><td><a href="../workflows/embed.html"><code>embed</code></a></td><td>P2b 向量重建：單批嵌入全部可檢索主張（OVH bge-m3→Ollama 備援）</td></tr></tbody></table></section><section class="panel"><h2>快捷</h2><p><a href="../index.html">回首頁</a>｜<a href="../queue.html">審查佇列</a>｜<a href="../ledger-1.html">帳本</a>｜<a href="../maintenance.html">維運排程</a></p></section></main>
+<footer>由 <code>kem console</code> 生成｜2026-11-09T13:09:07.284222200+00:00｜純靜態零 JavaScript｜資料來源：claims SSOT＋帳本＋佇列</footer>
+</body>
+</html>

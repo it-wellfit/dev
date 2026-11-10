@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>維運 — KEM 操作主控台</title>
+<link rel="stylesheet" href="../assets/console.css">
+</head>
+<body>
+<header><h1>KEM 操作主控台</h1><p class="sub">零 JavaScript｜系統與流程操作介面｜知識演進模組 v1</p><nav aria-label="主導航"><a href="../index.html">首頁</a><a href="../index.html#roles">角色</a><a href="../workflows/capture.html">工作流</a><a href="../claims/index.html">主張</a><a href="../ledger-1.html">帳本</a><a href="../queue.html">治理</a><a class="active" href="../maintenance.html">維運</a></nav></header>
+<main>
+<section class="panel"><h2>Phase I 自維運排程</h2><table><tbody><tr><th>任務名</th><td class="mono">kem-maintain</td></tr><tr><th>觸發</th><td>每 15 分鐘（腳本內窗口守衛：平日 08:00–18:00 外靜默退出）</td></tr><tr><th>腳本</th><td class="mono">Dev\scripts\kem-maintain.ps1</td></tr><tr><th>日誌</th><td class="mono">%LOCALAPPDATA%\kem-maintain\kem-maintain.log</td></tr><tr><th>可逆</th><td class="mono">schtasks /end /tn kem-maintain; schtasks /delete /tn kem-maintain /f</td></tr></tbody></table></section><section class="panel"><h2>維運日誌尾部</h2><div class="empty">日誌尚未生成（排程未觸發或窗口外）。</div></section></main>
+<footer>由 <code>kem console</code> 生成｜2026-11-09T13:09:07.366517200+00:00｜純靜態零 JavaScript｜資料來源：claims SSOT＋帳本＋佇列</footer>
+</body>
+</html>

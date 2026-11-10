@@ -1,0 +1,26 @@
+{
+  "id": "claim-20261107-011",
+  "claim_type": "fact",
+  "status": "published",
+  "track": "b",
+  "confidence": 0.7882775588909094,
+  "valid_from": "2026-11-07",
+  "valid_to": null,
+  "recorded_at": "2026-11-07T11:03:14.290708400Z",
+  "supersedes": [],
+  "superseded_by": null,
+  "evidence": [
+    {
+      "path": "docs/engineering/FREE_AI_ROUTING.md",
+      "rev": "working-tree",
+      "quote": "| **Model installed** | `qwen3.5:4b` (4.2B params, Q4_K_M, 262K context, 3.3 GB) |"
+    }
+  ],
+  "topics": [
+    "free-ai",
+    "ollama"
+  ],
+  "source": "raw/free-ai/2026-11-07-seed.md",
+  "title": "本機 Ollama 已安裝 qwen3.5:4b",
+  "body": "Local Ollama has qwen3.5:4b installed (4.2B params, Q4_K_M, 262K context, 3.3 GB) and serves it locally."
+}

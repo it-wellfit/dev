@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>角色權限矩陣 — Flaps ERP 工作台</title>
+    <link rel="stylesheet" href="/assets/design-system.css">
+</head>
+<body>
+    <a class="skip-link" href="#main">跳至主要內容</a>
+    <header class="app-header"><div class="container">
+        <div><h1>角色權限矩陣</h1><p class="app-subtitle">RBAC 對照表：角色 × 權限（唯讀檢視；授予/撤銷透過 API 或資料庫操作）</p></div>
+        <p class="app-subtitle">使用者：<strong>{{ acting_user }}</strong>｜<a class="btn btn-secondary" href="/">返回工作台</a></p>
+    </div></header>
+    <main id="main" class="container">
+        <section class="panel" aria-labelledby="m-title">
+            <h3 id="m-title">矩陣（{{ roles.len() }} 角色 × {{ permissions.len() }} 權限）</h3>
+            <div class="table-wrap">
+                <table>
+                    <caption>✓ = 已授予；— = 未授予</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col">權限（code）</th>
+                            {% for r in roles %}<th scope="col">{{ r.role_name }}<br><code>{{ r.role_code }}</code></th>{% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for p in permissions %}
+                        <tr>
+                            <th scope="row">{{ p.permission_name }}<br><code>{{ p.permission_code }}</code></th>
+                            {% for r in roles %}
+                            <td>{% if self.has_grant(r.role_id.as_str(), p.permission_id.as_str()) %}✓{% else %}—{% endif %}</td>
+                            {% endfor %}
+                        </tr>
+                        {% endfor %}
+                        {% if permissions.is_empty() %}
+                        <tr><td colspan="7" class="status-empty-note">權限表為空（將由 PermissionManager::initialize_default 於啟動時播種）。</td></tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+    <footer class="app-footer"><div class="container"><p>Flaps ERP 工作台 · 管理工作室（零 JavaScript）</p></div></footer>
+</body>
+</html>

@@ -147,7 +147,11 @@ async fn dashboard_pagination_and_bankpay_config_survive_restart() {
             .fetch_one(&pool)
             .await
             .expect("count persisted keys");
-    assert_eq!(rows, 5, "all five bankpay keys must be persisted");
+    // 2026-11-09: EsunConfig grew from 5 to 10 persisted keys (mTLS cert
+    // fields: ca_cert_path, client_cert_path, client_key_path, + 2 more).
+    // Cross-line stale-fixture fix (PHASE-R session) — count follows the
+    // model, never the other way around.
+    assert_eq!(rows, 10, "all ten bankpay keys must be persisted");
 
     // 3.5) API 資料管理平台（零 JS 管理主控台；目錄由 registry 驅動）。
     let catalog_req = Request::builder()

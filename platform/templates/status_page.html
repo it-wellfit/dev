@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>系統狀態 — Flaps ERP 工作台</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%23005fcc'/%3E%3Ctext x='8' y='12' font-size='10' font-family='sans-serif' fill='white' text-anchor='middle' font-weight='bold'%3EF%3C/text%3E%3C/svg%3E">
+    <link rel="stylesheet" href="/assets/design-system.css">
+    <meta http-equiv="refresh" content="30">
+</head>
+<body>
+    <a class="skip-link" href="#main">跳至主要內容</a>
+
+    <header class="app-header">
+        <div class="container">
+            <div>
+                <h1>系統狀態</h1>
+                <p class="app-subtitle">各模組健康度（每 30 秒自動更新；零 JavaScript）</p>
+            </div>
+            <p class="app-subtitle">
+                使用者：<strong>{{ acting_user }}</strong>
+                ｜
+                <a class="btn btn-secondary" href="/">返回工作台</a>
+            </p>
+        </div>
+    </header>
+
+    <main id="main" class="container">
+        <section class="panel" aria-labelledby="overall-title">
+            <h2 id="overall-title">整體狀態</h2>
+            <dl class="kpi-grid">
+                <div class="kpi">
+                    <dt>整體</dt>
+                    <dd>{% if overall == "ok" %}<span class="badge badge-success">正常</span>{% else %}<span class="badge badge-warning">{{ overall }}</span>{% endif %}</dd>
+                </div>
+                <div class="kpi">
+                    <dt>量測時間</dt>
+                    <dd>{{ timestamp }}</dd>
+                </div>
+            </dl>
+        </section>
+
+        <section class="panel" aria-labelledby="modules-title">
+            <h2 id="modules-title">模組健康度</h2>
+            <div class="table-wrap">
+                <table>
+                    <caption>模組狀態</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col">模組</th>
+                            <th scope="col">狀態</th>
+                            <th scope="col">說明</th>
+                            <th scope="col">最後檢查</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if modules.is_empty() %}
+                        <tr>
+                            <td colspan="4">
+                                <p class="empty-state">
+                                    <strong>尚無狀態資料</strong>
+                                    狀態探測未回報任何模組時，此處維持空狀態。
+                                </p>
+                            </td>
+                        </tr>
+                        {% else %}
+                        {% for m in modules %}
+                        <tr>
+                            <td>{{ m.label }}</td>
+                            <td><span class="badge {% if m.status == "ok" %}badge-success{% else %}badge-neutral{% endif %}">{{ m.status_label }}</span></td>
+                            <td>{{ m.detail }}</td>
+                            <td>{{ m.last_checked }}</td>
+                        </tr>
+                        {% endfor %}
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+            <p class="section-note">探測資料與 /api/status 同源；「警告」模組不影響帳務核心運作。</p>
+        </section>
+
+        <p class="form-actions">
+            <a class="btn btn-primary" href="/status">立即重新整理</a>
+        </p>
+    </main>
+
+    <footer class="site-footer">
+        <div class="container">
+            <p>Flaps ERP 工作台 · 系統狀態（零 JavaScript，WCAG 2.2 AA 方向）</p>
+        </div>
+    </footer>
+</body>
+</html>

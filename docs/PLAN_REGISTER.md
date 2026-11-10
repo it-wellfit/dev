@@ -243,7 +243,7 @@ Executed on the shared working tree after addendum #14. Scope: `platform/src/ban
 | Live smoke（:8091, 獨立 smoke DB, 已清理） | 401（未登入）/303（PRG 登入）/匯出 200→冪等重放一致→查詢推進 COMPLETED＋本地帳金額/白名單外 400/`/api/audit` 需登入 | 本 addendum 執行記錄 |
 
 This addendum records execution facts only; it does not approve product scope, certification, or release.
-## 2026-11-09 addendum #14 (security-driven sqlx 0.9 upgrade + RUSTSEC-2026-0459 disposition)
+## 2026-11-09 addendum #16 (security-driven sqlx 0.9 upgrade + RUSTSEC-2026-0459 disposition; renumbered from #14 — numbering collision with the parallel BankPay line)
 
 Trigger: `cargo audit` began reporting RUSTSEC-2026-0459 (CVE-2026-119375, severity 6.8 medium) after the advisory DB refresh — libsqlite3-sys 0.30.1 bundles SQLite < 3.54.0 (uninitialized page-cache memory disclosure via crafted .db + mismatched-page-size -wal pair; LOCAL vector). Evidence: audit EXIT=1 log 2026-11-09; advisory https://rustsec.org/advisories/RUSTSEC-2026-0459.
 
@@ -256,6 +256,38 @@ Trigger: `cargo audit` began reporting RUSTSEC-2026-0459 (CVE-2026-119375, sever
 
 This addendum records execution facts only; it does not approve product scope, certification, or release.
 
+## 2026-11-09 addendum #17 (PHASE-R: S1 檢索面 RAG 升級 — BM25＋混合向量; renumbered from #15 — numbering collision)
+
+Trigger: owner directive「必須用到所有先進相關技術（RAG）」. Tree-state audit found the gap precisely: S3 (kem) already ships full hybrid retrieval (BM25 + embeddings + fusion, 58 lib tests), but S1's `/api/search` was substring-only with constant `score: 1.0` (`platform/src/search.rs:48-56`, `cross_module_api.rs:265-280`). Executed per PHASE-R of `.kilo/plans/1793787631643-three-studio-slice-execution-plan.md`.
+
+| Item | Disposition | Evidence |
+|---|---|---|
+| RAG-S1 詞法腿 | New `platform/src/bm25.rs` (std-only, zero new deps — Tantivy lesson): CJK-aware tokenizer (single-char CJK tokens — improvement over kem's `w.len()>1` filter which drops them), `BM25Index` with Robertson IDF identical to kem (kem/search.rs:128; the +1.0 inside ln keeps IDF positive — a 0-floor variant was tried and rejected: it zeroed ubiquitous terms) | 5 unit tests PASS (rare-vs-common IDF, tf ordering, unknown→empty, mixed CJK tokenize, empty-safety) |
+| RAG-S2 混合引擎 | `platform/Cargo.toml` += `kem = { path = "../crates/kem" }` (zero new external crates — kem deps ⊆ platform deps). `SearchEngine` gains BM25 index (rebuilt on mutation, sorted doc_id positions) + freshness-stamped vectors (`sha256(content)` rule, kem §8) + `search_ranked()` with α-normalized fusion (α=0.5, refusal floor 0.55 mirroring kem calibration) and `via` provenance ("hybrid"/"bm25"); embedder reuse via `kem::embed::embed_batch` + `default_pool` (OVH bge-m3 → Ollama local); unreachable embedder → deterministic BM25-only degradation | 6 unit tests PASS (degradation marks via, ordering, pure-fusion blend at α=0.3, refusal floor, stale-vector-missing, delete rebuild) |
+| RAG-S3 端點接線 | `/api/search` returns real fused scores + `via` (additive field); direct fetch marked `via="direct"` (never a fake fused score) | compiles; degradation path deterministic in CI (no embedder) |
+| Cross-line stale fixture | `platform/tests/bankpay_persistence.rs:150` expected 5 persisted bankpay keys while the parallel line's EsunConfig refactor grew it to 10 (mTLS cert fields) — one-line stale-fixture fix with rationale comment | full workspace suite green after fix |
+| Four gates | fmt 0 / clippy -D warnings 0 / **246 passed 0 failed** whole workspace (bridge 7 + core 42 + kem 58 + platform 108 + kem-int 15 + bankpay_persistence 1 + characterization 6 + close_out 4 + slice12 2 + misc 3) / audit EXIT=0 both workspaces (platform-hub gained its own `.cargo/audit.toml` with the mirrored RUSTSEC-2026-0459 disposition — hub lock resolves libsqlite3-sys 0.37.0, same range block) | 2026-11-09 logs |
+| Out of scope (explicit) | LLM generation (kem `ask` discipline: references only), Tantivy/Qdrant (POC separate), index persistence, kem search decoupling refactor | plan §R.4 |
+| 效能評估進度報告 v2.0 | `docs/research/FlapsErp效能評估進度報告_v2.0.md` — 全程進度版（11-03→11-09 時間軸、246 測試、SLA 422ms、方法論進化表、開放項目誠實清單），登錄 docs/README.md 索引 | 本行 |
+
+This addendum records execution facts only; it does not approve product scope, certification, or release.
+
+## 2026-11-09 addendum #18 (雙作品整合：治理四頁＋檢索頁＋桌面殼 D1/D8 + 受眾分層 IA)
+
+Executed by the plan/code lane per `.kilo/plans/1793034142477-apihub-tauri-uiux-integration-plan.md`（D1/D3/D5/D7/D8 全數拍板）。Concurrent-stream convergence on `pages.rs`／`apihub.rs` is owned by that stream（見「進行中」列）。
+
+| Item | Disposition | Evidence |
+|---|---|---|
+| 受眾分層 IA（使用者裁決） | 操作者／管理者／技術人員三層；主導覽 `can_manage_users` 閘控管理與技術入口（並行流已重構為下拉分組）；操作者頁尾不帶開發文件連結 | `platform/templates/index.html` nav（20:59 版：管理下拉含 API 中樞/日誌/設定） |
+| E.Sun V2.8 契約目錄 | 8 契約端點入 catalog（`esun_endpoints()`：path/name/contract_ref §47–§299/平台對應/誠實標示「模擬對應3·未串接5」）；KPI 卡契約 8｜原生 12 | `apihub.rs::esun_endpoints()`＋`api_catalog.html`（含 KPI 定義 tooltip） |
+| 治理四頁（T2） | `/admin/api/records`（源 bankpay_audits＋bankpay_batches，HTTP 狀態實錄）、`/admin/api/codes`（僅列已驗證 910000＋rsStatus 語義）、`/admin/api/release`（RC-01..06 誠實狀態：3 已驗證/2 待憑證/1 未串接）、`/admin/api/net`（本地設定與程式面檢查；不做網路探測） | `apihub.rs` 處理器＋4 模板＋api.rs 路由；catalog 頁首入口連結已加 |
+| 檢索頁（T3） | `/search?q=`（Tantivy；空索引誠實回空態；RAG 升級後呈現融合結果） | `workbench.rs::search_page`＋`search.html`＋index 導覽「檢索」連結 |
+| 重複路由修復 | `/bankpay/exceptions`、`/import/history`、`/help` 各註冊兩次（axum 啟動 panic）→ 移除第二份 | api.rs 編輯（21:07） |
+| 桌面殼 D1/D8（T5/T6） | `tauri.conf.json`：devUrl:1420 移除、`url=http://127.0.0.1:8090/`、CSP 去 `script 'unsafe-inline'`、`bundle.active=true`+NSIS、v0.2.0；`main.rs`：24 個 mock commands 全數移除（P7）、冪等啟動（埠探測→spawn→6s 就緒等待）；`state.rs`：金額 f64→i64 minor（4 處，INV-01） | `web/src-tauri/*`（10/30 以來首次收斂；NSIS 產物建置列入下一切片） |
+| ADR-0013（T7） | 跨平台策略：桌面=Tauri 殼、Web=響應式零 JS、行動面本輪不承諾（誠實評估）；Electron 不採用（憲政衝突） | `docs/adr/ADR-0013-cross-platform-strategy.md` |
+| 進行中（他串流擁有） | `pages.rs`（14 頁：audit/trial-balance/ledger/batches/detail/exceptions/import-history/help/status/profile/roles/sessions/system）與 `apihub.rs` 模板結構重構收斂中——21:21 時 21 errors（E0609/E0308/E0599）為其過渡態；`/audit` 建議補 ROLE_MANAGE 閘（IA Tier 2） | cargo check 21:21 輸出；pages.rs mtime 21:06+ |
+
+This addendum records execution facts only; it does not approve product scope, certification, or release.
 ## Consolidation rules
 
 1. Keep one current navigation register and one acceptance/evidence ledger per project. Detailed requirements belong in their project documents.

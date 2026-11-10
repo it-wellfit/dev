@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 決策覆核 — Flaps ERP 工作台</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%23005fcc'/%3E%3Ctext x='8' y='12' font-size='10' font-family='sans-serif' fill='white' text-anchor='middle' font-weight='bold'%3EF%3C/text%3E%3C/svg%3E">
+    <link rel="stylesheet" href="/assets/design-system.css">
+</head>
+<body>
+    <a class="skip-link" href="#main">跳至主要內容</a>
+
+    <header class="app-header">
+        <div class="container">
+            <div>
+                <h1>AI 決策覆核</h1>
+                <p class="app-subtitle">建議來源可見、風險分明、人工裁決（AI 永不自動決策；零 JavaScript）</p>
+            </div>
+            <p class="app-subtitle">
+                使用者：<strong>{{ acting_user }}</strong>
+                ｜
+                <a class="btn btn-secondary" href="/">返回工作台</a>
+            </p>
+        </div>
+    </header>
+
+    <main id="main" class="container">
+        {% if let Some(e) = error %}
+        <div class="error-state" role="alert">
+            <strong>操作未完成</strong>
+            <p>{{ e }}</p>
+            <p class="hint">草稿未被刪除；請修正後重新操作。</p>
+        </div>
+        {% endif %}
+
+        <section class="panel" aria-labelledby="list-title">
+            <h2 id="list-title">待覆核建議</h2>
+            {% if suggestions.is_empty() %}
+            <p class="empty-state">
+                <strong>尚無待覆核建議</strong>
+                新的解析建議會出現在此處；全部處理完畢後，此區會維持空狀態。
+            </p>
+            {% else %}
+            {% for s in suggestions %}
+            <article class="panel" aria-labelledby="sg-{{ s.draft_id }}">
+                <h3 id="sg-{{ s.draft_id }}">{{ s.draft_id }} <span class="badge badge-info">{{ s.source }}</span></h3>
+                <dl class="kpi-grid">
+                    <div class="kpi">
+                        <dt>日期</dt>
+                        <dd>{{ s.date }}</dd>
+                    </div>
+                    <div class="kpi">
+                        <dt>金額</dt>
+                        <dd>{{ s.amount }}</dd>
+                    </div>
+                    <div class="kpi">
+                        <dt>借方</dt>
+                        <dd>{{ s.debit }}</dd>
+                    </div>
+                    <div class="kpi">
+                        <dt>貸方</dt>
+                        <dd>{{ s.credit }}</dd>
+                    </div>
+                </dl>
+                <p>
+                    風險分（0–1）：
+                    <meter min="0" max="1" value="{{ s.risk_value }}">{{ s.risk_label }}</meter>
+                    <strong>{{ s.risk_label }}</strong>
+                    <span class="hint">由完整度推導（缺失要素佔比）；分數僅供排序參考，不自動決策。</span>
+                </p>
+                <p class="hint">來源：{{ s.source }}・建立者：{{ s.created_by }}・{{ s.created_at }}{% if s.evidence_count > 0 %}・來源證據 {{ s.evidence_count }} 項{% endif %}</p>
+
+                <div class="form-actions">
+                    <form method="post" action="/drafts/adopt" class="form-inline">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                        <input type="hidden" name="date" value="{{ s.date }}">
+                        <input type="hidden" name="amount" value="{{ s.amount }}">
+                        <input type="hidden" name="debit_account" value="{{ s.debit }}">
+                        <input type="hidden" name="credit_account" value="{{ s.credit }}">
+                        <input type="hidden" name="currency" value="{{ s.currency }}">
+                        <input type="hidden" name="description" value="AI 建議覆核採納（{{ s.draft_id }}）">
+                        <button class="btn btn-primary" type="submit" {% if !s.complete %}disabled title="欄位不完整，請於草稿頁補齊後再採納"{% endif %}>採納</button>
+                    </form>
+                    <form method="post" action="/ai-decisions/reject" class="form-inline">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                        <input type="hidden" name="draft_id" value="{{ s.draft_id }}">
+                        <button class="btn btn-secondary" type="submit">拒絕並移除</button>
+                    </form>
+                </div>
+                {% if !s.complete %}
+                <p class="section-note">此建議尚不完整（缺失：{{ s.missing_display }}），請先於草稿解析頁補齊。</p>
+                {% endif %}
+            </article>
+            {% endfor %}
+            {% endif %}
+            <p class="section-note">採納＝把建議轉入標準草稿流程（永不直接落地）；拒絕＝移除該草稿並寫入稽核軌跡。</p>
+        </section>
+    </main>
+
+    <footer class="site-footer">
+        <div class="container">
+            <p>Flaps ERP 工作台 · AI 決策覆核（零 JavaScript，WCAG 2.2 AA 方向）</p>
+            <p>規格：docs/ux/UI-UX_需求規格.md §E3.6 · 設計系統：web/assets/design-system.css</p>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,26 @@
+{
+  "id": "claim-20261107-018",
+  "claim_type": "concept",
+  "status": "published",
+  "track": "b",
+  "confidence": 0.8,
+  "valid_from": "2026-11-07",
+  "valid_to": null,
+  "recorded_at": "2026-11-07T11:03:14.290752700Z",
+  "supersedes": [],
+  "superseded_by": null,
+  "evidence": [
+    {
+      "path": "docs/engineering/KNOWLEDGE_EVOLUTION_MODULE.md",
+      "rev": "working-tree",
+      "quote": "**100% 覆蓋的定義＝缺口項數 = 0 且全部 covered**"
+    }
+  ],
+  "topics": [
+    "kem",
+    "north-star"
+  ],
+  "source": "raw/kem/2026-11-07-seed.md",
+  "title": "100% 覆蓋定義為缺口清單清空",
+  "body": "100% knowledge coverage is defined as zero gap items in the enumerated domain inventory with every item covered — auditable, not a probability claim."
+}

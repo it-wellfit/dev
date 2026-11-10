@@ -481,6 +481,7 @@ RED→GREEN 測試證據＋四關＋對應痛點/WP 關閉矩陣更新＋PLAN_RE
 | GP-08 AI 加速評審 | AX-7＋VS-03 | 採用延遲量測（待實作） | ⬜ |
 | INV-01/02 | 已交付 | money/engine 42+mutants 100% | ✅ |
 | SLA 500ms | 已交付 | stress 100k warm p95 422ms | ✅ |
+| RAG 檢索（BM25＋混合向量） | PHASE-R | `bm25.rs` 5 tests＋`search.rs` 混合 6 tests＋`/api/search` via/真分數；embedder 重用 kem（零新外部依賴）；降級誠實標記 | ✅（addendum #17；LLM 生成不在範圍） |
 
 > PNT 級閉環明細見 §25.5（粒度互補：本表＝母痛點→切片歸屬；§25.5＝PNT→需求→落地→驗證）。v3.1-r3 補全上列 14 列（機器稽核發現缺測試列，違反 §21.2 零孤兒閘門；動態冪等插入，既有列未更動）。
 

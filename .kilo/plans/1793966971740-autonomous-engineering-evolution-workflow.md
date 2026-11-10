@@ -98,6 +98,8 @@ LOOP CLOSE (record trace to session manifest; update specs/knowledge; drift cont
 | F | Execute desktop cleanup `1793965687748-desktop-cleanup-plan.md` steps 1–5 | Desktop organized |
 | G | Review Wellfit `1793782615513-wellfit-unified-plan-v2.md` requirements table; add unmet items to backlog | Backlog updated |
 | H | Recurring session cadence: run workflow graph against highest-priority backlog item; record trace; pause on drift | Ongoing |
+| I | KEM self-maintenance (routine `kem sync` + `kem finalize` + Ollama Ollama-serving guard) — newly promoted by the user as the next step; this plan is the governing spec, see the addendum below | (see addendum) |
+| J | G4 distillation infrastructure | **Deferred by design** until the review-queue disposition count reaches ≥500; never force-created |
 
 ---
 
@@ -121,6 +123,58 @@ LOOP CLOSE (record trace to session manifest; update specs/knowledge; drift cont
 **Q-3 (current):** Approve proceeding with ekpi-platform Phase A evidence collection and API contract design (not production deployment)? → **RESOLVED: Approved** (evidence toward approval only; no deployment).
 
 **Q-4:** Should the implementation agent run `cargo test --locked --workspace` and the four gates (fmt/clippy/test/audit) to confirm baseline before starting Phase B? → **RESOLVED: Yes** (establishes current truth before any evolution work).
+
+---
+
+## 10. Addendum — 2026-11-09: Self-maintenance (Phase I) and G4 trigger (Phase J)
+
+This addendum refines §6's vague Phases I–J by contracting them into concrete mechanisms and explicit trigger criteria. It is binding for the implementation agent.
+
+### 10.1 Routine self-maintenance (Phase I)
+
+| Task | Purpose | Frequency | Exit condition |
+|------|---------|-----------|----------------|
+| `kem sync` | Re-verify evidence quotes; refresh confidence; queue issues | Every 15 min while machine is on, weekdays 08:00–18:00 | `findings = 0` after the run, or issues queued with explicit reasons (not swallowed) |
+| `kem finalize` | Regenerate `knowledge/index.md` + `log.md` + `dashboard.html` | Same window, after `sync` | Dashboard has `script count = 0` |
+| Ollama guard | Ensure `ollama serve` is running (idempotent) | Same window, before `sync` | `ollama serve` reachable at `http://127.0.0.1:11434` |
+| `kem lint` | Store lint rules L1–L3 | Same window, before `sync` | `findings = 0` (or any residual item is carried in the queue, not silently dropped) |
+
+Mechanism (Max):
+- Windows `schtasks` task, **every 15 min, Mon–Fri 08:00–18:00**, Silent (no interactive window).
+- Script path: `C:\Users\stephanie.huang\.local\bin\kem-maintain.ps1`, logs to `C:\Users\stephanie.huang\.local\bin\kem-maintain.log` (keep last 7 days).
+- The command `schtasks /create /tn kem-maintain /sc minute /mo 15 /st 08:00 /et 18:00 /d mon,tue,wed,thu,fri /f /ru "%LOCALAPPDATA%\\Programs\\Ollama\\ollama.exe" /tr "powershell -NoProfile -File \"C:\\Users\\stephanie.huang\\.local\\bin\\kem-maintain.ps1\""` is Claude-Code PowerShell; if `ru` is not allowed, the implementer must re-create with `/ru "%USERNAME%"` or equivalent and **record the change in the session manifest as a deviation**.
+- LLM fallback: `Ollama` lives locally, so the task needs **NO network** for `kem_sync`; it **MAY** call `OVH/LLM7/Pollinations` only for the integer-confidence tier; if `rate_limited`, that tier overflows to the next day, DEVNULL for self-maintenance ledger (never silent on evidence: `run_id` is logged).
+
+Reversible: `schtasks /end /tn kem-maintain` + delete in one command (`Register-ScheduledTask` equivalent), or set the script to exit early (`if (-not (Test-Path -LiteralPath "C:\Users\stephanie.huang\.local\bin\kem-maintain.ps1")) { exit 0 }`).
+
+### 10.2 Promoting the 02:28 installation (Research from §6 "promote")
+
+The 02:28 run scheduled `schtasks /create /sc once /tn kem-maintain /st 02:28` with label `DEV`. Key insight (from the execution trace): it was already a **background, silent** task with the **same label `kem-maintain`**. The plan's schedule (Q-3 form) is therefore the same shape as the device form, except for a **wider window** (08:00–18:00 vs once at 02:28).
+
+Promotion action:
+1. Keep `Dev\scripts\kem-maintain.ps1` as the **router** (single source of truth for the four tasks).
+2. `schtasks /create /tn kem-maintain` with the **same frequency** (every 15 min) and **same weekdays** (Mon–Fri 08:00–18:00) — the only change is the working directory/script path. Any deviation from that interval/window must be recorded as a deviation in the session manifest.
+
+### 10.3 G4 distillation (Phase J, data-triggered only)
+
+| Trigger | Condition |
+|---------|-----------|
+| **Primary (automatic)** | The review-queue **disposition count** (entries with a `disposition` field) reaches **≥500**. Monitored by a separate watch task (`kem-maintain` emits state; the count is read from `knowledge/.kem/review-queue.jsonl` — not a date). |
+| **Secondary** | Explicit user request (`user_triggered = true`). |
+| **NEVER** | A fixed date, a fixed ledger length, or a fixed claim count. Those would force recovery before data exists, violating G4's stopping rule (KEM Phase 5 row: "≥500 human reviews"). |
+
+G4 work (when triggered):
+1. `kem distill-export` reads the ledger of `disposition == accept|reject|supersede` entries, builds a clean training set, and writes it to `knowledge/.kem/g4-training.jsonl` (generated, rebuildable).
+2. Train the distilled classifier (CatBoost / logistic regression start, 0.8B distillation far-term).
+3. Replace T3 with the trained classifier; T2's uncertain band (0.30–0.70) routes to T3 when available, else to human review.
+4. Record the model version in the ledger (provenance); bump `kem` crate version; add a corresponding row to KEM §11.
+
+### 10.4 Routine sync: definition of "done"
+
+A routine run is `done` when:
+- `kem sync` exits 0 without issues, OR the issue list is routed to the review queue (not swallowed).
+- `kem finalize` succeeds and the produced `dashboard.html` still has `script count = 0`.
+- `Ollama` is reachable (status 200) or its absence is **recorded in the log** as `degraded`, not fabricated.
 
 ---
 

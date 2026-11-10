@@ -46,9 +46,17 @@ const IMPORT_DIR: &str = "data/bankpay/inbound";
 
 /// 小型 API 錯誤（問題＋可能原因＋處理方式由呼叫端組入訊息）。
 #[derive(Debug)]
-struct ApiError(StatusCode, String);
+pub(crate) struct ApiError(pub(crate) StatusCode, pub(crate) String);
 
 impl ApiError {
+    pub(crate) fn status(&self) -> StatusCode {
+        self.0
+    }
+
+    pub(crate) fn message(&self) -> String {
+        self.1.clone()
+    }
+
     fn bad_request(message: impl Into<String>) -> Self {
         Self(StatusCode::BAD_REQUEST, message.into())
     }
@@ -74,7 +82,7 @@ type ApiResult<T> = Result<T, ApiError>;
 
 /// CSRF 同步器權杖驗證（同步器權杖模式：JSON API 以 `X-CSRF-Token` 標頭、
 /// HTML 表單以 `csrf_token` 欄位攜帶，兩者統一於本函式比對 session token）。
-fn verify_csrf_token(session: &Session, provided: &str) -> ApiResult<()> {
+pub(crate) fn verify_csrf_token(session: &Session, provided: &str) -> ApiResult<()> {
     if !provided.is_empty() && provided == session.csrf_token {
         Ok(())
     } else {
@@ -580,7 +588,7 @@ pub async fn config_get_handler(
     }
 }
 
-/// 更新銀行支付設定請求。
+/// 更新銀行支付設定請求（部分更新語義：空/缺欄位＝保留現值）。
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ConfigUpdateRequest {
     pub esun_mock_mode: Option<bool>,
@@ -588,6 +596,11 @@ pub struct ConfigUpdateRequest {
     pub source_system_id: Option<String>,
     pub customer_id: Option<String>,
     pub payer_account: Option<String>,
+    pub esun_external_url: Option<String>,
+    pub client_cert_path: Option<String>,
+    pub client_key_path: Option<String>,
+    pub ca_cert_path: Option<String>,
+    pub timeout_secs: Option<u64>,
 }
 
 /// POST /api/bankpay/config — 更新設定（ROLE_MANAGE + CSRF；erp_config 為 SSOT）。
@@ -637,6 +650,31 @@ async fn config_update_inner(
     }
     if let Some(v) = req.payer_account {
         config.payer_account = Some(v);
+    }
+    if let Some(v) = req.esun_external_url {
+        if !v.is_empty() && !v.starts_with("https://") {
+            return Err(ApiError::bad_request(
+                "驗證失敗：esun_external_url 必須為 https:// 開頭。問題：外部沙盒/正式端點承載支付資料，明文 HTTP 會洩漏；處理方式：提供正式 HTTPS 端點。",
+            ));
+        }
+        config.esun_external_url = v;
+    }
+    if let Some(v) = req.client_cert_path {
+        config.client_cert_path = Some(v);
+    }
+    if let Some(v) = req.client_key_path {
+        config.client_key_path = Some(v);
+    }
+    if let Some(v) = req.ca_cert_path {
+        config.ca_cert_path = Some(v);
+    }
+    if let Some(v) = req.timeout_secs {
+        if v == 0 || v > 300 {
+            return Err(ApiError::bad_request(
+                "驗證失敗：timeout_secs 須為 1–300 秒。問題：0 會立即逾時、>300 佔用連線；處理方式：設定合理值（預設 30）。",
+            ));
+        }
+        config.timeout_secs = v;
     }
 
     // 先持久化（erp_config 為設定持久層 SSOT；冪等 UPSERT），成功後才更新
@@ -843,6 +881,11 @@ pub struct ConfigForm {
     pub source_system_id: Option<String>,
     pub customer_id: Option<String>,
     pub payer_account: Option<String>,
+    pub esun_external_url: Option<String>,
+    pub client_cert_path: Option<String>,
+    pub client_key_path: Option<String>,
+    pub ca_cert_path: Option<String>,
+    pub timeout_secs: Option<String>,
 }
 
 /// 查詢結果檢視（已格式化，模板零邏輯）。
@@ -1164,6 +1207,36 @@ pub async fn bankpay_config_form(
             .map(str::trim)
             .filter(|s| !s.is_empty())
             .map(str::to_string),
+        esun_external_url: form
+            .esun_external_url
+            .as_deref()
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .map(str::to_string),
+        client_cert_path: form
+            .client_cert_path
+            .as_deref()
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .map(str::to_string),
+        client_key_path: form
+            .client_key_path
+            .as_deref()
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .map(str::to_string),
+        ca_cert_path: form
+            .ca_cert_path
+            .as_deref()
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .map(str::to_string),
+        timeout_secs: form
+            .timeout_secs
+            .as_deref()
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .and_then(|s| s.parse::<u64>().ok()),
     };
     match config_update_inner(&state, &session, &form.csrf_token, req).await {
         Ok(_) => Redirect::to("/bankpay?saved=1#config").into_response(),

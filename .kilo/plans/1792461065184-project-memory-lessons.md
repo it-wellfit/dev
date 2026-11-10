@@ -129,7 +129,7 @@
 ## 5. 驗證計畫
 
 - 每檔第一行：版本與更新日期；內容以讀取驗證（不以作者宣稱）。
-- 所有內部連結（`§N` 式引用、檔案路徑）以 grep 對照目標存在性；懸空即修補（引用完整性稽核慣例）。
+- 所有內部連結（`§N` 式引用、檔案路徑）以 grep 對照目標存在性；懸空即修補（引用完整性稽核慣例）。**（v2.0 起由 T1 `memory_lint.py` 之 L5／L5b 自動化與強化——見 §9.1；v1.0 人工版曾遺漏 8 處，實證見 §9 引言）**
 - 無重複內容檢查：以關鍵字交叉比對 `AGENTS.md`、`1792865422970-*`（禁止大段複寫 SSOT）。
 
 ## 6. 風險與邊界
@@ -293,7 +293,7 @@
 ## 9. v2.0 實作任務清單（交付給實作代理）
 
 > **執行者**：可寫檔代理（plan agent 無寫檔權限）。**前置**：完整閱讀 §8；全程遵守 C-01..C-10（斷言式補丁、量測先行、誠實回報）。
-> **範圍邊界**：只動 `.kilo/memories/` 四檔＋新增 `tools/` 目錄＋`.kilo/templates/session-manifest.md`。**不屬本次範圍**：`AGENTS.md`、`.kilo/kilo.jsonc`（v1.0 已完成）、`Dev/knowledge/`、`Knowledge/`（只連結）。
+> **範圍邊界**：只動 `.kilo/memories/` 四檔＋新增 `tools/` 目錄＋`.kilo/templates/session-manifest.md`＋`scripts/session-start.ps1`（單行，T5b）。**session 工具鏈已全數實測（非假設）**：`session-validate.ps1` 僅驗 `git_head_start`／`dirty_start`／`Created:`／`Project(s):` 四欄（L25）→ 無需改動，且**新欄不得設為必填**（否則既存 4 份 manifest 將驗證失敗）；`session-end.ps1` 僅以 regex 替換 `(pending)` 欄（L37-38）→ 新欄沿用 `(pending)` 慣例即自動相容；`session-cleanup.ps1` 僅清除 `runs\`／`tests\*.log`／`io\input|output` 之過期產物（L33-35）→ 與 manifest 欄位零互動。**不屬本次範圍**：`AGENTS.md`、`.kilo/kilo.jsonc`（v1.0 已完成）、`Dev/knowledge/`、`Knowledge/`（只連結）。
 > **今日精確化稽核發現（2026-11-09，四檔全量 `§` 掃描驅動 T2a 之實證）**：corrections.md C-01/C-10 之 `§0.4`/`§0.2` 與 README L17 之 `§0.4` 為懸空（主計畫 §0 為編號清單；r3 已建立「§0 條名」慣例並廢除 `§0.N` 形式）；C-06 之歷史示例 token（`§12.1`、`§6.3`）以 `§` 前綴書寫，會被掃描器誤判為現行引用；project.md 對 ADR-0001 之 `§3-1/§3-2/§3-3` 為非慣例 hyphen 形式（lint 主 regex 盲區→以 L5b 偵測；ADR 慣例正解 `§3.1-3.3`）且 `§7` 語義不精確（正解 `§5.3`——read 實證 ADR `## 5.` 第 3 條＝「無 git 版控」）；decisions.md 無 ID 欄但 README 索引宣稱 `D-01..D-04`（三方不一致）。**四檔 `§` token 全量已枚舉（共 19 匹配：corrections 9 行／C-09 無 token；decisions 4 行；README 1 行；project 5 行），除 T2a 8 處外其餘皆可解析**（如 `§24`、`§25.7`、`§25.8-*`、`§25.5`、`§22`、`§21.2`、`§4` 等——已對主計畫/本計畫標題實測）。
 
 ### 9.1 T1：memory_lint.py（R-01 精確契約）
@@ -308,7 +308,8 @@
   - **L5（FAIL）** 交叉引用：§-引用解析（規則如下）；`憲章` 前綴引用為跨文件白名單（INFO，不檢）。
   - **L5b（WARN）** 非慣例形式：`§\d+-\d+`（hyphen 形式，如 `§3-1`）→ 提示改用點號或條名形式。**已知盲區聲明**：主 regex `§(\d+(?:\.\d+)*)` 對 hyphen 形式只會誤抓 `§3`（假陰性），故須獨立偵測此模式（C-10：盲區明示，不假設安全）。
   - **L6（WARN）** 預算：corrections.md > 8KB；或 corrections.md＋project.md > 12KB。
-  - **L7（WARN）** README 索引一致：索引表宣告之條數（regex 抓 `C-01..C-\d{2}`／`D-01..D-\d{2}`）與實際檔內條數相符。
+  - **L7（WARN）** README 索引一致：以 regex `C-01\.\.C-(\d{2})`／`D-01\.\.D-(\d{2})` 取索引表宣告值，與實檔資料列 ID 數比對；pattern 缺失→WARN「索引列未登載」。
+  - **範圍聲明**：本 lint 僅掃描四檔（引用**存在性**驗證）；不對主計畫內文做「現行主張掃描」（§24／archived 排除等約定屬 QG-09 職責；避免雙重職責）。
 - **L5 解析規則**（寫入腳本，供 QG-09 沿用）：
   - 蒐集 regex：`§(\d+(?:\.\d+)*)`；掃描四檔全部行。
   - 目標判定（**逐引用取「該引用之前最近的目標標記」**，非整行判定——因單行可含多目標，如 project.md L13「ADR…§7；AGENTS.md §6」）：標記集＝{`ADR-\d{4}` → 該 ADR 檔；`憲章` → INFO 白名單；`1792865422970` → 主計畫；`1792461065184` → 本計畫；其他 `*.md` 路徑 → INFO 略過（未納入目標表）}；**無任何標記 → 預設主計畫**。
@@ -330,10 +331,21 @@
 | 7 | project.md | 列 7 來源 | `…ADR-0001…` §7 | `…ADR-0001…` §5.3（ADR §5 第 3 條＝「無 git 版控」，read 實證） |
 | 8 | README.md | L17 維護規則 | 「（仿 plan §0.4）」 | 「（仿 `1792865422970-*` §0 變更管制）」 |
 
-### 9.3 T2：README.md 增補（六節＋兩精確化）
+### 9.3 T2：README.md 增補（精確插入規格；防重複為第一原則——研究 S-02/S-11 之膨脹警示）
 
-- 新增節（全為追加）：**常駐載入預算**（R-02：12KB/8KB、觸發式分層、非可協商置頂）｜**規則撰寫 4 準則**（R-03）｜**三層記憶分工表**（R-04：procedural/semantic/episodic＋讀取時機）｜**蒸餾三步程序**（R-06）｜**修剪機制**（R-07：每 10 session 或每季；零命中且非禁令→SUPERSEDED；紀錄入 decisions.md）｜**衝突權威序**（R-08：現行 repo 檔與工具輸出＞decisions＞project＞corrections 指引；衝突採更嚴者）。
-- 精確化：(a)「`.kilo/sessions/`（4 個現行 session）」→「（現行 session 目錄）」（去脆化數字）；(b) 首行版本 `v1.0` → `v1.1`。
+README 現行節序：`讀取順序` → `維護規則` → `與既有系統的分工` → `索引` → `演進方向`。逐項規格：
+
+| # | 對應 | 插入位置 | 內容要點 |
+|---|---|---|---|
+| 1 | R-08 | 新節「衝突權威序」，緊接「讀取順序」之後 | 現行 repo 檔與工具輸出＞decisions＞project＞corrections 指引；**禁令不因衝突失效——衝突採更嚴者**；遇衝突→開清單修記憶 |
+| 2 | R-06 | 併入「維護規則」節，追加 bullet | 蒸餾三步：事故→(session 內)記 manifest→(session 末)問「可重用？」→併入既有 C 或新增（新 C 必帶事件級「為什麼」與可重算「驗證」） |
+| 3 | R-07 | 併入「維護規則」節，追加 bullet | 修剪：每 10 session 或每季一次；零命中且非禁令→標 SUPERSEDED 不刪號；剪修建議與結果記入 decisions.md |
+| 4 | R-02 | 新節「常駐載入預算」，置於「維護規則」與「與既有系統的分工」之間 | ≤12KB；corrections.md ≤8KB；逾限時 project.md 移出 `instructions`、由 corrections.md 頂部唯一指針行按需觸發；非可協商規則置頂（S-07） |
+| 5 | R-03 | 新節「規則撰寫 4 準則」，緊接第 4 節 | (1) 禁令優先；(2) 只收 non-inferable／cross-cutting；(3) 每條必附可重算驗證；(4) 新增前先查重 |
+| 6 | R-04 | **擴充既有「與既有系統的分工」節**（同節加子表；**不新開平行節**） | 記憶三層子表：procedural＝corrections｜semantic＝project＋decisions｜episodic＝`.kilo/sessions/`＋平台原生記憶；含「讀取時機」欄（常駐／按需／任務匹配） |
+| 7 | R-04 補 | 「讀取順序」節，追加第 4 點 | 情節（episodic）僅於「任務與過去事件相關」時檢索；常駐不載入（S-05） |
+| 8 | 精確化 | 「索引」節 | 「`.kilo/sessions/`（4 個現行 session）」→「（現行 session，數目以目錄為準）」；**D 條數欄（`D-01..D-04`）於 T5c 統一更新為 `D-01..D-06`**（T5a 完成後；此為 L7 WARN 之消解點）；狀態欄於 T5c 依覆核結果更新 |
+| 9 | 精確化 | 首行 | 版本 `v1.0` → `v1.1` |
 
 ### 9.4 T3：decisions.md 格式 v1.1＋corrections.md 術語修正
 
@@ -342,24 +354,26 @@
 
 ### 9.5 T4→T5：驗證、回寫與收尾（執行序）
 
-1. **T4a**：實作 T1 後先跑**真檔**——預期：**5 個 L5 FAIL**（C-01 `§0.4`；C-10 `§0.2`；C-06 之歷史示例 token `§12.1`、`§6.3`；README L17 `§0.4`——5 處皆為 T2a 標的；其中 C-06 兩處屬「歷史 token 誤判為現行引用」型，其餘屬懸空型）＋**3 個 L5b WARN**（project.md `§3-1/§3-2/§3-3`）；project.md `§7` 之語義不合格屬目視稽核（lint 只驗存在性，不可判語義——盲區誠實標注）。記錄為 **sensitivity 證據**（證明檢查器不是空轉）。
-2. **T4b**：執行 T2a（8 處斷言式修正）→ 重跑 lint → **真檔全 PASS（WARN 允許）**。
-3. **T4c**：負向測試（**僅在 temp 複本**，不得動真檔）：注入 (i) C-ID 跳號/重號 (ii) project 壞日期 (iii) `§99` 懸空引用 (iv) decisions 欄數錯 (v) `§0.N` 形式 → 各須 FAIL；修正後各須回綠（≥2 案例全程重現）。
-4. **T5a**：decisions.md 增列 `D-05`（採用 memory_lint 執行化，連結 §9.1）與 `D-06`（引用精確化 8 處，連結 §9.2）。
-5. **T5b**：`.kilo/templates/session-manifest.md` 增「本次引用規則（C-xx）」欄（R-12 起步）。
-6. **T5c**：回寫 session manifest（證據：命令＋輸出）；`1792865422970-*` §24 若有需要補註 r4 之延續（依 C-02）。
-7. **範圍外提醒**：R-05（sha256）、R-09、R-10、R-11 保持 NEXT/LATER，本次**不執行**。
+1. **T4a（sensitivity 基準）**：實作 T1 後先跑**真檔**——預期初始：**L4 FAIL×4**（decisions.md 尚為 6 欄，待 T3 升級）＋**L5 FAIL×5**（C-01 `§0.4`；C-10 `§0.2`；C-06 之歷史示例 token `§12.1`、`§6.3`；README L17 `§0.4`——5 處皆為 T2a 標的，其中 C-06 兩處屬「歷史 token 誤判為現行引用」型，其餘屬懸空型）＋**WARN×4**（L5b×3：project.md hyphen 形式；L7×1：README 宣稱 `D-01..D-04` vs 實檔無 ID——T3 後消解）。project.md `§7` 之語義不合格屬目視稽核（lint 只驗存在性，不可判語義——盲區誠實標注）。記錄為 **sensitivity 證據**（證明檢查器不是空轉）。
+2. **T4b（修正與增補）**：依序執行 T2a（8 處斷言式）→ T3（decisions v1.1＋corrections 術語）→ T2（README 依 §9.3 之 9 項插入規格：3 新節＋1 擴充＋3 增補＋2 精確化）。
+3. **T4c（全綠重跑）**：重跑 lint → **真檔全 PASS（WARN 允許；L3／L6 預期 PASS——覆核日期為當日、檔案遠小於預算）**。
+4. **T4d（負向測試）**：**僅在 temp 複本**（不得動真檔）：注入 (i) C-ID 跳號/重號 (ii) project 壞日期 (iii) `§99` 懸空引用 (iv) decisions 欄數錯 (v) `§0.N` 形式 → 各須 FAIL；修正後各須回綠（≥2 案例全程重現）。
+5. **T5a**：decisions.md 增列 `D-05`（採用 memory_lint 執行化，連結 §9.1）與 `D-06`（引用精確化 8 處，連結 §9.2）。
+6. **T5b（雙檔同步；已實測生成器＝`session-start.ps1` 之硬編 `$lines` L74-101，模板僅為格式文件——兩者必須同步改，否則新欄漂移）**：(a) `.kilo/templates/session-manifest.md` 於 `- dirty_end: <true|false>` 行後增 `- Rules referenced: <C-xx, ... | none>`；(b) `scripts/session-start.ps1` 於 `$lines += "- dirty_end: (pending)"`（現 L84）後增 `$lines += "- Rules referenced: (pending)"`（沿用 `(pending)` 慣例即與 `session-end.ps1` 相容）。**不做**：`session-validate.ps1` 不增必填；`session-end.ps1` 不改（人工於 session 末填實）。
+7. **T5c**：更新 README 索引（D 條數欄 `D-01..D-04` → `D-01..D-06`；狀態欄依覆核結果）→ 重跑 lint 確認 **L7 WARN 消解、維持全 PASS**；回寫 session manifest（證據：命令＋輸出）；`1792865422970-*` §24 若有需要補註 r4 之延續（依 C-02）。
+8. **範圍外提醒**：R-05（sha256）、R-09、R-10、R-11 保持 NEXT/LATER，本次**不執行**。
 
 ### 9.6 v2.0 完成定義（DoD）
 
 1. lint 真檔全 PASS＋負向 5 注入全 FAIL 重現（證據入 manifest）。
 2. 引用精確化 8 處完成，L5 驗證通過。
-3. README 六節＋兩精確化＋版本 v1.1。
+3. README 依 §9.3 九項插入規格完成（3 新節：衝突權威序／常駐載入預算／規則撰寫 4 準則；1 擴充：與既有系統的分工＋記憶三層；3 增補：讀取順序第 4 點＋維護規則蒸餾／修剪 bullets；2 精確化：索引去脆化數＋版本 v1.1）。
 4. decisions.md 7 欄、`D-01..D-06` 齊備；corrections.md 術語修正完成。
-5. session-manifest 模板含「本次引用規則」欄。
-6. 全程斷言式、零內容刪除、diff 僅限 `.kilo/memories/`＋模板檔。
+5. session-manifest 模板與 `scripts/session-start.ps1` **雙檔同步**含「Rules referenced」欄；該欄未列入 `session-validate.ps1` 必填。驗證方式：`read` 核對 `session-start.ps1` 四必填欄仍在且新欄格式正確；選擇性附證：`session-validate.ps1` 實跑之錯誤數**不增加**（前後對比法；既有 warnings 不計）。
+6. 全程斷言式、零內容刪除、diff 僅限 `.kilo/memories/`（四檔＋`tools/`）＋`.kilo/templates/session-manifest.md`＋`scripts/session-start.ps1`（單行）。
 
 ### 9.7 觀察項（不在本次範圍；供後續）
 
 - `AGENTS.md` §6 之「ADR-0001 §5.3」以 ADR 慣例解析**合法**（§5 第 3 條），無需修正——但 AGENTS.md 本身不在 lint 掃描範圍；若未來擴展掃描，須為其加入 ADR/憲章目標判定。
 - ADR-0001 頁首（L10）自指「見 §7」；§7 為關聯文件、未重述非 git 事實——ADR 自身文內引用精度屬 ADR 維護範疇，本文僅記錄。
+- **結構性漂移風險（本次稽核發現）**：`.kilo/templates/session-manifest.md`（格式文件）與 `scripts/session-start.ps1`（`$lines` 硬編生成器）為**雙份手寫結構**，天生易漂移（本次 T5b 已同步一輪）。建議另案：`session-start.ps1` 改為讀取模板檔生成（單一來源），並可考慮納入 `memory_lint` 結構檢查。

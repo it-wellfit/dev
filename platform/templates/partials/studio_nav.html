@@ -1,0 +1,35 @@
+{% macro nav(acting_user, csrf_token) %}
+<nav class="site-nav" aria-label="主導覽">
+    <div class="container">
+        <a href="/">總覽</a>
+        <a href="/transactions">交易</a>
+        <a href="/bankpay">銀行支付</a>
+        <details class="nav-menu">
+            <summary>匯入與草稿</summary>
+            <div class="nav-menu-items">
+                <a href="/import">快速匯入</a>
+                <a href="/drafts">草稿解析</a>
+                <a href="/import/history">匯入歷史</a>
+            </div>
+        </details>
+        <details class="nav-menu">
+            <summary>報表分析</summary>
+            <div class="nav-menu-items">
+                <a href="/reports/monthly">月報表</a>
+                <a href="/reports/trial-balance">試算表</a>
+                <a href="/reports/ledger">總分類帳</a>
+                <a href="/reports/pivot?rows=account&cols=month&measure=debit">樞紐分析</a>
+                <a href="/reports/parallel?months=6">平行座標投影</a>
+            </div>
+        </details>
+        <a href="/help">說明</a>
+    </div>
+</nav>
+{% endmacro %}
+
+{% macro logout(acting_user, csrf_token) %}
+<form method="post" action="/logout" class="form-inline">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <button class="btn btn-secondary" type="submit">登出</button>
+</form>
+{% endmacro %}

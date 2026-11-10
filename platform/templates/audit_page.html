@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>稽核軌跡 — Flaps ERP 工作台</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%23005fcc'/%3E%3Ctext x='8' y='12' font-size='10' font-family='sans-serif' fill='white' text-anchor='middle' font-weight='bold'%3EF%3C/text%3E%3C/svg%3E">
+    <link rel="stylesheet" href="/assets/design-system.css">
+</head>
+<body>
+    <a class="skip-link" href="#main">跳至主要內容</a>
+
+    <header class="app-header">
+        <div class="container">
+            <div>
+                <h1>稽核軌跡</h1>
+                <p class="app-subtitle">誰在何時做了什麼（不可篡改鏈路；零 JavaScript）</p>
+            </div>
+            <p class="app-subtitle">
+                使用者：<strong>{{ acting_user }}</strong>
+                ｜
+                <a class="btn btn-secondary" href="/">返回工作台</a>
+            </p>
+        </div>
+    </header>
+
+    <main id="main" class="container">
+        <section class="panel" aria-labelledby="filter-title">
+            <h2 id="filter-title">篩選</h2>
+            <form method="get" action="/audit" role="search">
+                <div class="form-row">
+                    <label for="f_user">使用者（關鍵字）</label>
+                    <input class="input" type="text" id="f_user" name="user" value="{{ f_user }}" placeholder="user_id 或名稱">
+                </div>
+                <div class="form-row">
+                    <label for="f_action">動作（關鍵字）</label>
+                    <input class="input" type="text" id="f_action" name="action" value="{{ f_action }}" placeholder="例如：TRANSACTION、IMPORT">
+                </div>
+                <div class="form-row">
+                    <label for="f_start">起始日期</label>
+                    <input class="input" type="date" id="f_start" name="start" value="{{ f_start }}">
+                </div>
+                <div class="form-row">
+                    <label for="f_end">結束日期</label>
+                    <input class="input" type="date" id="f_end" name="end" value="{{ f_end }}">
+                </div>
+                <div class="form-actions">
+                    <button class="btn btn-primary" type="submit">套用篩選</button>
+                    <a class="btn btn-secondary" href="/audit">清除</a>
+                </div>
+            </form>
+            <p class="section-note">期間以發生時間（performed_at）計；結束日含當日 23:59:59。</p>
+        </section>
+
+        <section class="panel" aria-labelledby="audit-title">
+            <h2 id="audit-title">稽核紀錄</h2>
+            <div class="table-wrap">
+                <table>
+                    <caption>稽核紀錄（共 {{ total }} 筆）</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col">編號</th>
+                            <th scope="col">使用者</th>
+                            <th scope="col">動作</th>
+                            <th scope="col">資源</th>
+                            <th scope="col">詳細內容</th>
+                            <th scope="col">時間</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if rows.is_empty() %}
+                        <tr>
+                            <td colspan="6">
+                                <p class="empty-state">
+                                    <strong>尚無稽核紀錄</strong>
+                                    登入、登出與帳務操作會在此處留痕。
+                                </p>
+                            </td>
+                        </tr>
+                        {% else %}
+                        {% for row in rows %}
+                        <tr>
+                            <td>{{ row.log_id }}</td>
+                            <td>{{ row.act_name }}</td>
+                            <td>{{ row.event_label }}</td>
+                            <td>{{ row.resource }}</td>
+                            <td>{{ row.details }}</td>
+                            <td>{{ row.time }}</td>
+                        </tr>
+                        {% endfor %}
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+
+            <nav class="pagination" aria-label="稽核紀錄分頁">
+                {% if page > 1 %}
+                <a href="/audit?page={{ page - 1 }}&user={{ f_user }}&amp;action={{ f_action }}&amp;start={{ f_start }}&amp;end={{ f_end }}">← 上一頁</a>
+                {% else %}
+                <span class="is-disabled" aria-disabled="true">← 上一頁</span>
+                {% endif %}
+                <span class="page-status">第 {{ page }} / {{ total_pages }} 頁・共 {{ total }} 筆</span>
+                {% if page < total_pages %}
+                <a href="/audit?page={{ page + 1 }}&user={{ f_user }}&amp;action={{ f_action }}&amp;start={{ f_start }}&amp;end={{ f_end }}">下一頁 →</a>
+                {% else %}
+                <span class="is-disabled" aria-disabled="true">下一頁 →</span>
+                {% endif %}
+            </nav>
+            <p class="section-note">稽核軌跡僅追加不可改寫；您的角色：{{ role_code }}</p>
+        </section>
+    </main>
+
+    <footer class="site-footer">
+        <div class="container">
+            <p>Flaps ERP 工作台 · 稽核軌跡（零 JavaScript，WCAG 2.2 AA 方向）</p>
+            <p>規格：治理稽核工作室主頁 · 設計系統：web/assets/design-system.css</p>
+        </div>
+    </footer>
+</body>
+</html>

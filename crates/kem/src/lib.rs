@@ -13,6 +13,10 @@
 //! - supersede, never delete: `retired` is the only terminal state
 
 pub mod capture;
+pub mod console;
+// NOTE: `console` module source was removed 2026-11-09 (byte-signature
+// analysis: PUA-corrupted with unrecoverable byte-pair loss; kept in session
+// backup for the owner stream to rebuild). Re-add once rebuilt.
 pub mod dashboard;
 pub mod embed;
 pub mod evolve;

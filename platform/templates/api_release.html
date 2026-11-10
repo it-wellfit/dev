@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Release Checklist — Flaps ERP</title>
+    <link rel="stylesheet" href="/assets/design-system.css">
+</head>
+<body>
+    <a class="skip-link" href="#main">跳至主要內容</a>
+    <header class="app-header">
+        <div class="container">
+            <div>
+                <h1>Release Checklist</h1>
+                <p class="app-subtitle">玉山 BankPay 上線前檢核 — 誠實狀態；未驗證項目不標示為通過</p>
+            </div>
+            <p class="app-subtitle">
+                使用者：<strong>{{ acting_user }}</strong>
+                ｜ <a class="btn btn-secondary" href="/admin/api/catalog">服務目錄</a>
+                <a class="btn btn-secondary" href="/">返回工作台</a>
+            </p>
+        </div>
+    </header>
+    <main id="main" class="container">
+        <section class="panel" aria-labelledby="rel-title">
+            <h2 id="rel-title">檢核項（{{ items.len() }} 項）</h2>
+            <div class="table-wrap">
+                <table>
+                    <caption>上線前檢核（隨串接進度更新）</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col">編號</th>
+                            <th scope="col">類別</th>
+                            <th scope="col">項目</th>
+                            <th scope="col">證據</th>
+                            <th scope="col">狀態</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for r in items %}
+                        <tr>
+                            <td><code>{{ r.id }}</code></td>
+                            <td>{{ r.category }}</td>
+                            <td>{{ r.item }}</td>
+                            <td><code>{{ r.evidence }}</code></td>
+                            <td><span class="badge {{ r.status_class }}">{{ r.status }}</span></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <p class="section-note">
+                本清單起步為靜態規則表（來源：Wellfit ReleaseGate 設計＋OQ-E3 現況）；
+                自動串接為後續工作（RC-06）。狀態「未驗證／未串接」如實反映現況，不得手動改標通過。
+            </p>
+        </section>
+    </main>
+    <footer class="site-footer">
+        <div class="container">
+            <p>Flaps ERP · API 中樞 · 治理參照（零 JavaScript，WCAG 2.2 AA 方向）</p>
+            <p>契約：Wellfit/docs/bankpay/04-interface-specification.md · 決策：docs/adr/ADR-0012</p>
+        </div>
+    </footer>
+</body>
+</html>

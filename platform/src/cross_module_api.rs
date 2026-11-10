@@ -259,7 +259,11 @@ pub struct SearchQuery {
 pub struct SearchResult {
     pub doc_id: String,
     pub content: String,
+    /// Fused ranking score (α·norm(BM25) + (1−α)·norm(cosine)); BM25-only
+    /// when the embedder is unreachable. Never the constant 1.0.
     pub score: f64,
+    /// Retrieval-path provenance: "hybrid" or "bm25" (PHASE-R).
+    pub via: String,
 }
 
 pub async fn search_query(
@@ -268,13 +272,14 @@ pub async fn search_query(
 ) -> Json<Vec<SearchResult>> {
     let results = state
         .search
-        .search(&query.q)
+        .search_ranked(&query.q)
         .await
         .into_iter()
-        .map(|doc| SearchResult {
-            doc_id: doc.doc_id,
-            content: doc.content,
-            score: 1.0,
+        .map(|hit| SearchResult {
+            doc_id: hit.document.doc_id,
+            content: hit.document.content,
+            score: hit.score,
+            via: hit.via,
         })
         .collect::<Vec<_>>();
     Json(results)
@@ -305,7 +310,10 @@ pub async fn search_get(
         Some(doc) => Ok(Json(SearchResult {
             doc_id: doc.doc_id,
             content: doc.content,
+            // Direct fetch is not a ranking path: neutral score, explicit
+            // provenance (never a fake fused score).
             score: 1.0,
+            via: "direct".to_string(),
         })),
         None => Err((StatusCode::NOT_FOUND, "document not found".to_string())),
     }

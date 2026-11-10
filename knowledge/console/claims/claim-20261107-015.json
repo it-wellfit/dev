@@ -1,0 +1,26 @@
+{
+  "id": "claim-20261107-015",
+  "claim_type": "decision",
+  "status": "published",
+  "track": "b",
+  "confidence": 0.7941171494891214,
+  "valid_from": "2026-11-07",
+  "valid_to": null,
+  "recorded_at": "2026-11-07T11:03:14.290741300Z",
+  "supersedes": [],
+  "superseded_by": null,
+  "evidence": [
+    {
+      "path": "docs/engineering/THINKING_OPERATING_SYSTEM.md",
+      "rev": "working-tree",
+      "quote": "**工作區錨點**：單一寫者原則（api.rs）不是流程偏好，是對「雙寫者合併衝突迴路」的規則層介入。"
+    }
+  ],
+  "topics": [
+    "methodology",
+    "single-writer"
+  ],
+  "source": "raw/methodology/2026-11-07-seed.md",
+  "title": "api.rs/web 採單一寫者原則",
+  "body": "platform/src/api.rs and web/* follow a single-writer rule to break the dual-writer merge-conflict loop; this is a structural intervention, not a process preference."
+}

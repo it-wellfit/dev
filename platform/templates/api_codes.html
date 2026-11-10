@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>V2.8 錯誤碼對照 — Flaps ERP</title>
+    <link rel="stylesheet" href="/assets/design-system.css">
+</head>
+<body>
+    <a class="skip-link" href="#main">跳至主要內容</a>
+    <header class="app-header">
+        <div class="container">
+            <div>
+                <h1>V2.8 錯誤碼對照</h1>
+                <p class="app-subtitle">rsStatus 回應狀態語義 — 僅列已驗證項目；完整對照表以官方技術文件為準</p>
+            </div>
+            <p class="app-subtitle">
+                使用者：<strong>{{ acting_user }}</strong>
+                ｜ <a class="btn btn-secondary" href="/admin/api/catalog">服務目錄</a>
+                <a class="btn btn-secondary" href="/">返回工作台</a>
+            </p>
+        </div>
+    </header>
+    <main id="main" class="container">
+        <section class="panel" aria-labelledby="codes-title">
+            <h2 id="codes-title">已驗證錯誤碼（{{ codes.len() }} 項）</h2>
+            <div class="table-wrap">
+                <table>
+                    <caption>rsStatus.code 對照</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col">代碼</th>
+                            <th scope="col">意義</th>
+                            <th scope="col">語義</th>
+                            <th scope="col">處理方式</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for c in codes %}
+                        <tr>
+                            <td><code>{{ c.code }}</code></td>
+                            <td>{{ c.meaning }}</td>
+                            <td>{{ c.semantics }}</td>
+                            <td>{{ c.action }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <p class="section-note">
+                誠實原則：本頁僅列原始碼與測試可驗證之項目；非 910000 之回應一律視為未成功
+                （細節於 <code>rsStatus.message</code>／<code>moreInfo</code>），不得推測其他代碼的語義。
+            </p>
+        </section>
+    </main>
+    <footer class="site-footer">
+        <div class="container">
+            <p>Flaps ERP · API 中樞 · 治理參照（零 JavaScript，WCAG 2.2 AA 方向）</p>
+            <p>契約：Wellfit/docs/bankpay/04-interface-specification.md（rsStatus 章節）</p>
+        </div>
+    </footer>
+</body>
+</html>

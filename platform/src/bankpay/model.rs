@@ -155,6 +155,13 @@ pub struct ExportSummary {
 }
 
 /// E.Sun 銀行連線設定。
+///
+/// 欄位涵蓋 V2.8 連線要件（萃取自 Tauri 桌面版 `web/src-tauri/src/state.rs`
+/// 的連線設定模型，兩作品同步演進——見 ADR-0012 附錄）：
+/// - 內部/外部端點 URL（內部 dev/test 為 `http://<IP>:8080`、正式 `:8443`；
+///   外部沙盒為 `https://eospt.testesunbank.com.tw:9443`）
+/// - mTLS 三件套（client cert / client key / CA）
+/// - 逾時秒數
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsunConfig {
     pub esun_mock_mode: bool,
@@ -162,6 +169,16 @@ pub struct EsunConfig {
     pub source_system_id: Option<String>,
     pub customer_id: Option<String>,
     pub payer_account: Option<String>,
+    /// E.Sun 外部（沙盒/正式）端點，例 `https://eospt.testesunbank.com.tw:9443`。
+    pub esun_external_url: String,
+    /// mTLS 用戶端憑證路徑。
+    pub client_cert_path: Option<String>,
+    /// mTLS 用戶端私鑰路徑。
+    pub client_key_path: Option<String>,
+    /// E.Sun CA 憑證路徑。
+    pub ca_cert_path: Option<String>,
+    /// HTTP 逾時秒數（Okapi 預設 30）。
+    pub timeout_secs: u64,
 }
 
 impl Default for EsunConfig {
@@ -174,6 +191,11 @@ impl Default for EsunConfig {
             source_system_id: None,
             customer_id: None,
             payer_account: None,
+            esun_external_url: String::new(),
+            client_cert_path: None,
+            client_key_path: None,
+            ca_cert_path: None,
+            timeout_secs: 30,
         }
     }
 }

@@ -39,22 +39,40 @@
 
     <nav class="site-nav" aria-label="主導覽">
         <div class="container">
-            <a href="#dashboard">總覽</a>
+            <a href="/">總覽</a>
             <a href="/transactions">交易</a>
-            <a href="#accounts">會計科目</a>
-            <a href="#ai-decisions">AI 決策</a>
-            <a href="#new-transaction">新增交易</a>
+            <a href="/accounts">會計科目</a>
+            <a href="/search">檢索</a>
+            <a href="/ai-decisions">AI 決策</a>
             <a href="/bankpay">銀行支付</a>
-            <a href="/import">快速匯入</a>
-            <a href="/drafts">草稿解析</a>
-            <a href="/reports/monthly?ym={{ current_ym }}">月報表</a>
-            <a href="/reports/pivot?rows=account&cols=month&measure=debit">樞紐分析</a>
-            <a href="/reports/parallel?months=6">平行座標投影</a>
+            <a href="/audit">稽核軌跡</a>
+            <a href="/status">系統狀態</a>
+            <a href="/help">操作指引</a>
+            <details class="nav-menu">
+                <summary>匯入與草稿</summary>
+                <div class="nav-menu-items">
+                    <a href="/import">快速匯入</a>
+                    <a href="/drafts">草稿解析</a>
+                </div>
+            </details>
+            <details class="nav-menu">
+                <summary>報表分析</summary>
+                <div class="nav-menu-items">
+                    <a href="/reports/monthly?ym={{ current_ym }}">月報表</a>
+                    <a href="/reports/pivot?rows=account&cols=month&measure=debit">樞紐分析</a>
+                    <a href="/reports/parallel?months=6">平行座標投影</a>
+                </div>
+            </details>
             {% if can_manage_users %}
-            <a href="/admin/users">使用者管理</a>
-            <a href="/admin/api/catalog">API 中樞</a>
-            <a href="/admin/api/logs">API 日誌</a>
-            <a href="/admin/api/config">API 設定</a>
+            <details class="nav-menu">
+                <summary>管理</summary>
+                <div class="nav-menu-items">
+                    <a href="/admin/users">使用者管理</a>
+                    <a href="/admin/api/catalog">API 中樞</a>
+                    <a href="/admin/api/logs">API 日誌</a>
+                    <a href="/admin/api/config">API 設定</a>
+                </div>
+            </details>
             {% endif %}
         </div>
     </nav>
