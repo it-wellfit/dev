@@ -418,6 +418,20 @@ pub fn router(state: AppState) -> Router {
         )
         .route("/reports/ledger", get(crate::pages::account_ledger_page))
         .route("/bankpay/batches", get(crate::pages::bankpay_batches_page))
+        // ── 銀行支付作業頁與表單（單一註冊）──
+        .route("/bankpay", get(crate::bankpay::api::bankpay_page))
+        .route(
+            "/bankpay/export",
+            post(crate::bankpay::api::bankpay_export_form),
+        )
+        .route(
+            "/bankpay/import",
+            post(crate::bankpay::api::bankpay_import_form),
+        )
+        .route(
+            "/bankpay/config",
+            post(crate::bankpay::api::bankpay_config_form),
+        )
         .route(
             "/bankpay/exceptions",
             get(crate::pages::bankpay_exceptions_page),
@@ -442,53 +456,6 @@ pub fn router(state: AppState) -> Router {
         .route("/admin/system", get(crate::pages::admin_system_page))
         // ── 桌面版（Tauri）UI 對照：原 127.0.0.1:1420 網頁版原樣掛載 ──
         .route("/tauri-preview", get(tauri_preview))
-        // ── 銀行支付作業頁與表單（併發重組時遺漏，補回註冊）──
-        .route("/bankpay", get(crate::bankpay::api::bankpay_page))
-        .route(
-            "/bankpay/export",
-            post(crate::bankpay::api::bankpay_export_form),
-        )
-        .route(
-            "/bankpay/import",
-            post(crate::bankpay::api::bankpay_import_form),
-        )
-        .route(
-            "/bankpay/config",
-            post(crate::bankpay::api::bankpay_config_form),
-        )
-        .route(
-            "/bankpay/batches/:batch_id",
-            get(crate::pages::bankpay_batch_detail),
-        )
-        .route(
-            "/bankpay/exceptions",
-            get(crate::pages::bankpay_exceptions_page),
-        )
-        .route(
-            "/reports/trial-balance",
-            get(crate::pages::trial_balance_page),
-        )
-        .route("/status", get(crate::pages::status_page))
-        .route(
-            "/profile/password",
-            post(crate::pages::profile_change_password),
-        )
-        .route(
-            "/admin/sessions",
-            get(crate::pages::admin_sessions_page).post(crate::pages::admin_sessions_purge),
-        )
-        .route(
-            "/bankpay/export",
-            post(crate::bankpay::api::bankpay_export_form),
-        )
-        .route(
-            "/bankpay/import",
-            post(crate::bankpay::api::bankpay_import_form),
-        )
-        .route(
-            "/bankpay/config",
-            post(crate::bankpay::api::bankpay_config_form),
-        )
         // ── API 資料管理平台（零 JS；目錄由 apihub registry 驅動）──
         .route("/admin/api/catalog", get(crate::apihub::apihub_catalog))
         .route("/admin/api/test", get(crate::apihub::apihub_test))
