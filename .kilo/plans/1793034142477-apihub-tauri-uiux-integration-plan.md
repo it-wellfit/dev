@@ -1,6 +1,6 @@
 # 雙作品 UI/UX 比較、互補演進與最佳整合計畫（Tauri 玉山平台 ↔ Web 工作台）
 
-- 版本：v1.3｜日期：2026-11-09｜狀態：定稿（D1/D3/D5/D7/D8 全數拍板；含 27 頁全工作流批量交付）
+- 版本：v1.4｜日期：2026-11-10｜狀態：定稿＋P0/P1 執行切片（§9）；D1/D3/D5/D7/D8 全數拍板
 - 對應計畫 SSOT：ADR-0012（E.Sun 整合邊界）、`1793782615513-esun-bankpay-ui-optimization.md`、`.kilo/plans/1793787631643-three-studio-slice-execution-plan.md`
 - 營運方式：本檔為主計畫；實作後依規範更新 PLAN_REGISTER addendum 與 §22 追溯矩陣。
 
@@ -196,3 +196,58 @@
 | CSS SSOT | **維持 `include_str!` 現狀**（`platform/src/api.rs:505`） | 編譯期內嵌、零執行期 I/O；`close_out.rs` 漂移測試強制同 commit 與 `docs/design-system.css` 同步 |
 
 **實作移交**：本計畫已 implementation-ready；請切換至可寫入原始碼的代理（如 code 代理）依 §5 T1–T8 執行；plan 代理不執行原始碼變更。
+
+## 9. P0/P1 執行切片（2026-11-10 評估後定稿；交由 code 代理執行）
+
+> 前置：先跑 `cargo check -p platform` 取即時錯誤數。熱檔紀律：`api.rs`／`pages.rs` 若 30 分鐘內有他流寫入——讀取驗證後以**單點守衛替換**（出現次數 ≠ 1 即中止），否則等他流存檔。
+
+### P0-1 安全回應標頭（G-SH1）
+- **檔案**：`platform/src/api.rs`。
+- **步驟**：
+  1. 新增 `async fn security_headers`（`axum::middleware::from_fn` 形式）：對**每個**回應插入 `Content-Security-Policy: default-src 'self'; style-src 'self'; img-src 'self' data:; script-src 'none'`、`X-Content-Type-Options: nosniff`、`X-Frame-Options: DENY`、`Referrer-Policy: no-referrer`。
+  2. 掛載於最外層 router 建構尾端（`.layer(axum::middleware::from_fn(security_headers))`），確保 public／protected／protected_api 三群全覆蓋。
+- **P0-1a（CSP 前提，先做）**：`platform/templates/index.html` 僅 2 處內聯樣式——L404（`<form class="form-row" … style="display:flex; …">`）、L446（`<div id="audit-pagination" style="…">`）→ 移入 `web/assets/design-system.css` 新類別（`.audit-filter-form`、`.audit-pagination`，值沿用 token var）；同步 `docs/design-system.css`（`close_out.rs` 漂移測試強制同 commit）。L446 空 div 執行時檢查：若為模板條件殘留 → 補內容或移除。
+- **驗收**：登入後 `Invoke-WebRequest` 首頁回應含四標頭；`/`、`/states`、`/admin/api/catalog`、`/login` 渲染不變；`grep 'style="'` 於 `platform/templates` = 0。
+- **風險**：極低（純加成）。CSP 對 JSON API 無害。
+
+### P0-2 /audit RBAC（R2）
+- **檔案**：`platform/src/pages.rs` `audit_page`（現無閘——session 即可見全公司稽核）。
+- **步驟**：`Extension(session)` 後、任何查詢前插入 ROLE_MANAGE 閘：`state.permissions.has_permission_db(&session.user_id, "ROLE_MANAGE").await`；false → 403 denied 頁（語彙同 `apihub.rs::forbidden_page`，可直接複用其 HTML 字串樣式）。
+- **驗收**：store1 `GET /audit` → 403；admin → 200；T4 矩陣測試加入此斷言。
+- **風險**：低；若平行流同時改此 fn → 守衛替換保護。
+
+### P0-3 pages.rs 收斂（R1；擁有權另流，先查後補）
+- **步驟**：`cargo check -p platform`；綠 → 跳過。非綠且 `pages.rs` mtime > 30 分鐘未動 → 依錯誤修復（01:11 時 13 錯：`AuditView` 缺 template 所用 `username/action/created_at`、`BatchRowFull` 缺 `amount_display/status_class`、askama 對 `Option<String>` 之 `.is_empty()`（改 `{% if let Some(x) = … %}` 或欄位改 String）、`:821` E0308 型別）。原則：以**模板為契約**對齊 struct，不得改語意。
+- **驗收**：`cargo check -p platform` 0 錯 → `cargo test -p platform` 全綠 → 補 T4（訪客／admin／store1 × 頁面矩陣 smoke＋zero-JS 掃描）。
+
+### P0-4 catalog KPI derive（G-T1a；**疑似已解，僅核對**）
+- **步驟**：現行 `api_catalog.html`（L75–112）已改 `{{ esun_total }}`/`{{ native_total }}` 動態；舊硬編碼 `<dd>3</dd>/<dd>5</dd>` 已不存在。核對 handler `apihub_catalog` 傳值正確、模板無殘餘固定計數（`grep '<dd>[0-9]'`）。
+- **驗收**：無固定計數；如發現殘餘 → handler 計算 `esun_endpoints().iter().filter(…mode 統計…)` 傳入。
+
+### P1-1 Tauri 圖示與打包（R3）
+- **現況**：`web/src-tauri/icons/icon.ico` **已存在**；`bundle.icon: []` 未接；server 未入包。
+- **步驟**：
+  1. `tauri.conf.json` `bundle.icon: ["icons/icon.ico"]`。
+  2. sidecar：`cargo build --release -p platform --bin flaps-server` → 複製為 `web/src-tauri/binaries/flaps-server-x86_64-pc-windows-msvc.exe`；conf 加 `"externalBin": ["binaries/flaps-server"]`。
+  3. `main.rs` 解析序：`FLAPS_SERVER_EXE` → `exe_dir/flaps-server.exe`（bundle 後 sidecar 去 triple 同目錄）→ `exe_dir/binaries/flaps-server-*.exe`（dev）。
+  4. spawn 傳 `FLAPS_PORT=8090`；不強設 `FLAPS_DB_URL`（NSIS 預設 per-user 安裝、安裝目錄可寫 → `data/flaps.db` 可用；文件註明）。
+- **驗收**：`cargo tauri build` 通過並含 sidecar。
+
+### P1-2 啟動序無白屏（R4）
+- `tauri.conf.json`：視窗加 `"label": "main"`、`"visible": false`。
+- `main.rs`：`use tauri::Manager;`；setup 內 `ensure_platform_server()` 後 `app.get_webview_window("main").map(|w| w.show())`；失敗路徑**仍 show**（顯示連線指引，不困死在隱形視窗）。
+- **驗收**：server 關閉冷啟 → 視窗於 spawn 嘗試後才現；server 在線 → 直達儀表板。
+
+### P1-3 守衛掃描擴充（R7）
+- `platform/tests/guards.rs`：`SCAN_DIRS` 5 → 7：＋`"web/src-tauri/src"`、＋`"crates/kem/src"`（擴充後 `files.len() >= 40` 下限不變即自然滿足）。
+- **驗收**：`cargo test -p platform --test guards` 綠（新目錄零損傷）。
+
+### P1-4 NSIS 建置＋安裝 smoke
+- 前置：`cargo tauri --version`；缺 → `cargo install tauri-cli --locked`（一次性、需網路）。
+- 步驟：於 `web/src-tauri` 執行 `cargo tauri build --bundles nsis` → 產物 `target/release/bundle/nsis/Flaps ERP_0.2.0_x64-setup.exe`；`/S` 靜默安裝 → 啟動 → 驗證（視窗載入儀表板；`tasklist` 見 flaps-server.exe 被 spawn；登入後開 `/admin/api/catalog`）→ `/S` 反安裝 → 程序清空。
+- **證據**：產物路徑、tasklist 輸出、smoke 記錄 → PLAN_REGISTER addendum #19。
+- **風險**：NSIS bundler 首次需下載工具鏈（需網路）；WebView2 runtime 開發機已具。
+
+### 執行順序與依賴
+`P0-1(+1a) → P0-2 → P0-3(先查) → P0-4(核對) → 四關全綠 → P1-1 → P1-2 → P1-3 → P1-4 → addendum #19`。
+T4 矩陣測試（4 身份 × 頁面）於 P0-3 綠後立即補，作為 P1-4 smoke 前的自動化防護。

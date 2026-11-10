@@ -1,9 +1,10 @@
 # 專案記憶庫與迭代教訓落實計畫
 
-> 編號：1792461065184｜日期：2026-11-09｜狀態：v1.0 已實作（§4 步驟 1-5、7 落地；步驟 6 可選未執行）＋§8 演進建議與 §9 v2.0 任務清單（待執行）
+> 編號：1792461065184｜日期：2026-11-09｜狀態：v1.0 已實作（§4 步驟 1-5、7 落地；步驟 6 可選未執行）＋§8 演進建議與 §9 v2.0 任務清單（**已執行**，2026-11-10；見下方更新）
 > 來源：2026-11-07～11-09 對 `1792865422970-three-studio-governance-platform.md` 之 v3.1→v3.1-r2→v3.1-r3 精細迭代過程提煉。
 > 唯一權威：本檔。
 > **2026-11-09 更新**：v1.0 已交付（`.kilo/memories/` 四檔＋`.kilo/kilo.jsonc` `instructions` 自動加載＋`AGENTS.md` §7 第 4 步）。§8 為經 14 項線上來源查證之演進建議（v1.0→v2.0）。
+> **2026-11-10 更新**：**§8/§9 v2.0 已實作完成**——`tools/memory_lint`（Rust，零依賴；依使用者「嚴格遵守 Rust-first」指令取代 §9.1 原訂 `.py`，原檔已刪）＋T2a 引用精確化 8 處＋額外事實更新 1 處（D-07：project.md「非 git」經實測證偽並更新）＋README v1.1（§9.3 九項）＋T4a/T4c/T5c lint 報告與 T4d 負向測試 6/6（5 注入全 FAIL 重現、3 案例還原回綠）＋session 工具鏈「Rules referenced」欄（模板＋`session-start.ps1` 雙檔同步）。證據：`.kilo/sessions/20261110-dev-memory-v2/`（manifest＋runs/ 五份報告）。§9.1 之 `.py` 規格由本更新取代。 **2026-11-10 複審（r2）**：全檔 `.py` 字樣就地標 SUPERSEDED；記憶規則擴充至 **C-12**（現行 SSOT＝`.kilo/memories/corrections.md`；§3.2「10 條」為 v1.0 設計基數）；ADR 子引用判定校正為精確存在性（§9.1）；CI 接入 memory_lint（`.github/workflows/flexible-ci.yml`）。計畫正文其餘不變。
 
 ## 1. 目標
 
@@ -17,7 +18,7 @@
 |---|---|---|
 | `Dev/knowledge/`：surgical 自動繼續規則、Camino-1 對話機制、R2 review verdict | `ls Dev/knowledge/`（working-tree 未版本控管） | 可能承載 AGENTS.md 級規則但未進版本控管；實作前須逐檔查閱，不得重複書寫其領域規則 |
 | `Knowledge/README.md`：知識庫索引 | `ls Knowledge/`；`grep project.md` 命中 `docs/adr/ADR-0001-tech-stack-baseline.md:16` 指出「記憶（project.md）宣稱與程式碼不一致」 | 既有記憶與程式碼矛盾已有 ADR 處置；新記憶須分 workspace 標籤（見 §3.3），禁止跨 workspace 誤用 |
-| `Dev/` 根 workspace 非 git repo | ADR-0001/2026-11-03「根目錄非 git repo」 | repo 內 `.kilo/memories/` 無版本控管背書；需誠實標註（見 §6） |
+| `Dev/` 根 workspace 非 git repo〔**2026-11-10 已過時**：實測已初始化 git——toplevel＝`Dev/`、remote＝`github.com/it-wellfit/dev.git`；原述保留為歷史〕 | ADR-0001/2026-11-03「根目錄非 git repo」 | repo 內 `.kilo/memories/` 無版本控管背書；需誠實標註（見 §6）〔已於 2026-11-10 納入版控〕 |
 | `Dev/.kilo/sessions/` 已存在且有制度 | `index.md` 規則：「每 session 目錄須有 manifest.md；session 結束時更新 index」；現況 4 個 session 目錄 | 記憶庫沿用此制度（README 即索引） |
 | `Dev/.kilo/templates/session-manifest.md` 已存在 | `ls Dev/.kilo/templates/` | 記憶檔案格式可參照 manifest 慣例 |
 | 迭代已寫入正式記錄 | plan 檔 §24（v3.1/v3.1-r2/v3.1-r3）＋§25.8 結構優化分析；另 `PLAN_REGISTER.md:174` 登載「plan stub 缺正文 GAP-06」相關歷史 | 記憶庫只紀錄**教訓與連結**，不複寫 plan 內容（SSOT 紀律） |
@@ -58,7 +59,7 @@
 6. **引用完整性稽核**（C-06）——每個 `§N(.M)` 與 ID 引用須解析到定義；懸空先查出處（甄別跨文件引用如「憲章 §2.2」）；子節標題樣式須全檔統一。
 7. **語義覆蓋≠ID 存在**（C-07）——數「是否被展開/引用」時，斜線簡寫（`RIG-06/07/11/12/13`）與範圍簡寫（`PSN-01..08`）須展開後計數（教訓：誤報 21/24，實為 23/24）。
 8. **偽影甄別**（C-08）——掃描器給出的失敗先區分「掃描器假陽性」（字串多一空格、歷史記錄區塊）與「真錯誤」，再決定修文件或修掃描器。
-9. **寫入通道**（C-09）——PowerShell 5.1：heredoc 不支援；中文/`$`/反引號/雙引號經 `python3 -c` 可完整傳遞；寫含引號檔案先用 `$c = @' ... '@` here-string 寫 temp 檔，再由 Python append（`WriteAllText` 需 `[Text.UTF8Encoding]::new($false)` 防 BOM）。
+9. **寫入通道**（C-09）——PowerShell 5.1：heredoc 不支援；中文/`$`/反引號/雙引號經受控通道傳遞；寫含引號檔案先用 `$c = @' ... '@` here-string 寫 temp 檔，再由 PowerShell 原生 `[IO.File]::AppendAllText` 或 Rust 工具併入〔原「`python3 -c`／Python append」SUPERSEDED 2026-11-10（Rust-first，見 C-11）〕（`WriteAllText` 需 `[Text.UTF8Encoding]::new($false)` 防 BOM）。
 10. **誠實註記**（C-10）——未量測標 `UNKNOWN`，`UNKNOWN ≠ PASS ≠ FAIL`；數字聲明附量測方法與日期（`1792865422970-*` §0 證據紀律）。
 
 ### 3.2a 元素分層與重構工序（用户方法論落實——大/中/小/微/毫元素序列）
@@ -129,7 +130,7 @@
 ## 5. 驗證計畫
 
 - 每檔第一行：版本與更新日期；內容以讀取驗證（不以作者宣稱）。
-- 所有內部連結（`§N` 式引用、檔案路徑）以 grep 對照目標存在性；懸空即修補（引用完整性稽核慣例）。**（v2.0 起由 T1 `memory_lint.py` 之 L5／L5b 自動化與強化——見 §9.1；v1.0 人工版曾遺漏 8 處，實證見 §9 引言）**
+- 所有內部連結（`§N` 式引用、檔案路徑）以 grep 對照目標存在性；懸空即修補（引用完整性稽核慣例）。**（v2.0 起由 T1 `tools/memory_lint`（Rust）之 L5／L5b 自動化與強化——見 §9.1；v1.0 人工版曾遺漏 8 處，實證見 §9 引言；工具語言經 Rust-first 修訂）**
 - 無重複內容檢查：以關鍵字交叉比對 `AGENTS.md`、`1792865422970-*`（禁止大段複寫 SSOT）。
 
 ## 6. 風險與邊界
@@ -138,7 +139,7 @@
 - **記憶過時**：以 session-end 維護規則緩解；過時事實須標 `SUPERSEDED`（規則 1）。
 - **寫檔權限**：plan agent 無寫檔權限——實作須切換至可寫檔 agent 執行。
 - **超出範圍**：記憶系統自動注入至 session 啟動（Kilo config `instructions` 欄位機制）是否啟用，見 §4 步驟 7（使用者已決策為自動加載，理由：「教訓成為 agent 的反射而非文檔」）。
-- **Dev 根非 git repo 之風險**：記憶庫無 commit 背書，過時風險以 session-end 規則緩解；初始化 git 後（AGENTS.md §6）建議將 `.kilo/memories/` 納入版控。
+- **Dev 根非 git repo 之風險**〔**2026-11-10 已解除**：git 已初始化且 `.kilo/memories/` 已受控——見 project.md 列 13 與 D-07〕：記憶庫無 commit 背書，過時風險以 session-end 規則緩解；初始化 git 後（AGENTS.md §6）建議將 `.kilo/memories/` 納入版控。
 - **與 `Dev/knowledge/` claims 之關係**：claims 為 claim-registry（Fact/Invariant/Decision 三類，有 confidence／evidence／supersede 欄位，由 `crates/kem` 演進模組管理）；`.kilo/memories/` 為 agent 作業規則（強制執行）。兩者分工：**claim 是事實宣稱，memory 是行為規則**；規則若需升級為不變量，走 kem claim 流程（見 `knowledge/index.md` 索引與 `knowledge/log.md` 決策日誌），不直接把 memory 升格為 claim。
 - **覆核範圍聲明**：本計畫調查範圍為 workspace-root `Dev/` 及其同級 `Knowledge/`（2026 年同級目錄）與 `~/projects/`（`.config/kilo`、`.kilo`、`.kilocode` 已由 kilo-config skill 確認 Config File Locations）。
 
@@ -177,7 +178,7 @@
 **R-01 把可檢查的規則執行化（軟指令→硬護欄）**（NOW）
 - 依據：S-08（可執行化 67%→88.3%）、S-09（禁令＋可執行勝）、S-14（硬護欄穩定）
 - 現況：C-01..C-10 皆為散文；其中 C-02／C-04／C-07 其實可機器檢查；已有先例（本專案 deep3/deep4 掃描器）
-- 行動：新增 `.kilo/memories/tools/memory_lint.py`（環境已備 python3 3.14，無新依賴）：檢查 (a) corrections 六欄完整、ID 連續唯一、狀態值域 {ACTIVE, SUPERSEDED}；(b) project 每列 workspace 標籤＋日期可解析＋>30 天 WARN 補標 STALE；(c) 交叉引用解析（目標判定與解析規則見 §9.1 L5——含主計畫 §N/§N.M、本計畫 `## N.`、ADR §N.M 三種慣例；`憲章` 前綴白名單）；(d) 預算警示（corrections>8KB 或常駐合計>12KB WARN）。於 session-end 執行，輸出退出碼（**精確契約：§9.1**）
+- 行動：新增 `.kilo/memories/tools/memory_lint.py`（環境已備 python3 3.14，無新依賴）〔**SUPERSEDED 2026-11-10**：依 Rust-first 已改以 Rust（零依賴 crate）實作於 `tools/memory_lint/`；檢查項與契約不變（見 §9.1）〕：檢查 (a) corrections 六欄完整、ID 連續唯一、狀態值域 {ACTIVE, SUPERSEDED}；(b) project 每列 workspace 標籤＋日期可解析＋>30 天 WARN 補標 STALE；(c) 交叉引用解析（目標判定與解析規則見 §9.1 L5——含主計畫 §N/§N.M、本計畫 `## N.`、ADR §N.M 三種慣例；`憲章` 前綴白名單）；(d) 預算警示（corrections>8KB 或常駐合計>12KB WARN）。於 session-end 執行，輸出退出碼（**精確契約：§9.1**）
 - 驗證：對 v1.0 現檔跑 lint 全綠；注入壞列（缺欄/重號/壞日期）須轉紅（兩個案例）
 - 優缺點：（＋）可執行＝可驗證，抗稀釋；有先例證明合規大幅提升。（－）多一個維護腳本；格式變更需同步腳本
 
@@ -296,9 +297,9 @@
 > **範圍邊界**：只動 `.kilo/memories/` 四檔＋新增 `tools/` 目錄＋`.kilo/templates/session-manifest.md`＋`scripts/session-start.ps1`（單行，T5b）。**session 工具鏈已全數實測（非假設）**：`session-validate.ps1` 僅驗 `git_head_start`／`dirty_start`／`Created:`／`Project(s):` 四欄（L25）→ 無需改動，且**新欄不得設為必填**（否則既存 4 份 manifest 將驗證失敗）；`session-end.ps1` 僅以 regex 替換 `(pending)` 欄（L37-38）→ 新欄沿用 `(pending)` 慣例即自動相容；`session-cleanup.ps1` 僅清除 `runs\`／`tests\*.log`／`io\input|output` 之過期產物（L33-35）→ 與 manifest 欄位零互動。**不屬本次範圍**：`AGENTS.md`、`.kilo/kilo.jsonc`（v1.0 已完成）、`Dev/knowledge/`、`Knowledge/`（只連結）。
 > **今日精確化稽核發現（2026-11-09，四檔全量 `§` 掃描驅動 T2a 之實證）**：corrections.md C-01/C-10 之 `§0.4`/`§0.2` 與 README L17 之 `§0.4` 為懸空（主計畫 §0 為編號清單；r3 已建立「§0 條名」慣例並廢除 `§0.N` 形式）；C-06 之歷史示例 token（`§12.1`、`§6.3`）以 `§` 前綴書寫，會被掃描器誤判為現行引用；project.md 對 ADR-0001 之 `§3-1/§3-2/§3-3` 為非慣例 hyphen 形式（lint 主 regex 盲區→以 L5b 偵測；ADR 慣例正解 `§3.1-3.3`）且 `§7` 語義不精確（正解 `§5.3`——read 實證 ADR `## 5.` 第 3 條＝「無 git 版控」）；decisions.md 無 ID 欄但 README 索引宣稱 `D-01..D-04`（三方不一致）。**四檔 `§` token 全量已枚舉（共 19 匹配：corrections 9 行／C-09 無 token；decisions 4 行；README 1 行；project 5 行），除 T2a 8 處外其餘皆可解析**（如 `§24`、`§25.7`、`§25.8-*`、`§25.5`、`§22`、`§21.2`、`§4` 等——已對主計畫/本計畫標題實測）。
 
-### 9.1 T1：memory_lint.py（R-01 精確契約）
+### 9.1 T1：memory_lint（R-01 精確契約）〔原題含 `.py`，語言經 Rust-first 修訂見下〕
 
-- 路徑：`.kilo/memories/tools/memory_lint.py`；純讀、離線、Python stdlib only；從 `Dev/` 根執行（`--root` 可覆寫）。
+- 路徑：`.kilo/memories/tools/memory_lint.py`〔**SUPERSEDED 2026-11-10**：依 Rust-first 指令改以 Rust（零依賴 crate）實作於 `tools/memory_lint/`；其餘契約（輸出格式／退出碼／檢查項 L1..L7）不變；本行保留為歷史〕；純讀、離線；從 `Dev/` 根執行（`--root` 可覆寫）。
 - 輸出：每項 `PASS|WARN|FAIL [L#] <file>:<line> <message>`；結尾 summary。退出碼：`0`＝無 FAIL（WARN 允許）、`1`＝有 FAIL、`2`＝環境錯誤（目標檔缺失／解析失敗）。
 - 檢查項：
   - **L1（FAIL）** corrections.md：每資料列 6 欄；ID `C-\d{2}` 自 C-01 連續遞增、唯一；狀態 ∈ {ACTIVE, SUPERSEDED}；「為什麼」「驗證」欄非空。
@@ -315,7 +316,7 @@
   - 目標判定（**逐引用取「該引用之前最近的目標標記」**，非整行判定——因單行可含多目標，如 project.md L13「ADR…§7；AGENTS.md §6」）：標記集＝{`ADR-\d{4}` → 該 ADR 檔；`憲章` → INFO 白名單；`1792865422970` → 主計畫；`1792461065184` → 本計畫；其他 `*.md` 路徑 → INFO 略過（未納入目標表）}；**無任何標記 → 預設主計畫**。
   - 主計畫解析：`N` → 存在 `## §N` 標題；`N.M`（含更深）→ 存在 `### N.M…`／`#### N.M…` 標題（後綴如 `-archived` 忽略）；`§0`＋中文註記（如「§0 證據紀律」）→ 以 `§0` 判定。**`§0.N` 形式 → FAIL**（該慣例已由 r3 廢除）。
   - 本計畫解析：`N` → `## N.` 標題；`N.M` → `### N.M` 標題。
-  - ADR 解析：`N` → `## N.` 章存在；`N.M` → 章 N 存在且該章內編號列（行首 `N'\.`）數 ≥ M（例：ADR-0001 §3 有 5 條 → `§3.3` 合法；§5 有 4 條 → `§5.3` 合法）。
+  - ADR 解析：`N` → `## N.` 章存在；`N.M` → 章 N 存在且**存在行首為 `M.`（子號＋句點＋空白）之編號列**〔2026-11-10 校正：原「數 ≥ M」為代理語義，缺號章節會誤判；實作同步改為精確存在性〕（例：ADR-0001 §3 有 1..5 條 → `§3.3` 合法；§5 有 1..4 條 → `§5.3` 合法）。
   - 無法解析 → FAIL（附 file:line 與解析結果）。
 
 ### 9.2 T2a：引用精確化（8 處，斷言式；修正依據見 §9 引言實證與四檔全量 `§` 掃描）

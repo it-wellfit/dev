@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Zero-command shell baseline: explicit deny-all IPC surface. No commands or plugin permissions are reachable until granted here (Tauri 2 ACL posture; plan 1793034142477 D8).",
+  "windows": ["main"],
+  "permissions": []
+}

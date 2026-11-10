@@ -1,0 +1,16 @@
+[package]
+name = "memory_lint"
+version = "0.1.0"
+edition = "2021"
+description = "專案記憶庫結構與引用完整性檢查（記憶庫 v2.0；規格：.kilo/plans/1792461065184-project-memory-lessons.md §9.1）"
+
+[lib]
+name = "memory_lint"
+path = "src/lib.rs"
+
+[[bin]]
+name = "memory_lint"
+path = "src/main.rs"
+
+# 獨立 workspace：不併入 Dev 根 workspace（避免觸動根 Cargo.toml 與其 members）。
+[workspace]

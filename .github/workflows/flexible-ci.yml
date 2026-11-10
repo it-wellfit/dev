@@ -89,6 +89,23 @@ jobs:
         run: |
           cargo install cargo-audit
           cargo audit
+      - name: Memory lint gates (fmt / clippy / test)
+        env:
+          CARGO_TARGET_DIR: target/memlint
+        run: |
+          cargo fmt --manifest-path .kilo/memories/tools/memory_lint/Cargo.toml -- --check
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          cargo clippy --manifest-path .kilo/memories/tools/memory_lint/Cargo.toml --all-targets -- -D warnings
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          cargo test --manifest-path .kilo/memories/tools/memory_lint/Cargo.toml
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Memory lint (rules & refs integrity)
+        env:
+          CARGO_TARGET_DIR: target/memlint
+        run: |
+          cargo run --quiet --manifest-path .kilo/memories/tools/memory_lint/Cargo.toml -- --root .
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
 
   deploy:
     name: Deploy

@@ -1,4 +1,4 @@
-﻿// Flaps ERP — 桌面殼（Tauri 2.0）
+// Flaps ERP — 桌面殼（Tauri 2.0）
 //
 // D1（計畫 1793034142477）：殼載入平台伺服器 —— UI 單一事實來源為
 // platform 伺服器（http://127.0.0.1:8090；零 JS 工作台）。本檔不虛構任何
@@ -14,14 +14,23 @@
 mod state;
 
 use state::AppState;
+use tauri::Manager;
 
 /// 平台伺服器位址（殼與伺服器的唯一繫結點）。
+#[allow(dead_code)] // redundant by design: URL enforced via tauri.conf.json window.url; kept as documented single bind point
 const PLATFORM_URL: &str = "http://127.0.0.1:8090/";
 
 fn main() {
     tauri::Builder::default()
-        .setup(|_app| {
+        .setup(|app| {
             ensure_platform_server();
+            // R4（2026-11-10）：就緒後才顯示主視窗（visible:false 於 conf）；
+            // 失敗路徑仍 show（WebView 顯示連線指引，不困死隱形視窗）。
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.show();
+            } else {
+                tracing::error!("找不到主視窗（label=main）；請檢查 tauri.conf.json");
+            }
             Ok(())
         })
         .run(tauri::generate_context!())
@@ -40,17 +49,27 @@ fn ensure_platform_server() {
         return;
     }
 
-    let exe = std::env::var("FLAPS_SERVER_EXE")
-        .unwrap_or_else(|_| "flaps-server.exe".to_string());
-    let path = std::path::PathBuf::from(&exe);
-    if !path.exists() {
+    // 解析序（計畫 §9 P1-1；smoke 2026-11-10 證實相對路徑會沿 PATH 誤抓 dev 二進位）：
+    // FLAPS_SERVER_EXE → exe 同目錄（NSIS 落位）→ exe 目錄 binaries/（dev sidecar）。
+    let path = resolve_server_exe();
+    let Some(path) = path else {
         tracing::warn!(
-            "platform 伺服器執行檔未找到：{exe}；請先建置（cargo build -p platform --bin flaps-server）或設定 FLAPS_SERVER_EXE"
+            "platform 伺服器執行檔未找到（已查 FLAPS_SERVER_EXE、exe 同目錄與 binaries/）；\
+             請先建置（cargo build -p platform --bin flaps-server）或設定 FLAPS_SERVER_EXE"
         );
         return;
-    }
+    };
 
-    match std::process::Command::new(&path).env("FLAPS_PORT", "8090").spawn() {
+    // DB 位置不隨 CWD 漂移（smoke 2026-11-10 證實 CWD 相對路徑會撞上工作區舊 DB 的
+    // VersionMismatch）：以伺服器所在目錄為 CWD，並預建 data/（fail-soft；不可寫時
+    // 伺服器自身 fail-closed 回報）。
+    let mut cmd = std::process::Command::new(&path);
+    cmd.env("FLAPS_PORT", "8090");
+    if let Some(dir) = path.parent() {
+        cmd.current_dir(dir);
+        let _ = std::fs::create_dir_all(dir.join("data"));
+    }
+    match cmd.spawn() {
         Ok(child) => {
             tracing::info!("platform 伺服器已啟動（pid {:?}），等候埠就緒…", child.id());
         }
@@ -73,3 +92,30 @@ fn ensure_platform_server() {
 /// 保留：殼端狀態鏡像（V2.8 型別參照；金額一律 i64 minor，INV-01）。
 #[allow(dead_code)]
 fn _state_mirror(_s: &AppState) {}
+
+/// 伺服器執行檔解析（絕對路徑優先；杜絕 PATH 誤抓）。
+fn resolve_server_exe() -> Option<std::path::PathBuf> {
+    if let Ok(p) = std::env::var("FLAPS_SERVER_EXE") {
+        let path = std::path::PathBuf::from(p);
+        if path.exists() {
+            return Some(path);
+        }
+        tracing::warn!("FLAPS_SERVER_EXE 指向的檔案不存在，續查預設位置");
+    }
+    let exe_dir = std::env::current_exe()
+        .ok()
+        .and_then(|e| e.parent().map(std::path::Path::to_path_buf));
+    if let Some(dir) = exe_dir {
+        let installed = dir.join("flaps-server.exe");
+        if installed.exists() {
+            return Some(installed);
+        }
+        let dev_sidecar = dir
+            .join("binaries")
+            .join("flaps-server-x86_64-pc-windows-msvc.exe");
+        if dev_sidecar.exists() {
+            return Some(dev_sidecar);
+        }
+    }
+    None
+}

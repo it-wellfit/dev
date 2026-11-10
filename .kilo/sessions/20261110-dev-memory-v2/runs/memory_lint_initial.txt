@@ -1,0 +1,18 @@
+PASS [L1] corrections.md 結構（6 欄／ID 自 C-01 連續唯一／狀態值域／必填非空）
+PASS [L2] project.md 結構（4 欄／workspace 標籤值域／日期 YYYY-MM-DD）
+PASS [L3] project.md 新鮮度（覆核日期 >30 天且未標 STALE）
+FAIL [L4] decisions.md:6 欄數 6 ≠ 7（v1.1）
+FAIL [L4] decisions.md:7 欄數 6 ≠ 7（v1.1）
+FAIL [L4] decisions.md:8 欄數 6 ≠ 7（v1.1）
+FAIL [L4] decisions.md:9 欄數 6 ≠ 7（v1.1）
+FAIL [L5] corrections.md:6 §0.4：§0.N 形式已廢除（r3 慣例「§0 條名」）
+FAIL [L5] corrections.md:11 §12.1：主計畫無此子節標題
+FAIL [L5] corrections.md:11 §6.3：主計畫無此子節標題
+FAIL [L5] corrections.md:15 §0.2：§0.N 形式已廢除（r3 慣例「§0 條名」）
+FAIL [L5] README.md:17 §0.4：§0.N 形式已廢除（r3 慣例「§0 條名」）
+WARN [L5b] project.md:7 非慣例 hyphen 形式 §3-1（改用點號或條名）
+WARN [L5b] project.md:8 非慣例 hyphen 形式 §3-2（改用點號或條名）
+WARN [L5b] project.md:9 非慣例 hyphen 形式 §3-3（改用點號或條名）
+PASS [L6] 預算（corrections ≤8KB；corrections+project ≤12KB）
+WARN [L7] README.md D 條數不符：索引宣告 4，實檔 0
+SUMMARY: FAIL=9 WARN=4 PASS=4 (refs checked=37, whitelisted=2)

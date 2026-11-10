@@ -1,6 +1,6 @@
-# 三大工作室 SLICE 執行計畫（PHASE-G1..G3）— v4 定稿
+# 三大工作室 SLICE 執行計畫（PHASE-G1..G3）— v5
 
-> 計畫編號：1793787631643｜日期：2026-11-09（v4：樹態核查完成，擴充點全部落點到檔案/函式級）｜狀態：implementation-ready
+> 計畫編號：1793787631643｜日期：2026-11-10（v7：RP-6 全域盤點——Dev 根目錄未登錄文件群＋Kilo 快照區 ~70 份計畫（效能家族演化鏈完整現蹤）＋web/legacy-1420 並存事實）｜狀態：implementation-ready
 > 上位架構 SSOT：`.kilo/plans/1792865422970-three-studio-governance-platform.md`（v3.1 §7/§17/§20/§22）
 > 執行者注意：衝突以上位為準；每切片先做 §0 樹態核查再立 RED。
 
@@ -43,7 +43,7 @@
 | 候選 | 量化證據（2026-11-09 實測） | 判定定理應用 | 裁決 |
 |---|---|---|---|
 | `api.rs` 模組化（R1） | ≈4200 行；23 路由；14 個 POST 表單結構各自內聯 CSRF 檢查（`pub csrf_token` ×14；`if form.csrf_token != session.csrf_token` 重複 ≥11 處） | **Connascence-of-algorithm**：同演算法複製 11+ 處、局部性極低（跨 4000 行）→ 高強度低局部性=拆分候選；但**扇入=23 路由共用 AppState**，屬單向門 | **最後排序**：先 PRE-R1 PIN 測試；GAP-08 分歧解鎖後以「extractor/middleware 化」食譜執行（見 PRE-R1b） |
-| `web/index.html` 靜態基線 | 已有 Superseded 頭註 | 資訊價值>維護成本 | 保留不刪 |
+| `web/index.html` 靜態基線 | Superseded 頭註（2026-11-04，314 行）；並行線另增 `web/legacy-1420.html`（180 行，1420 原版 UI 重現）＋`legacy-1420.css`——兩檔並存，零 JS 適應度待 RP-6⑤ 驗證 | 資訊價值>維護成本 | 兩檔均保留不刪；legacy-1420 納入零 JS 適應度檢查 |
 | hub `MoneyCents(i64)` vs 根線 minor(i128)+rate(10^4) | 兩型別並存；UDM 序列化往返測試在 | **語義漂移偵測**：同概念（錢）兩單位、邊界無契約 | **不合併**（單向門、無對帳數據支持）；G2.3 補單位契約＋explicit 轉換＋防混用適應度 |
 | `KafkaEventStore` stub | 無流量證據 | 無觸發條件 | 不動（未來插槽） |
 | `agent-policy` DEC-15 | `advisory_only()` fail-closed 已驗（3 測試） | 決策權在擁有者（ESC-4 級） | 維持；G2.5 僅擴充 |
@@ -64,55 +64,57 @@ Zero-JS（script=0）；**金額** i64/i128 minor 禁浮點；GET 讀/POST 寫�
 
 ## 2. 任務清單（依序；每項含擴充點與 DoD）
 
+> **完成狀態總覽（2026-11-10）**：PHASE-G1/G2/G3 共 12 切片＋PRE-R1a 全數實作完成並驗證（G1.1＋G2.x 見 addendum #12；G1.2–G1.4＋G3.x 見 #13；全工作區 246 passed / 0 failed）。僅 G3.4（僅規格，阻塞）與 PRE-R1b（可選）未執行。
+
 ### PHASE-G1 — S1 工作台卓越化
-- [ ] **G1.1 八資料態全覆蓋**（WP-08）
+- [x] **G1.1 八資料態全覆蓋**（WP-08）
   - 擴充點：`states.html` 增「資料八態」標本區（空/零結果/載入中/部分/過期/無權限/錯誤/衝突——文案互異且各含下一步連結）。
   - 測試：index/transactions/import/drafts 四頁八態矩陣（註：transactions 之零結果態平行線已做，測試直接覆蓋即可）。
   - DoD：矩陣測試綠＋states.html 對照區 DOM 斷言。
-- [ ] **G1.2 篩選持久化驗證＋detail 返回語義**（WP-10）
+- [x] **G1.2 篩選持久化驗證＋detail 返回語義**（WP-10）
   - 擴充點：F1——只補缺口。
   - 測試：①帶 `q` 搜尋後翻頁，`next_page` URL 含 `q`（若 handler 已保留→測試即 PIN；未保留→RED 補齊）；②`transaction_detail` 返回連結保留 `q`+page。
   - DoD：兩測試綠；不重寫既有搜尋/分頁。
-- [ ] **G1.3 角色起始頁＋KPI 就地解釋**（WP-05/04/02）
+- [x] **G1.3 角色起始頁＋KPI 就地解釋**（WP-05/04/02）
   - 作法：role_code→首屏區塊（finance=待覆核隊列；viewer=報表入口；未知=預設總覽）；KPI 卡附定義/時點/來源註（內容接 ubiquitous_language）。
   - DoD：demo-finance/demo-viewer/ADMIN 三測試＋未知角色 fallback 測試。
-- [ ] **G1.4 批量裁決＋差異 highlight**（WP-07）
+- [x] **G1.4 批量裁決＋差異 highlight**（WP-07）
   - 作法：待覆核列表多選批量批/駁——單一 POST、逐列審計（沿用 audit_log event_type 約定）、署名、部分失敗語義明確（回報逐列結果）；異常列 highlight；自我裁決禁止。
   - DoD：批量部分失敗測試＋自我裁決 403 測試。
 
 ### PHASE-G2 — S2 中樞韌性化（platform-hub；於其目錄內獨立驗證）
-- [ ] **G2.1 冪等排程＋DLQ**（HP-05）
+- [x] **G2.1 冪等排程＋DLQ**（HP-05）
   - 擴充點：`EventStore` trait＋`attempt` 欄位。
   - 作法：`deliver_with_backoff`（指數退避+抖動；上限後入 DLQ：event_id/錯誤/時間）；DLQ 檢視與重放（重放需署名）。Kafka stub 不動。
   - DoD：重複事件不重放（驗證既有 `Duplicate` 語義）、超限入 DLQ、署名重放成功三測試。
-- [ ] **G2.2 熔斷＋半開**（HP-05）
+- [x] **G2.2 熔斷＋半開**（HP-05）
   - 作法：`CircuitBreakerAdapter` decorator 包 `ChannelAdapter`（成功率窗→Open→HalfOpen 探測→Closed）；不改 trait、不觸 `PendingContractAdapter` 語義。
   - DoD：故障注入測試（FAULT-07 落地）。
-- [ ] **G2.3 UDM 補實體＋單位契約**（HP-03/04）
+- [x] **G2.3 UDM 補實體＋單位契約**（HP-03/04）
   - 作法：新增 `CustomerRecord`/`PaymentRecord`/`InvoiceRecord`（沿用 Provenance/MoneyCents）；權威源＋衝突裁決欄位；補 MoneyCents↔根線 minor 單位契約文件＋explicit 轉換函式＋防混用適應度測試。
   - DoD：round-trip×3＋映射契約（缺欄硬失敗，沿用 `ColumnContract` 語義）＋單位契約測試。
-- [ ] **G2.4 對帳報告**（HP-06）
+- [x] **G2.4 對帳報告**（HP-06）
   - 作法：每同步流產出件數/金額總計/差異樣本（JSON＋零 JS 頁渲染；UI 掛 api_logs.html 演進由該線定，本切片只交付資料結構與計算）。
   - DoD：fixture 同步流→數字可重算驗證。
-- [ ] **G2.5 agent-policy 擴充**（HP-09）
+- [x] **G2.5 agent-policy 擴充**（HP-09）
   - 作法：維持 DEC-15 fail-closed；代理寫入一律產草稿；速率/資料類別上限（沿用 `RiskLevel`/`DataClassification` 枚舉）；請求帶 agent 標記入稽核。
   - DoD：越權拒絕＋超速 429＋審計標記三測試。
 
 ### PHASE-G3 — S3 治理稽核就緒
-- [ ] **G3.1 證據四要件導出**（GP-04）
+- [x] **G3.1 證據四要件導出**（GP-04）
   - 擴充點：F7 audit_log 既有欄位＋kem 鏈（`capture_source` 之 SHA-256）。
   - 作法：導出（CSV/頁）附「控制（event_type→控制碼映射）/期間（performed_at）/完整性（鏈驗證結果）/來源（event_data）」區塊。
   - DoD：渲染測試＋「一控制全鏈追溯」演練記錄。
-- [ ] **G3.2 控制庫跨框架映射**（GP-02）
+- [x] **G3.2 控制庫跨框架映射**（GP-02）
   - 作法：一控制↔多框架（ISO/內控/銀行合規）映射表；與 kem capture 雙向連結；孤兒檢查**復用 gov.rs 之 `Finding`/`lint()` 模式**（rule/claim_id/detail → rule/control_id/detail）。
   - DoD：映射完整性測試（孤兒控制=0）。
-- [ ] **G3.3 CCM 三指標**（GP-05）
+- [x] **G3.3 CCM 三指標**（GP-05）
   - 作法：鏈完整性（日驗證）/登入異常率/金額不變量違反=0——零 JS SVG 儀表。
   - DoD：fixture 事件流→數值重放斷言。
 - [ ] **G3.4 外部唯讀門戶**：僅規格（OQ-GOV-04 憑證模型未決；阻塞）。
 
 ### 平行安排（非切片，只加測試不改結構）
-- [ ] **PRE-R1a**：api.rs 23 路由特徵化測試集（請求→狀態碼+關鍵 DOM 斷言），作未來模組化安全網；可與 G1 並行。
+- [x] **PRE-R1a**（✅ 並行線交付 2026-11-09：`platform/tests/characterization.rs`，6 tests PASS）：api.rs 路由特徵化測試集（請求→狀態碼+關鍵 DOM 斷言），作未來模組化安全網。
 - [ ] **PRE-R1b（可選，框架首次應用示範）**：CSRF 統一 extractor——量化證據：同一檢查複製 ≥11 處（connascence-of-algorithm）。食譜：以 axum extractor/middleware 收斂為單一實作（行為不變）；前置=PRE-R1a PIN 全綠；驗證=PIN 不變＋四關＋`post_rejects_wrong_csrf_token` 等既有測試不改一字通過。雙向門（可回滾），architect 核可即做；不做亦不阻塞任何切片。
 
 ## 3. 執行順序
@@ -136,7 +138,7 @@ G1.1 → G1.2 → G1.3 → G1.4 → G2.1 → G2.2 → G2.3 → G3.1 → G2.4 →
 
 ## 6. 明示不在範圍
 
-KafkaEventStore 實作、SSE（OQ-GOV-02）、PostgreSQL 遷移（OQ-GOV-01）、HA（OQ-GOV-03）、api.rs 結構重構（僅 PRE-R1 測試）、輔翼 ERP 本體修改、授權/合約行為、MoneyCents↔minor 型別合併（僅契約）、外部門戶實作（G3.4 僅規格）。
+KafkaEventStore 實作、SSE（OQ-GOV-02）、PostgreSQL 遷移（OQ-GOV-01）、HA（OQ-GOV-03）、api.rs 結構重構（僅 PRE-R1 測試）、輔翼 ERP 本體修改、授權/合約行為、MoneyCents↔minor 型別合併（僅契約）、外部門戶實作（G3.4 僅規格）、**知識管理系統（D-OPS＋RAG-Transcendence）建置**（PHASE-K 為移交件，由「專案品質檢查與文件管理優化專案」承接執行）。
 
 ---
 
@@ -158,10 +160,10 @@ KafkaEventStore 實作、SSE（OQ-GOV-02）、PostgreSQL 遷移（OQ-GOV-01）�
 
 ## R.1 切片（每片樹態核查先行＋四關）
 
-- [ ] **RAG-S1 詞法腿**：新增 `platform/src/bm25.rs`（僅 std，零新依賴）——`tokenize`（ASCII 詞組＋CJK 單字 token，文檔註明無字典分詞 tradeoff）、`BM25Index`（K1=1.2、B=0.75、Robertson IDF +0.5 平滑下限 0、`scores_all` 降序、`add_text` 維護 df/長度）；測試：稀有詞>常見詞、詞頻有序、未知詞 0 分、混合中英 tokenize。DoD：4 測試綠，現行行為零變更。
-- [ ] **RAG-S2 混合引擎**：`platform/Cargo.toml` 增 `kem = { path = "../crates/kem" }`；`SearchEngine` 增 `bm25: RwLock<BM25Index>`＋`vectors: RwLock<HashMap<doc_id, (sha256, Vec<f32>)>>`；`add_document` 內嵌 `kem::embed::embed_batch(&kem::embed::default_pool(), ...)`（Err→無向量，照常索引——誠實降級）；新增 `search_ranked(query) -> Vec<(SearchDocument, f64, String via)>`：α·norm(BM25)+(1−α)·norm(cosine)（α=0.5、語義拒絕地板 0.55 對齊 kem 校準 2026-11-09），零詞法支持且 cosine<地板→丟棄；舊 `search()` 委託 ranked 丟分數（相容不變）；`delete_document` 重建 BM25＋刪向量；向量帶內容 SHA-256（kem §8 新鮮度規則），失配視同缺失。測試：注入向量 → via="hybrid"；弱向量（餘弦<地板、零詞法）→ 拒絕；空池注入（embedder 不可達）→ via="bm25" 確定性降級。DoD：單元測試全綠。
-- [ ] **RAG-S3 端點接線**：`/api/search` 回真實融合分數；`SearchResult` 增 `via` 欄位（加法相容，不破壞既有消費端）；整合測試——fixture 語料排序、CJK 查詢、未知詞回 `[]`（非假分數）、無 embedder 環境 via="bm25"。DoD：全測試綠＋四關。
-- [ ] **RAG-S4 文檔收口**：PLAN_REGISTER addendum #15、CHANGELOG 條目、master §22 增 RAG 列（WP 對照：可檢索性/語義查詢）、eval fixture 記錄（BM25 top-1 金測，沿用 kem `run_golden` 思路）。
+- [x] **RAG-S1 詞法腿**（✅ 2026-11-09）：新增 `platform/src/bm25.rs`（僅 std，零新依賴）——`tokenize`（ASCII 詞組＋CJK 單字 token，文檔註明無字典分詞 tradeoff）、`BM25Index`（K1=1.2、B=0.75、Robertson IDF 與 kem 同式——初版 0 地板曾致全共現詞零分，已修）、`scores_all` 降序、`add_text` 維護 df/長度；測試：稀有詞>常見詞、詞頻有序、未知詞 0 分、混合中英 tokenize。DoD：5 測試綠，現行行為零變更。
+- [x] **RAG-S2 混合引擎**（✅ 2026-11-09）：`platform/Cargo.toml` 增 `kem = { path = "../crates/kem" }`；`SearchEngine` 增 `bm25: RwLock<BM25Index>`＋`vectors: RwLock<HashMap<doc_id, (sha256, Vec<f32>)>>`；`add_document` 內嵌 `kem::embed::embed_batch(&kem::embed::default_pool(), ...)`（Err→無向量，照常索引——誠實降級）；新增 `search_ranked(query) -> Vec<(SearchDocument, f64, String via)>`：α·norm(BM25)+(1−α)·norm(cosine)（α=0.5、語義拒絕地板 0.55 對齊 kem 校準 2026-11-09），零詞法支持且 cosine<地板→丟棄；舊 `search()` 委託 ranked 丟分數（相容不變）；`delete_document` 重建 BM25＋刪向量；向量帶內容 SHA-256（kem §8 新鮮度規則），失配視同缺失。測試：注入向量 → via="hybrid"；弱向量（餘弦<地板、零詞法）→ 拒絕；空池注入（embedder 不可達）→ via="bm25" 確定性降級。DoD：6 單元測試全綠。
+- [x] **RAG-S3 端點接線**（✅ 2026-11-09）：`/api/search` 回真實融合分數；`SearchResult` 增 `via` 欄位（加法相容，不破壞既有消費端；直取 via="direct"）；整合測試——fixture 語料排序、CJK 查詢、未知詞回 `[]`（非假分數）、無 embedder 環境 via="bm25"。DoD：全測試綠＋四關。
+- [x] **RAG-S4 文檔收口**（✅ 2026-11-09，addendum #17——原 #15 因與並行線撞號重編）：PLAN_REGISTER addendum #17、CHANGELOG 第十四輪、master §22 增 RAG 列（可檢索性/語義查詢）、跨線 stale fixture 修復（bankpay 鍵 5→10）。
 
 ## R.2 風險與約束
 
@@ -177,3 +179,116 @@ KafkaEventStore 實作、SSE（OQ-GOV-02）、PostgreSQL 遷移（OQ-GOV-01）�
 ## R.4 明示不在範圍（PHASE-R）
 
 LLM 生成（`ask` 僅回參照的既有紀律）、Tantivy/Qdrant 重型索引（POC 另議）、索引/向量持久化、kem search.rs 去耦合重構（共享 crate 議題，待 kem 線穩定另案）。
+
+## R.5 完成標記（2026-11-10 更新）
+
+RAG-S1～S4 已全數實作完成並驗證（詳見 addendum #17——原 #15 因與並行線撞號重編）：`platform/src/bm25.rs`（5 tests）、`search.rs` 混合引擎（6 tests，含拒絕地板/stale 向量/降級）、`/api/search` 真分數＋via、跨線 stale fixture 修復（bankpay 鍵 5→10）。
+
+---
+
+# PHASE-K — 產品開發專案知識管理系統架構藍圖（D-OPS＋RAG-Transcendence）【移交件】
+
+> 擁有者指示（2026-11-10）：先產出最佳架構計畫，交由「**專案品質檢查與文件管理優化專案**」承接執行，避免本計畫失焦。本節＝移交件全文；**本計畫不執行其建置**。
+
+## K.0 定義界線
+
+- **D-OPS**（動態文檔查詢）：元資料驅動的文檔檢索/導航/雙向鏈結——**給人用**。
+- **RAG-Transcendence**：向量語義搜索（替代關鍵詞）＋AI 自動閱讀綜答＋自動嵌入聚類——**給 AI 用**。
+- 兩者合流＝「文檔＋知識＋產品生命週期管理（PLM）」一體化系統；本藍圖定義其架構與上線管線，執行歸承接專案。
+
+## K.1 工作室定位裁決（回應擁有者問題：稽核管理？技術？跨兩者？）
+
+**裁決：跨工作室，主導權單一——S3 治理稽核平台為系統擁有者（治理主導），S2 API 中樞為技術底座，S1 為使用者端。**
+
+| 候選方案 | 優點 | 缺點 | 裁決 |
+|---|---|---|---|
+| 僅 S3（稽核管理） | 審批流/版控政策/稽核鏈天然內建（kem gov.rs＋capture/vet/verdict 全在此語義域） | 缺向量庫/嵌入/CI-CD 技術棧 | ❌ 單獨不足 |
+| 僅技術工作室 | 向量/檢索/管線技術成熟 | 無治理→無審批、無稽核、無版控政策＝亂文件倉庫 | ❌ |
+| **跨 S3 主導＋S2 底座＋S1 端** | 治理與技術各司其職；**資產重用實證**：embedder 池/BM25（PHASE-R 已證 platform→kem 零成本）、kem 哈希鏈、gov.rs Finding/lint 模式、PLAN_REGISTER 雙登記慣例 | 跨界契約需先定義（K.5） | ✅ **採用** |
+
+## K.2 分層架構（RAG-Transcendence and Integration）
+
+| 層 | 職責 | 所屬工作室 | 關鍵組件（重用優先） |
+|---|---|---|---|
+| L1 使用者層 | 自然語言查詢、AI 答案閱讀、文檔瀏覽、回饋標記 | S1 | 問答介面＋引用溯源卡（文檔ID＋版本＋區段） |
+| L2 檢索層 | **向量語義搜索替代關鍵詞**＋BM25 混合＋rerank | S2 | 重用 `platform/bm25.rs`＋kem embedder 池（bge-m3→Ollama）＋向量庫（pgvector/Tantivy/Qdrant 由承接專案依 K.5 評估集裁決） |
+| L3 生成層 | AI 自動閱讀多篇文檔並綜合回答；**無引用不輸出**（每答案必附文檔ID＋版本＋行區段） | S2 | LLM 閘門（沿用 FREE_AI_ROUTING 池；本地優先 C-08） |
+| L4 治理層 | 自動嵌入/聚類（僅導航輔助，不替代治理分類）、審批工作流、沙盒、灰度、監控、版控、稽核鏈 | S3 | gov.rs `Finding`/`lint()` 模式、kem SHA-256 鏈、PLAN_REGISTER 雙登記 |
+
+## K.3 五閘門上線管線（沙盒→驗證→試點→灰度→監控）
+
+| Gate | 名稱 | 內容 | 退出條件 |
+|---|---|---|---|
+| G0 | 沙盒模擬 | 隔離環境重放真實查詢集；不觸生產索引/文檔 | 沙盒報告產出；零生產寫入 |
+| G1 | 精密實驗 | eval 金測：檢索命中率、回答正確性、**引用可解析**（每答案→文檔+版本+區段）、幻覺審計 | 指標 ≥ 預先釘選門檻（未達=拒絕，如拒絕地板概念） |
+| G2 | 真實情境影子試點 | AI 答案與人工查閱**並行**（shadow mode）；差異逐條登記 | 影子對比報告 ≥ n 天零重大分歧 |
+| G3 | 灰度替換 | 10%→50%→100% 查詢流；**回滾=feature flag 切回人工/舊流程** | 每階段指標不退化 |
+| G4 | 上線監控 | 稽核鏈連續性、漂移偵測（embedder 模型版本變更→全量重嵌評估）、品質回歸警報 | 常態營運＋季度重審 |
+
+## K.4 版控與稽核（重用既有資產，不重造）
+
+| 機制 | 重用來源 | 說明 |
+|---|---|---|
+| 文檔版本化 | kem 哈希鏈＋audit_log 模式 | 文檔=版本化物件（content+sha256+version+prev_id）；變更=diff＋審批；回滾=revert |
+| 自動嵌入 | kem::embed::embed_batch（PHASE-R 已證零成本重用） | add 時嵌入；模型版本變更→stale（sha256 失配語義沿用） |
+| 聚類導航 | gov.rs `Finding`/`lint()` 模式 | 聚類僅輔助檢索；治理分類仍以 CONTROL_LIBRARY/框架映射為準 |
+| 登記整合 | PLAN_REGISTER 雙登記慣例 | 文檔登記＝計畫登記子集；同一提交雙登記 |
+
+## K.5 移交清單（交「專案品質檢查與文件管理優化專案」）
+
+1. 本節 K.0–K.4 全文（架構藍圖＋五閘門＋版控稽核）。
+2. 元資料規範：front-matter（tags/status/owner/last-updated/related-docs），全文檔強制。
+3. 評估集：golden queries＋引用金測（G1 門檻釘選由承接專案執行，本藍圖僅定方法）。
+4. SSOT 紀律：`docs/` 權威文件**不搬移**，系統僅索引＋嵌入＋治理。
+5. 承接方驗收：G0–G4 各自 DoD；完成後回寫 PLAN_REGISTER addendum。
+6. **`DOCUMENTATION_MASTER_SPEC.md`**（Dev 根目錄，205 行，v2.0 Apex）：文檔治理憲政規格——SSOT/絕對反模擬/漸進式揭露/剛性邊界/八角色驗收邊界——與本藍圖 L4 治理層直接互補，承接專案必讀並併入其治理章程（RP-6④ 一併移交）。
+
+## K.6 釐清：1793788660000 HTML 檔案之謎（擁有者先前查詢）
+
+擁有者提及的 `~/.local/share/kilo/plans/1793788660000-flaps-erp-performance-progress-report-v2.0.html` **確實存在**——位於 Kilo 自身計畫快照區（使用者 profile，工作區外），故工作區掃描找不到。該檔為 2026-11-05 產品線進度報告之 Kilo 快照（.md＋.html 渲染版）。**工作區 SSOT** 仍為 `docs/research/` 下文件；Kilo 快照區由 Kilo 管理，不入工作區版控（已入 PLAN_REGISTER 追溯，見 RP-1）。
+
+---
+
+# PHASE-RP — 輔翼ERP效能評估進度報告 整合與演進（本計畫聚焦重定向）
+
+> 擁有者指示（2026-11-10）：本計畫聚焦 輔翼ERP效能評估進度報告。
+
+## RP.0 重大發現：同名報告 ×2（重複風險實錘，語義漂移定理命中）
+
+| 報告 | 位置 | 日期 | 覆蓋線 | 內容 |
+|---|---|---|---|---|
+| ①**產品線**進度報告 | `~/.local/share/kilo/plans/1793788660000-*`（.md 552 行＋.html；Kilo 快照區，**工作區外**） | 2026-11-05 | **Electron 產品線**（FlapsErp v0.0.4 桌面） | FLAPS-PERF-PRG-2026-1105-003「效能問題評估與解決方案—專案進度暨改善追蹤報告」：config.ini 調優核對表（附錄C）、A/B 雙軌、P1-P4 藍圖、RSK-E1~E9、五閘門前身（G0-G4 雛形） |
+| ②**平台線**進度報告 | `docs/research/FlapsErp效能評估進度報告_v2.0.md`（**工作區內 SSOT**） | 2026-11-09 | **Rust 平台線** | 132 行：246 tests、422ms SLA、MT 100%、RAG、十二切片 |
+| ③**RPA-ECOM 專案主文件 v2.1** | `FlapsErp_RPA_電商系統對接_專案文件與開發前準備報告_v2.1.html`（**Dev 根目錄**，863 行；未登錄 docs 索引） | 2026-10-27 撰寫／11-03 Gate1 複審修訂 | **RPA-ECOM 對接線**（Electron→電商） | 專案代碼 FLAPS-RPA-ECOM-2026：G1–G6 KPI（G4＝斷路器：連續失敗 5 次觸發、重試 ≤3、恢復 ≤5min——即 G2.2 之驗收準則源）、OQ-01~08、交付物規格 DEL-M/D/C/T、WBS 101 人日、甘特（至 2027-02-08 結案）、RACI、風險登記冊、§10 部署維運、§11 最佳化（「文件即程式碼」原則自述）、ADR-001/002 草案清單 |
+| ④**Dev 根目錄未登錄文件群**（8+ 份 .md，全未入 docs 索引） | 根目錄 glob 實測 | 2026-10-26~11-05 | 產品線＋跨線 | `flaps_erp_performance_analysis.md`（133 行＝DOC-01 產品線逆向分析）、`flaps_erp_project_plan.md`（308 行＝DOC-02 專案章程 FLAPS-PERF-PRJ-001）、`flaps_erp_architecture_optimization_plan.md`（816 行＝DOC-03 架構優化 FLAPS-ARCH-OPT-002 v2.0）、`PHASE1_IMPLEMENTATION_README.md`（311 行，Phase 1 實作記錄）、`FREE_AI_SYSTEM_UPDATE.md`（459 行，免費 AI 研究——FREE_AI_ROUTING 之前身/補充）、`DOCUMENTATION_MASTER_SPEC.md`（205 行，**文檔治理憲政規格**：SSOT/反模擬/漸進式揭露/八角色驗收）、`WORKTREE_WORKFLOW.md`（209 行，八環境協作，Active）、`GEMINI.md`（75 行，WEB3 工作區規則，跨區） |
+| ⑤**Kilo 快照區完整計畫庫** | `~/.local/share/kilo/plans/`（**~70 份 .md**，工作區外） | 2026-11-01~09 | 跨專案 | **效能家族演化鏈完整現蹤**：progress v1（`1793787631643-flaps-erp-performance-progress-report.md`，與本計畫同 session 前綴）→v2.0（1793788660000）；install guide v1→v2→v3→v4→v5→v6（1793788300000/9000000/9500000）；deep-verification report（1793789700000）。另有其他專案計畫 ~50 份（ISMS/ekpi/MTRIX/Wellfit/ARES/KNB 系列）——歸各專案，不複製 |
+
+**風險**：①②同名（FlapsErp效能評估進度報告_v2.0）、同 v2.0、不同線（Electron 產品 vs Rust 平台）——正是 §0.5 語義漂移定理命中案例：同概念、邊界無契約。**擁有者記憶正確**：①內容含 config.ini 調優（附錄C：備份→DISABLE_HARDWARE_ACCELERATION→IGNORE_CERT_ERR→重跑量測→回滾），即「調整哪些設定改善效能」之文件。③之發現另揭：`docs/management/FlapsErp_RPA_Ecommerce_Project_Plan_v2.1.md` 頭註宣稱「v2.1 前檔為 0 bytes 空殼，本版首次補實全文」**對家族歷史不實**——.md 檔本身 0 bytes 屬實，但家族 v2.1 內容一直存在於根目錄 HTML（見 RP-5 修正）。
+
+## RP.1 切片（消解同名衝突，可查證可追溯）
+
+- [ ] **RP-1 命名區分＋入冊（已裁決：對稱改名，雙向門）**：①產品線報告入工作區為 `docs/research/FlapsErp產品線效能進度報告_v2.0.md`（內容自 Kilo 快照 .md 複製，頭註聲明「Electron 產品線；Kilo 快照區另有 .html 渲染版」）；②平台線改名 `docs/research/FlapsErp平台線效能評估進度報告_v2.0.md`——同一提交更新活引用（README §2.7、效能優化操作手冊相依清單；歷史 addendum #14/#17 為點時記錄不回改，由 #18 記錄改名）；③兩者互鏈＋README §2.7 索引登錄＋PLAN_REGISTER addendum #18。**裁決依據**：擁有者核心顧慮＝同名混淆已實際發生三次（Kilo HTML 誤認、config.ini 文件遍尋不著、本輪重複疑慮）；對稱命名永久消歧；改名為雙向門（revert＝改回）。**活引用實證（2026-11-10 grep）＝3 處**：效能優化操作手冊 L10、README L121、PLAN_REGISTER addendum #17（點時記錄不回改）——全部同一提交更新，估算精確。
+- [ ] **RP-2 四方整合指引（零內容重複）**：config.ini 調優之**操作源**＝產品線報告附錄C 核對表；**整合手冊**＝`docs/04-operations/FlapsErp效能優化操作手冊_v1.0.md` §3.2；**量測法**＝效能架構 P4；**驗收指標源**＝RPA-ECOM 主文件 §1.1 G4（斷路器：連續失敗 5 次觸發、重試 ≤3、恢復 ≤5min——即 G2.2 之驗收準則）與 §10.2（監控/備份/回滾）。四方互鏈不重寫。另：**操作手冊家族互鏈**——效能優化操作手冊 ↔ A1 檔案通道手冊（RP-6⑥ 遷移後同目錄 `docs/04-operations/`），附錄交叉引用。
+- [ ] **RP-3 演進程序**：平台線報告——每次四關全綠後 7 日內刷新（測試數/SLA/新切片）；產品線報告——隨 P1-P4 藍圖階段更新（歸並行線/承接專案）。
+- [ ] **RP-4 誠實標註維持**：RAM 未量測、M2 登入稽核、fuzz run 等維持 UNKNOWN；拒絕地板/事實等級（✔△⚠）標記沿用。
+- [ ] **RP-5 RPA-ECOM v2.1 家族調和（新發現，撤回錯誤宣稱）**：
+  - 事實：Dev 根目錄 `FlapsErp_RPA_電商系統對接_專案文件與開發前準備報告_v2.1.html`（863 行）為 RPA-ECOM 線**原始專案主文件**（2026-10-27 撰寫、11-03 Gate1 複審修訂、被逆向分析 §9 引用、有 ADR-001/002 鏈）；`docs/management/FlapsErp_RPA_Ecommerce_Project_Plan_v2.1.md` 頭註宣稱「v2.1 前檔為 0 bytes 空殼，本版首次補實全文」**對家族歷史不實**（.md 檔本身 0 bytes 屬實，但家族 v2.1 內容一直存在於根目錄 HTML）——依誠實紀律（GOVERNANCE P7）必須修正。
+  - 作法：①將 HTML 內容轉錄為 `docs/management/FlapsErp_RPA_電商系統對接_專案文件與開發前準備報告_v2.1.md`（與 .html 成對——沿用 Kilo 快照 .md/.html 成對慣例），並併入摘要版之獨有「現況對齊」段（四階段藍圖對齊＋2026-11-09 門檻 246/422ms）為 §0 附錄；②摘要版 `FlapsErp_RPA_Ecommerce_Project_Plan_v2.1.md` 頭註改標「SUPERSEDED by 主文件（執行狀態已併入其 §0 附錄）」；③根目錄 .html 與 ADR 四檔（ADR-001/002/003 草案＋Gate1 複審報告 v1）搬入 `docs/management/`（**不搬 docs/adr/**——避免與 ADR-0001..0013 撞號；RPA-ECOM 家族檔名自帶前綴消歧）；④README §2.6 索引登錄＋addendum #18。
+  - 裁決依據：原始主文件在先（10-27）、內容最富（WBS/甘特/RACI/風險/OQ/交付物規格）、被上游引用 → 為家族 SSOT；後建摘要版（11-10，不知情重複）＝降級併入。「文件即程式碼」原則（主文件 §11 自述）支持 .md 權威＋.html 渲染成對。
+  - DoD：主文件 .md/.html 成對入冊；錯誤宣稱修正有記錄；ADR 四檔入冊；摘要版 superseded 標記；docs 索引零死鏈。
+- [ ] **RP-6 全域盤點登錄（Dev 根目錄＋Kilo 快照區——消除盤點方法缺口）**：
+  - ①**DOC-01/02/03 搬入 `docs/research/`**（產品線前綴命名：`FlapsErp產品線效能深度分析_v1.0.md`／`FlapsErp產品線專案章程_v1.0.md`／`FlapsErp產品線架構優化計畫_v2.0.md`），同一提交更新產品線報告之來源清單路徑（DOC-01~03 原引無 docs/ 前綴）。
+  - ②**Kilo 快照區追溯表**落盤於 README 索引：效能家族演化鏈（progress v1→v2.0、install guide v1→v6、deep-verification，含 Kilo 內路徑與版本鏈）——**不搬移**（Kilo 管理），僅登錄位置與版本鏈供追溯。
+  - ③其他專案計畫 ~50 份（ISMS/ekpi/MTRIX/Wellfit/ARES/KNB）＝README 索引單一指引行（「其他專案計畫見 Kilo 快照區」），**不複製不搬移**（歸各專案 SSOT）。
+  - ④四份待分類裁決：`PHASE1_IMPLEMENTATION_README.md`（audit 後 register 或 superseded）、`FREE_AI_SYSTEM_UPDATE.md`（與 `docs/engineering/FREE_AI_ROUTING.md` 關係裁定：合併或標 superseded——同一主題兩份，語義漂移風險）、`DOCUMENTATION_MASTER_SPEC.md`（→ **併入 PHASE-K.5 移交件**：文檔治理憲政規格與 L4 治理層直接互補）、`WORKTREE_WORKFLOW.md`（Active → 入 `docs/standards/` 登錄）；`GEMINI.md`（WEB3 工作區規則，非本工作區管轄）→ 標記待擁有者裁決去留，本計畫不動。
+  - ⑤`web/legacy-1420.html`＋`web/assets/legacy-1420.css`（並行線新增，1420 原版 UI 重現）：納入零 JS 適應度驗證（script=0 斷言）＋登錄 web/ 說明。
+  - ⑥`docs/research/A1檔案通道端到端操作手冊_v1.0.md`（236 行 Runbook，RUN-2026-1103-001，已登錄 README:123）→ **搬入 `docs/04-operations/`**（放置一致性：操作手冊家族同目錄；Runbook 不應在 research/；README §2.7→§2.6 索引同步；雙向門）。
+  - DoD：Dev 根目錄 .md 零未登錄（README 索引全覆蓋）；Kilo 追溯表落盤；每檔有去向（register/supersede/移交/待裁決）；操作手冊家族三冊同目錄互鏈；addendum #18 記錄。
+- DoD：兩報告可區分（檔名＋頭註）、零內容重複、README＋PLAN_REGISTER 已登錄、addendum #18 落盤。
+
+## RP.2 裁決依據
+
+- 語義漂移定理（§0.5）：同名異線＝邊界無單位/線別契約 → 命名區分＋互鏈，不合併為單檔（單向門：合併需擁有者 ADR，且兩線讀者/節奏不同）。
+- SSOT 紀律：Kilo 快照區（工作區外）非 SSOT；`docs/research/` 為 SSOT；快照檔由 Kilo 管理**不搬移不刪除**，僅入冊索引（RP-1）。
+- RPA-ECOM 家族（RP-5）：原始主文件在先（10-27）、內容最富、被上游引用（逆向分析 §9）→ 為家族 SSOT；後建摘要版（11-10，不知情重複）＝降級併入。「文件即程式碼」原則（RPA-ECOM 主文件 §11 自述：架構圖/介面矩陣/工作流/腳本納入版控）支持 .md 權威＋.html 渲染成對。
+- 命名裁決（RP-1）：對稱改名為雙向門（revert＝改回原名），引用更新 ≤3 處同一提交、addendum #18 留痕——符合「該刪就刪該保留就保留該發展就發展」與零静默變更紀律。

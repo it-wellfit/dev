@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Flaps ERP — 銀行金流整合平台（1420 原版重現）</title>
+<link rel="stylesheet" href="/assets/legacy-1420.css">
+</head>
+<body>
+    <aside class="sidebar">
+        <div class="brand"><h1>🏦 Flaps ERP</h1><p>銀行金流整合平台</p></div>
+        <div class="nav-group-title">系統</div>
+        <a class="nav-item active" href="#overview"><span>📊</span> 系統總覽</a>
+        <a class="nav-item" href="#apis"><span>🔌</span> API 服務中心</a>
+        <a class="nav-item" href="#connection"><span>🔗</span> 連線檢查</a>
+        <a class="nav-item" href="#security"><span>🔒</span> 資安檢查</a>
+        <div class="nav-group-title">台幣業務</div>
+        <a class="nav-item" href="#twd-payment"><span>💰</span> 台幣付款放行</a>
+        <a class="nav-item" href="#twd-query"><span>🔍</span> 台幣交易查詢</a>
+        <a class="nav-item" href="#statements"><span>📋</span> 交易明細查詢</a>
+        <div class="nav-group-title">外幣業務</div>
+        <a class="nav-item" href="#fx-validate"><span>💱</span> 外幣付款預檢</a>
+        <a class="nav-item" href="#fx-query"><span>🔍</span> 外幣交易查詢</a>
+        <div class="nav-group-title">帳戶管理</div>
+        <a class="nav-item" href="#balance"><span>💳</span> 帳戶餘額查詢</a>
+        <a class="nav-item" href="#accounts"><span>📁</span> 帳戶管理</a>
+        <div class="nav-group-title">工具</div>
+        <a class="nav-item" href="#errors"><span>⚠️</span> 錯誤代碼查詢</a>
+        <a class="nav-item" href="#tests"><span>📝</span> 測試紀錄</a>
+        <a class="nav-item" href="#pdf"><span>📄</span> PDF 結果預覽</a>
+        <a class="nav-item" href="#release"><span>✅</span> 上線驗收中心</a>
+    </aside>
+    <main class="main">
+        <div class="banner">
+            📌 原 <strong>127.0.0.1:1420</strong> 網頁版<strong>原樣重現</strong>（開發紀錄快照，含當時之模擬數據）— 供新舊設計比較。
+            對照新平台：<a href="/">工作台（伺服器版）</a> · <a href="/admin/api/catalog">API 中樞</a> · <a href="/bankpay">銀行支付工作室</a>
+        </div>
+        <div class="topbar">
+            <h2>系統總覽</h2>
+            <div class="badges">
+                <span class="badge badge-mock">模擬模式</span>
+                <span class="muted">最後更新: 2026/10/30 下午6:10:11</span>
+            </div>
+        </div>
+        <div class="kpis">
+            <div class="kpi"><div class="label">總交易數</div><div class="value">150</div><div class="sub">所有時間</div></div>
+            <div class="kpi"><div class="label">總交易金額</div><div class="value">NT$500,000</div><div class="sub">TWD</div></div>
+            <div class="kpi"><div class="label">啟用帳戶</div><div class="value">45</div><div class="sub">銀行帳戶</div></div>
+            <div class="kpi"><div class="label">待處理交易</div><div class="value">12</div><div class="sub">需要處理</div></div>
+        </div>
+        <section class="section" id="apis">
+            <div class="section-head"><h3>8 項銀行 API 服務狀態</h3><button class="btn">重新檢查</button></div>
+            <div class="api-grid">
+                <div class="api-card"><div class="api-info"><div class="name">台幣付款放行</div><div class="endpoint">/payment/createTwdPaymentInstruction</div><div class="desc">提交台幣付款指示</div></div><div class="api-status"><div class="st">模擬測試通過</div><div class="ms">45ms</div></div></div>
+                <div class="api-card"><div class="api-info"><div class="name">台幣交易狀態查詢</div><div class="endpoint">/payment/retrieveTwdPaymentInstructionResult</div><div class="desc">查詢台幣交易狀態</div></div><div class="api-status"><div class="st">模擬測試通過</div><div class="ms">32ms</div></div></div>
+                <div class="api-card"><div class="api-info"><div class="name">交易明細查詢</div><div class="endpoint">/account/retrieveStatements</div><div class="desc">查詢帳戶交易明細</div></div><div class="api-status"><div class="st">模擬測試通過</div><div class="ms">28ms</div></div></div>
+                <div class="api-card"><div class="api-info"><div class="name">外幣交易檢核計算</div><div class="endpoint">/payment/validateFxPaymentInstruction</div><div class="desc">外幣付款預先檢核</div></div><div class="api-status"><div class="st">模擬測試通過</div><div class="ms">50ms</div></div></div>
+                <div class="api-card"><div class="api-info"><div class="name">外幣付款放行</div><div class="endpoint">/payment/createFxPaymentInstruction</div><div class="desc">提交外幣付款指示</div></div><div class="api-status"><div class="st">模擬測試通過</div><div class="ms">55ms</div></div></div>
+                <div class="api-card"><div class="api-info"><div class="name">外幣交易狀態查詢</div><div class="endpoint">/payment/retrieveFxPaymentInstructionResult</div><div class="desc">查詢外幣交易狀態</div></div><div class="api-status"><div class="st">模擬測試通過</div><div class="ms">30ms</div></div></div>
+                <div class="api-card"><div class="api-info"><div class="name">帳戶餘額查詢</div><div class="endpoint">/account/retrieveAccountBalance</div><div class="desc">查詢帳戶餘額</div></div><div class="api-status"><div class="st">模擬測試通過</div><div class="ms">25ms</div></div></div>
+                <div class="api-card"><div class="api-info"><div class="name">台幣付款結果列印</div><div class="endpoint">/payment/retrieveTwdPaymentInstructionPrintResult</div><div class="desc">取得付款結果 PDF</div></div><div class="api-status"><div class="st">模擬測試通過</div><div class="ms">60ms</div></div></div>
+            </div>
+        </section>
+        <section class="section" id="connection">
+            <div class="section-head"><h3>系統健康狀態</h3></div>
+            <div class="health-grid">
+                <div class="health-item"><span class="k">TLS 版本</span><span class="check">TLS 1.2</span></div>
+                <div class="health-item"><span class="k">2-Way SSL</span><span class="check">✓</span></div>
+                <div class="health-item"><span class="k">Port 8443（正式）</span><span class="check">✓</span></div>
+                <div class="health-item"><span class="k">Port 9443（沙盒）</span><span class="check">✓</span></div>
+            </div>
+        </section>
+        <div class="two-col">
+            <section class="section" id="security">
+                <div class="section-head"><h3>資安檢查</h3></div>
+                <div class="health-grid two-col">
+                    <div class="health-item"><span class="k">憑證綁定</span><span class="check">✓</span></div>
+                    <div class="health-item"><span class="k">SourceSystemId</span><span class="check">✓</span></div>
+                    <div class="health-item"><span class="k">WDAC</span><span class="check">✓</span></div>
+                    <div class="health-item"><span class="k">敏感資料遮罩</span><span class="check">✓</span></div>
+                    <div class="health-item"><span class="k">CSRF 防護</span><span class="check">✓</span></div>
+                    <div class="health-item"><span class="k">XSS 防護</span><span class="check">✓</span></div>
+                </div>
+            </section>
+            <section class="section" id="errors">
+                <div class="section-head"><h3>rsStatus 錯誤代碼</h3></div>
+                <table>
+                    <thead><tr><th>代碼</th><th>說明</th><th>類別</th><th>處理</th></tr></thead>
+                    <tbody>
+                        <tr><td><code>910000</code></td><td>Success</td><td>Success</td><td>Process</td></tr>
+                        <tr><td colspan="4" class="muted">完整代碼表：Wellfit/docs/bankpay/04-interface-specification.md（V2.8）</td></tr>
+                    </tbody>
+                </table>
+            </section>
+        </div>
+        <div class="two-col">
+            <section class="section" id="tests">
+                <div class="section-head"><h3>測試紀錄</h3></div>
+                <table>
+                    <thead><tr><th>API</th><th>類型</th><th>結果</th><th>耗時</th></tr></thead>
+                    <tbody>
+                        <tr><td>TWD Payment</td><td>Mock</td><td class="check">Pass</td><td>45ms</td></tr>
+                    </tbody>
+                </table>
+            </section>
+            <section class="section" id="release">
+                <div class="section-head"><h3>上線驗收（ReleaseGate）</h3></div>
+                <table>
+                    <thead><tr><th>#</th><th>項目</th><th>負責</th><th>狀態</th></tr></thead>
+                    <tbody>
+                        <tr><td>RC-01</td><td>Spec inventory</td><td>Architect</td><td class="check">Pass</td></tr>
+                    </tbody>
+                </table>
+            </section>
+        </div>
+        <section class="section" id="twd-payment">
+            <div class="section-head"><h3>💰 台幣付款放行</h3><span class="badge badge-mock">Mock</span></div>
+            <table>
+                <tbody>
+                    <tr><th>msgId</th><td><code>MOCK123</code></td></tr>
+                    <tr><th>rsStatus.code</th><td><code>910000</code> <span class="check">SUCCESS (Mock)</span></td></tr>
+                </tbody>
+            </table>
+            <p class="muted legacy-note">原 Tauri 命令 <code>bankpay_create_twd_payment</code> 之固定回應；真實串接見 Wellfit/crates/wellfit_bankpay。</p>
+        </section>
+        <section class="section" id="twd-query">
+            <div class="section-head"><h3>🔍 台幣交易查詢</h3><span class="badge badge-mock">Mock</span></div>
+            <table>
+                <tbody>
+                    <tr><th>msgId</th><td><code>MOCK123</code></td></tr>
+                    <tr><th>rsStatus.code</th><td><code>910000</code></td></tr>
+                    <tr><th>txStatus</th><td><code>0000</code></td></tr>
+                    <tr><th>bankRef</th><td><code>BANK-REF-001</code></td></tr>
+                </tbody>
+            </table>
+        </section>
+        <section class="section" id="statements">
+            <div class="section-head"><h3>📋 交易明細查詢</h3><span class="badge badge-mock">/account/retrieveStatements</span></div>
+            <table>
+                <thead><tr><th>欄位</th><th>說明</th></tr></thead>
+                <tbody>
+                    <tr><td>明細檔</td><td>帳戶交易明細（CP950/Big5 媒體編碼，base64 內容）</td></tr>
+                    <tr><td>對應平台功能</td><td><a class="legacy-link" href="/bankpay">銀行支付工作室 → 匯入銀行回應檔</a>（真實 CSV 解析）</td></tr>
+                </tbody>
+            </table>
+        </section>
+        <section class="section" id="fx-validate">
+            <div class="section-head"><h3>💱 外幣付款預檢</h3><span class="badge badge-mock">/payment/validateFxPaymentInstruction</span></div>
+            <p class="muted">原版未實作此分區內容（側邊欄連結指向「#」）；新平台已於 API 中樞登錄為「未串接」。</p>
+        </section>
+        <section class="section" id="fx-query">
+            <div class="section-head"><h3>🔍 外幣交易查詢</h3><span class="badge badge-mock">/payment/retrieveFxPaymentInstructionResult</span></div>
+            <p class="muted">原版未實作此分區內容；新平台狀態：未串接（見 API 中樞）。</p>
+        </section>
+        <section class="section" id="balance">
+            <div class="section-head"><h3>💳 帳戶餘額查詢</h3><span class="badge badge-mock">/account/retrieveAccountBalance</span></div>
+            <table>
+                <thead><tr><th>帳戶</th><th>類型</th><th>幣別</th><th>餘額</th></tr></thead>
+                <tbody>
+                    <tr><td>acc_001</td><td>ASSETS</td><td>TWD</td><td>NT$500,000</td></tr>
+                </tbody>
+            </table>
+        </section>
+        <section class="section" id="accounts">
+            <div class="section-head"><h3>📁 帳戶管理</h3></div>
+            <table>
+                <thead><tr><th>ID</th><th>代碼</th><th>名稱</th><th>類型</th><th>幣別</th><th>狀態</th></tr></thead>
+                <tbody>
+                    <tr><td>acc_001</td><td>1000</td><td>Assets</td><td>ASSETS</td><td>TWD</td><td class="check">啟用</td></tr>
+                </tbody>
+            </table>
+            <p class="muted legacy-note">新平台對應：<a class="legacy-link" href="/accounts">會計科目管理</a>（真實資料庫）。</p>
+        </section>
+        <section class="section" id="pdf">
+            <div class="section-head"><h3>📄 PDF 結果預覽</h3><span class="badge badge-mock">/payment/retrieveTwdPaymentInstructionPrintResult</span></div>
+            <p class="muted">取得付款結果 PDF；原版為側邊欄預留，未呈現內容。</p>
+        </section>
+    </main>
+</body>
+</html>

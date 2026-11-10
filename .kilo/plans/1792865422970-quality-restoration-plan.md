@@ -262,6 +262,45 @@ SPEC/BDD ──▶ Skeptic₀（攻擊規格）──▶ RED 測試 ──▶ IM
 - 本路徑 plan 檔曾遭並行覆寫：執行前先 `git log`／讀檔確認本節仍在；若被覆寫，以本節為還原來源。
 - 文獻倍數（≈30×）以論文全文為準，引用時保留出處 DOI。
 
+## 11. 全面未完成項目盤點（2026-11-10；以唯讀查證為準，HEAD `b2b601c`）
+
+### 11.1 已完成且已驗證（無需動作）
+
+S9–S15 全部切片、S11/S12 頁面批次、IMP-019 修復（`f60dc8a`）、IMP-020(b)（`6581933`）、IMP-021 演練（DRILL PASS）、AUDIT-0003/0004、QA 演進流程文件、519 測試基線、雙 benchmark 基線。
+
+### 11.2 未完成——工程可單獨完成（下一輪 code agent 佇列）
+
+| # | 項目 | 現況 | 前置 |
+|---|---|---|---|
+| P1 | **IMP-019 register 列修正**——修復已落地（`f60dc8a`）但 register 列仍寫 In progress（前一輪 .Replace 靜默失敗：backtick 跳脫字串未匹配）。追溯說謊必須修正 | register 列與事實不符 | 無 |
+| P2 | **IMP-020 register 列修正**——同上，(b) 已落地（`6581933`）但列仍寫 (b) pending | 同上 | 無 |
+| P3 | **Roadmap ticks 補齊**——S10/S12/S13/S14/S15 五列未勾（僅 S9/S11 有 ✅） | roadmap-v1.md | 無 |
+| P4 | **ui-state-audit 六列補齊**——/events、/audit/chains、/role-matrix、/glossary、/help、/about 六頁審計列未寫 | ui-state-audit.md | 無 |
+| P5 | **C6 同位性紅報告**——雙 EventPayload 的 serde 逐位元組同位性測試（預期紅：欄位差異實測），作為合併前置證據 | 測試未寫 | 無（紅報告本身即交付物） |
+| P6 | **PG-A PostgreSQL 接線**——PgApprovalRepository 以 runtime SQL 實作（對應 migration schema），無 DB 環境誠實標注 | fail-closed 骨架 | P5（合併後單一型別）建議但非必須 |
+| P7 | **頁面擴展至 27+**——現註冊 21 頁；補 workflows/{id} 詳細、events/{seq} 詳細、audit/verify 等 ≥6 頁 | 21 頁 | P1–P4（註冊表驅動測試就緒） |
+
+### 11.3 未完成——需外部決策或資源（誠實邊界，不可單方面關閉）
+
+| # | 項目 | 阻塞來源 |
+|---|---|---|
+| E1 | A1 真實試點（Phase A approval） | DEC-01 owner 未指派 |
+| E2 | IdP/SSO/MFA、WORM、多租戶 | DEC-12…20 未決（Phase B） |
+| E3 | CI/跨主機證據 | 無 CI 環境（IMP-017 host policy） |
+| E4 | off-host 備份目標 | IMP-012 需核准的異地目標 |
+| E5 | Phase 2/3（OTel、排程器、AI advisory、湖倉、預測性維護） | 依 Phase 1 試點結果與 DEC |
+
+### 11.4 執行順序（下一輪 code agent）
+
+```
+P1+P2+P3+P4（文檔修正批，單一提交）→ P5（C6 紅報告）→ P6（PG-A）
+→ P7（頁面擴展批次）→ 每片 canonical 收口
+```
+
+### 11.5 驗收
+
+每項完成後：canonical exit 0＋register 證據列＋（文件變更時）check-docs PASS。P5 的紅報告為**預期失敗的測試**——本身即交付物，不需轉綠；合併實作時才轉綠。
+
 #### 不變式（T1–T4 期間）
 
 - 僅觸碰三個檔案：`docs/quality/qa-evolution-flow.md`（新建）、`docs/quality/test-verification-plan-v2.md`（一行）、`docs/traceability/register.md`（一列）——**零原始碼變更、零其他文件變更**。

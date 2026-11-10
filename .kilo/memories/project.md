@@ -4,10 +4,10 @@
 
 | 事實（一句話） | 標籤 | 來源連結 | 覆核日期 |
 |---|---|---|---|
-| 主產品為 ekpi-platform/OEKAP；根 workspace 為 FlapsErp RPA 支援線 | [根] | `docs/adr/ADR-0001-tech-stack-baseline.md` §3-1 | 2026-11-09 |
-| 根 workspace 技術棧基線：edition 2021／resolver 2／axum 0.7／SQLite（升級列為獨立 POC） | [根] | `docs/adr/ADR-0001-tech-stack-baseline.md` §3-2 | 2026-11-09 |
-| 表現層 100% JavaScript-Free 為剛性不變量 | [根] | `docs/adr/ADR-0001-tech-stack-baseline.md` §3-3 | 2026-11-09 |
+| 主產品為 ekpi-platform/OEKAP；根 workspace 為 FlapsErp RPA 支援線 | [根] | `docs/adr/ADR-0001-tech-stack-baseline.md` §3.1 | 2026-11-09 |
+| 根 workspace 技術棧基線：edition 2021／resolver 2／axum 0.7／SQLite（升級列為獨立 POC） | [根] | `docs/adr/ADR-0001-tech-stack-baseline.md` §3.2 | 2026-11-09 |
+| 表現層 100% JavaScript-Free 為剛性不變量 | [根] | `docs/adr/ADR-0001-tech-stack-baseline.md` §3.3 | 2026-11-09 |
 | 三大工作室計畫 SSOT 為 `1792865422970-*`（§0–§27，v3.1-r3） | [根] | `.kilo/plans/1792865422970-three-studio-governance-platform.md` | 2026-11-09 |
 | 合規事實權威在 `Knowledge/`（SoA 93 控制、crosswalk、ADR-0001..0012） | [KB] | `Knowledge/README.md`（知識庫索引） | 2026-11-09 |
 | 記憶與程式碼曾矛盾（project.md 宣稱 vs 實際棧）——新事實必標 workspace 來源 | [全] | `docs/adr/ADR-0001-tech-stack-baseline.md:16` | 2026-11-09 |
-| `Dev/` 根 workspace 非 git repo（記憶庫無 commit 背書，以 session 記錄綁定） | [根] | `docs/adr/ADR-0001-tech-stack-baseline.md` §7；`AGENTS.md` §6 | 2026-11-09 |
+| `Dev/` 根 workspace **已初始化 git**（2026-11-10 實測：toplevel＝`Dev/`、HEAD 有提交、`.kilo/memories/` 已受控；`ADR-0001` §5.3 與 `AGENTS.md` §6 之「非 git」記載已成歷史） | [根] | 實測命令：`git rev-parse --show-toplevel`；證據登錄 `.kilo/sessions/20261110-dev-memory-v2/manifest.md` | 2026-11-10 |
