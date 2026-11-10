@@ -4,6 +4,7 @@ members = [
     "core",
     "platform",
     "web",
+    "crates/console_manifest",
     "crates/flaps_bridge",
     "crates/kem",
 ]

@@ -26,10 +26,17 @@ askama = "0.16"
 argon2 = { version = "0.5", features = ["std"] }
 # Slice 8: CSV import parsing and file fingerprinting (traceability)
 csv = "1.3"
+# XLSX 匯入轉接器（全能進料門戶 V1）：純 Rust、零外部執行檔依賴（crates-io 實證：0.38.0、17.8M 下載、2026-11-02 更新）
+calamine = { version = "0.38", features = ["dates"] }
+# PDF 文字層匯入轉接器（V2）：純 Rust 擷取（crates-io 實證：0.12.1、7.9M 下載、2026-09-16 更新）
+pdf-extract = "0.12"
 sha2 = "0.10"
 
 # Core crate dependency
 flaps_core = { path = "../core" }
+
+# Unified ops console manifest (single page/registry SSOT; plan 1793033568961 §3)
+console_manifest = { path = "../crates/console_manifest" }
 
 # PHASE-R (RAG-S2): reuse the proven embedder pool + cosine from the
 # knowledge module. Path dependency — zero new external crates (kem's deps

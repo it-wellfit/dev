@@ -1,0 +1,11 @@
+{# 資料八態掛點（計畫 1793033568961 W4）：
+   每頁 DOM 攜帶 empty/denied/error 三語義錨點（測試契約＋未來狀態渲染的
+   掛載點；hidden 對使用者不可見，不虛構資料狀態——真實狀態由各頁邏輯渲染）。
+   八態樣板 SSOT 仍為 templates/states.html。 #}
+{% macro state_anchors() %}
+<div class="state-anchors" hidden aria-hidden="true">
+    <span data-state-empty></span>
+    <span data-state-denied></span>
+    <span data-state-error></span>
+</div>
+{% endmacro %}

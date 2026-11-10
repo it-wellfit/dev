@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+{% import "partials/studio_nav.html" as studio_nav %}
 <html lang="zh-Hant-TW">
 <head>
     <meta charset="UTF-8">
@@ -29,28 +30,7 @@
         </div>
     </header>
 
-    <nav class="site-nav" aria-label="主導覽">
-        <div class="container">
-            <a href="/">總覽</a>
-            <a href="/transactions">交易</a>
-            <a href="/bankpay" aria-current="page">銀行支付</a>
-            <details class="nav-menu">
-                <summary>匯入與草稿</summary>
-                <div class="nav-menu-items">
-                    <a href="/import">快速匯入</a>
-                    <a href="/drafts">草稿解析</a>
-                </div>
-            </details>
-            <details class="nav-menu">
-                <summary>報表分析</summary>
-                <div class="nav-menu-items">
-                    <a href="/reports/monthly">月報表</a>
-                    <a href="/reports/pivot?rows=account&cols=month&measure=debit">樞紐分析</a>
-                    <a href="/reports/parallel?months=6">平行座標投影</a>
-                </div>
-            </details>
-        </div>
-    </nav>
+    {{ studio_nav::site_nav(nav) }}
 
     {# 全域狀態列：與首頁 /api/status 同源即時探測（單次探測，chips 與 overall 一致） #}
     <div id="status-bar" class="status-bar status-{{ sys_status_overall }}" role="status" aria-label="系統狀態">

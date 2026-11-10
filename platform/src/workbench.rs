@@ -12,8 +12,7 @@ use askama::Template;
 use axum::extract::{Query, State};
 use axum::http::StatusCode;
 use axum::response::{Html, IntoResponse, Response};
-use axum::routing::get;
-use axum::{Extension, Router};
+use axum::Extension;
 
 use crate::api::AppState;
 use crate::auth::Session;
@@ -26,6 +25,7 @@ use crate::auth::Session;
 #[template(path = "search.html")]
 pub struct SearchTemplate {
     pub acting_user: String,
+    pub nav: crate::nav::NavModel,
     pub q: String,
     pub has_q: bool,
     pub results: Vec<SearchResultRow>,
@@ -40,6 +40,7 @@ pub struct SearchResultRow {
 pub async fn search_page(
     State(state): State<AppState>,
     session: Extension<Session>,
+    nav: Extension<crate::nav::NavModel>,
     Query(query): Query<HashMap<String, String>>,
 ) -> Response {
     let q = query.get("q").cloned().unwrap_or_default();
@@ -59,6 +60,7 @@ pub async fn search_page(
     }
     render_or_500(SearchTemplate {
         acting_user: session.user_id.clone(),
+        nav: nav.0.clone(),
         q,
         has_q,
         results,
@@ -76,7 +78,5 @@ fn render_or_500<T: Template>(template: T) -> Response {
     }
 }
 
-/// HTML 群組路由（require_session 由 api.rs 統一掛載）。
-pub fn router() -> Router<AppState> {
-    Router::new().route("/search", get(search_page))
-}
+// F5 死碼清除（計畫 1793033568961 W3；2026-11-10）：原 `pub fn router()` 註冊
+// /search，但零呼叫者（api.rs inline 註冊為唯一活源）。路由註冊單一來源＝api.rs。

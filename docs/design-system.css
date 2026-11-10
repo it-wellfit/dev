@@ -1042,9 +1042,7 @@ main:not(:has(:target)) a[href="#dashboard"] {
 /* ============================================================
    Components — Panel (Section)
    ============================================================ */
-.panel {
-  animation: fadeIn var(--transition-base);
-}
+/* 載入動畫已移除（fadeIn 於載入瞬間使面板半透明，違反可讀性；動效僅保留於互動回饋）。 */
 
 /* 舊單頁原型的 :target 分區切換已移除：平台為多頁式應用，所有面板
    常駐顯示；僅 .status-panel（詳情面板）保留 :target 開合語義。 */
@@ -1627,6 +1625,17 @@ legend {
   width: 100%;
 }
 
+/* ═══ 導航角色徽章（角色專屬 UI：目前角色一目了然） ═══ */
+
+.nav-role-badge {
+  margin-left: auto;
+  font-size: var(--font-size-xs);
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+}
+
 /* ═══ 頁尾與行內表單（工作平台 v1.1） ═══ */
 
 .app-footer {
@@ -1968,4 +1977,14 @@ html {
 .skip-link:focus {
   top: var(--space-4);
   box-shadow: var(--shadow-lg);
+}
+
+/* ============================================================
+   Audit Filter Form（CSP style-src 'self'：原內聯樣式移入）
+   ============================================================ */
+.audit-filter-form {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-3);
 }

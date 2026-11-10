@@ -7,6 +7,7 @@ pub mod com;
 pub mod controls;
 pub mod cross_module_api;
 pub mod db;
+pub mod nav;
 pub mod pages;
 pub mod search;
 pub mod status;

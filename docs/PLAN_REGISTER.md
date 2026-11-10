@@ -288,6 +288,57 @@ Executed by the plan/code lane per `.kilo/plans/1793034142477-apihub-tauri-uiux-
 | 進行中（他串流擁有） | `pages.rs`（14 頁：audit/trial-balance/ledger/batches/detail/exceptions/import-history/help/status/profile/roles/sessions/system）與 `apihub.rs` 模板結構重構收斂中——21:21 時 21 errors（E0609/E0308/E0599）為其過渡態；`/audit` 建議補 ROLE_MANAGE 閘（IA Tier 2） | cargo check 21:21 輸出；pages.rs mtime 21:06+ |
 
 This addendum records execution facts only; it does not approve product scope, certification, or release.
+## 2026-11-10 addendum #19 (P0 安全收口 + P1 桌面 v0.2 可分發：NSIS 實證)
+
+Executed per `.kilo/plans/1793034142477-*` §9（P0/P1 執行切片）。並行流協作：security headers 由其先落地（Slice 11），pages.rs 收斂由其完成；本線完成 P0-1a/P0-2 與全部 P1。
+
+| Item | Disposition | Evidence |
+|---|---|---|
+| P0-1 安全標頭 | 已在位且嚴於計畫：`auth::security_headers` 掛全回應——`default-src 'none'; style-src 'self'; img-src 'self' data:; font-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'`＋`nosniff`＋`X-Frame-Options: DENY`＋`no-referrer`＋`no-store` | api.rs router 尾 `.layer(map_response(...))`；smoke 實收 CSP 標頭 |
+| P0-1a 內聯歸零 | `index.html` 2 處內聯樣式（稽核篩選 form、死元素空 div）→ 新類別 `.audit-filter-form` 入 `web/assets`＋`docs/design-system.css`（兩檔同步 byte-equal 實測）；死 div 移除（零 JS 下無引用） | `grep 'style="' platform/templates` = 0 |
+| P0-2 稽核 RBAC | `/audit` 補 `ROLE_MANAGE` 閘＋`denied_page` 共用輔助（Denied 八態語彙） | `page_matrix` 斷言 store1 `/audit` → 403 PASS |
+| P0-3 pages.rs 收斂 | 並行流完成（09:19）；本線 10:0x 複驗 0 錯、145 測試綠 | `cargo check`/`cargo test` |
+| P0-4 catalog KPI | 已動態（`esun_total`/`native_total`）；`grep '<dd>[0-9]'` 零命中 | 模板複驗 |
+| T4 角色矩陣 | 新 `platform/tests/page_matrix.rs`：訪客 303；admin 10 頁 200＋零 JS；store1 操作者頁 200、治理頁（audit/catalog/users）403 | 1 passed（2.35s） |
+| P1-1 圖示＋打包 | `bundle.icon` 接 `icons/icon.ico`；**NSIS 實證 externalBin 單獨不入包**（1.9MiB 安裝缺 sidecar）→ 追加 `resources` 映射後 3.82MiB 入包（安裝目錄 3 檔齊）；`resolve_server_exe` 絕對路徑序（FLAPS_SERVER_EXE→exe 目錄→binaries/）——**smoke 抓出 PATH 相對路徑誤抓 dev 二進位之真 bug** | 安裝清單＋`target/release/flaps-server.exe` 拷貝鏈 |
+| P1-2 無白屏啟動 | `label:main`＋`visible:false`；setup 就緒後 `window.show()`（失敗路徑亦 show 防困死）；**smoke 抓出 CWD 相對 DB 路徑 bug**——舊版 DB 遇（BOM 正規化後）0005 checksum 不符之 `VersionMismatch(5)` fail-closed 崩潰 → spawn 強制 `current_dir(exe_dir)`＋預建 `data/` | 兩輪 smoke 前後對照：崩潰（stderr 實錄）→ login 200 |
+| P1-3 守衛擴充 | `SCAN_DIRS` 5→7（＋`web/src-tauri/src`、＋`crates/kem/src`）；guards 2/2 PASS（新目錄零損傷） | guards test |
+| P1-4 NSIS 實證 | `Flaps ERP_0.2.0_x64-setup.exe`（3.82MiB）；/S 安裝→shell（安裝目錄）→spawn 安裝目錄 flaps-server（路徑實錄）→**login 200＋CSP＋零 JS**；teardown 0 殘留；/S 反安裝 exit 0（`data/flaps.db` 依設計保留使用者資料） | 本節全部命令輸出 |
+| 過渡態事件 | release 建置窗口撞上並行流瞬時重複路由 `GET /tauri-preview`（axum 執行期 panic；編譯不擋）——其 11:54 修復後本線重建清除 | stderr 實錄＋重建後 smoke 綠 |
+| 四關封印 | `fmt` EXIT=0；**145 測試 0 失敗**（112 lib＋16＋1＋6＋4＋2＋3＋1）；clippy 本線範圍零新增 | 2026-11-10 日誌 |
+
+This addendum records execution facts only; it does not approve product scope, certification, or release.
+## 2026-11-10 addendum #20 (全能進料門戶 V1：XLSX 匯入轉接器——Grill-me 收斂後的首個實作)
+
+Grill-me 兩問收斂：第一位使用者＝會計/財務承辦；殺手級應用＝消滅重複鍵入；進料＝全格式（Excel/CSV＋Email PDF＋紙本＋系統匯出）。產品答案：**單一進料門戶＋多格式轉接器管線**（開放封閉：新格式＝新 adapter，主幹不動）。免費技術實證：calamine 0.38.0（crates-io：17.8M 下載、2026-11-02 更新、純 Rust）。
+
+| Item | Disposition | Evidence |
+|---|---|---|
+| 欄位驗證器萃取 | `validate_import_row` 重構為薄殼＋新增 `validate_fields`（6 欄格式中立契約）——CSV 與 XLSX 共用同一驗證 | api.rs L3103 |
+| 格式偵測 | `detect_import_format`（magic bytes：PK\x03\x04→XLSX，其餘 CSV）；`parse_xlsx_rows`（calamine 第一張工作表→(row_no, cells)） | api.rs L3178/L3189 |
+| preview 分流 | `push_import_row`（列數上限 fail-closed＋欄位不足明確訊息）；CSV 路徑零改動、XLSX 路徑跳過標題列＋row_no+1 對齊 Excel 顯示 | api.rs import_preview |
+| calamine dates | `features=["dates"]`（as_datetime 被閘；**chrono 為既有依賴，零新增外部 crate**） | platform/Cargo.toml |
+| Excel 浮點正規化 | Data::Float 整數值去小數、其餘最短表示→既有 `parse_decimal_to_minor` fail-closed | 測試實錄：1500.5→150050 minor、99.99→9999 minor |
+| 端到端驗收 | 新 `platform/tests/import_xlsx.rs`＋`fixtures/sample-import.xlsx`（PowerShell .NET ZipArchive 自建最小 OOXML：inlineStr 中文＋浮點金額＋幣別錯誤列）：multipart 上傳→PRG→批次 draft→3 列（1 錯 2 合格）→錯誤訊息含「幣別不支援：XXX」→報表渲染→零 JS | 1 passed（1.30s） |
+| 模板 | `import.html` accept 加 `.xlsx`＋提示（支援格式/日期文字格式 V1 限制） | import.html L36-42 |
+| V2/V2.5 路線 | PDF 文字層（pdf-extract 0.12.1，crates-io 實證）＝V2 首項；OCR（Tesseract）依紙本佔比評估＝V2.5；Email 附件＝V3 | 本 Brief 分期表 |
+| 過渡態聲明 | clippy 複跑時並行流帳戶分頁重構進行中（api.rs:1655/pages.rs:426 兩錯，15:29-15:31 mtime）——**他串流擁有收斂權**；本線 XLSX 測試於其前已 PASS（revision-bound） | 15:33 cargo 輸出 |
+
+This addendum records execution facts only; it does not approve product scope, certification, or release.
+## 2026-11-10 addendum #21 (全能進料門戶 V2：PDF 文字層轉接器 + NavModel 平台重構收斂封印)
+
+V2 交付（另一串流同期完成 NavModel 統一導覽大重構——本線觀察其收斂並封印 fmt）。
+
+| Item | Disposition | Evidence |
+|---|---|---|
+| PDF 轉接器 | `detect_import_format` 加 `%PDF` magic；`parse_pdf_rows`（pdf-extract 0.12.1 記憶體擷取，crates-io 實證：7.9M 下載、2026-09-16 更新）；分隔啟發鏈 TAB → 「2+ 連續空白」→「\|」；掃描式 PDF → 明確錯誤訊息（OCR 屬 V2.5） | api.rs（enum/detect/parse_pdf_rows/preview Pdf 分支） |
+| 重大教訓（實證） | 首版 fixture 以 PDF 字串逃逸 `\011`（TAB）分隔——擷取器未還原逃逸 → 測試紅（right:1）；改**管線分隔**（普通字元必存）→ 綠。真實世界 PDF 文字層的分隔符不確定性，正是啟發鏈存在的理由 | import_pdf 首次紅→修 fixture 後 PASS（1.10s） |
+| 測試 | `import_pdf.rs`：multipart→PRG→draft→2 列（1 合格 1 幣別錯誤）→150050 minor→報表渲染→零 JS；fixture＝PowerShell 手組最小 PDF（正確 xref、795B） | 1 passed |
+| NavModel 重構（他串流） | `crate::nav::NavModel`＋Extension 注入席捲全模板（含本線 apihub/workbench 之結構——其完成掃描）；本線觀察 33→0 收斂全程並於其靜置後以 rustfmt 封印餘留縮排（api.rs/apihub.rs/nav.rs，語義零改動） | cargo check 逐輪輸出；rustfmt EXIT=0 |
+| 四關封印 | fmt 0／clippy 零警告（all-targets）／**152 測試 0 失敗**（117 lib＋16＋6＋4＋3＋2＋1×4；含 import_xlsx、import_pdf、page_matrix、guards）／本線範圍零新增警告 | 2026-11-10 17:5x 日誌 |
+| 門戶矩陣現況 | CSV✓（既有）｜XLSX✓（V1）｜PDF 文字層✓（V2）｜OCR＝V2.5｜Email 附件＝V3｜系統模板映射＝V3 | 分期表 |
+
+This addendum records execution facts only; it does not approve product scope, certification, or release.
 ## Consolidation rules
 
 1. Keep one current navigation register and one acceptance/evidence ledger per project. Detailed requirements belong in their project documents.

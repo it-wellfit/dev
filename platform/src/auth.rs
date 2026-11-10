@@ -21,8 +21,6 @@ use axum::extract::{Form, Request, State};
 use axum::http::{header, HeaderMap, StatusCode};
 use axum::middleware::Next;
 use axum::response::{Html, IntoResponse, Redirect, Response};
-use axum::routing::{get, post};
-use axum::Router;
 use serde::Deserialize;
 use sqlx::SqlitePool;
 use std::collections::HashMap;
@@ -387,6 +385,19 @@ pub struct LoginForm {
     pub password: String,
 }
 
+/// 使用者的主要角色碼（roles 表第一筆；無角色回 None）。
+async fn primary_role_code(pool: &SqlitePool, user_id: &str) -> Option<String> {
+    sqlx::query_scalar(
+        "SELECT r.role_code FROM user_roles ur JOIN roles r ON ur.role_id = r.role_id \
+         WHERE ur.user_id = ? ORDER BY r.role_code LIMIT 1",
+    )
+    .bind(user_id)
+    .fetch_optional(pool)
+    .await
+    .ok()
+    .flatten()
+}
+
 /// POST /login — rate-limit check, authenticate, create a session (303 PRG).
 pub async fn post_login(State(state): State<AppState>, Form(form): Form<LoginForm>) -> Response {
     // P1-7: consecutive-failure lockout per username (checked BEFORE any
@@ -409,7 +420,15 @@ pub async fn post_login(State(state): State<AppState>, Form(form): Form<LoginFor
             let secure = security_flag(&state, "cookie_secure").await;
             match create_session(&state.pool, &user_id).await {
                 Ok((session_id, _)) => {
-                    let mut response = Redirect::to("/").into_response();
+                    // 角色落地頁（不同角色登入後看到不同首頁）：
+                    // ADMIN → 平台總覽；FINANCE → 試算表（帳務焦點）；
+                    // STORE/POS → 交易清單（作業焦點）。
+                    let landing = match primary_role_code(&state.pool, &user_id).await {
+                        Some(rc) if rc == "FINANCE" => "/reports/trial-balance",
+                        Some(rc) if rc == "STORE" || rc == "POS" => "/transactions",
+                        _ => "/",
+                    };
+                    let mut response = Redirect::to(landing).into_response();
                     if let Ok(value) =
                         header::HeaderValue::from_str(&session_cookie_value(&session_id, secure))
                     {
@@ -470,6 +489,14 @@ pub async fn require_session(
 ) -> Response {
     match current_session(&state, request.headers()).await {
         Some(session) => {
+            // W2（grill-B：middleware 注入）：NavFlags 一次查詢 → NavModel
+            // 純記憶體過濾 → Extension；handler 一行複製。API/JSON 路徑亦付
+            // 一次查詢（本機 SQLite <1ms；page_matrix 效能斷言驗證預算）。
+            let flags = crate::api::nav_flags(&state, &session.user_id).await;
+            let current_path = request.uri().path().to_string();
+            request
+                .extensions_mut()
+                .insert(crate::nav::NavModel::build(&flags, &current_path));
             request.extensions_mut().insert(session);
             next.run(request).await
         }
@@ -499,12 +526,9 @@ pub async fn require_session_api(
     }
 }
 
-/// Convenience constructor shared with the API router.
-pub fn login_router() -> Router<crate::api::AppState> {
-    Router::new()
-        .route("/login", get(get_login).post(post_login))
-        .route("/logout", post(post_logout))
-}
+// F5 死碼清除（計畫 1793033568961 W3；2026-11-10）：原 `pub fn login_router()`
+// 為便利建構器，但零呼叫者（/login、/logout 由 api.rs inline 註冊）。路由註冊
+// 單一來源＝api.rs。
 
 #[cfg(test)]
 mod tests {

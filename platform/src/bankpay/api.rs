@@ -903,6 +903,8 @@ pub struct QueryView {
 pub struct BankPayPageTemplate {
     pub acting_user: String,
     pub csrf_token: String,
+    /// W2（grill-B）：manifest 驅動導覽模型（require_session middleware 注入）。
+    pub nav: crate::nav::NavModel,
     /// 具 ROLE_MANAGE 者顯示設定區。
     pub can_manage: bool,
     pub mock_mode: bool,
@@ -989,6 +991,7 @@ fn render_or_500_with(mut template: BankPayPageTemplate, error: Option<String>) 
 pub async fn bankpay_page(
     State(state): State<AppState>,
     Extension(session): Extension<Session>,
+    nav: Extension<crate::nav::NavModel>,
     axum::extract::Query(query): axum::extract::Query<BankPayPageQuery>,
 ) -> Response {
     let data = page_data(&state, &session).await;
@@ -1035,6 +1038,7 @@ pub async fn bankpay_page(
     let template = BankPayPageTemplate {
         acting_user: session.user_id.clone(),
         csrf_token: session.csrf_token.clone(),
+        nav: nav.0.clone(),
         can_manage: data.can_manage,
         mock_mode: data.mock_mode,
         configured: data.configured,
@@ -1064,6 +1068,7 @@ pub async fn bankpay_page(
 pub async fn bankpay_export_form(
     State(state): State<AppState>,
     Extension(session): Extension<Session>,
+    nav: Extension<crate::nav::NavModel>,
     Form(form): Form<ExportForm>,
 ) -> Response {
     // 金額：小數字串 → 精確整數分（INV-01；禁浮點）。
@@ -1075,6 +1080,7 @@ pub async fn bankpay_export_form(
                 BankPayPageTemplate {
                     acting_user: session.user_id.clone(),
                     csrf_token: session.csrf_token.clone(),
+                    nav: nav.0.clone(),
                     can_manage: data.can_manage,
                     mock_mode: data.mock_mode,
                     configured: data.configured,
@@ -1109,6 +1115,7 @@ pub async fn bankpay_export_form(
                 BankPayPageTemplate {
                     acting_user: session.user_id.clone(),
                     csrf_token: session.csrf_token.clone(),
+                    nav: nav.0.clone(),
                     can_manage: data.can_manage,
                     mock_mode: data.mock_mode,
                     configured: data.configured,
@@ -1135,6 +1142,7 @@ pub async fn bankpay_export_form(
 pub async fn bankpay_import_form(
     State(state): State<AppState>,
     Extension(session): Extension<Session>,
+    nav: Extension<crate::nav::NavModel>,
     Form(form): Form<ImportForm>,
 ) -> Response {
     let req = ImportRequest {
@@ -1152,6 +1160,7 @@ pub async fn bankpay_import_form(
                 BankPayPageTemplate {
                     acting_user: session.user_id.clone(),
                     csrf_token: session.csrf_token.clone(),
+                    nav: nav.0.clone(),
                     can_manage: data.can_manage,
                     mock_mode: data.mock_mode,
                     configured: data.configured,
@@ -1178,6 +1187,7 @@ pub async fn bankpay_import_form(
 pub async fn bankpay_config_form(
     State(state): State<AppState>,
     Extension(session): Extension<Session>,
+    nav: Extension<crate::nav::NavModel>,
     Form(form): Form<ConfigForm>,
 ) -> Response {
     // 部分更新語義：空欄位 = 保留現值；checkbox 未勾選 = 關閉。
@@ -1246,6 +1256,7 @@ pub async fn bankpay_config_form(
                 BankPayPageTemplate {
                     acting_user: session.user_id.clone(),
                     csrf_token: session.csrf_token.clone(),
+                    nav: nav.0.clone(),
                     can_manage: data.can_manage,
                     mock_mode: data.mock_mode,
                     configured: data.configured,

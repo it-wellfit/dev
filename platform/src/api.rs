@@ -17,6 +17,7 @@ use axum::http::{header, StatusCode};
 use axum::response::{Html, IntoResponse, Redirect, Response};
 use axum::routing::{get, post};
 use axum::{Extension, Json, Router};
+use chrono::Datelike;
 use flaps_core::permission::PermissionManager;
 use flaps_core::{
     format_minor, parse_decimal_to_minor, LedgerEngine, Transaction, TransactionItem,
@@ -247,6 +248,9 @@ pub struct IndexTemplate {
     pub status_chips: Vec<StatusChip>,
     /// 整體系統狀態："healthy" | "degraded" | "error"。
     pub sys_status_overall: String,
+    /// W2（grill-B）：manifest 驅動導覽模型（require_session middleware 注入；
+    /// 舊 NavFlags 旗標由 console_manifest SSOT 過濾取代——無權限入口不渲染）。
+    pub nav: crate::nav::NavModel,
 }
 
 /// 全域狀態列的單一模組狀態（server-render，零 JS）。
@@ -375,10 +379,18 @@ pub fn router(state: AppState) -> Router {
         .route("/login", get(auth::get_login).post(auth::post_login))
         .route("/logout", post(auth::post_logout))
         .route("/assets/design-system.css", get(design_system_css))
-        .route("/api/health", get(health));
+        .route("/api/health", get(health))
+        // 桌面版（Tauri）UI 對照：純靜態設計文件，無任何資料，公開供比對。
+        .route("/tauri-preview", get(tauri_preview))
+        .route("/assets/legacy-1420.css", get(legacy_1420_css))
+        .route("/assets/fonts/:file", get(serve_font));
 
     let protected = Router::new()
         .route("/", get(index))
+        // W6：知識控制台靜態伺服（session 保護；grill-A 多候選根解析）。
+        .route("/console", get(console_index))
+        .route("/console/", get(console_files))
+        .route("/console/*path", get(console_files))
         .route(
             "/transactions",
             get(transactions_page).post(create_transaction),
@@ -408,6 +420,8 @@ pub fn router(state: AppState) -> Router {
         .route("/states", get(states_page))
         .route("/accounts", get(accounts_page).post(accounts_create))
         .route("/accounts/toggle", post(accounts_toggle))
+        // F4 收斂（計畫 1793033568961 W3）：科目詳情快照頁（LEDGER_READ 閘於 handler）。
+        .route("/accounts/:id", get(crate::pages::account_detail_page))
         .route("/ai-decisions", get(ai_decisions_page))
         .route("/ai-decisions/reject", post(ai_decisions_reject))
         // ── 工作室頁面批次（27+ 頁；零 JS，session 保護）──
@@ -454,8 +468,6 @@ pub fn router(state: AppState) -> Router {
             get(crate::pages::admin_sessions_page).post(crate::pages::admin_sessions_purge),
         )
         .route("/admin/system", get(crate::pages::admin_system_page))
-        // ── 桌面版（Tauri）UI 對照：原 127.0.0.1:1420 網頁版原樣掛載 ──
-        .route("/tauri-preview", get(tauri_preview))
         // ── API 資料管理平台（零 JS；目錄由 apihub registry 驅動）──
         .route("/admin/api/catalog", get(crate::apihub::apihub_catalog))
         .route("/admin/api/test", get(crate::apihub::apihub_test))
@@ -522,11 +534,13 @@ pub struct PageQuery {
 async fn index(
     State(state): State<AppState>,
     session: Extension<Session>,
+    nav: Extension<crate::nav::NavModel>,
     Query(query): Query<PageQuery>,
 ) -> Response {
     let html = build_index(
         &state,
         &session,
+        &nav,
         None,
         FormValues::default(),
         parse_page_param(query.page.as_deref()),
@@ -546,26 +560,145 @@ async fn index(
 /// traversal surface, zero runtime file I/O, deterministic deployment.
 const DESIGN_SYSTEM_CSS: &str = include_str!("../../web/assets/design-system.css");
 
+/// UI V2 — Data-Driven Premium 覆蓋層（grill-me 7/7 裁決）：
+/// dark-first + 玉山綠 accent + 側邊欄 Grid 佈局 + minimal chrome。
+/// 獨立檔案附加於基礎樣式之後（cascade 覆蓋；刪除即回滾）。
+const UI_V2_CSS: &str = include_str!("../../web/assets/ui-v2.css");
+
 async fn design_system_css() -> impl IntoResponse {
     (
         [(header::CONTENT_TYPE, "text/css; charset=utf-8")],
-        DESIGN_SYSTEM_CSS,
+        format!("{}\n\n{}", DESIGN_SYSTEM_CSS, UI_V2_CSS),
     )
 }
 
-/// Tauri 桌面版前端（原 `127.0.0.1:1420` 網頁版）原樣掛載。
-///
-/// 桌面版（`web/src-tauri`）與本平台共用同一份 `web/index.html` 與
-/// `web/assets/design-system.css`（同源相對路徑直接生效）；頁面內容為
-/// 桌面版 UI 原樣（含其展示資料），由 HTML 內導航「工作台（伺服器版）」
-/// 連回本平台（見該檔 nav）。
-const TAURI_INDEX_HTML: &str = include_str!("../../web/index.html");
+/// 字體檔案（CSP `font-src 'self'`：自架 woff2，白名單限定兩個檔名）。
+const FONT_FILES: &[(&str, &[u8])] = &[
+    (
+        "inter-latin.woff2",
+        include_bytes!("../../web/assets/fonts/inter-latin.woff2"),
+    ),
+    (
+        "jetbrains-mono-latin.woff2",
+        include_bytes!("../../web/assets/fonts/jetbrains-mono-latin.woff2"),
+    ),
+];
+
+// ---------------------------------------------------------------------------
+// W6：/console/* 知識控制台靜態伺服（計畫 1793033568961；grill-A 裁定）。
+// 受 session 保護（掛於 protected 群組）；防路徑穿越 fail-closed；
+// 副檔名白名單 html/css/json；根目錄多候選解析（安裝版 exe_dir → 開發版 CWD）。
+// ---------------------------------------------------------------------------
+
+/// KEM 控制台根目錄解析：候選序列命中即回傳（皆無 → None，/console/* 一律 404）。
+/// 候選：exe_dir/knowledge/console（NSIS 捆綁）→ CWD 及其至多 3 層父目錄
+/// （開發版：cargo 測試 CWD＝platform/，生成物在 repo 根 knowledge/console）。
+fn console_root() -> Option<std::path::PathBuf> {
+    let rel = std::path::Path::new("knowledge/console");
+    let mut candidates: Vec<std::path::PathBuf> = Vec::new();
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(dir) = exe.parent() {
+            candidates.push(dir.join(rel));
+        }
+    }
+    if let Ok(cwd) = std::env::current_dir() {
+        let mut dir = Some(cwd);
+        for _ in 0..4 {
+            if let Some(d) = dir {
+                candidates.push(d.join(rel));
+                dir = d.parent().map(std::path::Path::to_path_buf);
+            }
+        }
+    }
+    candidates
+        .into_iter()
+        .find(|c| c.is_dir() && c.join("index.html").is_file())
+}
+
+/// GET /console/*path — 伺服 knowledge/console 生成頁（零 JS 靜態；fail-closed）。
+async fn console_files(axum::extract::Path(path): axum::extract::Path<String>) -> Response {
+    // 拒絕 ..、反斜線、NUL、前導 /、點檔段（.git/.hidden）。
+    let bad = path.contains("..")
+        || path.contains('\\')
+        || path.contains('\0')
+        || path.starts_with('/')
+        || path.split('/').any(|seg| seg.starts_with('.'));
+    if bad {
+        return StatusCode::NOT_FOUND.into_response();
+    }
+    // 空路徑或目錄根 → index.html。
+    let rel = if path.is_empty() || path.ends_with('/') {
+        format!("{path}index.html")
+    } else {
+        path
+    };
+    let Some(root) = console_root() else {
+        return StatusCode::NOT_FOUND.into_response();
+    };
+    let full = root.join(&rel);
+    let (root_canon, full_canon) = match (root.canonicalize(), full.canonicalize()) {
+        (Ok(r), Ok(f)) => (r, f),
+        _ => return StatusCode::NOT_FOUND.into_response(),
+    };
+    if !full_canon.starts_with(&root_canon) {
+        return StatusCode::NOT_FOUND.into_response();
+    }
+    let ext = full_canon
+        .extension()
+        .and_then(|e| e.to_str())
+        .unwrap_or_default();
+    let content_type = match ext {
+        "html" => "text/html; charset=utf-8",
+        "css" => "text/css; charset=utf-8",
+        "json" => "application/json",
+        _ => return StatusCode::NOT_FOUND.into_response(),
+    };
+    match tokio::fs::read(&full_canon).await {
+        Ok(bytes) => ([(header::CONTENT_TYPE, content_type)], bytes).into_response(),
+        Err(_) => StatusCode::NOT_FOUND.into_response(),
+    }
+}
+
+/// GET /console → 303 至 /console/index.html（Canonical 入口）。
+async fn console_index() -> Response {
+    Redirect::to("/console/index.html").into_response()
+}
+
+/// GET /assets/fonts/:file — 自架字體（白名單比對，防路徑穿越）。
+async fn serve_font(axum::extract::Path(file): axum::extract::Path<String>) -> Response {
+    let found = FONT_FILES.iter().find(|(name, _)| **name == file);
+    match found {
+        Some((_, bytes)) => (
+            [(header::CONTENT_TYPE, "font/woff2")],
+            [(header::CACHE_CONTROL, "public, max-age=31536000, immutable")],
+            bytes.to_vec(),
+        )
+            .into_response(),
+        None => StatusCode::NOT_FOUND.into_response(),
+    }
+}
+
+/// 原 `127.0.0.1:1420` 網頁版（銀行金流整合平台）原樣重現：
+/// 依 `.playwright-mcp` 快照與 `web/src-tauri` 命令資料重建的靜態頁，
+/// 供新舊設計比較（開發紀錄，非現行功能頁）。
+const LEGACY_1420_HTML: &str = include_str!("../../web/legacy-1420.html");
+
+/// 1420 原版重現頁之樣式（CSP `style-src 'self'`：樣式須為同源檔案）。
+const LEGACY_1420_CSS: &str = include_str!("../../web/legacy-1420.css");
 
 /// GET /tauri-preview — 桌面版（Tauri）UI 對照頁（session 保護）。
 async fn tauri_preview() -> impl IntoResponse {
     (
         [(header::CONTENT_TYPE, "text/html; charset=utf-8")],
-        TAURI_INDEX_HTML,
+        LEGACY_1420_HTML,
+    )
+}
+
+/// GET /assets/legacy-1420.css — 1420 原版重現頁樣式。
+async fn legacy_1420_css() -> impl IntoResponse {
+    (
+        [(header::CONTENT_TYPE, "text/css; charset=utf-8")],
+        LEGACY_1420_CSS,
     )
 }
 
@@ -612,6 +745,7 @@ async fn health(State(state): State<AppState>) -> Response {
 async fn create_transaction(
     State(state): State<AppState>,
     session: Extension<Session>,
+    nav: Extension<crate::nav::NavModel>,
     Form(form): Form<TransactionForm>,
 ) -> Response {
     // CSRF (T-08): the form token must match the acting session's token.
@@ -619,6 +753,7 @@ async fn create_transaction(
         let html = build_index(
             &state,
             &session,
+            &nav,
             Some(
                 "CSRF 驗證失敗（問題：表單權杖與工作階段不符；可能原因：頁面停留過久或重複開啟；處理方式：重新整理頁面後再送出一次）。"
                     .to_string(),
@@ -639,7 +774,7 @@ async fn create_transaction(
         // Redirect::to uses 303 See Other — the correct PRG verb after POST.
         Ok(()) => Redirect::to("/#transactions").into_response(),
         Err((status, message)) => {
-            let html = build_index(&state, &session, Some(message), saved_form, 1).await;
+            let html = build_index(&state, &session, &nav, Some(message), saved_form, 1).await;
             match html {
                 Ok(body) => (status, Html(body)).into_response(),
                 Err(e) => (status, format!("錯誤頁面渲染失敗：{e}")).into_response(),
@@ -859,6 +994,47 @@ async fn can_manage_users(state: &AppState, user_id: &str) -> bool {
         .permissions
         .has_permission_db(user_id, "ROLE_MANAGE")
         .await
+}
+
+/// 導航可見性旗標（角色專屬 UI：不同角色看到不同的頁面與功能）。
+///
+/// 單一查詢取回使用者全部有效權限碼，導航以旗標過濾——無權限的入口
+/// 不渲染（而非渲染後擋下），低角色永不見死連結。
+#[derive(Debug, Clone, Default)]
+pub struct NavFlags {
+    pub ledger_read: bool,
+    pub ledger_write: bool,
+    pub manage_users: bool,
+    pub role_code: String,
+}
+
+pub(crate) async fn nav_flags(state: &AppState, user_id: &str) -> NavFlags {
+    let codes: Vec<String> = sqlx::query_scalar(
+        "SELECT DISTINCT p.permission_code FROM user_roles ur \
+         JOIN role_permissions rp ON ur.role_id = rp.role_id \
+         JOIN permissions p ON rp.permission_id = p.permission_id \
+         WHERE ur.user_id = ? AND p.is_active = 1",
+    )
+    .bind(user_id)
+    .fetch_all(&state.pool)
+    .await
+    .unwrap_or_default();
+    let role_code: String = sqlx::query_scalar(
+        "SELECT r.role_code FROM user_roles ur JOIN roles r ON ur.role_id = r.role_id \
+         WHERE ur.user_id = ? ORDER BY r.role_code LIMIT 1",
+    )
+    .bind(user_id)
+    .fetch_optional(&state.pool)
+    .await
+    .ok()
+    .flatten()
+    .unwrap_or_default();
+    NavFlags {
+        ledger_read: codes.iter().any(|c| c == "LEDGER_READ"),
+        ledger_write: codes.iter().any(|c| c == "LEDGER_WRITE"),
+        manage_users: codes.iter().any(|c| c == "ROLE_MANAGE"),
+        role_code,
+    }
 }
 
 async fn render_admin_forbidden(state: &AppState, session: &Session) -> Response {
@@ -1162,6 +1338,7 @@ async fn admin_reset_password(
 #[template(path = "report_parallel.html")]
 pub struct ParallelTemplate {
     pub acting_user: String,
+    pub nav: crate::nav::NavModel,
     pub months: i64,
     pub chart_svg: String,
 }
@@ -1171,6 +1348,7 @@ pub struct ParallelTemplate {
 async fn report_parallel_page(
     State(state): State<AppState>,
     session: Extension<Session>,
+    nav: Extension<crate::nav::NavModel>,
     axum::extract::Query(query): axum::extract::Query<std::collections::HashMap<String, String>>,
 ) -> Response {
     if !state
@@ -1243,6 +1421,7 @@ async fn report_parallel_page(
     let chart_svg = flaps_core::parallel::render_parallel_coordinates(&series, 720, 260);
     let template = ParallelTemplate {
         acting_user: session.user_id.clone(),
+        nav: nav.0.clone(),
         months,
         chart_svg,
     };
@@ -1268,6 +1447,7 @@ async fn ai_suggest_enabled(state: &AppState) -> bool {
 #[template(path = "ai_suggestion.html")]
 pub struct AiSuggestionTemplate {
     pub acting_user: String,
+    pub nav: crate::nav::NavModel,
     pub csrf_token: String,
     pub suggestion: Option<flaps_core::ParsedSuggestion>,
     pub degrade_message: Option<String>,
@@ -1284,6 +1464,7 @@ fn render_with_status(template: impl askama::Template, status: StatusCode) -> Re
 async fn ai_suggest(
     State(state): State<AppState>,
     session: Extension<Session>,
+    nav: Extension<crate::nav::NavModel>,
     Form(form): Form<DraftParseForm>,
 ) -> Response {
     // CSRF (T-08): synchronizer token check before any work.
@@ -1298,6 +1479,7 @@ async fn ai_suggest(
     if !ai_suggest_enabled(&state).await {
         let template = AiSuggestionTemplate {
             acting_user: session.user_id.clone(),
+            nav: nav.0.clone(),
             csrf_token: session.csrf_token.clone(),
             suggestion: None,
             degrade_message: Some(
@@ -1343,6 +1525,7 @@ async fn ai_suggest(
             // 韌性：Ollama 離線/逾時 -> graceful degradation.
             let template = AiSuggestionTemplate {
                 acting_user: session.user_id.clone(),
+            nav: nav.0.clone(),
                 csrf_token: session.csrf_token.clone(),
                 suggestion: None,
                 degrade_message: Some(format!(
@@ -1359,6 +1542,7 @@ async fn ai_suggest(
         Err(msg) => {
             let template = AiSuggestionTemplate {
                 acting_user: session.user_id.clone(),
+                nav: nav.0.clone(),
                 csrf_token: session.csrf_token.clone(),
                 suggestion: None,
                 degrade_message: Some(format!(
@@ -1387,6 +1571,7 @@ async fn ai_suggest(
 
     let template = AiSuggestionTemplate {
         acting_user: session.user_id.clone(),
+        nav: nav.0.clone(),
         csrf_token: session.csrf_token.clone(),
         suggestion: Some(parsed),
         degrade_message: None,
@@ -1481,6 +1666,7 @@ pub struct CoverageRow {
 #[template(path = "parse_coverage.html")]
 pub struct ParseCoverageTemplate {
     pub acting_user: String,
+    pub nav: crate::nav::NavModel,
     pub total: usize,
     pub complete: usize,
     pub ratio_display: String,
@@ -1491,6 +1677,7 @@ pub struct ParseCoverageTemplate {
 async fn parse_coverage_page(
     State(state): State<AppState>,
     session: Extension<Session>,
+    nav: Extension<crate::nav::NavModel>,
 ) -> Response {
     if !can_manage_users(&state, &session.user_id).await {
         return render_admin_forbidden(&state, &session).await;
@@ -1528,6 +1715,7 @@ async fn parse_coverage_page(
 
     let template = ParseCoverageTemplate {
         acting_user: session.user_id.clone(),
+        nav: nav.0.clone(),
         total,
         complete,
         ratio_display: format!("{ratio}%"),
@@ -1540,18 +1728,24 @@ async fn parse_coverage_page(
 #[template(path = "states.html")]
 pub struct StatesTemplate {
     pub acting_user: String,
+    pub nav: crate::nav::NavModel,
 }
 
 /// GET /states - UI component-state showcase for design review and acceptance
 /// (UI-UX spec E3.7): buttons, forms, badges, feedback, table, KPI, pagination.
-async fn states_page(session: Extension<Session>) -> Response {
+async fn states_page(
+    session: Extension<Session>,
+    nav: Extension<crate::nav::NavModel>,
+) -> Response {
     render_or_500(StatesTemplate {
         acting_user: session.user_id.clone(),
+        nav: nav.0.clone(),
     })
 }
 
 #[derive(Debug, Clone)]
 pub struct AccountChildRow {
+    pub id: String,
     pub code: String,
     pub name: String,
     pub currency: String,
@@ -1601,6 +1795,7 @@ pub struct AccountFormValues {
 #[template(path = "accounts.html")]
 pub struct AccountsTemplate {
     pub acting_user: String,
+    pub nav: crate::nav::NavModel,
     pub csrf_token: String,
     pub can_manage: bool,
     pub groups: Vec<AccountGroup>,
@@ -1613,7 +1808,7 @@ pub struct AccountsTemplate {
 }
 
 /// Grouping label for the five standard account types.
-fn account_type_label(account_type: &str) -> &'static str {
+pub(crate) fn account_type_label(account_type: &str) -> &'static str {
     match account_type {
         "ASSETS" => "資產",
         "LIABILITIES" => "負債",
@@ -1624,13 +1819,18 @@ fn account_type_label(account_type: &str) -> &'static str {
     }
 }
 
-async fn accounts_page(State(state): State<AppState>, session: Extension<Session>) -> Response {
-    render_or_500(build_accounts_template(&state, &session, None, None).await)
+async fn accounts_page(
+    State(state): State<AppState>,
+    session: Extension<Session>,
+    nav: Extension<crate::nav::NavModel>,
+) -> Response {
+    render_or_500(build_accounts_template(&state, &session, &nav.0, None, None).await)
 }
 
 async fn build_accounts_template(
     state: &AppState,
     session: &Session,
+    nav: &crate::nav::NavModel,
     error: Option<String>,
     notice: Option<String>,
 ) -> AccountsTemplate {
@@ -1666,6 +1866,7 @@ async fn build_accounts_template(
                     if let Some(&ridx) = root_row_index.get(parent_id) {
                         if let Some(root) = groups[gidx].roots.get_mut(ridx) {
                             root.children.push(AccountChildRow {
+                                id: id.clone(),
                                 code: code.clone(),
                                 name: name.clone(),
                                 currency: currency.clone(),
@@ -1711,6 +1912,7 @@ async fn build_accounts_template(
 
     AccountsTemplate {
         acting_user: session.user_id.clone(),
+        nav: nav.clone(),
         csrf_token: session.csrf_token.clone(),
         can_manage: can_manage_users(state, &session.user_id).await,
         groups,
@@ -1745,6 +1947,7 @@ pub struct AccountCreateForm {
 async fn accounts_create(
     State(state): State<AppState>,
     session: Extension<Session>,
+    nav: Extension<crate::nav::NavModel>,
     Form(form): Form<AccountCreateForm>,
 ) -> Response {
     if !can_manage_users(&state, &session.user_id).await {
@@ -1764,7 +1967,7 @@ async fn accounts_create(
     macro_rules! fail_accounts {
         ($message:expr) => {{
             let mut template =
-                build_accounts_template(&state, &session, Some($message), None).await;
+                build_accounts_template(&state, &session, &nav.0, Some($message), None).await;
             template.form = form_values;
             return (StatusCode::BAD_REQUEST, render_or_500(template)).into_response();
         }};
@@ -1859,6 +2062,7 @@ pub struct SuggestionRow {
 #[template(path = "ai_decisions.html")]
 pub struct AiDecisionsTemplate {
     pub acting_user: String,
+    pub nav: crate::nav::NavModel,
     pub csrf_token: String,
     pub suggestions: Vec<SuggestionRow>,
     pub error: Option<String>,
@@ -1927,7 +2131,11 @@ fn analyze_draft(
 
 /// GET /ai-decisions - review drafts awaiting human adjudication (P4).
 /// AI suggestions never enter the ledger directly; the human adapts/adopts.
-async fn ai_decisions_page(State(state): State<AppState>, session: Extension<Session>) -> Response {
+async fn ai_decisions_page(
+    State(state): State<AppState>,
+    session: Extension<Session>,
+    nav: Extension<crate::nav::NavModel>,
+) -> Response {
     let rows: Vec<(String, String, String, String, String)> = sqlx::query_as(
         "SELECT draft_id, source, created_by, created_at, draft_json FROM drafts \
          ORDER BY created_at DESC LIMIT 50",
@@ -1955,6 +2163,7 @@ async fn ai_decisions_page(State(state): State<AppState>, session: Extension<Ses
 
     render_or_500(AiDecisionsTemplate {
         acting_user: session.user_id.clone(),
+        nav: nav.0.clone(),
         csrf_token: session.csrf_token.clone(),
         suggestions,
         error: None,
@@ -2155,6 +2364,7 @@ pub struct TxListRow {
 #[template(path = "transactions.html")]
 pub struct TransactionsTemplate {
     pub acting_user: String,
+    pub nav: crate::nav::NavModel,
     pub query: String,
     pub rows: Vec<TxListRow>,
     pub total: i64,
@@ -2169,6 +2379,7 @@ pub struct TransactionsTemplate {
 async fn transactions_page(
     State(state): State<AppState>,
     session: Extension<Session>,
+    nav: Extension<crate::nav::NavModel>,
     Query(params): Query<TransactionsQuery>,
 ) -> Response {
     let search = params.q.unwrap_or_default().trim().to_string();
@@ -2219,6 +2430,7 @@ async fn transactions_page(
 
     render_or_500(TransactionsTemplate {
         acting_user: session.user_id.clone(),
+        nav: nav.0.clone(),
         query: search,
         rows,
         total,
@@ -2243,6 +2455,7 @@ pub struct TxItemRow {
 #[template(path = "transaction_detail.html")]
 pub struct TransactionDetailTemplate {
     pub acting_user: String,
+    pub nav: crate::nav::NavModel,
     pub not_found: bool,
     pub tx_id: String,
     pub code: String,
@@ -2315,6 +2528,7 @@ pub struct BulkReviewOutcome {
 #[template(path = "bulk_review.html")]
 pub struct BulkReviewTemplate {
     pub acting_user: String,
+    pub nav: crate::nav::NavModel,
     pub decision_label: String,
     pub outcomes: Vec<BulkReviewOutcome>,
     pub ok_count: usize,
@@ -2338,6 +2552,7 @@ pub struct BulkReviewForm {
 async fn reviews_bulk(
     State(state): State<AppState>,
     session: Extension<Session>,
+    nav: Extension<crate::nav::NavModel>,
     Form(form): Form<BulkReviewForm>,
 ) -> Response {
     if !state
@@ -2471,6 +2686,7 @@ async fn reviews_bulk(
     let fail_count = outcomes.len() - ok_count;
     render_or_500(BulkReviewTemplate {
         acting_user: session.user_id.clone(),
+        nav: nav.0.clone(),
         decision_label: decision_label.to_string(),
         outcomes,
         ok_count,
@@ -2734,6 +2950,7 @@ async fn admin_ccm_indicators(
 async fn transaction_detail_page(
     State(state): State<AppState>,
     session: Extension<Session>,
+    nav: Extension<crate::nav::NavModel>,
     Path(id): Path<String>,
     Query(context): Query<DetailContextQuery>,
 ) -> Response {
@@ -2767,6 +2984,7 @@ async fn transaction_detail_page(
     else {
         let not_found = TransactionDetailTemplate {
             acting_user: session.user_id.clone(),
+            nav: nav.0.clone(),
             not_found: true,
             tx_id: id,
             code: String::new(),
@@ -2825,6 +3043,7 @@ async fn transaction_detail_page(
 
     render_or_500(TransactionDetailTemplate {
         acting_user: session.user_id.clone(),
+        nav: nav.0.clone(),
         not_found: false,
         tx_id,
         code,
@@ -2951,6 +3170,7 @@ pub struct ImportBatchView {
 #[template(path = "import.html")]
 pub struct ImportTemplate {
     pub acting_user: String,
+    pub nav: crate::nav::NavModel,
     pub csrf_token: String,
     pub notice: Option<String>,
     pub batch: Option<ImportBatchView>,
@@ -2959,6 +3179,7 @@ pub struct ImportTemplate {
 async fn import_upload_page(
     State(state): State<AppState>,
     session: Extension<Session>,
+    nav: Extension<crate::nav::NavModel>,
     axum::extract::Query(query): axum::extract::Query<std::collections::HashMap<String, String>>,
 ) -> Response {
     let batch = match query.get("batch") {
@@ -2984,6 +3205,7 @@ async fn import_upload_page(
     });
     let template = ImportTemplate {
         acting_user: session.user_id.clone(),
+        nav: nav.0.clone(),
         csrf_token: session.csrf_token.clone(),
         notice,
         batch,
@@ -3046,43 +3268,44 @@ async fn load_batch_view(state: &AppState, batch_id: &str) -> Option<ImportBatch
     })
 }
 
-/// Validate one CSV record into an import draft (rules = same as the form).
-fn validate_import_row(record: &csv::StringRecord) -> Result<ImportRowDraft, String> {
-    if record.len() < 6 {
-        return Err(format!(
-            "欄位不足（需 6 欄：date, debit_account, credit_account, amount, currency, description），實得 {} 欄",
-            record.len()
-        ));
-    }
-    let date = chrono::NaiveDate::parse_from_str(record.get(0).unwrap().trim(), "%Y-%m-%d")
-        .map_err(|_| format!("日期格式不正確：{}", record.get(0).unwrap()))?
+/// 格式中立欄位驗證（CSV 與 XLSX 轉接器共用同一契約；規則＝表單同款）。
+fn validate_fields(
+    date_raw: &str,
+    debit_raw: &str,
+    credit_raw: &str,
+    amount_raw: &str,
+    currency_raw: &str,
+    description_raw: &str,
+) -> Result<ImportRowDraft, String> {
+    let date = chrono::NaiveDate::parse_from_str(date_raw.trim(), "%Y-%m-%d")
+        .map_err(|_| format!("日期格式不正確：{date_raw}"))?
         .to_string();
     if chrono::NaiveDate::parse_from_str(&date, "%Y-%m-%d").expect("date already validated")
         > chrono::Utc::now().date_naive()
     {
         return Err("日期不得為未來".to_string());
     }
-    let debit_account = record.get(1).unwrap().trim().to_string();
+    let debit_account = debit_raw.trim().to_string();
     if debit_account.is_empty() || debit_account.len() > MAX_ACCOUNT_ID_LEN {
         return Err("借方科目空白或過長".to_string());
     }
-    let credit_account = record.get(2).unwrap().trim().to_string();
+    let credit_account = credit_raw.trim().to_string();
     if credit_account.is_empty() || credit_account.len() > MAX_ACCOUNT_ID_LEN {
         return Err("貸方科目空白或過長".to_string());
     }
     if debit_account.eq_ignore_ascii_case(&credit_account) {
         return Err("借貸科目相同".to_string());
     }
-    let amount_minor = flaps_core::parse_decimal_to_minor(record.get(3).unwrap().trim(), 2)
+    let amount_minor = flaps_core::parse_decimal_to_minor(amount_raw.trim(), 2)
         .map_err(|e| format!("金額錯誤：{e}"))?;
     if amount_minor <= 0 {
         return Err("金額必須大於 0".to_string());
     }
-    let currency = record.get(4).unwrap().trim().to_uppercase();
+    let currency = currency_raw.trim().to_uppercase();
     if !SUPPORTED_CURRENCIES.contains(&currency.as_str()) {
         return Err(format!("幣別不支援：{currency}"));
     }
-    let description = record.get(5).unwrap().trim().to_string();
+    let description = description_raw.trim().to_string();
     if description.is_empty() || description.len() > MAX_DESCRIPTION_LEN {
         return Err("摘要空白或過長".to_string());
     }
@@ -3094,6 +3317,112 @@ fn validate_import_row(record: &csv::StringRecord) -> Result<ImportRowDraft, Str
         currency,
         description,
     })
+}
+
+/// Validate one CSV record into an import draft（薄殼：委派 validate_fields）。
+fn validate_import_row(record: &csv::StringRecord) -> Result<ImportRowDraft, String> {
+    if record.len() < 6 {
+        return Err(format!(
+            "欄位不足（需 6 欄：date, debit_account, credit_account, amount, currency, description），實得 {} 欄",
+            record.len()
+        ));
+    }
+    validate_fields(
+        record.get(0).unwrap(),
+        record.get(1).unwrap(),
+        record.get(2).unwrap(),
+        record.get(3).unwrap(),
+        record.get(4).unwrap(),
+        record.get(5).unwrap(),
+    )
+}
+
+/// 匯入格式偵測（magic bytes）：ZIP 開頭＝XLSX（Office Open XML），其餘走 CSV。
+#[derive(Debug, PartialEq, Eq)]
+enum ImportFormat {
+    Csv,
+    Xlsx,
+    Pdf,
+}
+
+fn detect_import_format(data: &[u8]) -> ImportFormat {
+    if data.len() >= 4 && data[0] == 0x50 && data[1] == 0x4B && data[2] == 0x03 && data[3] == 0x04 {
+        ImportFormat::Xlsx
+    } else if data.len() >= 4 && &data[0..4] == b"%PDF" {
+        ImportFormat::Pdf
+    } else {
+        ImportFormat::Csv
+    }
+}
+
+/// 解析 XLSX 第一張工作表為 (row_no, cells)——欄位契約與 CSV 完全相同（6 欄）。
+/// 金額儲存格以 Excel 浮點呈現：整數值去小數、其餘最短表示（後續 parse fail-closed）。
+/// 日期欄為文字格式 YYYY-MM-DD（V1 限制：Excel 序列日期會產出明確錯誤訊息）。
+fn parse_xlsx_rows(data: &[u8]) -> Result<Vec<(usize, Vec<String>)>, String> {
+    use calamine::Reader;
+    let cursor = std::io::Cursor::new(data);
+    let mut workbook: calamine::Xlsx<std::io::Cursor<&[u8]>> =
+        calamine::open_workbook_from_rs(cursor).map_err(|e| format!("XLSX 開啟失敗：{e}"))?;
+    let range = workbook
+        .worksheet_range_at(0)
+        .ok_or_else(|| "XLSX 內沒有工作表".to_string())?
+        .map_err(|e| format!("XLSX 讀取失敗：{e}"))?;
+    let mut out = Vec::new();
+    for (idx, row) in range.rows().enumerate() {
+        let cells: Vec<String> = row
+            .iter()
+            .map(|c| match c {
+                calamine::Data::Empty => String::new(),
+                calamine::Data::String(s) => s.clone(),
+                calamine::Data::Float(f) => {
+                    if f.fract() == 0.0 {
+                        format!("{}", *f as i64)
+                    } else {
+                        format!("{f}")
+                    }
+                }
+                calamine::Data::Int(i) => i.to_string(),
+                calamine::Data::Bool(b) => b.to_string(),
+                calamine::Data::DateTime(dt) => dt
+                    .as_datetime()
+                    .map(|d| d.format("%Y-%m-%d").to_string())
+                    .unwrap_or_else(|| dt.to_string()),
+                other => format!("{other:?}"),
+            })
+            .collect();
+        out.push((idx + 1, cells));
+    }
+    Ok(out)
+}
+
+/// V2：PDF 文字層匯入（pdf-extract；掃描式 PDF 無文字層 → 明確錯誤訊息，OCR 屬 V2.5）。
+/// 欄位分隔啟發式（依序）：TAB → 「2+ 連續空白」→ 「|」；皆無 → 單欄（後續以欄位不足 fail-closed）。
+/// 每行一筆；首列由呼叫端 skip(1) 視為標題（與 CSV/XLSX 對稱）。
+fn parse_pdf_rows(data: &[u8]) -> Result<Vec<(usize, Vec<String>)>, String> {
+    let text = pdf_extract::extract_text_from_mem(data)
+        .map_err(|e| format!("PDF 文字層擷取失敗（掃描式 PDF 需 OCR；V2.5 路線）：{e}"))?;
+    let mut out = Vec::new();
+    for (idx, line) in text.lines().enumerate() {
+        let trimmed = line.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+        let cells: Vec<String> = if trimmed.contains('\t') {
+            trimmed.split('\t').map(|s| s.trim().to_string()).collect()
+        } else if trimmed.contains("  ") {
+            trimmed
+                .split("  ")
+                .filter(|s| !s.trim().is_empty())
+                .map(|s| s.trim().to_string())
+                .collect()
+        } else if trimmed.contains('|') {
+            trimmed.split('|').map(|s| s.trim().to_string()).collect()
+        } else {
+            vec![trimmed.to_string()]
+        };
+        out.push((idx + 1, cells));
+    }
+    Ok(out)
 }
 
 /// POST /import/preview — parse + validate + persist a draft batch (no ledger
@@ -3159,34 +3488,98 @@ async fn import_preview(
     let sha = sha2::Sha256::digest(&data);
     let sha_hex = format!("{sha:x}");
 
-    let mut reader = csv::ReaderBuilder::new()
-        .has_headers(true)
-        .flexible(true)
-        .from_reader(data.as_slice());
-
     let batch_id = uuid::Uuid::new_v4().to_string();
     let mut drafts: Vec<(usize, ImportRowDraft)> = Vec::new();
     let mut errors: Vec<(usize, String, String)> = Vec::new();
 
-    for (idx, record) in reader.records().enumerate() {
+    /// 單列入列（列數上限 fail-closed；欄位不足給明確訊息）。
+    fn push_import_row(
+        drafts: &mut Vec<(usize, ImportRowDraft)>,
+        errors: &mut Vec<(usize, String, String)>,
+        line_no: usize,
+        cells: &[String],
+        raw: String,
+    ) {
         if drafts.len() + errors.len() >= IMPORT_MAX_ROWS {
             errors.push((
-                idx + 2,
+                line_no,
                 String::new(),
                 format!("超過 {IMPORT_MAX_ROWS} 列上限，其餘列未處理"),
             ));
-            break;
+            return;
         }
-        let line_no = idx + 2; // 1-based, after the header row
-        match record {
-            Ok(rec) => {
-                let raw = rec.iter().collect::<Vec<_>>().join(",");
-                match validate_import_row(&rec) {
-                    Ok(draft) => drafts.push((line_no, draft)),
-                    Err(msg) => errors.push((line_no, raw, msg)),
+        if cells.len() < 6 {
+            errors.push((
+                line_no,
+                raw,
+                format!(
+                    "欄位不足（需 6 欄：date, debit_account, credit_account, amount, currency, description），實得 {} 欄",
+                    cells.len()
+                ),
+            ));
+            return;
+        }
+        match validate_fields(
+            &cells[0], &cells[1], &cells[2], &cells[3], &cells[4], &cells[5],
+        ) {
+            Ok(draft) => drafts.push((line_no, draft)),
+            Err(msg) => errors.push((line_no, raw, msg)),
+        }
+    }
+
+    match detect_import_format(&data) {
+        ImportFormat::Csv => {
+            let mut reader = csv::ReaderBuilder::new()
+                .has_headers(true)
+                .flexible(true)
+                .from_reader(data.as_slice());
+            for (idx, record) in reader.records().enumerate() {
+                let line_no = idx + 2; // 1-based, after the header row
+                if drafts.len() + errors.len() >= IMPORT_MAX_ROWS {
+                    errors.push((
+                        line_no,
+                        String::new(),
+                        format!("超過 {IMPORT_MAX_ROWS} 列上限，其餘列未處理"),
+                    ));
+                    break;
+                }
+                match record {
+                    Ok(rec) => {
+                        let raw = rec.iter().collect::<Vec<_>>().join(",");
+                        match validate_import_row(&rec) {
+                            Ok(draft) => drafts.push((line_no, draft)),
+                            Err(msg) => errors.push((line_no, raw, msg)),
+                        }
+                    }
+                    Err(e) => errors.push((line_no, String::new(), format!("CSV 解析失敗：{e}"))),
                 }
             }
-            Err(e) => errors.push((line_no, String::new(), format!("CSV 解析失敗：{e}"))),
+        }
+        ImportFormat::Xlsx => {
+            // 第一列視為欄位標題（與 CSV has_headers(true) 對稱）；row_no+1 對齊 Excel 顯示列號。
+            match parse_xlsx_rows(&data) {
+                Ok(rows) => {
+                    for (row_no, cells) in rows.into_iter().skip(1) {
+                        let line_no = row_no + 1;
+                        let raw = cells.join(" | ");
+                        push_import_row(&mut drafts, &mut errors, line_no, &cells, raw);
+                    }
+                }
+                Err(msg) => errors.push((1, String::new(), msg)),
+            }
+        }
+        ImportFormat::Pdf => {
+            // 首列視為欄位標題（與 CSV/XLSX 對稱）；PDF 擷取行序即列號。
+            match parse_pdf_rows(&data) {
+                Ok(rows) => {
+                    for (row_no, cells) in rows.into_iter().skip(1) {
+                        let line_no = row_no + 1;
+                        let raw = cells.join(" | ");
+                        push_import_row(&mut drafts, &mut errors, line_no, &cells, raw);
+                    }
+                }
+                Err(msg) => errors.push((1, String::new(), msg)),
+            }
         }
     }
 
@@ -3471,6 +3864,7 @@ pub struct DraftListView {
 #[template(path = "drafts.html")]
 pub struct DraftsTemplate {
     pub acting_user: String,
+    pub nav: crate::nav::NavModel,
     pub csrf_token: String,
     pub drafts: Vec<DraftListView>,
     pub error: Option<String>,
@@ -3481,6 +3875,7 @@ pub struct DraftsTemplate {
 #[template(path = "wizard.html")]
 pub struct WizardTemplate {
     pub acting_user: String,
+    pub nav: crate::nav::NavModel,
     pub csrf_token: String,
     pub step: i32,
     /// Selected transaction template code (cash-payment / cash-receipt /
@@ -3495,7 +3890,11 @@ pub struct WizardTemplate {
 }
 
 /// GET /drafts — paste unstructured text; see recent drafts.
-async fn drafts_page(State(state): State<AppState>, session: Extension<Session>) -> Response {
+async fn drafts_page(
+    State(state): State<AppState>,
+    session: Extension<Session>,
+    nav: Extension<crate::nav::NavModel>,
+) -> Response {
     let rows: Vec<(String, String, String)> = sqlx::query_as(
         "SELECT draft_id, source, draft_json FROM drafts WHERE created_by = ? ORDER BY created_at DESC LIMIT 10",
     )
@@ -3525,6 +3924,7 @@ async fn drafts_page(State(state): State<AppState>, session: Extension<Session>)
 
     let template = DraftsTemplate {
         acting_user: session.user_id.clone(),
+        nav: nav.0.clone(),
         csrf_token: session.csrf_token.clone(),
         drafts,
         error: None,
@@ -3610,6 +4010,7 @@ pub struct WizardQuery {
 async fn wizard_page(
     State(state): State<AppState>,
     session: Extension<Session>,
+    nav: Extension<crate::nav::NavModel>,
     axum::extract::Query(query): axum::extract::Query<WizardQuery>,
 ) -> Response {
     let step = query.step.as_deref().unwrap_or("1");
@@ -3685,6 +4086,7 @@ async fn wizard_page(
 
             let rendered = WizardTemplate {
                 acting_user: session.user_id.clone(),
+                nav: nav.0.clone(),
                 csrf_token: session.csrf_token.clone(),
                 step: 2,
                 template,
@@ -3706,6 +4108,7 @@ async fn wizard_page(
         _ => {
             let rendered = WizardTemplate {
                 acting_user: session.user_id.clone(),
+                nav: nav.0.clone(),
                 csrf_token: session.csrf_token.clone(),
                 step: 1,
                 template: String::new(),
@@ -3751,6 +4154,7 @@ pub struct WizardStep2Form {
 async fn wizard_step2(
     State(state): State<AppState>,
     session: Extension<Session>,
+    nav: Extension<crate::nav::NavModel>,
     Form(form): Form<WizardStep2Form>,
 ) -> Response {
     if form.csrf_token != session.csrf_token {
@@ -3806,6 +4210,7 @@ async fn wizard_step2(
                 .unwrap_or_default();
         let rendered = WizardTemplate {
             acting_user: session.user_id.clone(),
+            nav: nav.0.clone(),
             csrf_token: session.csrf_token.clone(),
             step: 2,
             template: form.template.clone(),
@@ -3828,6 +4233,7 @@ async fn wizard_step2(
     let amount_minor = amount_minor.unwrap_or(0);
     let rendered = WizardTemplate {
         acting_user: session.user_id.clone(),
+        nav: nav.0.clone(),
         csrf_token: session.csrf_token.clone(),
         step: 3,
         template: form.template.clone(),
@@ -3875,6 +4281,7 @@ fn parse_year_month(raw: &str) -> Option<String> {
 #[template(path = "report_monthly.html")]
 pub struct MonthlyReportTemplate {
     pub acting_user: String,
+    pub nav: crate::nav::NavModel,
     pub ym: String,
     pub currency: String,
     pub rows: Vec<ReportRow>,
@@ -3895,6 +4302,7 @@ pub struct ReportRow {
 async fn report_monthly_page(
     State(state): State<AppState>,
     session: Extension<Session>,
+    nav: Extension<crate::nav::NavModel>,
     axum::extract::Query(query): axum::extract::Query<std::collections::HashMap<String, String>>,
 ) -> Response {
     if !state
@@ -3904,7 +4312,17 @@ async fn report_monthly_page(
     {
         return (StatusCode::FORBIDDEN, "需要 LEDGER_READ 權限。".to_string()).into_response();
     }
-    let Some(ym) = query.get("ym").and_then(|y| parse_year_month(y)) else {
+    // 預設當月：未帶 ym 時以系統日期推導（demo/日常瀏覽皆零摩擦）。
+    let Some(ym) = query
+        .get("ym")
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+        .and_then(|y| parse_year_month(&y))
+        .or_else(|| {
+            let now = chrono::Utc::now();
+            Some(format!("{:04}-{:02}", now.year(), now.month()))
+        })
+    else {
         return (
             StatusCode::BAD_REQUEST,
             "月份參數格式不正確；請使用 ym=YYYY-MM。".to_string(),
@@ -3931,6 +4349,7 @@ async fn report_monthly_page(
 
     let template = MonthlyReportTemplate {
         acting_user: session.user_id.clone(),
+        nav: nav.0.clone(),
         ym,
         currency: "TWD".to_string(),
         rows: report_rows,
@@ -3954,7 +4373,17 @@ async fn report_monthly_csv(
     {
         return (StatusCode::FORBIDDEN, "需要 LEDGER_READ 權限。".to_string()).into_response();
     }
-    let Some(ym) = query.get("ym").and_then(|y| parse_year_month(y)) else {
+    // 預設當月：未帶 ym 時以系統日期推導（demo/日常瀏覽皆零摩擦）。
+    let Some(ym) = query
+        .get("ym")
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+        .and_then(|y| parse_year_month(&y))
+        .or_else(|| {
+            let now = chrono::Utc::now();
+            Some(format!("{:04}-{:02}", now.year(), now.month()))
+        })
+    else {
         return (
             StatusCode::BAD_REQUEST,
             "月份參數格式不正確；請使用 ym=YYYY-MM。".to_string(),
@@ -4045,6 +4474,7 @@ pub struct PivotMatrix {
 #[template(path = "report_pivot.html")]
 pub struct PivotTemplate {
     pub acting_user: String,
+    pub nav: crate::nav::NavModel,
     pub rows_dim: String,
     pub cols_dim: String,
     pub measure: String,
@@ -4056,6 +4486,7 @@ pub struct PivotTemplate {
 async fn report_pivot_page(
     State(state): State<AppState>,
     session: Extension<Session>,
+    nav: Extension<crate::nav::NavModel>,
     axum::extract::Query(query): axum::extract::Query<std::collections::HashMap<String, String>>,
 ) -> Response {
     if !state
@@ -4116,6 +4547,7 @@ async fn report_pivot_page(
     let matrix = assemble_pivot(&raw_cells, measure, 20);
     let template = PivotTemplate {
         acting_user: session.user_id.clone(),
+        nav: nav.0.clone(),
         rows_dim: rows_dim.to_string(),
         cols_dim: cols_dim.to_string(),
         measure: measure.to_string(),
@@ -4212,6 +4644,7 @@ fn assemble_pivot(raw: &[(String, String, i64)], measure: &str, max_rows: usize)
 async fn build_index(
     state: &AppState,
     session: &Session,
+    nav: &crate::nav::NavModel,
     error: Option<String>,
     form: FormValues,
     requested_page: i64,
@@ -4358,6 +4791,7 @@ async fn build_index(
     // 全域狀態列與詳情面板：與 /api/status 同源、單次即時探測（防重複探測
     // 造成 chips 與 overall 時間戳/狀態不一致）。
     let (status_chips, sys_status_overall) = status_chips(state).await;
+    // W2（grill-B）：NavModel 由 require_session middleware 注入（manifest SSOT 過濾）。
     IndexTemplate {
         acting_user: session.user_id.clone(),
         csrf_token: session.csrf_token.clone(),
@@ -4405,6 +4839,7 @@ async fn build_index(
         },
         status_chips,
         sys_status_overall,
+        nav: nav.clone(),
         recent_audit_logs: {
             let rows: Vec<crate::cross_module_api::AuditRow> = sqlx::query_as(
                 "SELECT al.log_id, al.performed_by, u.username, al.event_type, COALESCE(al.transaction_id, ''), COALESCE(al.event_data, ''), al.performed_at FROM audit_log al LEFT JOIN users u ON al.performed_by = u.user_id ORDER BY al.performed_at DESC LIMIT 10",

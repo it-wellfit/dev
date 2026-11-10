@@ -21,8 +21,7 @@ use askama::Template;
 use axum::extract::{Query, State};
 use axum::http::StatusCode;
 use axum::response::{Html, IntoResponse, Redirect, Response};
-use axum::routing::get;
-use axum::{Extension, Form, Router};
+use axum::{Extension, Form};
 use serde::Deserialize;
 
 use crate::api::AppState;
@@ -288,6 +287,7 @@ fn catalog_rows() -> Vec<CatalogRow> {
 #[template(path = "api_catalog.html")]
 pub struct ApiCatalogTemplate {
     pub acting_user: String,
+    pub nav: crate::nav::NavModel,
     pub endpoints: Vec<CatalogRow>,
     /// E.Sun BankPay V2.8 官方契約端點（8 個；權威規格：
     /// `Wellfit/docs/bankpay/04-interface-specification.md`）。
@@ -400,6 +400,7 @@ pub fn esun_endpoints() -> Vec<EsunEndpointView> {
 #[template(path = "api_test.html")]
 pub struct ApiTestTemplate {
     pub acting_user: String,
+    pub nav: crate::nav::NavModel,
     pub endpoints: Vec<CatalogRow>,
     pub selected: String,
     pub params: Vec<TestParam>,
@@ -414,6 +415,7 @@ pub struct ApiTestTemplate {
 #[template(path = "api_logs.html")]
 pub struct ApiLogsTemplate {
     pub acting_user: String,
+    pub nav: crate::nav::NavModel,
     pub logs: Vec<crate::api::AuditLogRow>,
 }
 
@@ -421,6 +423,7 @@ pub struct ApiLogsTemplate {
 #[template(path = "api_config.html")]
 pub struct ApiConfigTemplate {
     pub acting_user: String,
+    pub nav: crate::nav::NavModel,
     pub csrf_token: String,
     pub esun_mock_mode: bool,
     pub esun_url: String,
@@ -646,6 +649,7 @@ async fn live_response(state: &AppState, path: &str, params: &[TestParam]) -> St
 pub async fn apihub_catalog(
     State(state): State<AppState>,
     session: Extension<Session>,
+    nav: Extension<crate::nav::NavModel>,
 ) -> Response {
     if let Some(resp) = require_admin(&state, &session).await {
         return resp;
@@ -654,6 +658,7 @@ pub async fn apihub_catalog(
     let native = catalog_rows();
     let view = ApiCatalogTemplate {
         acting_user: session.user_id.clone(),
+        nav: nav.0.clone(),
         esun_total: esun.len(),
         native_total: native.len(),
         esun_endpoints: esun,
@@ -666,6 +671,7 @@ pub async fn apihub_catalog(
 pub async fn apihub_test(
     State(state): State<AppState>,
     session: Extension<Session>,
+    nav: Extension<crate::nav::NavModel>,
     Query(query): Query<HashMap<String, String>>,
 ) -> Response {
     if let Some(resp) = require_admin(&state, &session).await {
@@ -697,6 +703,7 @@ pub async fn apihub_test(
     }
     render_or_500(ApiTestTemplate {
         acting_user: session.user_id.clone(),
+        nav: nav.0.clone(),
         endpoints: catalog_rows(),
         selected,
         params,
@@ -709,7 +716,11 @@ pub async fn apihub_test(
 }
 
 /// GET /admin/api/logs — 稽核日誌（最近 100 筆；NULL 安全）。
-pub async fn apihub_logs(State(state): State<AppState>, session: Extension<Session>) -> Response {
+pub async fn apihub_logs(
+    State(state): State<AppState>,
+    session: Extension<Session>,
+    nav: Extension<crate::nav::NavModel>,
+) -> Response {
     if let Some(resp) = require_admin(&state, &session).await {
         return resp;
     }
@@ -751,19 +762,28 @@ pub async fn apihub_logs(State(state): State<AppState>, session: Extension<Sessi
         .collect();
     render_or_500(ApiLogsTemplate {
         acting_user: session.user_id.clone(),
+        nav: nav.0.clone(),
         logs,
     })
 }
 
 /// GET /admin/api/config — 現行設定＋erp_config 持久列。
-pub async fn apihub_config(State(state): State<AppState>, session: Extension<Session>) -> Response {
+pub async fn apihub_config(
+    State(state): State<AppState>,
+    session: Extension<Session>,
+    nav: Extension<crate::nav::NavModel>,
+) -> Response {
     if let Some(resp) = require_admin(&state, &session).await {
         return resp;
     }
-    render_config_page(&state, &session).await
+    render_config_page(&state, &session, &nav.0).await
 }
 
-async fn render_config_page(state: &AppState, session: &Session) -> Response {
+async fn render_config_page(
+    state: &AppState,
+    session: &Session,
+    nav: &crate::nav::NavModel,
+) -> Response {
     let config = state.bankpay_config.lock().await.clone();
     let rows: Vec<ConfigRow> = sqlx::query_as(
         "SELECT config_key, config_value, COALESCE(updated_at, '') FROM erp_config \
@@ -782,6 +802,7 @@ async fn render_config_page(state: &AppState, session: &Session) -> Response {
     render_or_500(ApiConfigTemplate {
         acting_user: session.user_id.clone(),
         csrf_token: session.csrf_token.clone(),
+        nav: nav.clone(),
         esun_mock_mode: config.esun_mock_mode,
         esun_url: config.esun_url.clone(),
         source_system_id: config.source_system_id.clone().unwrap_or_default(),
@@ -889,22 +910,10 @@ fn render_or_500<T: Template>(template: T) -> Response {
     }
 }
 
-/// HTML 群組路由（require_session 由 api.rs 統一掛載；本模組不重掛）。
-pub fn router() -> Router<AppState> {
-    Router::new()
-        .route("/admin/api/catalog", get(apihub_catalog))
-        .route("/admin/api/test", get(apihub_test))
-        .route("/admin/api/logs", get(apihub_logs))
-        .route(
-            "/admin/api/config",
-            get(apihub_config).post(apihub_config_update),
-        )
-        // ── 治理四頁（T2；技術人員受眾）──
-        .route("/admin/api/records", get(apihub_records))
-        .route("/admin/api/codes", get(apihub_codes))
-        .route("/admin/api/release", get(apihub_release))
-        .route("/admin/api/net", get(apihub_net))
-}
+// F5 死碼清除（計畫 1793033568961 W3；2026-11-10）：原 `pub fn router()` 註冊
+// /admin/api/* 八頁，但零呼叫者（api.rs inline 註冊為唯一活源，grep 實證）。
+// 為避免雙來源漂移（未來誤 merge 將 panic 於重複路由），已移除死碼；
+// 路由註冊單一來源＝api.rs。
 
 // ---------------------------------------------------------------------------
 // 治理四頁（T2：records／codes／release／net）— 技術人員受眾（Tier 3）
@@ -937,6 +946,7 @@ pub struct BankpayBatchRow {
 #[template(path = "api_records.html")]
 pub struct ApiRecordsTemplate {
     pub acting_user: String,
+    pub nav: crate::nav::NavModel,
     pub records: Vec<BankpayRecordRow>,
     pub batches: Vec<BankpayBatchRow>,
 }
@@ -945,6 +955,7 @@ pub struct ApiRecordsTemplate {
 #[template(path = "api_codes.html")]
 pub struct ApiCodesTemplate {
     pub acting_user: String,
+    pub nav: crate::nav::NavModel,
     pub codes: Vec<ErrorCodeRow>,
 }
 
@@ -959,6 +970,7 @@ pub struct ErrorCodeRow {
 #[template(path = "api_release.html")]
 pub struct ApiReleaseTemplate {
     pub acting_user: String,
+    pub nav: crate::nav::NavModel,
     pub items: Vec<ReleaseItemRow>,
 }
 
@@ -975,6 +987,7 @@ pub struct ReleaseItemRow {
 #[template(path = "api_net.html")]
 pub struct ApiNetTemplate {
     pub acting_user: String,
+    pub nav: crate::nav::NavModel,
     pub checks: Vec<NetCheckRow>,
 }
 
@@ -990,6 +1003,7 @@ pub struct NetCheckRow {
 pub async fn apihub_records(
     State(state): State<AppState>,
     session: Extension<Session>,
+    nav: Extension<crate::nav::NavModel>,
 ) -> Response {
     if let Some(resp) = require_admin(&state, &session).await {
         return resp;
@@ -1065,13 +1079,18 @@ pub async fn apihub_records(
         .collect();
     render_or_500(ApiRecordsTemplate {
         acting_user: session.user_id.clone(),
+        nav: nav.0.clone(),
         records,
         batches,
     })
 }
 
 /// GET /admin/api/codes — V2.8 錯誤碼對照（僅列已驗證項；完整表見官方文件）。
-pub async fn apihub_codes(State(state): State<AppState>, session: Extension<Session>) -> Response {
+pub async fn apihub_codes(
+    State(state): State<AppState>,
+    session: Extension<Session>,
+    nav: Extension<crate::nav::NavModel>,
+) -> Response {
     if let Some(resp) = require_admin(&state, &session).await {
         return resp;
     }
@@ -1085,6 +1104,7 @@ pub async fn apihub_codes(State(state): State<AppState>, session: Extension<Sess
     }];
     render_or_500(ApiCodesTemplate {
         acting_user: session.user_id.clone(),
+        nav: nav.0.clone(),
         codes,
     })
 }
@@ -1093,6 +1113,7 @@ pub async fn apihub_codes(State(state): State<AppState>, session: Extension<Sess
 pub async fn apihub_release(
     State(state): State<AppState>,
     session: Extension<Session>,
+    nav: Extension<crate::nav::NavModel>,
 ) -> Response {
     if let Some(resp) = require_admin(&state, &session).await {
         return resp;
@@ -1149,12 +1170,17 @@ pub async fn apihub_release(
     ];
     render_or_500(ApiReleaseTemplate {
         acting_user: session.user_id.clone(),
+        nav: nav.0.clone(),
         items,
     })
 }
 
 /// GET /admin/api/net — 連線與資安姿態（本地設定與程式面檢查；不做網路探測）。
-pub async fn apihub_net(State(state): State<AppState>, session: Extension<Session>) -> Response {
+pub async fn apihub_net(
+    State(state): State<AppState>,
+    session: Extension<Session>,
+    nav: Extension<crate::nav::NavModel>,
+) -> Response {
     if let Some(resp) = require_admin(&state, &session).await {
         return resp;
     }
@@ -1230,6 +1256,7 @@ pub async fn apihub_net(State(state): State<AppState>, session: Extension<Sessio
     });
     render_or_500(ApiNetTemplate {
         acting_user: session.user_id.clone(),
+        nav: nav.0.clone(),
         checks,
     })
 }

@@ -1,11 +1,12 @@
 <!DOCTYPE html>
+{% import "partials/studio_nav.html" as studio_nav %}
 <html lang="zh-Hant-TW">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Flaps ERP 工作台</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%23005fcc'/%3E%3Ctext x='8' y='12' font-size='10' font-family='sans-serif' fill='white' text-anchor='middle' font-weight='bold'%3EF%3C/text%3E%3C/svg%3E">
-    <link rel="stylesheet" href="assets/design-system.css">
+    <link rel="stylesheet" href="/assets/design-system.css">
 </head>
 <body>
     <a class="skip-link" href="#main">跳至主要內容</a>
@@ -37,45 +38,7 @@
         </div>
     </header>
 
-    <nav class="site-nav" aria-label="主導覽">
-        <div class="container">
-            <a href="/">總覽</a>
-            <a href="/transactions">交易</a>
-            <a href="/accounts">會計科目</a>
-            <a href="/search">檢索</a>
-            <a href="/ai-decisions">AI 決策</a>
-            <a href="/bankpay">銀行支付</a>
-            <a href="/audit">稽核軌跡</a>
-            <a href="/status">系統狀態</a>
-            <a href="/help">操作指引</a>
-            <details class="nav-menu">
-                <summary>匯入與草稿</summary>
-                <div class="nav-menu-items">
-                    <a href="/import">快速匯入</a>
-                    <a href="/drafts">草稿解析</a>
-                </div>
-            </details>
-            <details class="nav-menu">
-                <summary>報表分析</summary>
-                <div class="nav-menu-items">
-                    <a href="/reports/monthly?ym={{ current_ym }}">月報表</a>
-                    <a href="/reports/pivot?rows=account&cols=month&measure=debit">樞紐分析</a>
-                    <a href="/reports/parallel?months=6">平行座標投影</a>
-                </div>
-            </details>
-            {% if can_manage_users %}
-            <details class="nav-menu">
-                <summary>管理</summary>
-                <div class="nav-menu-items">
-                    <a href="/admin/users">使用者管理</a>
-                    <a href="/admin/api/catalog">API 中樞</a>
-                    <a href="/admin/api/logs">API 日誌</a>
-                    <a href="/admin/api/config">API 設定</a>
-                </div>
-            </details>
-            {% endif %}
-        </div>
-    </nav>
+    {{ studio_nav::site_nav(nav) }}
 
     {# 全域狀態列（T10/T11）：sticky 頂部、零 JS；「查看詳情」以 CSS :target
        展開詳情面板。與 /api/status 同一即時探測來源（status::probe_modules），
@@ -401,7 +364,7 @@
             {# 篩選控制（零 JS）：真實 GET 表單，送出後導向 /api/audit JSON API
                並套用篩選（對應 AuditQuery：user_id/action/start_date/end_date）。
                原實作為無表單按鈕（需 JS 才能運作），違反零 JS 規範，已修正。 #}
-            <form class="form-row" method="get" action="/api/audit" style="display:flex; gap:var(--space-2); flex-wrap:wrap; margin-bottom:var(--space-3);" aria-label="稽核紀錄篩選">
+            <form class="form-row audit-filter-form" method="get" action="/api/audit" aria-label="稽核紀錄篩選">
                 <label class="sr-only" for="audit-user">使用者 ID</label>
                 <input class="input" type="text" id="audit-user" name="user_id" placeholder="使用者 ID" />
                 <label class="sr-only" for="audit-action">動作關鍵字</label>
@@ -443,7 +406,6 @@
                     </tbody>
                 </table>
             </div>
-            <div id="audit-pagination" style="margin-top:var(--space-2); display:flex; gap:var(--space-2);"></div>
             <p class="section-note">
                 共 {{ recent_audit_logs.len() }} 筆記錄 · API：GET /api/audit?page=&limit=&user_id=&action=&start_date=&end_date=
             </p>

@@ -183,6 +183,7 @@ async fn primary_role(pool: &SqlitePool, user_id: &str) -> String {
 #[template(path = "audit_page.html")]
 pub struct AuditPageTemplate {
     pub acting_user: String,
+    pub nav: crate::nav::NavModel,
     pub csrf_token: String,
     pub role_code: String,
     pub rows: Vec<AuditView>,
@@ -204,12 +205,45 @@ pub struct AuditPageQuery {
     pub page: Option<String>,
 }
 
+/// 403 denied 頁（資料八態 Denied 語彙；治理頁閘門共用）。
+/// title/detail 皆為程式端常數，不含使用者輸入（無 XSS 面）。
+fn denied_page(title: &str, detail: &str) -> Response {
+    (
+        StatusCode::FORBIDDEN,
+        Html(format!(
+            "<!DOCTYPE html><html lang=\"zh-Hant-TW\"><head><meta charset=\"UTF-8\">\
+             <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\
+             <title>{title} — Flaps ERP</title>\
+             <link rel=\"stylesheet\" href=\"/assets/design-system.css\"></head><body>\
+             <a class=\"skip-link\" href=\"#main\">跳至主要內容</a>\
+             <main id=\"main\" class=\"container\">\
+             <div class=\"denied-state\" role=\"alert\" data-state-denied>\
+             <strong>{title}</strong><p>{detail}</p>\
+             <p><a class=\"btn btn-secondary\" href=\"/\">返回工作台</a></p></div></main></body></html>"
+        )),
+    )
+        .into_response()
+}
+
 /// GET /audit — 稽核軌跡完整頁（篩選＋分頁）。
 pub async fn audit_page(
     State(state): State<AppState>,
     Extension(session): Extension<Session>,
+    nav: Extension<crate::nav::NavModel>,
     Query(q): Query<AuditPageQuery>,
 ) -> Response {
+    // IA Tier 2（2026-11-10；R2）：稽核屬治理職能——ROLE_MANAGE 閘。
+    // 未具權限者不得檢視全公司操作軌跡；403 以 Denied 八態語彙回報。
+    if !state
+        .permissions
+        .has_permission_db(&session.user_id, "ROLE_MANAGE")
+        .await
+    {
+        return denied_page(
+            "無權檢視稽核軌跡",
+            "稽核軌跡屬治理職能，需要 ROLE_MANAGE 權限。請向系統管理員申請權限，或改用您可存取的頁面。",
+        );
+    }
     let page = q
         .page
         .as_deref()
@@ -240,6 +274,7 @@ pub async fn audit_page(
     let role_code = primary_role(&state.pool, &session.user_id).await;
     render(AuditPageTemplate {
         acting_user: session.user_id.clone(),
+        nav: nav.0.clone(),
         csrf_token: session.csrf_token.clone(),
         role_code,
         rows,
@@ -269,6 +304,7 @@ pub struct TrialBalanceRow {
 #[template(path = "trial_balance.html")]
 pub struct TrialBalanceTemplate {
     pub acting_user: String,
+    pub nav: crate::nav::NavModel,
     pub csrf_token: String,
     pub rows: Vec<TrialBalanceRow>,
     pub total_debit: i64,
@@ -280,6 +316,7 @@ pub struct TrialBalanceTemplate {
 pub async fn trial_balance_page(
     State(state): State<AppState>,
     Extension(session): Extension<Session>,
+    nav: Extension<crate::nav::NavModel>,
 ) -> Response {
     let rows: Vec<TrialBalanceRow> = sqlx::query_as(
         "SELECT a.account_code, a.account_name, \
@@ -301,6 +338,7 @@ pub async fn trial_balance_page(
         .sum();
     render(TrialBalanceTemplate {
         acting_user: session.user_id.clone(),
+        nav: nav.0.clone(),
         csrf_token: session.csrf_token.clone(),
         balanced: total_debit == total_credit,
         rows,
@@ -325,6 +363,7 @@ pub struct LedgerEntryRow {
 #[template(path = "account_ledger.html")]
 pub struct AccountLedgerTemplate {
     pub acting_user: String,
+    pub nav: crate::nav::NavModel,
     pub csrf_token: String,
     pub account: Option<AccountPickRow>,
     pub entries: Vec<LedgerEntryRow>,
@@ -343,6 +382,7 @@ pub struct AccountPickRow {
 pub async fn account_ledger_page(
     State(state): State<AppState>,
     Extension(session): Extension<Session>,
+    nav: Extension<crate::nav::NavModel>,
     Query(q): Query<HashMap<String, String>>,
 ) -> Response {
     let accounts: Vec<AccountPickRow> = sqlx::query_as(
@@ -368,11 +408,149 @@ pub async fn account_ledger_page(
     };
     render(AccountLedgerTemplate {
         acting_user: session.user_id.clone(),
+        nav: nav.0.clone(),
         csrf_token: session.csrf_token.clone(),
         account,
         entries,
         accounts,
         selected,
+    })
+}
+
+// ---------------------------------------------------------------------------
+// 4-5b. 科目詳情（F4 收斂；計畫 1793033568961 W3）
+// ---------------------------------------------------------------------------
+
+/// 科目詳情分錄列（最近 20 筆，新→舊；金額已格式化）。
+#[derive(Debug, Clone)]
+pub struct AccountDetailItemRow {
+    pub transaction_code: String,
+    pub transaction_date: String,
+    pub description: String,
+    pub item_type: String,
+    pub amount_display: String,
+    pub currency: String,
+}
+
+#[derive(Template)]
+#[template(path = "account_detail.html")]
+pub struct AccountDetailTemplate {
+    pub acting_user: String,
+    pub nav: crate::nav::NavModel,
+    pub found: bool,
+    pub account_code: String,
+    pub account_name: String,
+    pub account_type_label: String,
+    pub currency: String,
+    pub is_active: bool,
+    pub debit_display: String,
+    pub credit_display: String,
+    pub items: Vec<AccountDetailItemRow>,
+}
+
+/// GET /accounts/:id — 科目詳情（快照）。detail＝快照、流水請用 /reports/ledger
+/// （計畫 §7.3 分工）。與 /accounts 同閘：LEDGER_READ fail-closed；未知 id 以
+/// 404 呈現 data-state-error 語彙（不洩漏存在性差異）。
+pub async fn account_detail_page(
+    State(state): State<AppState>,
+    Extension(session): Extension<Session>,
+    nav: Extension<crate::nav::NavModel>,
+    Path(account_id): Path<String>,
+) -> Response {
+    if !state
+        .permissions
+        .has_permission_db(&session.user_id, "LEDGER_READ")
+        .await
+    {
+        return denied_page(
+            "無權檢視科目詳情",
+            "科目詳情屬帳務資料，需要 LEDGER_READ 權限。請向系統管理員申請權限，或改用您可存取的頁面。",
+        );
+    }
+    #[derive(Debug, sqlx::FromRow)]
+    struct AccountRow {
+        account_code: String,
+        account_name: String,
+        account_type: String,
+        currency: String,
+        is_active: bool,
+    }
+    let account: Option<AccountRow> = sqlx::query_as(
+        "SELECT account_code, account_name, account_type, currency, is_active \
+         FROM accounts WHERE account_id = ?",
+    )
+    .bind(&account_id)
+    .fetch_optional(&state.pool)
+    .await
+    .unwrap_or_default();
+    let Some(a) = account else {
+        // 未知 id：404 ＋ found=false 樣式頁（不洩漏存在性差異）。
+        let mut t = render(AccountDetailTemplate {
+            acting_user: session.user_id.clone(),
+            nav: nav.0.clone(),
+            found: false,
+            account_code: String::new(),
+            account_name: String::new(),
+            account_type_label: String::new(),
+            currency: String::new(),
+            is_active: false,
+            debit_display: String::new(),
+            credit_display: String::new(),
+            items: Vec::new(),
+        });
+        *t.status_mut() = StatusCode::NOT_FOUND;
+        return t;
+    };
+    let (debit_minor, credit_minor): (i64, i64) = sqlx::query_as(
+        "SELECT \
+         COALESCE(SUM(CASE WHEN item_type = 'DEBIT' THEN amount_minor ELSE 0 END), 0), \
+         COALESCE(SUM(CASE WHEN item_type = 'CREDIT' THEN amount_minor ELSE 0 END), 0) \
+         FROM transaction_items WHERE account_id = ?",
+    )
+    .bind(&account_id)
+    .fetch_one(&state.pool)
+    .await
+    .unwrap_or((0, 0));
+    let items: Vec<AccountDetailItemRow> = sqlx::query_as::<
+        _,
+        (String, String, String, String, i64, String),
+    >(
+        "SELECT t.transaction_code, t.transaction_date, t.description, ti.item_type, \
+         ti.amount_minor, ti.currency \
+         FROM transaction_items ti JOIN transactions t ON ti.transaction_id = t.transaction_id \
+         WHERE ti.account_id = ? \
+         ORDER BY t.transaction_date DESC, t.transaction_code DESC, ti.item_id DESC LIMIT 20",
+    )
+    .bind(&account_id)
+    .fetch_all(&state.pool)
+    .await
+    .unwrap_or_default()
+    .into_iter()
+    .map(
+        |(transaction_code, transaction_date, description, item_type, amount_minor, currency)| {
+            AccountDetailItemRow {
+                transaction_code,
+                transaction_date,
+                description,
+                item_type,
+                amount_display: flaps_core::format_minor(amount_minor, 2),
+                currency,
+            }
+        },
+    )
+    .collect();
+    render(AccountDetailTemplate {
+        acting_user: session.user_id.clone(),
+        nav: nav.0.clone(),
+        found: true,
+        account_code: a.account_code,
+        account_name: a.account_name,
+        account_type_label: crate::api::account_type_label(&a.account_type).to_string(),
+        currency: a.currency,
+        is_active: a.is_active,
+        debit_display: flaps_core::format_minor(debit_minor, 2),
+        credit_display: flaps_core::format_minor(credit_minor, 2),
+        items,
     })
 }
 
@@ -468,6 +646,7 @@ fn to_batch_views(rows: Vec<BatchRowFull>) -> Vec<BatchView> {
 #[template(path = "bankpay_batches.html")]
 pub struct BankPayBatchesTemplate {
     pub acting_user: String,
+    pub nav: crate::nav::NavModel,
     pub csrf_token: String,
     pub batches: Vec<BatchView>,
     pub total: usize,
@@ -477,11 +656,13 @@ pub struct BankPayBatchesTemplate {
 pub async fn bankpay_batches_page(
     State(state): State<AppState>,
     Extension(session): Extension<Session>,
+    nav: Extension<crate::nav::NavModel>,
 ) -> Response {
     let batches = to_batch_views(batches_query(&state.pool, None).await);
     let total = batches.len();
     render(BankPayBatchesTemplate {
         acting_user: session.user_id.clone(),
+        nav: nav.0.clone(),
         csrf_token: session.csrf_token.clone(),
         batches,
         total,
@@ -492,6 +673,7 @@ pub async fn bankpay_batches_page(
 #[template(path = "bankpay_batch_detail.html")]
 pub struct BankPayBatchDetailTemplate {
     pub acting_user: String,
+    pub nav: crate::nav::NavModel,
     pub csrf_token: String,
     pub batch: Option<BatchView>,
     pub audits: Vec<AuditView>,
@@ -502,6 +684,7 @@ pub struct BankPayBatchDetailTemplate {
 pub async fn bankpay_batch_detail(
     State(state): State<AppState>,
     Extension(session): Extension<Session>,
+    nav: Extension<crate::nav::NavModel>,
     Path(batch_id): Path<String>,
 ) -> Response {
     let batch = sqlx::query_as::<_, BatchRowFull>(
@@ -520,6 +703,7 @@ pub async fn bankpay_batch_detail(
         .collect();
     render(BankPayBatchDetailTemplate {
         acting_user: session.user_id.clone(),
+        nav: nav.0.clone(),
         csrf_token: session.csrf_token.clone(),
         not_found: batch.is_none(),
         batch,
@@ -531,6 +715,7 @@ pub async fn bankpay_batch_detail(
 #[template(path = "bankpay_exceptions.html")]
 pub struct BankPayExceptionsTemplate {
     pub acting_user: String,
+    pub nav: crate::nav::NavModel,
     pub csrf_token: String,
     pub exceptions: Vec<BatchView>,
 }
@@ -539,11 +724,13 @@ pub struct BankPayExceptionsTemplate {
 pub async fn bankpay_exceptions_page(
     State(state): State<AppState>,
     Extension(session): Extension<Session>,
+    nav: Extension<crate::nav::NavModel>,
 ) -> Response {
     let exceptions =
         to_batch_views(batches_query(&state.pool, Some(&["FAILED", "REJECTED"])).await);
     render(BankPayExceptionsTemplate {
         acting_user: session.user_id.clone(),
+        nav: nav.0.clone(),
         csrf_token: session.csrf_token.clone(),
         exceptions,
     })
@@ -557,6 +744,7 @@ pub async fn bankpay_exceptions_page(
 #[template(path = "import_history.html")]
 pub struct ImportHistoryTemplate {
     pub acting_user: String,
+    pub nav: crate::nav::NavModel,
     pub csrf_token: String,
     pub rows: Vec<AuditView>,
 }
@@ -565,10 +753,12 @@ pub struct ImportHistoryTemplate {
 pub async fn import_history_page(
     State(state): State<AppState>,
     Extension(session): Extension<Session>,
+    nav: Extension<crate::nav::NavModel>,
 ) -> Response {
     let rows = audit_rows_page(&state.pool, None, Some("IMPORT"), None, None, 100, 0).await;
     render(ImportHistoryTemplate {
         acting_user: session.user_id.clone(),
+        nav: nav.0.clone(),
         csrf_token: session.csrf_token.clone(),
         rows,
     })
@@ -582,6 +772,7 @@ pub async fn import_history_page(
 #[template(path = "help.html")]
 pub struct HelpTemplate {
     pub acting_user: String,
+    pub nav: crate::nav::NavModel,
     pub csrf_token: String,
     pub role_code: String,
 }
@@ -590,10 +781,12 @@ pub struct HelpTemplate {
 pub async fn help_page(
     State(state): State<AppState>,
     Extension(session): Extension<Session>,
+    nav: Extension<crate::nav::NavModel>,
 ) -> Response {
     let role_code = primary_role(&state.pool, &session.user_id).await;
     render(HelpTemplate {
         acting_user: session.user_id.clone(),
+        nav: nav.0.clone(),
         csrf_token: session.csrf_token.clone(),
         role_code,
     })
@@ -607,6 +800,7 @@ pub async fn help_page(
 #[template(path = "status_page.html")]
 pub struct StatusPageTemplate {
     pub acting_user: String,
+    pub nav: crate::nav::NavModel,
     pub csrf_token: String,
     pub modules: Vec<crate::api::StatusChip>,
     pub overall: String,
@@ -617,6 +811,7 @@ pub struct StatusPageTemplate {
 pub async fn status_page(
     State(state): State<AppState>,
     Extension(session): Extension<Session>,
+    nav: Extension<crate::nav::NavModel>,
 ) -> Response {
     let modules_map = crate::status::probe_modules(&state).await;
     let labels: [(&str, &str); 6] = [
@@ -644,6 +839,7 @@ pub async fn status_page(
     let timestamp = chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true);
     render(StatusPageTemplate {
         acting_user: session.user_id.clone(),
+        nav: nav.0.clone(),
         csrf_token: session.csrf_token.clone(),
         modules,
         overall,
@@ -659,6 +855,7 @@ pub async fn status_page(
 #[template(path = "profile.html")]
 pub struct ProfileTemplate {
     pub acting_user: String,
+    pub nav: crate::nav::NavModel,
     pub csrf_token: String,
     pub roles: Vec<String>,
     pub saved: bool,
@@ -679,11 +876,13 @@ async fn roles_of(pool: &SqlitePool, user_id: &str) -> Vec<String> {
 pub async fn profile_page(
     State(state): State<AppState>,
     Extension(session): Extension<Session>,
+    nav: Extension<crate::nav::NavModel>,
     Query(q): Query<HashMap<String, String>>,
 ) -> Response {
     let roles = roles_of(&state.pool, &session.user_id).await;
     render(ProfileTemplate {
         acting_user: session.user_id.clone(),
+        nav: nav.0.clone(),
         csrf_token: session.csrf_token.clone(),
         roles,
         saved: q.get("saved").map(|v| v == "1").unwrap_or(false),
@@ -703,6 +902,7 @@ pub struct ChangePasswordForm {
 pub async fn profile_change_password(
     State(state): State<AppState>,
     Extension(session): Extension<Session>,
+    nav: Extension<crate::nav::NavModel>,
     Form(form): Form<ChangePasswordForm>,
 ) -> Response {
     let render_error = |msg: String, status: StatusCode| {
@@ -722,6 +922,7 @@ pub async fn profile_change_password(
                 Html(
                     ProfileTemplate {
                         acting_user: user_id.clone(),
+                        nav: nav.0.clone(),
                         csrf_token: csrf,
                         roles,
                         saved: false,
@@ -824,6 +1025,7 @@ pub struct PermissionRow {
 #[template(path = "admin_roles.html")]
 pub struct AdminRolesTemplate {
     pub acting_user: String,
+    pub nav: crate::nav::NavModel,
     pub csrf_token: String,
     pub roles: Vec<RoleRow>,
     pub permissions: Vec<PermissionRow>,
@@ -843,6 +1045,7 @@ impl AdminRolesTemplate {
 pub async fn admin_roles_page(
     State(state): State<AppState>,
     Extension(session): Extension<Session>,
+    nav: Extension<crate::nav::NavModel>,
 ) -> Response {
     let roles: Vec<RoleRow> =
         sqlx::query_as("SELECT role_id, role_name, role_code FROM roles ORDER BY role_code")
@@ -863,6 +1066,7 @@ pub async fn admin_roles_page(
             .unwrap_or_default();
     render(AdminRolesTemplate {
         acting_user: session.user_id.clone(),
+        nav: nav.0.clone(),
         csrf_token: session.csrf_token.clone(),
         roles,
         permissions,
@@ -885,6 +1089,7 @@ pub struct SessionRow {
 #[template(path = "admin_sessions.html")]
 pub struct AdminSessionsTemplate {
     pub acting_user: String,
+    pub nav: crate::nav::NavModel,
     pub csrf_token: String,
     pub sessions: Vec<SessionRow>,
     pub purged: bool,
@@ -894,6 +1099,7 @@ pub struct AdminSessionsTemplate {
 pub async fn admin_sessions_page(
     State(state): State<AppState>,
     Extension(session): Extension<Session>,
+    nav: Extension<crate::nav::NavModel>,
     Query(q): Query<HashMap<String, String>>,
 ) -> Response {
     let sessions: Vec<SessionRow> = sqlx::query_as(
@@ -906,6 +1112,7 @@ pub async fn admin_sessions_page(
     .unwrap_or_default();
     render(AdminSessionsTemplate {
         acting_user: session.user_id.clone(),
+        nav: nav.0.clone(),
         csrf_token: session.csrf_token.clone(),
         sessions,
         purged: q.get("purged").map(|v| v == "1").unwrap_or(false),
@@ -944,6 +1151,7 @@ pub async fn admin_sessions_purge(
 #[template(path = "admin_system.html")]
 pub struct AdminSystemTemplate {
     pub acting_user: String,
+    pub nav: crate::nav::NavModel,
     pub csrf_token: String,
     pub version: String,
     pub migration_count: i64,
@@ -958,6 +1166,7 @@ pub struct AdminSystemTemplate {
 pub async fn admin_system_page(
     State(state): State<AppState>,
     Extension(session): Extension<Session>,
+    nav: Extension<crate::nav::NavModel>,
 ) -> Response {
     let count = |sql: &'static str| {
         let pool = &state.pool;
@@ -977,6 +1186,7 @@ pub async fn admin_system_page(
         count("SELECT COUNT(*) FROM sessions WHERE expires_at > datetime('now')").await;
     render(AdminSystemTemplate {
         acting_user: session.user_id.clone(),
+        nav: nav.0.clone(),
         csrf_token: session.csrf_token.clone(),
         version: env!("CARGO_PKG_VERSION").to_string(),
         migration_count,

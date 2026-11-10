@@ -12,12 +12,14 @@ use std::path::{Path, PathBuf};
 
 /// Directories scanned relative to the repository root (the platform crate's
 /// manifest dir is inside the repo root; the root is its parent).
-const SCAN_DIRS: [&str; 5] = [
+const SCAN_DIRS: [&str; 7] = [
     "core/src",
     "platform/src",
     "platform/templates",
     "platform/migrations",
     "web/assets",
+    "web/src-tauri/src",
+    "crates/kem/src",
 ];
 
 const TEXT_EXTENSIONS: [&str; 6] = ["rs", "html", "css", "sql", "toml", "md"];

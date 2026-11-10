@@ -1,35 +1,32 @@
-{% macro nav(acting_user, csrf_token) %}
+{# 導覽共用 macro（計畫 1793033568961 W2）：由 console_manifest SSOT 經
+   platform::nav::NavModel 生成；middleware 每請求建構，handler 一行複製。
+   規則：無權限入口不渲染（NavModel 已過濾）；目前頁 aria-current="page"；
+   群組為 <details> 零 JS 下拉；角色徽章僅在有 role_code 時渲染。
+   W4：輸出尾端附帶資料八態掛點（每頁 DOM 契約）。 #}
+{% import "partials/state_anchors.html" as state_anchors %}
+{% macro site_nav(nav) %}
 <nav class="site-nav" aria-label="主導覽">
     <div class="container">
-        <a href="/">總覽</a>
-        <a href="/transactions">交易</a>
-        <a href="/bankpay">銀行支付</a>
+        {% for g in nav.groups %}
+        {% if g.is_menu %}
         <details class="nav-menu">
-            <summary>匯入與草稿</summary>
+            <summary>{{ g.label }}</summary>
             <div class="nav-menu-items">
-                <a href="/import">快速匯入</a>
-                <a href="/drafts">草稿解析</a>
-                <a href="/import/history">匯入歷史</a>
+                {% for it in g.items %}
+                <a href="{{ it.href }}"{% if it.active %} aria-current="page"{% endif %}>{{ it.label }}</a>
+                {% endfor %}
             </div>
         </details>
-        <details class="nav-menu">
-            <summary>報表分析</summary>
-            <div class="nav-menu-items">
-                <a href="/reports/monthly">月報表</a>
-                <a href="/reports/trial-balance">試算表</a>
-                <a href="/reports/ledger">總分類帳</a>
-                <a href="/reports/pivot?rows=account&cols=month&measure=debit">樞紐分析</a>
-                <a href="/reports/parallel?months=6">平行座標投影</a>
-            </div>
-        </details>
-        <a href="/help">說明</a>
+        {% else %}
+        {% for it in g.items %}
+        <a href="{{ it.href }}"{% if it.active %} aria-current="page"{% endif %}>{{ it.label }}</a>
+        {% endfor %}
+        {% endif %}
+        {% endfor %}
+        {% if !nav.role_code.is_empty() %}
+        <span class="nav-role-badge" title="目前角色">{{ nav.role_code }}</span>
+        {% endif %}
     </div>
 </nav>
-{% endmacro %}
-
-{% macro logout(acting_user, csrf_token) %}
-<form method="post" action="/logout" class="form-inline">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-    <button class="btn btn-secondary" type="submit">登出</button>
-</form>
+{{ state_anchors::state_anchors() }}
 {% endmacro %}

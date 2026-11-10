@@ -715,18 +715,18 @@ async fn bankpay_config_form_requires_manage_and_saves() {
 async fn tauri_preview_serves_desktop_ui_with_cross_nav() {
     let (app, pool) = in_memory_app().await;
     seed_admin(&pool).await;
-    // 未登入 → 303（HTML 群組）。
+    // 公開路由（純靜態設計文件，無任何資料）：未登入亦 200。
     let (status, _, _) = send(app.clone(), get("/tauri-preview", None)).await;
-    assert_eq!(status, StatusCode::SEE_OTHER);
+    assert_eq!(status, StatusCode::OK);
 
     let cookie = login(&app).await;
     let (status, body, _) = send(app.clone(), get("/tauri-preview", Some(&cookie))).await;
     assert_eq!(status, StatusCode::OK, "desktop UI served verbatim");
     assert!(
-        body.contains("Flaps ERP 工作台"),
-        "desktop shell title present"
+        body.contains("銀行金流整合平台"),
+        "legacy 1420 page title present"
     );
-    // 雙向整合連結：桌面版頁內可回伺服器工作台。
+    // 雙向整合連結：舊版頁內可回伺服器工作台。
     assert!(
         body.contains("工作台（伺服器版）"),
         "cross-link back to platform must exist"

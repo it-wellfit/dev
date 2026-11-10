@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+{% import "partials/studio_nav.html" as studio_nav %}
 <html lang="zh-Hant-TW">
 <head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,6 +12,7 @@
         <div><h1>活動工作階段</h1><p class="app-subtitle">伺服器端可撤銷 session（T-01/R06）；過期清理為維運動作</p></div>
         <p class="app-subtitle">使用者：<strong>{{ acting_user }}</strong>｜<a class="btn btn-secondary" href="/">返回工作台</a></p>
     </div></header>
+    {{ studio_nav::site_nav(nav) }}
     <main id="main" class="container">
         {% if purged %}
         <div class="panel" role="status"><h3>過期工作階段已清除</h3><p class="section-note">purge_expired_sessions 已執行（冪等維運操作）。</p></div>

@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+{% import "partials/studio_nav.html" as studio_nav %}
 <html lang="zh-Hant-TW">
 <head>
     <meta charset="UTF-8">
@@ -23,6 +24,7 @@
             </p>
         </div>
     </header>
+    {{ studio_nav::site_nav(nav) }}
 
     <main id="main" class="container">
         {% if let Some(e) = error %}
@@ -43,7 +45,7 @@
                 <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                 <div class="form-row">
                     <label for="acc-key">科目鍵值 <span aria-hidden="true">*</span></label>
-                    <input class="input" type="text" id="acc-key" name="account_key" value="{{ form.code }}" required maxlength="32" placeholder="例如：BANK-001">
+                    <input class="input" type="text" id="acc-key" name="account_code" value="{{ form.code }}" required maxlength="32" placeholder="例如：BANK-001">
                     <p class="hint">代碼必須唯一；首次使用的代碼才會新增（重複代碼送出會被拒絕）。</p>
                 </div>
                 <div class="form-row">
@@ -108,7 +110,7 @@
                     <tbody>
                         {% for a in g.roots %}
                         <tr>
-                            <td>{{ a.code }}</td>
+                            <td><a href="/accounts/{{ a.id }}"><code>{{ a.code }}</code></a></td>
                             <td>
                                 {{ a.name }}
                                 {% if !a.children.is_empty() %}
@@ -116,7 +118,7 @@
                                     <summary>{{ a.children.len() }} 子科目</summary>
                                     <ul>
                                         {% for child in a.children %}
-                                        <li>{{ child.code }} {{ child.name }}（{{ child.currency }}）{% if child.active %} · 啟用{% else %} · <span class="badge badge-neutral">停用</span>{% endif %}</li>
+                                        <li><a href="/accounts/{{ child.id }}"><code>{{ child.code }}</code></a> {{ child.name }}（{{ child.currency }}）{% if child.active %} · 啟用{% else %} · <span class="badge badge-neutral">停用</span>{% endif %}</li>
                                         {% endfor %}
                                     </ul>
                                 </details>
