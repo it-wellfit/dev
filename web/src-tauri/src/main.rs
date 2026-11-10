@@ -22,6 +22,11 @@ const PLATFORM_URL: &str = "http://127.0.0.1:8090/";
 
 fn main() {
     tauri::Builder::default()
+        // W10（計畫 1793033568961）：自動更新鏈——minisign 簽章驗證由
+        // tauri.conf.json plugins.updater.pubkey 鎖定（不可停用）；
+        // Windows 走 NSIS passive 靜默更新；endpoint 指向內部 feed
+        // （https://updates.flaps.internal/erp/latest.json）。
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(|app| {
             ensure_platform_server();
             // R4（2026-11-10）：就緒後才顯示主視窗（visible:false 於 conf）；

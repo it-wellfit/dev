@@ -4,8 +4,9 @@
 //! 設計原則（憲章 §2.3＋AGENTS §4＋KEM §8）：
 //! - 純靜態 HTML＋共享 CSS；`<script>` 計數恆為 0；互動僅用 :target/:has()
 //! - 深色模式（prefers-color-scheme）、列印樣式、:focus-visible 全覆蓋
-//! - 頁數 = f(claims, workflows, roles, ledger chunks)——有機擴展律：
-//!   pages ≈ 21 + claims + ceil(ledger/200)；主控台規模隨知識庫成長
+//! - 頁數擴展律（計畫 1793033568961 §3.3 實測校準）：
+//!   pages = 24 + claims + ceil(ledger/200)（24＝HTML 23 頁＋console.css 計數；
+//!   與 console_manifest::static_console_pages 逐次相等，test 斷言鎖定）
 //! - 角色 × 工作流 × 情境全覆蓋（developer/reviewer/operator/pm/auditor）
 
 use crate::filing::status_counts;
@@ -193,49 +194,73 @@ fn page(title: &str, active: &str, body: &str) -> String {
     h
 }
 
-pub const CONSOLE_CSS: &str = r#":root{
-  --bg:#f4f6f9;--surface:#fff;--ink:#1b2733;--muted:#5c6b7a;--accent:#0b5cab;
-  --ok:#177245;--warn:#9a5b00;--err:#b3261e;--border:#d9dfe7;--chip:#eef2f7;
-  --s1:4px;--s2:8px;--s3:16px;--s4:24px;--radius:10px;
-  --font:"Microsoft JhengHei","PingFang TC","Noto Sans TC",system-ui,sans-serif;
-  --mono:Consolas,"Cascadia Mono",monospace}
-@media (prefers-color-scheme:dark){:root{--bg:#10161d;--surface:#182029;--ink:#e8edf3;
-  --muted:#9db0c2;--accent:#6db3f2;--ok:#5cd6a2;--warn:#f0b45c;--err:#ff8f86;
-  --border:#2c3947;--chip:#212c38}}
+pub const CONSOLE_CSS: &str = r#"/* 知識控制台樣式（W7 全收斂：token 名稱與值＝web/assets/design-system.css canonical；
+   色差屬 grill-E 裁定之收斂結果，映射表見 PLAN_REGISTER addendum #20）。
+   本檔為獨立部署工件：token 值複製自 canonical（漂移由 guards 測試比對攔截）。 */
+:root{
+  --color-surface:#ffffff;
+  --color-surface-sunken:#f8fafc;
+  --color-text-primary:#0f172a;
+  --color-text-secondary:#475569;
+  --color-border:#e2e8f0;
+  --color-neutral-100:#f1f5f9;
+  --color-primary:#2563eb;
+  --color-success:#16a34a;
+  --color-warning:#d97706;
+  --color-error:#dc2626;
+  --space-1:4px;--space-2:8px;--space-4:16px;--space-6:24px;
+  --radius-lg:12px;
+  --font-family-sans:"Inter","Noto Sans TC","Microsoft JhengHei","PingFang TC",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  --font-family-mono:"JetBrains Mono","Cascadia Mono","Fira Code",Consolas,"Liberation Mono",monospace}
+@media (prefers-color-scheme:dark){:root{
+  --color-surface:#0f172a;
+  --color-surface-sunken:#020617;
+  --color-text-primary:#f1f5f9;
+  --color-text-secondary:#cbd5e1;
+  --color-border:#334155;
+  --color-neutral-100:#1e293b;
+  --color-primary:#60a5fa;
+  --color-success:#22c55e;
+  --color-warning:#f59e0b;
+  --color-error:#f87171}}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);line-height:1.65}
-header{background:var(--surface);border-bottom:1px solid var(--border);padding:var(--s2) var(--s3);position:sticky;top:0;z-index:2}
-h1{margin:0;font-size:1.25rem}.sub{margin:2px 0 0;color:var(--muted);font-size:.8rem}
-nav{display:flex;gap:var(--s1);margin-top:var(--s2);flex-wrap:wrap}
-nav a{padding:5px 12px;border-radius:999px;text-decoration:none;color:var(--ink);border:1px solid var(--border);font-size:.85rem}
-nav a:hover{background:var(--chip)}
-nav a.active,nav a:focus-visible{background:var(--chip);border-color:var(--accent);color:var(--accent);font-weight:600}
-nav a:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
-main{max-width:1100px;margin:0 auto;padding:var(--s3)}
-.panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:var(--s3);margin-bottom:var(--s2)}
-h2{font-size:1rem;margin:0 0 var(--s2)}
-h2 small{font-weight:400;color:var(--muted)}
+body{margin:0;background:var(--color-surface-sunken);color:var(--color-text-primary);font-family:var(--font-family-sans);line-height:1.65}
+header{background:var(--color-surface);border-bottom:1px solid var(--color-border);padding:var(--space-2) var(--space-4);position:sticky;top:0;z-index:2}
+h1{margin:0;font-size:1.25rem}.sub{margin:2px 0 0;color:var(--color-text-secondary);font-size:.8rem}
+nav{display:flex;gap:var(--space-1);margin-top:var(--space-2);flex-wrap:wrap}
+nav a{padding:5px 12px;border-radius:999px;text-decoration:none;color:var(--color-text-primary);border:1px solid var(--color-border);font-size:.85rem}
+nav a:hover{background:var(--color-neutral-100)}
+nav a.active,nav a:focus-visible{background:var(--color-neutral-100);border-color:var(--color-primary);color:var(--color-primary);font-weight:600}
+nav a:focus-visible{outline:3px solid var(--color-primary);outline-offset:2px}
+main{max-width:1100px;margin:0 auto;padding:var(--space-4)}
+.panel{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:var(--space-4);margin-bottom:var(--space-2)}
+h2{font-size:1rem;margin:0 0 var(--space-2)}
+h2 small{font-weight:400;color:var(--color-text-secondary)}
+h2.mt-4{margin-top:var(--space-6)}
+.mt-3{margin-top:var(--space-4)}
+.kpi-num{font-size:1.5rem;font-weight:700}
+.log-tail{white-space:pre-wrap}
 table{width:100%;border-collapse:collapse;font-size:.86rem}
-th{text-align:left;color:var(--muted);border-bottom:2px solid var(--border);padding:6px var(--s2);white-space:nowrap}
-td{padding:8px var(--s2);border-bottom:1px solid var(--border);vertical-align:top}
-tbody tr:hover{background:color-mix(in srgb,var(--accent) 5%,transparent)}
-code,.mono{font-family:var(--mono);font-size:.82rem}
-code.cmd{background:var(--chip);padding:2px 8px;border-radius:6px;display:inline-block}
-a{color:var(--accent)}
-a:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:3px}
-.pill{display:inline-block;border-radius:999px;padding:1px 10px;font-size:.72rem;font-weight:600;background:var(--chip);color:var(--muted)}
-.pill.published{background:color-mix(in srgb,var(--ok) 15%,var(--surface));color:var(--ok)}
-.pill.superseded,.pill.deprecated{background:color-mix(in srgb,var(--warn) 16%,var(--surface));color:var(--warn)}
-.pill.draft,.pill.pending_review{background:var(--chip);color:var(--muted)}
-.pill.retired{background:color-mix(in srgb,var(--err) 12%,var(--surface));color:var(--err)}
-.bar{position:relative;height:8px;background:var(--chip);border-radius:99px;min-width:80px;display:inline-block;vertical-align:middle}
-.bar i{position:absolute;inset:0 auto 0 0;border-radius:99px;background:var(--accent)}
-.bar.hi i{background:var(--ok)}.bar.lo i{background:var(--warn)}
-.banner{border-left:4px solid var(--warn);background:color-mix(in srgb,var(--warn) 8%,var(--surface));padding:var(--s2) var(--s3);border-radius:var(--radius);margin-bottom:var(--s2)}
-.empty{color:var(--muted);text-align:center;padding:var(--s4)}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:var(--s2)}
-.type{color:var(--muted);font-size:.78rem}
-footer{color:var(--muted);font-size:.74rem;padding:var(--s3);max-width:1100px;margin:0 auto}
+th{text-align:left;color:var(--color-text-secondary);border-bottom:2px solid var(--color-border);padding:6px var(--space-2);white-space:nowrap}
+td{padding:8px var(--space-2);border-bottom:1px solid var(--color-border);vertical-align:top}
+tbody tr:hover{background:color-mix(in srgb,var(--color-primary) 5%,transparent)}
+code,.mono{font-family:var(--font-family-mono);font-size:.82rem}
+code.cmd{background:var(--color-neutral-100);padding:2px 8px;border-radius:6px;display:inline-block}
+a{color:var(--color-primary)}
+a:focus-visible{outline:3px solid var(--color-primary);outline-offset:2px;border-radius:3px}
+.pill{display:inline-block;border-radius:999px;padding:1px 10px;font-size:.72rem;font-weight:600;background:var(--color-neutral-100);color:var(--color-text-secondary)}
+.pill.published{background:color-mix(in srgb,var(--color-success) 15%,var(--color-surface));color:var(--color-success)}
+.pill.superseded,.pill.deprecated{background:color-mix(in srgb,var(--color-warning) 16%,var(--color-surface));color:var(--color-warning)}
+.pill.draft,.pill.pending_review{background:var(--color-neutral-100);color:var(--color-text-secondary)}
+.pill.retired{background:color-mix(in srgb,var(--color-error) 12%,var(--color-surface));color:var(--color-error)}
+.bar{position:relative;height:8px;background:var(--color-neutral-100);border-radius:99px;min-width:80px;display:inline-block;vertical-align:middle}
+.bar i{position:absolute;inset:0 auto 0 0;border-radius:99px;background:var(--color-primary)}
+.bar.hi i{background:var(--color-success)}.bar.lo i{background:var(--color-warning)}
+.banner{border-left:4px solid var(--color-warning);background:color-mix(in srgb,var(--color-warning) 8%,var(--color-surface));padding:var(--space-2) var(--space-4);border-radius:var(--radius-lg);margin-bottom:var(--space-2)}
+.empty{color:var(--color-text-secondary);text-align:center;padding:var(--space-6)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:var(--space-2)}
+.type{color:var(--color-text-secondary);font-size:.78rem}
+footer{color:var(--color-text-secondary);font-size:.74rem;padding:var(--space-4);max-width:1100px;margin:0 auto}
 @media print{header{position:static}nav{display:none}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 "#;
@@ -321,9 +346,9 @@ fn claim_body(c: &Claim, vec_present: bool) -> String {
             "未建立／已陳舊（BM25-only 路徑）"
         }
     );
-    b.push_str("<h2 style=\"margin-top:16px\">主張內容</h2><p>");
+    b.push_str("<h2 class=\"mt-4\">主張內容</h2><p>");
     b.push_str(&esc(&c.body));
-    b.push_str("</p><h2 style=\"margin-top:16px\">證據</h2><table><thead><tr><th>來源檔</th><th>修訂版</th><th>逐字引證</th></tr></thead><tbody>");
+    b.push_str("</p><h2 class=\"mt-4\">證據</h2><table><thead><tr><th>來源檔</th><th>修訂版</th><th>逐字引證</th></tr></thead><tbody>");
     for ev in &c.evidence {
         let _ = write!(
             b,
@@ -337,7 +362,7 @@ fn claim_body(c: &Claim, vec_present: bool) -> String {
     b.push_str("</tbody></table>");
     let _ = write!(
         b,
-        "<p class=\"mono\" style=\"margin-top:12px\"><a href=\"{}.json\">檢視機器 SSOT JSON →</a></p>",
+        "<p class=\"mono mt-3\"><a href=\"{}.json\">檢視機器 SSOT JSON →</a></p>",
         c.id
     );
     b.push_str("</section>");
@@ -382,7 +407,7 @@ pub fn generate(
             let _ = (status, count);
             let _ = write!(
                 b,
-                "<div class=\"panel\"><div class=\"mono\" style=\"font-size:1.5rem;font-weight:700\">{count}</div><div class=\"type\">{label}</div></div>"
+                "<div class=\"panel\"><div class=\"mono kpi-num\">{count}</div><div class=\"type\">{label}</div></div>"
             );
         }
         b.push_str("</div>");
@@ -652,7 +677,7 @@ pub fn generate(
             .unwrap_or_default();
         b.push_str("<section class=\"panel\"><h2>維運日誌尾部</h2>");
         if let Ok(log) = std::fs::read_to_string(&log_path) {
-            b.push_str("<pre class=\"mono\" style=\"white-space:pre-wrap\">");
+            b.push_str("<pre class=\"mono log-tail\">");
             let tail: Vec<&str> = log.lines().rev().take(30).collect();
             b.push_str(&esc(&tail.into_iter().rev().collect::<Vec<_>>().join("\n")));
             b.push_str("</pre>");
@@ -670,4 +695,88 @@ pub fn generate(
 /// 供 dashboard 狀態卡重導出的政府計數（避免重複實作）。
 pub fn status_summary(claims: &[Claim]) -> [(ClaimStatus, usize); 6] {
     status_counts(claims)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::PathBuf;
+
+    /// W6（計畫 1793033568961）：generate() 回傳頁數＝manifest 擴展律
+    /// `static_console_pages(claims, ledger)`——逐次相等斷言。
+    /// 以 repo 知識庫（../../knowledge）為輸入、temp 目錄為輸出（不觸碰交付物）。
+    #[test]
+    fn generated_page_count_matches_manifest_expansion_law() {
+        let root = PathBuf::from("../../knowledge");
+        if !root.join("claims").is_dir() {
+            // 環境無知識庫：誠實跳過（UNKNOWN ≠ PASS）。
+            eprintln!("skip: knowledge root not found at {}", root.display());
+            return;
+        }
+        let claims = crate::filing::load_claims(&root.join("claims")).expect("load claims");
+        let ledger_path = root.join("ledger.jsonl");
+        let entries = if ledger_path.exists() {
+            crate::ledger::read_all(&ledger_path).expect("read ledger")
+        } else {
+            Vec::new()
+        };
+        let queue =
+            crate::gov::pending_queue(&root.join(".kem/review-queue.jsonl")).unwrap_or_default();
+        let vectors = crate::embed::load_vectors(&root.join(".kem/vectors.json"))
+            .ok()
+            .flatten();
+
+        let out = std::env::temp_dir().join(format!("kem-console-law-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&out);
+        std::fs::create_dir_all(&out).expect("temp out");
+        let root_tmp = out.join("knowledge");
+        std::fs::create_dir_all(&root_tmp).expect("tmp knowledge root");
+
+        let pages =
+            generate(&root_tmp, &claims, &entries, &queue, vectors.as_ref()).expect("generate");
+        let expected = console_manifest::static_console_pages(claims.len(), entries.len());
+        assert_eq!(
+            pages,
+            expected,
+            "擴展律失準：generate()={pages} vs manifest={expected}（claims={}，ledger={}）",
+            claims.len(),
+            entries.len()
+        );
+        // HTML 檔數＝回傳值 −1（console.css 計數）。
+        let html_count = count_html(&root_tmp.join("console"));
+        assert_eq!(html_count, pages - 1, "HTML 檔數應為回傳頁數減 CSS 計數");
+        // W7：生成 CSS 不得殘留舊詞彙 token（--bg/--accent 等自造名稱）。
+        let css = std::fs::read_to_string(root_tmp.join("console/assets/console.css"))
+            .expect("console.css");
+        for legacy in ["--bg:", "--accent:", "--ink:", "--s1:", "--font:"] {
+            assert!(
+                !css.contains(legacy),
+                "legacy token {legacy} survived W7 convergence"
+            );
+        }
+        // W6：生成頁零內聯樣式（CSP 相容契約）。
+        let index_html =
+            std::fs::read_to_string(root_tmp.join("console/index.html")).expect("index.html");
+        assert!(
+            !index_html.contains("style="),
+            "inline style survived de-inlining"
+        );
+
+        let _ = std::fs::remove_dir_all(&out);
+    }
+
+    fn count_html(dir: &Path) -> usize {
+        let mut n = 0;
+        if let Ok(rd) = std::fs::read_dir(dir) {
+            for e in rd.flatten() {
+                let p = e.path();
+                if p.is_dir() {
+                    n += count_html(&p);
+                } else if p.extension().and_then(|x| x.to_str()) == Some("html") {
+                    n += 1;
+                }
+            }
+        }
+        n
+    }
 }

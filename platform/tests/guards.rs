@@ -136,3 +136,100 @@ fn templates_have_zero_javascript() {
         problems.join("\n")
     );
 }
+
+// ---------------------------------------------------------------------------
+// W6/W7（計畫 1793033568961）：KEM 控制台生成物護欄＋設計 token 收斂檢查。
+// ---------------------------------------------------------------------------
+
+#[test]
+fn generated_console_has_zero_javascript_and_no_inline_styles() {
+    let root = repo_root();
+    let console = root.join("knowledge/console");
+    assert!(
+        console.join("index.html").is_file(),
+        "knowledge/console/index.html must exist (run `kem --root knowledge console`)"
+    );
+    let mut files = Vec::new();
+    collect_text_files(&console, &mut files);
+    assert!(
+        files.len() >= 40,
+        "console pages missing (found {})",
+        files.len()
+    );
+    let mut problems = Vec::new();
+    for file in &files {
+        let text = fs::read_to_string(file).unwrap_or_default();
+        if text.contains("<script") {
+            problems.push(format!("{}: <script> element", file.display()));
+        }
+        // W6：生成頁內聯樣式歸零（平台 CSP style-src 'self' 會阻擋）。
+        if text.contains("style=") {
+            problems.push(format!("{}: inline style attribute", file.display()));
+        }
+    }
+    assert!(
+        problems.is_empty(),
+        "KEM console zero-JS / de-inline invariant violated:\n{}",
+        problems.join("\n")
+    );
+}
+
+#[test]
+fn console_css_tokens_are_canonical_design_system_values() {
+    // W7（grill-E 全收斂）：console.css 的自造色值必須逐字存在於
+    // web/assets/design-system.css canonical 調色（漂移即攔截）。
+    let root = repo_root();
+    let console_css = fs::read_to_string(root.join("knowledge/console/assets/console.css"))
+        .expect("console.css must exist");
+    let design = fs::read_to_string(root.join("web/assets/design-system.css"))
+        .expect("design-system.css must exist");
+    // 抽取 console.css 的色值字面值（#rgb/#rrggbb）。
+    let mut problems = Vec::new();
+    let mut in_def = false;
+    for line in console_css.lines() {
+        let l = line.trim();
+        if l.starts_with(":root{") || l.starts_with("--color-") {
+            in_def = true;
+        }
+        if l.starts_with('}') {
+            in_def = false;
+        }
+        // 僅檢查 :root 定義區的色值（規則區的 color-mix 引用不受限）。
+        if !in_def {
+            continue;
+        }
+        for tok in l.split(|c: char| c == ';' || c == '{' || c == '}') {
+            let tok = tok.trim();
+            if let Some(hash) = tok.find('#') {
+                let hex = &tok[hash..];
+                let hex = hex.split(' ').next().unwrap_or(hex);
+                let valid = hex.len() == 4 || hex.len() == 7;
+                if !valid {
+                    continue;
+                }
+                if !design.to_uppercase().contains(&hex.to_uppercase()) {
+                    problems.push(format!("non-canonical color {hex} (line: {tok})"));
+                }
+            }
+        }
+    }
+    assert!(
+        problems.is_empty(),
+        "console.css token drift (grill-E 全收斂違反):\n{}",
+        problems.join("\n")
+    );
+    // 舊詞彙 token 不得殘留（W7 收斂完成後的防回歸）。
+    for legacy in [
+        "--bg:",
+        "--accent:",
+        "--ink:",
+        "--muted:",
+        "--s1:",
+        "--font:",
+    ] {
+        assert!(
+            !console_css.contains(legacy),
+            "legacy token {legacy} survived convergence"
+        );
+    }
+}

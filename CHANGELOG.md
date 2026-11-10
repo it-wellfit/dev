@@ -3,6 +3,24 @@
 本檔記錄根 workspace（`core/`、`platform/`、`web/`、`crates/flaps_bridge`）的實際變更。格式參考 Keep a Changelog。子專案（ekpi-platform、Wellfit、SyncMesh）各自有變更記錄。
 
 
+## [Unreleased] — 2026-11-10（統一營運控制台 manifest 雙渲染器；addendum #20）
+
+### Added
+- **Console Manifest SSOT**（計畫 `1793033568961` W1）：新 crate `crates/console_manifest`——NAV_GROUPS(11)/PAGES(65 登記)/FAMILIES(2)/擴展律 `pages=24+claims+⌈ledger/200⌉`（與 `kem console generate()` 逐次相等；實測 45 頁）；13 契約測試。
+- **導覽統一**（W2/grill-B）：`platform/src/nav.rs` NavModel 由 manifest 生成、`require_session` middleware 每請求注入；38 模板＋handlers 接線；`partials/studio_nav.html` site_nav macro（aria-current、零 JS 下拉、角色徽章）。**無權限入口不渲染**——/audit 死連結（B7a）根治，回歸測試鎖定。
+- **/accounts/:id 科目詳情**（W3/F4）：LEDGER_READ 閘、未知 id 404 樣式頁、列表/子科目連結；`partials/state_anchors.html` 八態掛點（W4）經導覽 macro 全頁輸出。
+- **/console/*path 知識控制台伺服**（W6/grill-A）：session 保護、防穿越 fail-closed、副檔名白名單（html/css/json）、多候選根解析（exe_dir→CWD→父層）；KEM 生成頁 45 頁重新生成（token 全收斂＋零內聯樣式）。
+- **發行鏈現代化**（W10）：tauri-plugin-updater 接線（minisign 公鑰鎖定/passive/createUpdaterArtifacts）；minisign 金鑰對（私鑰 repo 外）；NSIS resources 捆綁 knowledge/console；runbook `docs/release/UPDATER_RUNBOOK.md`。**unsigned (test-only)**。
+
+### Changed
+- **KEM console.css token 全收斂**（W7/grill-E）：canonical 名稱＋值（design-system.css SSOT）；色差映射表見 PLAN_REGISTER addendum #20；dark mode 對齊 canonical。
+- 擴展律文檔校正：`pages ≈ 21+…` → `pages = 24 + claims + ⌈ledger/200⌉`（實測校準）。
+- 死碼清除（F5）：`apihub::router()`/`workbench::router()`/`login_router()`（零呼叫者實證）。
+- runtime DB 狀態檔（flaps.db-shm/-wal）解除追蹤（.gitignore 意圖完成）。
+
+### Verified
+- 量測（2026-11-10）：fmt EXIT=0；clippy -D warnings EXIT=0；test **270 passed / 0 failed**（platform 153＋kem 43＋flaps_core 58＋console_manifest 13＋護欄/矩陣）；audit EXIT=0（2 allowed，audit.toml 載明）。
+- page_matrix：visitor 303／admin 200／store1 操作者 200＋治理 403／finance Write 200＋治理 403；安全標頭；導覽可達；aria-current；八態掛點；/console 200/303/404/穿越 5 形態/json 白名單；死連結回歸防護。
 ## [Unreleased] — 2026-11-09（第十四輪：PHASE-R — S1 檢索面 RAG 升級）
 
 ### Added

@@ -355,3 +355,29 @@ This addendum records execution facts only; it does not approve product scope, c
 3. Reconcile EKPI status summaries and legacy flat documentation against `docs/README.md`, `docs/quality/phase-gates.md`, and revision-bound assurance records.
 4. Ratify the Wellfit ISMS document hierarchy and scope; independently verify each standards edition and applicability from a primary source before using it as compliance evidence.
 5. Preserve every unresolved owner, bank, or data-governance decision as blocked; do not silently select a vendor, certification scope, cloud provider, or release target.
+
+## 2026-11-10 addendum #20 (統一營運控制台 manifest 雙渲染器：W1-W7/W10 實作)
+
+Executed per `.kilo/plans/1793033568961-unified-ops-console-manifest.md` v1.5（grill-me 全分支裁定：A/發行鏈/B/C/D/E）。
+
+| Item | Disposition | Evidence |
+|---|---|---|
+| W1 Console Manifest SSOT | 完成：新 crate `crates/console_manifest`（零外部依賴）——`NAV_GROUPS`(11)/`PAGES`(42 動態＋23 靜態)/`FAMILIES`(2)/擴展律 `24+claims+⌈ledger/200⌉`；13 契約測試綠 | `cargo test -p console_manifest` 13 passed |
+| W2 導覽統一 | 完成：`platform/src/nav.rs` NavModel（SSOT 過濾＋fail-closed 閘映射）；`require_session` middleware 注入（grill-B）；`partials/studio_nav.html` site_nav macro；38 模板＋handlers 接線；**無權限入口不渲染** | page_matrix：store1 nav 無 /audit 與 /admin/users（B7a 死連結回歸防護綠） |
+| W3 缺口關閉 | 完成：F4 `/accounts/:id`（LEDGER_READ 閘、未知 id→404 樣式、列表/子科目連結）；F5 死碼清除（apihub::router/workbench::router/login_router 零呼叫者實證後刪除）；audit.html 歸檔 SUPERSEDED | page_matrix：/accounts/ACC-A 200、NOPE 404；grep 死碼 0 命中 |
+| W4 八態掛點 | 完成：`partials/state_anchors.html`（empty/denied/error 隱藏語義錨點）經 site_nav 全頁輸出；states.html 維持八態 SSOT | page_matrix 斷言 data-state-empty/denied/error 綠 |
+| W5 矩陣擴充 | 完成：page_matrix 增 finance 身份（Write 頁 200/治理 403）、安全標頭（CSP/nosniff/DENY）、導覽可達、aria-current、POST 頁、死連結回歸 | `cargo test -p platform --test page_matrix` 2 passed |
+| W6 /console 靜態伺服 | 完成：`GET /console/*path`（session 保護、防穿越 fail-closed、副檔名白名單 html/css/json、grill-A 多候選根解析 exe_dir→CWD→父層 4 級）；KEM 生成頁零內聯樣式；護欄擴至 knowledge/console | page_matrix：index 200/css 200/303/穿越 5 形態 404/json 白名單 200 |
+| W6 KEM 接入 | 完成：擴展律文檔校正（≈21→24+claims+⌈ledger/200⌉）；generate()==manifest 律斷言測試；生成頁內聯樣式歸零（4 模式→類別） | `kem --root knowledge console`＝**45 頁**（24+20+1）；console.rs 測試綠 |
+| W7 token 全收斂 | 完成：CONSOLE_CSS 重寫為 canonical token 名稱＋值（grill-E 裁定；色差映射表見本條目後附）；dark mode 對齊 canonical；護欄測試比對色值 ∈ design-system 調色＋舊詞彙禁殘留 | guards 4/4 綠（含 console_css_tokens_are_canonical_design_system_values） |
+| W10 發行鏈現代化 | 完成（配置層）：tauri-plugin-updater 2.0 接線；minisign 金鑰對生成（--ci；私鑰於 %USERPROFILE%\.tauri\flaps-erp\，**repo 外**）；tauri.conf：pubkey/passive/createUpdaterArtifacts/內部 endpoint；NSIS resources 捆綁 knowledge/console（grill-A）；殼編譯綠 | web/src-tauri cargo check EXIT=0；pubkey 152 chars |
+| 四關 | 全綠：fmt EXIT=0；clippy -D warnings EXIT=0；test 270 passed/0 failed（platform 153＋kem 43＋flaps_core 58＋manifest 13＋新護欄/矩陣）；audit 2 allowed（audit.toml 載明） | 命令與 exit code 綁本 session 記錄 |
+| 提交 | b9797da feat(console)（66 files）＋63beb5a chore(release)（43 files）＋本檔 #20 | git log |
+
+**W7 色差映射表（grill-E 裁定之收斂結果，非視覺回歸）**：--accent #0b5cab→--color-primary #2563eb；--ok #177245→--color-success #16a34a；--warn #9a5b00→--color-warning #d97706；--err #b3261e→--color-error #dc2626；--ink #1b2733→--color-text-primary #0f172a；--muted #5c6b7a→--color-text-secondary #475569；--bg #f4f6f9→--color-surface-sunken #f8fafc；--border #d9dfe7→--color-border #e2e8f0；--chip #eef2f7→--color-neutral-100 #f1f5f9；--radius 10px→--radius-lg 12px。
+
+**W10 保管紀律**：私鑰＋密碼存於 `%USERPROFILE%\.tauri\flaps-erp\`（repo 外；遺失＝無法推送更新）。**所有產物現為 unsigned (test-only)**——購證（Azure Trusted Signing／OV/EV）前禁止生產分發聲明。runbook：`docs/release/UPDATER_RUNBOOK.md`。
+
+**未竟（誠實 UNKNOWN）**：W10 端到端安裝器構建（`cargo tauri build` 含 NSIS＋updater 產物三件）未於本 session 執行——需要 flaps-server release 構建＋數分鐘；endpoint feed 基礎設施（內部 HTTPS 主機）未建。KEM 控制台導覽字串完全由 manifest 生成（頁數/標題已接）——13 工作流 href 重構留待下一切片。
+
+This addendum records execution facts only; it does not approve product scope, certification, or release.
