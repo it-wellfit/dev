@@ -178,3 +178,23 @@
 2. 取代文件 → 原檔開頭加 `> ⚠️ SUPERSEDED by <新路徑>（保留供追溯）`，索引同步改註。
 3. 死鏈零容忍：本索引所有相對路徑以 `docs/` 為根；發現死鏈即修。
 4. 並行工作線之文件（如 FREE_AI_ROUTING、KNOWLEDGE_EVOLUTION_MODULE）收錄時註明所屬線，避免誤認為主線 SSOT。
+
+---
+
+## 6. Kilo 快照區追溯（工作區外；RP-6②）
+
+> Kilo 計畫快照區位於使用者 profile（`~/.local/share/kilo/plans/`，**工作區外**），由 Kilo 管理——**不搬移、不刪除**；此處僅登錄位置與版本鏈供追溯。SSOT 為 `docs/` 內文件。
+
+### 6.1 效能家族演化鏈（已核實）
+
+| 家族 | 版本鏈 | Kilo 內路徑（`~/.local/share/kilo/plans/`） |
+| :--- | :--- | :--- |
+| 效能進度報告（產品線） | v1 → **v2.0** | `1793787631643-flaps-erp-performance-progress-report.md` → `1793788660000-flaps-erp-performance-progress-report-v2.0.md`（35,198 B）＋ `.html`（66,298 B 渲染版） |
+| 安裝優化指南 | v1 → v2.0 → v3.0 → v4.0 → v5.0 → v6.0 | `1793787631643-...install-optimization-guide.md` → `1793788300000-...-v2.0.md` → `1793789000000-...-v3.0.md` → … |
+| 深度驗證報告 | — | `1793789700000-*`（deep-verification report） |
+
+> v2.0 產品線報告已入工作區為 [`research/FlapsErp產品線效能進度報告_v2.0.md`](research/FlapsErp產品線效能進度報告_v2.0.md)（RP-1 入冊）；Kilo 快照副本保留。
+
+### 6.2 其他專案計畫
+
+其他專案計畫（ISMS／ekpi-platform／MTRIX／Wellfit／ARES／KNB 等 ~50 份）見 Kilo 快照區；**歸各專案 SSOT，不複製不搬移**。
