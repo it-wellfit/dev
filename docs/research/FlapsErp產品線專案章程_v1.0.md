@@ -292,7 +292,7 @@
 ## 11. 附錄
 
 ### 11.1 參考文件
-- `flaps_erp_performance_analysis.md`（逆向工程分析報告）
+- `docs/research/FlapsErp產品線效能深度分析_v1.0.md`（逆向工程分析報告；2026-11-11 RP-6① 遷入）
 - `Wellfit/AGENTS.md`（Rust 專案規範）
 - `docs/product-solution.md`（產品解決方案）
 
