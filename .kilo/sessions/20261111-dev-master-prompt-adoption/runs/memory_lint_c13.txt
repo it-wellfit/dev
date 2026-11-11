@@ -1,0 +1,9 @@
+PASS [L1] corrections.md 結構（6 欄／ID 自 C-01 連續唯一／狀態值域／必填非空）
+PASS [L2] project.md 結構（4 欄／workspace 標籤值域／日期 YYYY-MM-DD）
+PASS [L3] project.md 新鮮度（覆核日期 >30 天且未標 STALE）
+PASS [L4] decisions.md 結構（7 欄／ID 自 D-01 連續唯一／狀態值域）
+PASS [L5] 四檔 §-引用解析（存在性；主計畫／本計畫／ADR）：checked=37, whitelisted=2
+PASS [L5b] 四檔 hyphen 形式偵測（§N-M，非慣例）
+PASS [L6] 預算（corrections ≤8KB；corrections+project ≤12KB）
+PASS [L7] README 索引條數一致（C／D 宣告值 vs 實檔）
+SUMMARY: FAIL=0 WARN=0 PASS=8 (refs checked=37, whitelisted=2)

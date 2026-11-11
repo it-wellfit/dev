@@ -1,0 +1,19 @@
+From: clerk@example.com
+To: erp@example.com
+Subject: =?utf-8?b?5oaZ6aCf6YCj5pu05pS55LuL?=
+MIME-Version: 1.0
+Date: Mon, 9 Nov 2026 10:00:00 +0800
+Content-Type: multipart/mixed; boundary="EMLBOUND"
+
+--EMLBOUND
+Content-Type: text/plain; charset=utf-8
+
+請參附件。
+--EMLBOUND
+Content-Disposition: attachment; filename="entries.csv"
+Content-Type: text/csv; charset=utf-8
+
+date,debit_account,credit_account,amount,currency,description
+2026-11-09,ACC-A,ACC-B,1500.5,TWD,EML 測試
+2026-11-09,ACC-C,ACC-D,99.99,USD,EML 第二列
+--EMLBOUND--

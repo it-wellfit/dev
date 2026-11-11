@@ -12,7 +12,7 @@ use std::path::{Path, PathBuf};
 
 /// Directories scanned relative to the repository root (the platform crate's
 /// manifest dir is inside the repo root; the root is its parent).
-const SCAN_DIRS: [&str; 7] = [
+const SCAN_DIRS: [&str; 8] = [
     "core/src",
     "platform/src",
     "platform/templates",
@@ -20,6 +20,7 @@ const SCAN_DIRS: [&str; 7] = [
     "web/assets",
     "web/src-tauri/src",
     "crates/kem/src",
+    "knowledge/console",
 ];
 
 const TEXT_EXTENSIONS: [&str; 6] = ["rs", "html", "css", "sql", "toml", "md"];
@@ -137,6 +138,28 @@ fn templates_have_zero_javascript() {
     );
 }
 
+#[test]
+fn templates_have_no_inline_styles() {
+    // 平台 CSP 為 `style-src 'self'`（無 unsafe-inline）：模板內聯樣式會被
+    // 瀏覽器直接阻擋而失效，故於建置期攔截（與零 JS 同屬呈現層契約）。
+    let root = repo_root();
+    let mut files = Vec::new();
+    collect_text_files(&root.join("platform/templates"), &mut files);
+    assert!(!files.is_empty(), "template directory must not be empty");
+    let mut problems = Vec::new();
+    for file in &files {
+        let text = fs::read_to_string(file).unwrap_or_default();
+        if text.contains("style=") {
+            problems.push(format!("{}: inline style attribute", file.display()));
+        }
+    }
+    assert!(
+        problems.is_empty(),
+        "inline style violates CSP style-src 'self':\n{}",
+        problems.join("\n")
+    );
+}
+
 // ---------------------------------------------------------------------------
 // W6/W7（計畫 1793033568961）：KEM 控制台生成物護欄＋設計 token 收斂檢查。
 // ---------------------------------------------------------------------------
@@ -198,7 +221,7 @@ fn console_css_tokens_are_canonical_design_system_values() {
         if !in_def {
             continue;
         }
-        for tok in l.split(|c: char| c == ';' || c == '{' || c == '}') {
+        for tok in l.split([';', '{', '}']) {
             let tok = tok.trim();
             if let Some(hash) = tok.find('#') {
                 let hex = &tok[hash..];

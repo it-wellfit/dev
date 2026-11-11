@@ -3,10 +3,17 @@
 //! 期望：訪客（未登入）HTML 頁 → 303 導向 /login；store1（唯讀操作者）
 //! 操作者頁 → 200、治理/技術頁 → 403（含 P0-2 稽核閘）；admin 全通 → 200；
 //! 所有回應零 `<script`（零 JS 契約）。
+//!
+//! W11：路由對帳——`api.rs` 實際註冊的路由與 `console_manifest` 動態頁必須
+//! 雙向相等（新增路由未登錄 manifest＝導覽缺口；manifest 未落地＝死頁面）。
+
+#![forbid(unsafe_code)]
 
 use axum::body::Body;
 use axum::http::{header, Request, StatusCode};
 use sqlx::sqlite::SqlitePoolOptions;
+use std::collections::HashSet;
+use std::path::{Path, PathBuf};
 use tower::ServiceExt;
 
 const ADMIN_PASSWORD: &str = "matrix-admin-pass";
@@ -380,4 +387,191 @@ async fn w2_w6_nav_matrix_headers_anchors_console() {
     )
     .await;
     assert_eq!(status, StatusCode::OK, "claims json whitelist must be 200");
+}
+
+// ---------------------------------------------------------------------------
+// W11：路由對帳（manifest ↔ axum 路由表）
+// ---------------------------------------------------------------------------
+
+/// 非頁面路由窮舉清單（資產、下載、表單動作、中間態、靜態主控台託管）。
+/// 每筆都必須在 `api.rs` 實際註冊，否則清單過期（測試會失敗）。
+const NON_PAGE_ROUTES: [&str; 26] = [
+    "/logout",
+    "/assets/design-system.css",
+    "/assets/legacy-1420.css",
+    "/assets/fonts/:file",
+    "/console",
+    "/console/",
+    "/console/*path",
+    "/admin/audit_evidence.csv",
+    "/admin/control_coverage.json",
+    "/admin/ccm.json",
+    "/admin/users/toggle",
+    "/admin/users/reset_password",
+    "/import/preview",
+    "/import/confirm",
+    "/import/mapping",
+    "/import/mapping/apply",
+    "/drafts/parse",
+    "/new/step2",
+    "/reports/monthly.csv",
+    "/drafts/adopt",
+    "/accounts/toggle",
+    "/ai-decisions/reject",
+    "/bankpay/export",
+    "/bankpay/import",
+    "/bankpay/config",
+    "/profile/password",
+];
+
+/// 從 Rust 原始碼抽出 `.route("…")` 註冊：(路徑, 含 GET, 含 POST)。
+fn extract_routes(source: &str) -> Vec<(String, bool, bool)> {
+    let mut out = Vec::new();
+    let mut cursor = 0usize;
+    while let Some(rel) = source[cursor..].find(".route(") {
+        let start = cursor + rel + ".route(".len();
+        let Some(q1) = source[start..].find('"') else {
+            break;
+        };
+        let path_start = start + q1 + 1;
+        let Some(q2) = source[path_start..].find('"') else {
+            break;
+        };
+        let path = source[path_start..path_start + q2].to_string();
+        let after = path_start + q2;
+        let next = source[after..]
+            .find(".route(")
+            .map(|i| after + i)
+            .unwrap_or(source.len());
+        let segment = &source[after..next];
+        out.push((path, segment.contains("get("), segment.contains("post(")));
+        cursor = next;
+    }
+    out
+}
+
+fn platform_src_dir() -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("src")
+}
+
+fn collect_rs_files(dir: &Path, out: &mut Vec<PathBuf>) {
+    if let Ok(rd) = std::fs::read_dir(dir) {
+        for entry in rd.flatten() {
+            let path = entry.path();
+            if path.is_dir() {
+                collect_rs_files(&path, out);
+            } else if path.extension().and_then(|s| s.to_str()) == Some("rs") {
+                out.push(path);
+            }
+        }
+    }
+}
+
+#[test]
+fn route_registry_matches_manifest_pages() {
+    let api_src = std::fs::read_to_string(platform_src_dir().join("api.rs")).expect("api.rs");
+    let routes = extract_routes(&api_src);
+    assert!(
+        routes.len() >= 70,
+        "route extraction looks broken (found {} registrations)",
+        routes.len()
+    );
+
+    let manifest_paths: HashSet<&str> = console_manifest::PAGES
+        .iter()
+        .filter(|p| p.renderer == console_manifest::Renderer::Dynamic)
+        .map(|p| p.path)
+        .collect();
+    let non_page: HashSet<&str> = NON_PAGE_ROUTES.iter().copied().collect();
+
+    let mut problems: Vec<String> = Vec::new();
+    let mut seen: HashSet<String> = HashSet::new();
+    for (path, _has_get, _has_post) in &routes {
+        if !seen.insert(path.clone()) {
+            problems.push(format!("duplicate route registration: {path}"));
+        }
+        if path.starts_with("/api/") {
+            continue;
+        }
+        if manifest_paths.contains(path.as_str()) || non_page.contains(path.as_str()) {
+            continue;
+        }
+        problems.push(format!(
+            "route {path} is neither a manifest page nor an allow-listed non-page route"
+        ));
+    }
+
+    // manifest → 路由：登錄了頁面就必須真的註冊路由（否則導覽出現死連結）。
+    for path in &manifest_paths {
+        if !seen.contains(*path) {
+            problems.push(format!("manifest page {path} has no registered route"));
+        }
+    }
+    // 非頁面清單 → 路由：清單不得過期（每筆都必須實際存在）。
+    for path in &non_page {
+        if !seen.contains(*path) {
+            problems.push(format!("non-page route {path} listed but not registered"));
+        }
+    }
+
+    // 方法對帳：manifest 宣告 GET／POST 必須與路由註冊一致。
+    for page in console_manifest::PAGES
+        .iter()
+        .filter(|p| p.renderer == console_manifest::Renderer::Dynamic)
+    {
+        let Some((_, has_get, has_post)) = routes.iter().find(|(p, _, _)| p == page.path) else {
+            continue;
+        };
+        match page.method {
+            console_manifest::Method::Get => {
+                if !has_get {
+                    problems.push(format!(
+                        "manifest GET page {} is not served by GET",
+                        page.id
+                    ));
+                }
+            }
+            console_manifest::Method::Post => {
+                if !has_post {
+                    problems.push(format!(
+                        "manifest POST page {} is not served by POST",
+                        page.id
+                    ));
+                }
+            }
+        }
+    }
+
+    assert!(
+        problems.is_empty(),
+        "route ↔ manifest parity violated:\n{}",
+        problems.join("\n")
+    );
+}
+
+#[test]
+fn routes_outside_api_module_must_be_api_only() {
+    // HTML 頁面路由只能註冊於 api.rs；其他模組只允許 /api/* 資料端點。
+    let mut files = Vec::new();
+    collect_rs_files(&platform_src_dir(), &mut files);
+    let mut problems = Vec::new();
+    for file in files {
+        if file.file_name().and_then(|s| s.to_str()) == Some("api.rs") {
+            continue;
+        }
+        let source = std::fs::read_to_string(&file).unwrap_or_default();
+        for (path, _, _) in extract_routes(&source) {
+            if !path.starts_with("/api/") {
+                problems.push(format!(
+                    "{}: non-API route {path} outside api.rs",
+                    file.display()
+                ));
+            }
+        }
+    }
+    assert!(
+        problems.is_empty(),
+        "HTML route registered outside api.rs:\n{}",
+        problems.join("\n")
+    );
 }

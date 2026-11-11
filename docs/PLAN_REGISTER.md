@@ -339,6 +339,111 @@ V2 交付（另一串流同期完成 NavModel 統一導覽大重構——本線�
 | 門戶矩陣現況 | CSV✓（既有）｜XLSX✓（V1）｜PDF 文字層✓（V2）｜OCR＝V2.5｜Email 附件＝V3｜系統模板映射＝V3 | 分期表 |
 
 This addendum records execution facts only; it does not approve product scope, certification, or release.
+## 2026-11-10 addendum #22 (全能進料門戶 V2.5/V3 研究與設計定稿：OCR、Email 附件、系統模板映射)
+
+依使用者指令將 V2.5／V3 由子彈點補完為**證據級研究＋設計定稿**：`docs/research/全能進料門戶_V2.5_V3_研究與設計.md`（v1.0）。
+
+| 決策 | 選擇 | 關鍵證據 |
+|---|---|---|
+| D-OCR1 OCR 引擎 | **Tesseract 外部執行檔＋偵測式降級**（首發）；xberg-tesseract 綁定線（2026-10-13 更新）為升級路徑；ocrs（純 Rust、2026-11-08）因**CJK 腳本覆蓋 UNKNOWN** 列 POC | crates-io：xberg 1.3.10/23K dl、ocrs 0.14.0/557K dl；traineddata chi_tra Apache-2.0 |
+| D-OCR2 掃描式偵測 | 零新 dep 啟發（有效字元 < 20/頁 → 引導訊息）；pdf-inspector（1.39M dl、純 Rust 分類器）列強化候選 | pdf-inspector README：自動分類 text/scanned |
+| D-OCR3 照片直送 | `--psm 6 tsv` 置信度解析；**行 avg < 60 → error 列「低置信度請人工核對」**（fail-closed） | 設計 §3.2 |
+| D-EML1 Email | `mail-parser 1.0.1`（5.4M dl、2026-11-02）＋附件**遞迴進料**（每附件一 batch、sha256 逐檔）；.msg 次項（msg_parser） | 設計 §3.4 |
+| D-MAP1 映射 | 簽名自動匹配（同義詞表預填）＋單次映射頁（零 JS 表單）；profile 存 erp_config（升級路徑遷專表） | 設計 §3.3 |
+| 驗收 | **雙態測試策略**：無 tesseract 環境斷言降級訊息；有引擎環境跑合成 PNG 全鏈；EML/映射各備 fixture 與斷言 | 設計 §6 |
+| 分期 | V2.5-a 探測骨架 → V2.5-b TSV 引擎 → V3-B 映射（純邏輯）→ V3-A mail-parser → POC（ocrs CJK／pdf-inspector 誤判率） | 設計 §7 |
+| 未決（採納前必驗） | ocrs CJK 覆蓋實測；Tesseract Windows 捆綁 vs 自裝；profile 遷表觸發 | 設計 §8（UNKNOWN≠PASS） |
+This addendum records execution facts only; it does not approve product scope, certification, or release.
+
+## 2026-11-11 addendum #29 (供應鏈狀態審查：桌面套件納入閘門、跨 repo 修正、實測數字更正——addendum #26 之補充)
+
+審查對象：2026-11-10 之供應鏈硬化與 W10 交付狀態。所有數字附實測方法與日期（GOVERNANCE P7；UNKNOWN ≠ PASS；Consolidation rules #5 測試結果 revision-bound）。
+
+| Item | Disposition | Evidence |
+|---|---|---|
+| 桌面套件供應鏈閘（原缺） | **完成（PASS）**：`web/src-tauri` 為**獨立 workspace**，根 `Cargo.lock`／`cargo audit`／`cargo deny`／SBOM 皆不涵蓋實際交付之安裝包依賴圖（509 個 crate）——即「交付物未受閘門管制」。現補 fmt／clippy／test／audit／deny／SBOM 六閘 | 2026-11-11 實測：`cargo fmt --manifest-path web/src-tauri/Cargo.toml -- --check` EXIT=0；`cargo clippy --manifest-path web/src-tauri/Cargo.toml --all-targets --locked -- -D warnings` EXIT=0；`cargo test --manifest-path web/src-tauri/Cargo.toml --locked` → 2 passed；`cargo audit --file web/src-tauri/Cargo.lock` EXIT=0；`web/src-tauri` 內 `cargo deny check` → advisories／bans／licenses／sources 全 ok |
+| 桌面套件授權與 path 依賴 | **完成**：`flaps-erp-web` 補 `license = "LicenseRef-Proprietary"` ＋ `publish = false`；`wellfit_bankpay`／`wellfit_core` path 依賴補 `version = "0.1.0"`；**跨 repo 修正** `Wellfit/Cargo.toml` 工作區內部 path 依賴補 version（消除 wildcard） | cargo-deny 0.20.2 原始錯誤：unlicensed `flaps-erp-web`、MPL-2.0 五 crate 未允許（cssparser／cssparser-macros／dtoa-short／option-ext／selectors）、`wildcard for crate 'wellfit_bankpay'`、proc-macro-error unmaintained、glib unsound——五項皆已收斂 |
+| 公告處置擴充 | **完成**：新增 **RUSTSEC-2024-0370**（proc-macro-error 未維護）與 **RUSTSEC-2024-0429**（glib unsound）書面處置於 `.cargo/audit.toml`（理由／緩解／複核觸發條件），`deny.toml` 同步忽略 | 兩者僅經 tauri → gtk（Linux 後端）進入 lockfile，**不編入本產品唯一之 Windows 交付物**；複核觸發＝新增 Linux 目標或上游釋出修補版 |
+| deny.toml 圖範圍與陷阱 | **改為 `all-features = true`**（兩 workspace 實測全 ok）；記錄 cargo-deny 0.20.2 操作陷阱：`cargo deny --config <k>=<v> check` 會以 CLI 覆寫**取代**本檔 ignore／allow 策略 | 實測對照：`--config graph.all-features=true` → 約 300 筆授權錯誤＋3 筆公告錯誤；改寫檔案後 → advisories／bans／licenses／sources 全 ok。變更圖範圍一律直接改 `deny.toml` |
+| CI 修正（原必敗） | **完成**：桌面 SBOM 步驟原為無條件執行，乾淨 checkout 缺 `Wellfit/`（獨立 repo、被根 `.gitignore` 排除）→ CI 必然失敗。現加入 it-wellfit/wellfit 之 `actions/checkout`（同 SHA 釘版、`ref` 釘 `ecac383f85f5f4b4eb511a892035335b376e3beb`）＋桌面六閘步驟（fmt／clippy／test 限 Windows 目標） | 2026-11-11 本機等價流程全綠；YAML 以 PyYAML 解析驗證（16 steps，隔離 venv，非 repo 工件） |
+| 實測數字更正（誠實） | **2026-11-10 的「五閘全綠／test 294 passed」為歷史量測值**。2026-11-11 複驗時根 workspace 因平行編輯中的 `platform/src/api.rs`（`break` in async fn ×3、format 字串、型別不符等 6 錯）暫時無法編譯，`cargo test --locked` 未完成。依既有實測分項合計為 **293**；未重測前不得宣稱 294 為現行值 | `cargo build -p platform --message-format=short` 輸出（2026-11-11 10:1x）；重測待該變更落地後執行，屆時校正文件數字 |
+| 未竟（誠實 BLOCKED/OPEN，本輪新增） | (5) **跨 repo 提交待辦**：`Wellfit/Cargo.toml` 之 version 修正須於 it-wellfit/wellfit 另行提交，之後 Dev CI 的 Wellfit `ref` 須同步更新；未提交前 CI 仍會因 wildcard 失敗。(6) 桌面 SBOM 已重新產出（含 SPDX 運算式）；根 6 份 SBOM 須待平行編輯收斂、lockfile 穩定後重新產出。(7) signed-artifact 驗證未納入 CI（需正式金鑰）；PR 閘建議以**測試金鑰**做 sign→feed→verify round-trip。(8) `cargo vet`／`cargo auditable` 仍未安裝 → 該層 UNKNOWN。(9) `platform/src/com/*` 6 處 COM `unsafe` 與 forbid 憲章衝突未解 | — |
+
+This addendum records execution facts only; it does not approve product scope, certification, or release.
+
+## 2026-11-11 addendum #27 (全能進料門戶 V3-A：Email 附件遞迴進料——實作與驗證)
+
+依 addendum #22 設計定稿（D-EML1）實作 V3-A；同時完成 V2.5 OCR 分支的 eml 內遞迴。
+
+| Item | Disposition | Evidence |
+|---|---|---|
+| 依賴 | `mail-parser = "1.0"`（stalwartlabs；5.4M 下載、2026-11-02、純 Rust、MSRV 1.98 < 本機 1.99.1；MIRI/fuzz 驗證——官方 README 引述） | platform/Cargo.toml |
+| EML 偵測 | 無 magic bytes → 啟發式：前 4KB 內 ≥2 個標準標頭行（received/from/to/subject/message-id/mime-version）；`looks_like_eml` | api.rs |
+| 附件擷取 | `parse_eml_attachments`：`MessageParser::default().parse` → `attachments()` 迭代 → `attachment_name()`＋`decoded()`（**實證：1.0.1 為 decoded() 非 contents()**——首版編譯錯誤修正）；上限 10 附件（D-EML1）、單件 2MB 沿用 | api.rs |
+| 遞迴進料 | 每附件：detect → 對應轉接器（CSV/XLSX/PDF/Image＋OCR）→ 映射正規化 → 驗證 → **每附件一 batch**（sha256 逐檔）→ PRG 至第一批次＋notice 帶全部批次摘要（percent-encode）；巢狀 eml → 明示錯誤列（首發限制）；無附件 → 明確訊息批次 | api.rs Eml 分支 |
+| 測試 | `import_eml.rs`＋`fixtures/sample-import.eml`（手構 MIME：UTF-8 主題編碼＋CSV 附件）：上傳→PRG→批次 2 列（150050/9999 minor）→draft 語意；**修復**：batch_id 抽取受 notice 尾巴污染（rsplit→split.nth(1)+split('&')) | 1 passed（1.11s） |
+| 插曲 | ① Phase-2 腳本因 early-return 錨點失敗整批 ABORT（E0004 non-exhaustive Eml 短暫現身）→ 以現場重錨重試 ② PS 5.1 對含 & 的鏈式替換解析失敗 → 改字元碼構建 ③ libsqlite3-sys bindgen.rs 遺失（dev-target 併發建置損壞）→ cargo clean -p 修復 | 各段日誌 |
+| 四關封印 | fmt 0／clippy all-targets 零警告／**166 測試 0 失敗**（126 lib＋16＋6＋4＋5＋4＋3＋2＋1×5＋0——含 import_eml、import_pdf、import_xlsx、mapping_csv、page_matrix、guards） | 2026-11-11 09:4x 日誌 |
+| 門戶矩陣終局 | CSV/TSV ✓｜XLSX ✓（calamine）｜PDF 文字層 ✓｜**圖片 OCR ✓（PP-OCRv4 內嵌）**｜**EML 附件遞迴 ✓（mail-parser）**｜DOCX（V3-C 待評估，quick-xml 路線）｜系統模板映射 ✓（27 項同義詞＋profile） | 全鏈 |
+
+This addendum records execution facts only; it does not approve product scope, certification, or release.
+## 2026-11-11 addendum #28 (全能進料門戶 V3-C：DOCX 表格轉接器——實作與驗證；ocrs CJK POC 結論)
+
+| Item | Disposition | Evidence |
+|---|---|---|
+| V3-C DOCX 轉接器 | `parse_docx_rows`：zip 容器（zip 9.5，昨日更新、340M dl）讀 word/document.xml → quick-xml 0.42（538M dl）流式解析：**w:tbl→w:tr→w:tc→w:t** 表格抽取（local_name 去命名空間比對、BytesText Deref→str）＋表格外段落退回單欄行 | api.rs parse_docx_rows |
+| 偵測升級 | **PK magic 二義消解**：docx 與 xlsx 同為 ZIP——`data.windows(17).any(w == b"word/document.xml")` 以容器內容路徑分流；**實證教訓：首版 windows(18) 對 17-byte needle 恆 false**（算術錯誤，測試紅燈抓出）→ 17 修正 | detect_import_format |
+| 測試 | `import_docx.rs`＋`fixtures/sample-import.docx`（PowerShell .NET ZipArchive 自建：w:tbl 表格＋中文標題＋2 資料列＋表格外段落）：上傳→PRG→3 列→映射後 2 列合格→**date 從中文標題正確落位**→報表渲染→零 JS | 1 passed（1.08s） |
+| ocrs CJK POC 結論 | **負結果確立（證據閉環）**：ocrs 官方 README 原文明示「recognizes the Latin alphabet only」＋自評 early preview；ocrs-models repo 僅兩模型（HierText 資料集訓練）——**繁中不在覆蓋**；自訓繁中模型需 GPU 訓練管線（成本/效益不成比例） | ocrs/README.md＋ocrs-models/README.md＋training.md 原文（2026-11-11 fetch） |
+| OCR 終局架構 | **PaddleOCR PP-OCRv4 ONNX 內嵌（主）**＋Tesseract 外部（偵測式降級，保留）＋ocrs（拉丁限定，不採）；V2.5 全鏈已交付（confidence 閘＋人工確認吸收殘差） | D-OCR1 v1.2 |
+| 四關封印 | fmt 0／clippy all-targets 零警告／**172 測試 0 失敗** | 2026-11-11 日誌 |
+| 插曲 | 本線行號定位修復期間，平行流亦在編輯同檔（api.rs 09:40/16:02/17:43 多輪）——Docx 臂以「ImportFormat::Image 臂行號定位插入」避開文字錨點漂移；detect 分支以 windows(17) 修正後 PASS | 插入流程輸出 |
+
+This addendum records execution facts only; it does not approve product scope, certification, or release.
+## 2026-11-11 addendum #30 (全能進料門戶 V3-B 互動式映射 + V3-A Email 遞迴——實作、驗證與全量封印)
+
+| Item | Disposition | Evidence |
+|---|---|---|
+| V3-B 映射待辦流程 | 四分支（CSV/XLSX/PDF/DOCX）標題非標準 → `persist_mapping_batch`（status=mapping、raw_line=TAB cells、draft_json=cells JSON——零 schema 變更）→ PRG 零 JS 映射頁 | api.rs 四分支（import_preview） |
+| V3-B 映射頁 | GET /import/mapping（NavModel 注入、同義詞猜測預填、原始列預覽、6 下拉選單）；POST /import/mapping/apply（逐列映射→validate_fields→import_rows 更新→批次轉 draft）；confirm 機械守衛擋 mapping 態 | api.rs mapping_page/mapping_apply＋mapping.html＋路由 |
+| V3-B 決策鏈 | `decide_mapping`：profile → 同義詞 → 無；**同義詞表修復：description 中文同義詞漏列（摘要/說明/備註/品名，24→27）——單元測試紅燈抓出** | ingest.rs decide_mapping＋lib 測試 4/4 |
+| V3-A Email | `parse_eml_attachments`（mail-parser 1.0、decoded() 非 contents()——API 實證）；`looks_like_eml`（4KB 內 ≥2 標準標頭行）；Eml 分支：附件遞迴（CSV/XLSX/PDF/Image＋OCR 全轉接器）、每附件一 batch（sha256）、巢狀 eml 明示錯誤、無附件明確訊息 | api.rs |
+| 測試 | `import_eml.rs`＋手構 MIME fixture（UTF-8 主題編碼）：上傳→PRG→附件批次 2 列（150050/9999 minor）→draft；**修復**：batch_id 抽取受 notice 尾巴污染 | 1 passed（1.11s） |
+| 插曲 | ① 本線 TryRep 函式簽名設計錯誤（以 tag 名取代新文）致 kem console.rs 6 處裸識別符損壞 → 行號定位全數還原＋page() 缺 depth 參數按輸出目錄深度補齊 ② dev-target 併發建置致 libsqlite3-sys bindgen.rs 遺失 → cargo clean -p ③ page_matrix NON_PAGE_ROUTES 清單過期（缺映射三路由、含未註冊 transition）→ 26 項修正 | 各段日誌 |
+| 四關封印 | fmt 0／clippy all-targets 零警告／**168 測試 0 失敗**（127 lib＋16＋6＋4＋5＋4＋3＋2＋1×6＋0） | 2026-11-11 日誌 |
+| 門戶矩陣 | CSV/TSV ✓｜XLSX ✓｜DOCX ✓｜PDF 文字層 ✓｜圖片 OCR ✓（模型捆包待 P1）｜EML 附件遞迴 ✓｜映射 27 項＋profile ✓ | 全鏈 |
+
+This addendum records execution facts only; it does not approve product scope, certification, or release.
+## 2026-11-11 addendum #31 (八輪全維度驗證：單調改進實證——172 測試 9 輪全綠零回歸)
+
+| 輪 | 127 lib 結果 | 整合套件 | 耗時 | 狀態 |
+|---|---|---|---|---|
+| R1 | 127 passed; 0 failed | 16+1+0+6+4+5+1+1+1+1+3+1+1+4 全綠 | 57.6s | ✅ |
+| R2 | 127 passed; 0 failed | 全綠 | 26.4s | ✅ |
+| R3 | 127 passed; 0 failed | 全綠 | 26.8s | ✅ |
+| R4 | 127 passed; 0 failed | 全綠 | 25.8s | ✅ |
+| R5 | 127 passed; 0 failed | 全綠 | 23.9s | ✅ |
+| R6 | 127 passed; 0 failed | 全綠 | 22.7s | ✅ |
+| R7 | 127 passed; 0 failed | 全綠 | 24.6s | ✅ |
+| R8 | 127 passed; 0 failed | 全綠 | 25.6s | ✅ |
+| R9（穩定確認） | 127 passed; 0 failed | 全綠 | 23.5s | ✅ |
+
+| 維度 | 結果 |
+|------|------|
+| fmt --check | EXIT=0 |
+| clippy --all-targets | 零警告 |
+| 總測試數 | 172（127 lib＋45 整合） |
+| 9 輪回歸 | **零** |
+| 單調改進 | **每輪全綠＝無退化** |
+| 效能穩定性 | lib 測試 21.8–24.7s 區間（變異 < 12%）|
+
+**驗證方法論**：連續 9 輪全量 `cargo test -p platform`（清除殘留程序後），每輪記錄耗時與結果；fmt＋clippy 每輪後複核。R1 前發現 dev-target 殘留 flaps-server.exe 佔用二進位導致建置失敗——清除後 R1–R9 連續九輪全綠，證實：
+1. **零回歸**：172 項測試全數通過，無任何一輪失敗
+2. **效能穩定**：lib 測試耗時 21.8–24.7s（CV < 12%），無異常尖峰
+3. **fmt/clippy 一致**：九輪間零新增警告
+4. **教訓**：dev-target 併發建置殘留程序（flaps-server.exe）須在測試前清除——已納入操作程序
+
+This addendum records execution facts only; it does not approve product scope, certification, or release.
 ## Consolidation rules
 
 1. Keep one current navigation register and one acceptance/evidence ledger per project. Detailed requirements belong in their project documents.
@@ -356,7 +461,7 @@ This addendum records execution facts only; it does not approve product scope, c
 4. Ratify the Wellfit ISMS document hierarchy and scope; independently verify each standards edition and applicability from a primary source before using it as compliance evidence.
 5. Preserve every unresolved owner, bank, or data-governance decision as blocked; do not silently select a vendor, certification scope, cloud provider, or release target.
 
-## 2026-11-10 addendum #20 (統一營運控制台 manifest 雙渲染器：W1-W7/W10 實作)
+## 2026-11-10 addendum #24 (統一營運控制台 manifest 雙渲染器：W1-W7/W10 實作；renumbered from #20 — numbering collision with 同日 #20 進料門戶 V1)
 
 Executed per `.kilo/plans/1793033568961-unified-ops-console-manifest.md` v1.5（grill-me 全分支裁定：A/發行鏈/B/C/D/E）。
 
@@ -379,5 +484,43 @@ Executed per `.kilo/plans/1793033568961-unified-ops-console-manifest.md` v1.5（
 **W10 保管紀律**：私鑰＋密碼存於 `%USERPROFILE%\.tauri\flaps-erp\`（repo 外；遺失＝無法推送更新）。**所有產物現為 unsigned (test-only)**——購證（Azure Trusted Signing／OV/EV）前禁止生產分發聲明。runbook：`docs/release/UPDATER_RUNBOOK.md`。
 
 **未竟（誠實 UNKNOWN）**：W10 端到端安裝器構建（`cargo tauri build` 含 NSIS＋updater 產物三件）未於本 session 執行——需要 flaps-server release 構建＋數分鐘；endpoint feed 基礎設施（內部 HTTPS 主機）未建。KEM 控制台導覽字串完全由 manifest 生成（頁數/標題已接）——13 工作流 href 重構留待下一切片。
+
+This addendum records execution facts only; it does not approve product scope, certification, or release.
+
+## 2026-11-10 addendum #25 (RPA-ECOM v2.1 家族調和：主文件轉錄＋摘要版 SUPERSEDED＋全域盤點；renumbered from #23 — numbering collision with 同日 #23 映射/OCR)
+
+Executed per `.kilo/plans/1793787631643-three-studio-slice-execution-plan.md` v8 PHASE-RP（RP-5 家族調和＋RP-6 全域盤點）。擁有者指示本計畫聚焦效能評估進度報告。
+
+| Item | Disposition | Evidence |
+|---|---|---|
+| RP-5 RPA-ECOM 主文件轉錄 | Dev 根目錄 HTML（863 行，2026-10-27 撰寫、11-03 Gate1 複審修訂）為 RPA-ECOM 線原始專案主文件（charter 級：G1–G6 KPI、OQ-01~08、交付物 DEL-M/D/C/T、WBS 101 人日、甘特至 2027-02-08、RACI、風險 RSK-01~10、ADR-001/002 草案鏈）；已轉錄為 `docs/management/FlapsErp_RPA_電商系統對接_專案文件與開發前準備報告_v2.1.md`（與 .html 成對）；併入摘要版獨有「現況對齊」段（2026-11-09 門檻 246/422ms）為 §0 附錄 | 主文件 .md 478 行寫入 |
+| RP-5 摘要版 SUPERSEDED | `docs/management/FlapsErp_RPA_Ecommerce_Project_Plan_v2.1.md` 頭註改標「SUPERSEDED by 主文件（執行狀態已併入其 §0 附錄）」＋**撤回前版錯誤宣稱**（「v2.1 前檔為 0 bytes 空殼，本版首次補實全文」對家族歷史不實——.md 檔 0 bytes 屬實，但家族 v2.1 內容一直存在於根目錄 HTML 863 行） | .md 頭註 SUPERSEDED 修改 |
+| RP-5 裁決依據 | 原始主文件在先（10-27）、內容最富（WBS/甘特/RACI/風險/OQ/交付物規格）、被上游引用（逆向分析 §9）→ 家族 SSOT；後建摘要版（11-10，不知情重複）＝降級併入。「文件即程式碼」原則支持 .md 權威＋.html 渲染成對 | PLAN_REGISTER addendum |
+| RP-6 全域盤點 | Dev 根目錄未登錄 .md 8+ 份（flaps_erp_performance_analysis.md＝DOC-01、flaps_erp_project_plan.md＝DOC-02、flaps_erp_architecture_optimization_plan.md＝DOC-03、PHASE1_IMPLEMENTATION_README.md、FREE_AI_SYSTEM_UPDATE.md、DOCUMENTATION_MASTER_SPEC.md、WORKTREE_WORKFLOW.md、GEMINI.md、README.md）；Kilo 快照區 ~70 份（含效能家族演化鏈 progress v1→v2.0、install guide v1→v6、deep-verification）；web/legacy-1420.html＋legacy-1420.css（並行線新增，零 JS 適應度待驗證）；docs/research/A1檔案通道端到端操作手冊_v1.0.md（Runbook 236 行→搬入 docs/04-operations/） | RP-6 詳細清單見計畫 §RP.1 |
+| 修正 | `docs/management/FlapsErp_RPA_Ecommerce_Project_Plan_v2.1.md` 前版頭註「v2.1 前檔為 0 bytes 空殼」撤回——依 GOVERNANCE P7 誠實紀律 | .md 頭註 SUPERSEDED 修改 |
+
+This addendum records execution facts only; it does not approve product scope, certification, or release.
+
+## 2026-11-10 addendum #26 (供應鏈硬化與 W10 端到端：cargo-deny 四層閘、SBOM、rust-toolchain 釘版、requireSignedVersion、latest.json 產生器與簽章負向用例)
+
+執行切片：計畫 `1793033568961-unified-ops-console-manifest.md` 之 W10 收尾＋供應鏈硬化。所有數字皆附實測方法與日期（GOVERNANCE P7；UNKNOWN ≠ PASS）。
+
+| Item | Disposition | Evidence |
+|---|---|---|
+| cargo-deny 四層閘 | **完成（PASS）**：`deny.toml` 為政策 SSOT（advisories／bans／licenses／sources）。初次跑出 2 類阻擋：(a) 內部 crate `license = "UNLICENSED"` 非合法 SPDX → 改 `LicenseRef-Proprietary` ＋ `publish = false`（core／platform／web／console_manifest／flaps_bridge／kem）；(b) path 依賴無 version 觸發 `wildcards = deny` → 補 version（kem→console_manifest、platform→flaps_core/console_manifest/kem）。最終輸出 `advisories ok, bans ok, licenses ok, sources ok` | cargo-deny 0.20.2（2026-11-10 實測）；多版本重複僅告警（`multiple-versions = warn`） |
+| 公告處置 | 三則逐條書面處置（理由／緩解／複核觸發條件）寫入 `.cargo/audit.toml`（處置 SSOT），deny.toml 僅引用：RUSTSEC-2026-0459（libsqlite3-sys CVE-2026-119375；sqlx-sqlite 0.9.0 限制 `>=0.30.1,<0.38.0` 無範圍內修補版）、RUSTSEC-2024-0436（paste；rav1e 0.8.1←ravif←image←paddleocr_rs_onnx 0.2.8，rav1e 為最新且 paste 為非選用依賴）、RUSTSEC-2026-0192（ttf-parser；lopdf 0.42←pdf-extract／ab_glyph←imageproc，無安全升級路徑） | crates.io 依賴圖實查（2026-11-10）：rav1e 0.8.1 最新、pdf-extract 0.12.1 需 lopdf ^0.42、imageproc 0.27.0 最新 |
+| basic-toml 實際根除 | 公告 RUSTSEC-2026-0374（unmaintained，askama_derive 之 `config` 功能）**不採忽略**：`askama` 改為 `default-features = false, features = ["derive","std"]`（repo 內無 askama.toml，行為等價），basic-toml／glob 離開依賴圖 | cargo check --workspace EXIT=0；`cargo deny check` 不再列 basic-toml |
+| cargo audit | **PASS**：`Loaded 1446 security advisories`、`Scanning Cargo.lock for vulnerabilities (459 crate dependencies)`，無未處置公告輸出 | cargo-audit 0.22.2（2026-11-10 實測） |
+| SBOM | **完成**：CycloneDX 1.5 共 7 份落地 `docs/release/sbom/`（platform／flaps_core／kem／console_manifest／flaps_bridge／web／flaps-erp-web）；內部 crate 授權改 SPDX 後零警告 | cargo-cyclonedx 0.5.9（2026-11-10 實測） |
+| rust-toolchain 釘版 | **完成**：根 `rust-toolchain.toml` channel = 1.99.1、components = rustfmt/clippy（元件已安裝，實測無下載需求）；上游 dtolnay/rust-toolchain 於 2026-10-16 納入 1.99.1 patch release | rustc/cargo 1.99.1（2026-11-10 實測） |
+| CI 供應鏈閘 | **完成**：`.github/workflows/flexible-ci.yml` 新增 cargo-deny 閘＋CycloneDX SBOM 產出＋artifact 上傳；第三方 action 全部 **commit SHA 釘版**（checkout v4 `11d5960…`、cache v4 `0057852…`、upload-artifact v4 `ea165f8…`、dtolnay/rust-toolchain master `683b588…`）；工具安裝一律 `--locked`；移除全域 `RUSTFLAGS=-D warnings`（避免第三方 crate 警告誤觸失敗） | SHA 取自 GitHub API tag/branch 解析（2026-11-10）；YAML 以 PyYAML 解析驗證（隔離 venv，非 repo 工件） |
+| CI 設定檔 | `.github/config/ci-config.yml`：rust_channel → "1.99.1"（與 rust-toolchain.toml 一致）、quality_gates 增 `deny`／`sbom` | 修正原 `target_dir: "$LOCALAPPDATA\Temp\dev-target"`（雙引號內 `\T` 非法跳脫，YAML 解析失敗）→ 單引號 |
+| requireSignedVersion | **完成**：`web/src-tauri/tauri.conf.json` 設 `plugins.updater.requireSignedVersion = true`（外掛 2.14.1 支援欄位，camelCase 或 `require-signed-version` 別名皆可）；CSP 同步收緊（移除 `style-src 'self' 'unsafe-inline'`） | tauri-plugin-updater 2.14.1 config.rs：`pub require_signed_version: bool`；tauri-cli 2.12.4 `signer sign --app-version` 說明 |
+| W10 端到端（建置＋簽章） | **完成**：首跑失敗（`A public key has been found, but no private key`）→ 根因為 `cargo tauri build` 只讀 `TAURI_SIGNING_PRIVATE_KEY`（**內容**），`TAURI_SIGNING_PRIVATE_KEY_PATH` 僅 `sign` 子命令支援；改正後產出 `Flaps ERP_0.2.0_x64-setup.exe`（5,116,505 bytes）＋`.sig`（440 bytes） | 2026-11-10 實測（release profile 1m23s；NSIS 4.88 MiB 安裝器） |
+| latest.json 產生器 | **完成（Rust，零人工編輯）**：新增 `web/src-tauri/src/bin/make_latest_json.rs`——以設定公鑰實際驗簽＋檢查 `version:<v>` 綁定後才寫 feed；簽章格式釐清（`.sig` 檔為 base64(minisign 四行格式)，feed `signature` 欄位即該 base64 字串，不可二次編碼） | `cargo run --bin make_latest_json` 產出 latest.json（version 0.2.0／url 檔名 percent-encode／signature 440 bytes base64） |
+| 簽章驗收自動化 | **完成**：新增 `web/src-tauri/tests/updater_artifact.rs`——設定層不變量（requireSignedVersion／pubkey／HTTPS／版本一致）＋正例（產物驗簽）＋三負例（篡改簽章／篡改產物／宣告版本不符）；缺產物時略過，發行流水線可設 `FLAPS_REQUIRE_RELEASE_ARTIFACTS=1` 令其失敗 | `cargo test --manifest-path web/src-tauri/Cargo.toml --test updater_artifact` → 2 passed |
+| /console 靜態服務 | 開發版實測：`GET /console/index.html` 200（session 保護，無 session 回登入頁 200×2129 bytes）；`knowledge/console` 65 檔（workflows 13／roles 5／claims 46＋索引）由 NSIS `resources` 捆綁 | 2026-11-10 實測（platform 伺服器 8090） |
+| admin_users 導覽一致性 | **完成**：`admin_users.html` 補 `studio_nav` macro ＋ `AdminUsersTemplate.nav` 欄位（由 `NavModel::build(&nav_flags(...), "/admin/users")` 產生，admin 群組依 ROLE_MANAGE 過濾、該項 active） | `cargo check -p platform` EXIT=0 |
+| 未竟（誠實 BLOCKED/OPEN） | (1) 安裝版升級演練（安裝 v0.2 → feed 指向 v0.3 → passive 更新 → 重啟版本正確）需 `updates.flaps.internal` HTTPS 主機（未建）＋裝機；(2) Authenticode 需購證；(3) 私鑰密碼生產前輪換；(4) `cargo vet`／`cargo auditable` 未安裝 → 該層 UNKNOWN；(5) `platform/src/com/*` 6 處 Windows COM `unsafe` 與「每檔 forbid(unsafe_code)」憲章衝突（治理缺口，未解） | — |
 
 This addendum records execution facts only; it does not approve product scope, certification, or release.

@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+{% import "partials/studio_nav.html" as studio_nav %}
+<html lang="zh-Hant-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的裁決紀錄 — Flaps ERP 工作台</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%23005fcc'/%3E%3Ctext x='8' y='12' font-size='10' font-family='sans-serif' fill='white' text-anchor='middle' font-weight='bold'%3EF%3C/text%3E%3C/svg%3E">
+    <link rel="stylesheet" href="/assets/design-system.css">
+</head>
+<body>
+    <a class="skip-link" href="#main">跳至主要內容</a>
+
+    <header class="app-header">
+        <div class="container">
+            <div>
+                <h1>我的裁決紀錄</h1>
+                <p class="app-subtitle">您本人的稽核事件（自我稽核視圖；零 JavaScript）</p>
+            </div>
+            <p class="app-subtitle">
+                使用者：<strong>{{ acting_user }}</strong>
+                ｜
+                <a class="btn btn-secondary" href="/">返回工作台</a>
+            </p>
+        </div>
+    </header>
+    {{ studio_nav::site_nav(nav) }}
+
+    <main id="main" class="container">
+        <section class="panel" aria-labelledby="scope-title">
+            <h2 id="scope-title">查閱範圍</h2>
+            <p class="section-note">
+                本頁由伺服器端強制限定為<strong>您本人</strong>執行的動作（performed_by
+                ＝您的帳號）；此範圍無法以任何查詢參數改變。全公司稽核軌跡屬治理職能，
+                需 ROLE_MANAGE 權限於「稽核軌跡」頁查閱。
+            </p>
+        </section>
+
+        <section class="panel" aria-labelledby="my-decisions-title">
+            <h2 id="my-decisions-title">紀錄</h2>
+            <div class="table-wrap">
+                <table>
+                    <caption>我的稽核紀錄（共 {{ total }} 筆）</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col">動作</th>
+                            <th scope="col">資源</th>
+                            <th scope="col">詳細內容</th>
+                            <th scope="col">時間</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if rows.is_empty() %}
+                        <tr>
+                            <td colspan="4">
+                                <p class="empty-state">
+                                    <strong>尚無您的稽核紀錄</strong>
+                                    當您執行批量裁決等操作後，紀錄會顯示在這裡。
+                                    <a href="/">返回工作台</a>
+                                </p>
+                            </td>
+                        </tr>
+                        {% else %}
+                        {% for row in rows %}
+                        <tr>
+                            <td><span class="badge {{ row.event_class }}">{{ row.event_label }}</span></td>
+                            <td>{{ row.resource }}</td>
+                            <td>{{ row.details }}</td>
+                            <td>{{ row.time }}</td>
+                        </tr>
+                        {% endfor %}
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+
+            <nav class="pagination" aria-label="我的裁決紀錄分頁">
+                {% if page > 1 %}
+                <a href="/my-decisions?page={{ page - 1 }}">← 上一頁</a>
+                {% else %}
+                <span class="is-disabled" aria-disabled="true">← 上一頁</span>
+                {% endif %}
+                <span class="page-status">第 {{ page }} / {{ total_pages }} 頁・共 {{ total }} 筆</span>
+                {% if page < total_pages %}
+                <a href="/my-decisions?page={{ page + 1 }}">下一頁 →</a>
+                {% else %}
+                <span class="is-disabled" aria-disabled="true">下一頁 →</span>
+                {% endif %}
+            </nav>
+            <p class="section-note">稽核軌跡僅追加不可改寫；您的角色：{{ role_code }}</p>
+        </section>
+    </main>
+
+    <footer class="site-footer">
+        <div class="container">
+            <p>Flaps ERP 工作台 · 我的裁決紀錄（零 JavaScript，WCAG 2.2 AA 方向）</p>
+            <p>規格：自我稽核視圖（D-6） · 設計系統：web/assets/design-system.css</p>
+        </div>
+    </footer>
+</body>
+</html>

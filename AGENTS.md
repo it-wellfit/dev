@@ -1,6 +1,6 @@
 # AGENTS.md — Dev 根工作區代理人執行入口
 
-> 版本：v1.0｜日期：2026-11-03｜狀態：Active
+> 版本：v1.1｜日期：2026-11-10｜狀態：Active
 > 本檔為新代理人／開發者的快速執行入口。**規則 SSOT 不在本檔**：憲政與效力順位見 `WORKSPACE_CHARTER.md`，管理體系見 `docs/standards/GOVERNANCE_STANDARD.md`，工程基線見 `docs/standards/SHARED_STANDARDS.md`。本檔僅陳述本地後果與入口連結（P1 單一事實來源）。
 
 ## 1. 專案概覽與產品裁定
@@ -52,7 +52,7 @@ cargo audit                                           ; # 依賴安全（.cargo/
 
 ## 6. Git 工作流（現狀說明）
 
-根工作區目前**非 git repo**（ADR-0001 §5.3 記錄）。初始化 git 前以 session 記錄綁定證據；子專案（Wellfit 等）各自有 git 規範。初始化後依 SHARED_STANDARDS §5 執行（`<type>: <subject>`、關聯 Issue、`main` 保護）。
+根工作區**已初始化 git**（2026-11-10 實測：toplevel＝`Dev/`、remote＝`origin`（`github.com/it-wellfit/dev.git`）；ADR-0001 §5.3 之「非 git」記載已成歷史）。子專案（Wellfit 等）各自有 git 規範。提交依 SHARED_STANDARDS §5 執行（`<type>: <subject>`、關聯 Issue、`main` 保護）。
 
 ## 7. 接手程序（新 session 標準動作）
 

@@ -1,0 +1,12 @@
+# Rust 工具鏈釘版（可重現建置）。
+#
+# 依據：
+# - 本機實測 rustc/cargo 1.99.1（2026-11-10），rustfmt/clippy 元件已安裝。
+# - dtolnay/rust-toolchain 於 2026-10-16 納入 1.99.1 patch release（上游認可）。
+# - rustup 會自動套用本檔；CI 亦應改用 rust-toolchain.toml（見 .github/workflows/flexible-ci.yml）。
+#
+# 升級流程：獨立 POC → 通過 fmt/clippy/test/audit/deny 五閘 → 更新本檔 channel 並提交。
+[toolchain]
+channel = "1.99.1"
+profile = "minimal"
+components = ["rustfmt", "clippy"]

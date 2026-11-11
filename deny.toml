@@ -1,0 +1,83 @@
+# cargo-deny 供應鏈政策（根 workspace；Flaps ERP 輔翼線）
+#
+# 分層基準（2026 產業實務）：cargo audit 掃 RustSec 弱點、cargo deny 治理
+# 授權／版本／來源政策、cargo vet 記錄人工稽核（見 docs/release/UPDATER_RUNBOOK.md
+# 「供應鏈閘」節）。本檔為政策 SSOT，CI 與提交前皆執行 `cargo deny check`。
+#
+# 驗證紀錄：cargo-deny 0.20.2（2026-11-10 實測）。
+
+[graph]
+# all-features = true：掃描「可交付最大範圍」依賴圖（含 optional 依賴與各 backend），
+# 2026-11-11 實測根 workspace 通過（advisories ok / bans ok / licenses ok / sources ok）。
+# 注意：不可用 `cargo deny --config graph.all-features=true check` 覆寫——cargo-deny 0.20.2
+# 會以 CLI 覆寫取代本檔其餘策略（ignore／allow 清單全部失效，檢查反而失敗）。
+# 變更圖範圍一律直接改本檔。
+all-features = true
+no-default-features = false
+
+[output]
+feature-depth = 1
+
+[advisories]
+# cargo-deny 0.20：vulnerability／unsound／notice 一律為 error（欄位已移除，不可設定）。
+# yanked 一律拒絕；unmaintained 維持預設 "all"（任何未維護 crate 皆使檢查失敗），
+# 必須先在 .cargo/audit.toml 留下書面處置（理由／緩解／複核觸發條件）才可加入 ignore。
+yanked = "deny"
+unmaintained = "all"
+ignore = [
+    # RUSTSEC-2026-0459（CVE-2026-119375，libsqlite3-sys 內嵌 SQLite < 3.54.0；
+    #   sqlx-sqlite 0.9.0 限制 libsqlite3-sys >=0.30.1,<0.38.0，無範圍內修補版）
+    # RUSTSEC-2024-0436（paste 1.0.15；rav1e 0.8.1←ravif←image←paddleocr_rs_onnx 0.2.8）
+    # RUSTSEC-2026-0192（ttf-parser 0.25.1；lopdf 0.42←pdf-extract／ab_glyph←imageproc）
+    # 逐條理由、緩解措施與複核觸發條件見 .cargo/audit.toml（處置 SSOT）。
+    "RUSTSEC-2026-0459",
+    "RUSTSEC-2024-0436",
+    "RUSTSEC-2026-0192",
+    # RUSTSEC-2024-0370（proc-macro-error 未維護；僅 Linux GTK/glib 巨集建置期依賴，
+    #   本產品僅出 Windows 產物，該 crate 不進入交付物）
+    # RUSTSEC-2024-0429（glib unsound；同為 Linux-only 後端，不編入 Windows 產物）
+    # 逐條理由、緩解措施與複核觸發條件見 .cargo/audit.toml（處置 SSOT）。
+    "RUSTSEC-2024-0370",
+    "RUSTSEC-2024-0429",
+]
+
+[licenses]
+allow = [
+    "MIT",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Zlib",
+    "NCSA",
+    "CDLA-Permissive-2.0",
+    "Unicode-3.0",
+    "CC0-1.0",
+    # MPL-2.0（檔案層級 copyleft）：僅出現在 Tauri 桌面包的 css 解析鏈
+    # （cssparser／cssparser-macros／dtoa-short／option-ext／selectors），
+    # 本專案未修改該些 crate 原始碼，僅以未修改形式連結進 Windows 產物。
+    # 複核觸發：若我們修改這些 crate 或將其獨立散布，須重新評估 copyleft 義務。
+    "MPL-2.0",
+]
+confidence-threshold = 0.8
+# 工作區內部 crate 為專有軟體（publish = false），授權政策僅適用第三方依賴；
+# 內部 crate 的授權與散布由公司政策與知識庫（Knowledge/）SSOT 管理。
+private = { ignore = true }
+
+[bans]
+# 同一 crate 多版本僅告警（Rust 生態常態）；通配版號一律拒絕（可重現解析）。
+multiple-versions = "warn"
+wildcards = "deny"
+highlight = "all"
+allow = []
+deny = []
+skip = []
+skip-tree = []
+
+[sources]
+# 僅允許 crates.io；禁止未知 registry 與 git 直連來源（供應鏈管制）。
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+allow-git = []

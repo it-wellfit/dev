@@ -1,0 +1,376 @@
+/* ══════════════════════════════════════════════════════════════
+   UI V2 — Data-Driven Premium（grill-me 7/7 裁決）
+   原則: dark-first · 高密度 · minimal chrome · 側邊欄導航
+   依據: 2026 業界研究 (Linear/Vercel/Grafana/Supabase) + 玉山品牌
+   載入方式: api.rs 設計樣式路由串接（design-system.css 之後）
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── 色彩：dark 永遠預設 + 玉山綠 accent（完整 token 集） ──
+   修復：僅覆蓋子集會殘留淺色主題的 subtle/muted 亮背景，
+   導致亮色文字疊在淺色背景上（需反白才可見）。此處覆蓋「全部」
+   語義 token，與基礎 CSS 的暗色媒體區塊完全對齊。 */
+:root {
+  --color-background: #020617;
+  --color-surface: #0f172a;
+  --color-surface-raised: #1e293b;
+  --color-surface-sunken: #020617;
+  --color-surface-overlay: rgba(15, 23, 42, 0.85);
+  --color-surface-glass: rgba(15, 23, 42, 0.72);
+  --color-border: #334155;
+  --color-border-subtle: #1e293b;
+  --color-border-strong: #475569;
+  --color-border-focus: #2dd4bf;
+  --color-text-primary: #f1f5f9;
+  --color-text-secondary: #cbd5e1;
+  --color-text-tertiary: #94a3b8;
+  --color-text-disabled: #475569;
+  --color-text-inverse: #042f2e;
+  --gradient-primary: linear-gradient(135deg, #14b8a6, #0d9488);
+  --gradient-success: linear-gradient(135deg, #22c55e 0%, #0d9488 100%);
+  --gradient-warning: linear-gradient(135deg, #f59e0b 0%, #ea580c 100%);
+  --gradient-error: linear-gradient(135deg, #f87171 0%, #b91c1c 100%);
+
+  /* 玉山綠 primary（數值色階反轉：暗色 UI 中低號=深） */
+  --color-primary: #2dd4bf;
+  --color-primary-hover: #5eead4;
+  --color-primary-active: #99f6e4;
+  --color-primary-subtle: rgba(45, 212, 191, 0.1);
+  --color-primary-muted: rgba(45, 212, 191, 0.18);
+  --color-primary-50: #042f2e;
+  --color-primary-100: #042f2e;
+  --color-primary-200: #134e4a;
+  --color-primary-300: #115e59;
+  --color-primary-400: #0f766e;
+  --color-primary-500: #0d9488;
+  --color-primary-600: #14b8a6;
+  --color-primary-700: #2dd4bf;
+  --color-primary-800: #5eead4;
+  --color-primary-900: #99f6e4;
+  --color-primary-950: #ccfbf1;
+
+  /* 語義色：暗底亮色版（含 subtle/muted 透明背景） */
+  --color-success: #22c55e;
+  --color-success-subtle: rgba(34, 197, 94, 0.1);
+  --color-success-muted: rgba(34, 197, 94, 0.2);
+  --color-warning: #f59e0b;
+  --color-warning-subtle: rgba(245, 158, 11, 0.1);
+  --color-warning-muted: rgba(245, 158, 11, 0.2);
+  --color-error: #f87171;
+  --color-error-subtle: rgba(248, 113, 113, 0.1);
+  --color-error-muted: rgba(248, 113, 113, 0.2);
+  --color-info: #60a5fa;
+  --color-info-subtle: rgba(96, 165, 250, 0.1);
+  --color-info-muted: rgba(96, 165, 250, 0.2);
+
+  /* 中性色階反轉 */
+  --color-neutral-50: #0f172a;
+  --color-neutral-100: #1e293b;
+  --color-neutral-200: #334155;
+  --color-neutral-300: #475569;
+  --color-neutral-400: #64748b;
+  --color-neutral-500: #94a3b8;
+  --color-neutral-600: #cbd5e1;
+  --color-neutral-700: #e2e8f0;
+  --color-neutral-800: #f1f5f9;
+  --color-neutral-900: #f8fafc;
+
+  /* 陰影：暗色加深 */
+  --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.2);
+  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.3), 0 1px 2px -1px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -2px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -4px rgba(0, 0, 0, 0.3);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.4);
+  --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  --glass-bg: rgba(15, 23, 42, 0.72);
+  --glass-border: rgba(255, 255, 255, 0.08);
+
+  color-scheme: dark;
+}
+
+/* 中和 light/dark 媒體查詢（dark-only v1）：
+   淺色偏好使用者也取得同一套暗色語義 token（修復反白可見性 bug）。 */
+@media (prefers-color-scheme: light) {
+  :root {
+    --color-background: #020617;
+    --color-surface: #0f172a;
+    --color-surface-raised: #1e293b;
+    --color-surface-sunken: #020617;
+    --color-surface-overlay: rgba(15, 23, 42, 0.85);
+    --color-surface-glass: rgba(15, 23, 42, 0.72);
+    --color-border: #334155;
+    --color-border-subtle: #1e293b;
+    --color-border-strong: #475569;
+    --color-border-focus: #2dd4bf;
+    --color-text-primary: #f1f5f9;
+    --color-text-secondary: #cbd5e1;
+    --color-text-tertiary: #94a3b8;
+    --color-text-disabled: #475569;
+    --color-text-inverse: #042f2e;
+    --color-primary: #2dd4bf;
+    --color-primary-subtle: rgba(45, 212, 191, 0.1);
+    --color-primary-muted: rgba(45, 212, 191, 0.18);
+    --color-success: #22c55e;
+    --color-success-subtle: rgba(34, 197, 94, 0.1);
+    --color-success-muted: rgba(34, 197, 94, 0.2);
+    --color-warning: #f59e0b;
+    --color-warning-subtle: rgba(245, 158, 11, 0.1);
+    --color-warning-muted: rgba(245, 158, 11, 0.2);
+    --color-error: #f87171;
+    --color-error-subtle: rgba(248, 113, 113, 0.1);
+    --color-error-muted: rgba(248, 113, 113, 0.2);
+    --color-info: #60a5fa;
+    --color-info-subtle: rgba(96, 165, 250, 0.1);
+    --color-info-muted: rgba(96, 165, 250, 0.2);
+    color-scheme: dark;
+  }
+}
+
+/* ── 字體：Inter + JetBrains Mono（自架 woff2，CSP font-src 'self'） ── */
+@font-face {
+  font-family: "Inter";
+  src: url("/assets/fonts/inter-latin.woff2") format("woff2");
+  font-weight: 100 900;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+2000-206F, U+2074, U+20B9;
+}
+
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("/assets/fonts/jetbrains-mono-latin.woff2") format("woff2");
+  font-weight: 100 800;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+2000-206F;
+}
+
+/* ── 佈局：左側欄 220px + 頂欄 + 狀態列 + 主區（全明確網格定位，零重疊） ──
+   網格：col1=側欄（跨全列）／col2: 列1=頂欄、列2=狀態列、列3=主區。
+   四個子元素全部明確 grid-column/grid-row——消除 auto-placement 碰撞
+   （修復：狀態列與側欄導航重疊、「操作指引」被蓋住）。 */
+body {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  grid-template-rows: auto auto 1fr;
+  min-height: 100vh;
+  background: var(--color-background);
+}
+
+/* 側邊欄：sticky、跨全列、垂直、表面色 */
+.site-nav {
+  grid-column: 1;
+  grid-row: 1 / 4;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: var(--color-surface);
+  border-right: 1px solid var(--color-border);
+  border-bottom: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  z-index: var(--z-sticky);
+}
+
+.site-nav .container {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-3) var(--space-2);
+  max-width: none;
+  overflow-x: visible;
+}
+
+/* 側邊欄連結：垂直、圓角 hover、去頂欄底線 */
+.site-nav .container > a,
+.site-nav details.nav-menu > summary {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: none;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.site-nav .container > a:hover,
+.site-nav details.nav-menu > summary:hover {
+  background: var(--color-primary-subtle);
+  color: var(--color-primary);
+}
+
+/* 側邊欄 details 分組：展開時項目內縮顯示（非浮動下拉） */
+.site-nav details.nav-menu .nav-menu-items {
+  position: static;
+  display: none;
+  border: none;
+  background: none;
+  box-shadow: none;
+  padding: 0 0 0 var(--space-4);
+  min-width: 0;
+}
+
+.site-nav details.nav-menu[open] .nav-menu-items {
+  display: flex;
+  flex-direction: column;
+}
+
+/* 頂欄：sticky、純表面色（去 glass） */
+.app-header {
+  grid-column: 2;
+  grid-row: 1;
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky);
+  background: var(--color-surface);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.app-header .container { max-width: none; }
+
+/* 狀態列：明確置於頂欄下方（col2 列2）——不與 main 碰撞 */
+.status-bar {
+  grid-column: 2;
+  grid-row: 2;
+}
+
+/* 主區：填滿右欄（列3，狀態列之下） */
+main.container {
+  grid-column: 2;
+  grid-row: 3;
+  max-width: none;
+  padding: var(--space-5) var(--space-6);
+}
+
+/* ── 面板：1px 邊框 + raised 表面，minimal chrome ──
+   依據: dark UI 中 lighter=closer；去裝飾陰影讓使用者看資料 */
+.panel {
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  padding: var(--space-4);
+  margin-bottom: var(--space-4);
+  box-shadow: none;
+}
+
+.panel h3 {
+  font-size: var(--font-size-lg);
+  border-bottom: 1px solid var(--color-border-subtle);
+  padding-bottom: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.panel h3::after { display: none; }
+
+/* ── 表格：tabular-nums + 緊湊列（帳務金額對齊） ── */
+table { font-variant-numeric: tabular-nums; }
+
+th, td { padding: var(--space-2) var(--space-3); }
+
+/* ── KPI：mono 數字 + 緊湊 ── */
+.kpi {
+  border-radius: 4px;
+  padding: var(--space-4);
+}
+
+.kpi dd {
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-2xl);
+}
+
+/* ── 按鈕/輸入：radius 4px + 玉山綠 ── */
+.btn, .input { border-radius: 4px; }
+
+.btn-primary {
+  background: var(--gradient-primary);
+  border: none;
+}
+
+/* ── 登入頁：無側邊欄（:has 原生支援） ── */
+body:has(.login-panel) { display: block; }
+
+body:has(.login-panel) .site-nav { display: none; }
+
+/* ── 無導航頁（稽核/狀態/設定等單欄頁）：排除 Grid 側欄，避免空白 220px ── */
+body:not(:has(.site-nav)) { display: block; }
+
+/* ── 響應式：≤900px 單欄堆疊（觸控友善、零重疊） ── */
+@media (max-width: 900px) {
+  body { display: block; background: var(--color-background); }
+
+  .site-nav {
+    position: static;
+    height: auto;
+    overflow-y: visible;
+    border-right: none;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .site-nav .container {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: var(--space-1);
+    padding: var(--space-2);
+  }
+
+  .site-nav .container > a,
+  .site-nav details.nav-menu > summary {
+    width: auto;
+    padding: var(--space-2) var(--space-3);
+  }
+
+  .site-nav details.nav-menu .nav-menu-items {
+    position: absolute;
+    background: var(--color-surface-raised);
+    border: 1px solid var(--color-border);
+    border-radius: 4px;
+    box-shadow: var(--shadow-lg);
+    padding: var(--space-2);
+    z-index: var(--z-sticky);
+  }
+
+  /* 手機：工作室標頭收起（chip 化導航，減少垂直長度） */
+  .nav-studio-header { display: none; }
+
+  .status-bar { position: static; }
+
+  main.container { padding: var(--space-4); }
+}
+
+/* ── 精緻化：選取色（原 primary-900 深藍字在暗底不可讀） ── */
+::selection {
+  background: var(--color-primary-muted);
+  color: var(--color-primary-950);
+}
+
+/* ── 精緻化：側邊欄角色徽章（貼心設計：目前角色一眼可辨） ── */
+.site-nav .nav-role-badge {
+  align-self: flex-start;
+  margin-top: var(--space-3);
+  margin-left: 0;
+  padding: 3px 12px;
+  color: var(--color-primary);
+  background: var(--color-primary-subtle);
+  border-color: var(--color-primary-muted);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.05em;
+}
+
+/* ── 精緻化：頂欄登出按鈕對齊與尺寸 ── */
+.app-header .form-inline .btn {
+  padding: 6px 14px;
+}
+
+.app-header .app-subtitle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+/* ── 精緻化：狀態列最小高度與垂直置中 ── */
+.status-bar-inner {
+  min-height: 44px;
+  align-items: center;
+}

@@ -1,6 +1,6 @@
-# 三大工作室 SLICE 執行計畫（PHASE-G1..G3）— v5
+# 三大工作室 SLICE 執行計畫（PHASE-G1..G3）— v8
 
-> 計畫編號：1793787631643｜日期：2026-11-10（v7：RP-6 全域盤點——Dev 根目錄未登錄文件群＋Kilo 快照區 ~70 份計畫（效能家族演化鏈完整現蹤）＋web/legacy-1420 並存事實）｜狀態：implementation-ready
+> 計畫編號：1793787631643｜日期：2026-11-10（v8：RP-6 全域盤點——Dev 根目錄未登錄文件群＋Kilo 快照區 ~70 份計畫（效能家族演化鏈完整現蹤）＋web/legacy-1420 並存事實；RP-7：Kilo 快照區 ~70 份計畫文件清點與登錄；RP-8：Dev 根目錄未登錄文件盤點；RP-9：web/legacy-1420.html 零 JS 適應度驗證）｜狀態：implementation-ready
 > 上位架構 SSOT：`.kilo/plans/1792865422970-three-studio-governance-platform.md`（v3.1 §7/§17/§20/§22）
 > 執行者注意：衝突以上位為準；每切片先做 §0 樹態核查再立 RED。
 
@@ -261,7 +261,7 @@ RAG-S1～S4 已全數實作完成並驗證（詳見 addendum #17——原 #15 �
 | ②**平台線**進度報告 | `docs/research/FlapsErp效能評估進度報告_v2.0.md`（**工作區內 SSOT**） | 2026-11-09 | **Rust 平台線** | 132 行：246 tests、422ms SLA、MT 100%、RAG、十二切片 |
 | ③**RPA-ECOM 專案主文件 v2.1** | `FlapsErp_RPA_電商系統對接_專案文件與開發前準備報告_v2.1.html`（**Dev 根目錄**，863 行；未登錄 docs 索引） | 2026-10-27 撰寫／11-03 Gate1 複審修訂 | **RPA-ECOM 對接線**（Electron→電商） | 專案代碼 FLAPS-RPA-ECOM-2026：G1–G6 KPI（G4＝斷路器：連續失敗 5 次觸發、重試 ≤3、恢復 ≤5min——即 G2.2 之驗收準則源）、OQ-01~08、交付物規格 DEL-M/D/C/T、WBS 101 人日、甘特（至 2027-02-08 結案）、RACI、風險登記冊、§10 部署維運、§11 最佳化（「文件即程式碼」原則自述）、ADR-001/002 草案清單 |
 | ④**Dev 根目錄未登錄文件群**（8+ 份 .md，全未入 docs 索引） | 根目錄 glob 實測 | 2026-10-26~11-05 | 產品線＋跨線 | `flaps_erp_performance_analysis.md`（133 行＝DOC-01 產品線逆向分析）、`flaps_erp_project_plan.md`（308 行＝DOC-02 專案章程 FLAPS-PERF-PRJ-001）、`flaps_erp_architecture_optimization_plan.md`（816 行＝DOC-03 架構優化 FLAPS-ARCH-OPT-002 v2.0）、`PHASE1_IMPLEMENTATION_README.md`（311 行，Phase 1 實作記錄）、`FREE_AI_SYSTEM_UPDATE.md`（459 行，免費 AI 研究——FREE_AI_ROUTING 之前身/補充）、`DOCUMENTATION_MASTER_SPEC.md`（205 行，**文檔治理憲政規格**：SSOT/反模擬/漸進式揭露/八角色驗收）、`WORKTREE_WORKFLOW.md`（209 行，八環境協作，Active）、`GEMINI.md`（75 行，WEB3 工作區規則，跨區） |
-| ⑤**Kilo 快照區完整計畫庫** | `~/.local/share/kilo/plans/`（**~70 份 .md**，工作區外） | 2026-11-01~09 | 跨專案 | **效能家族演化鏈完整現蹤**：progress v1（`1793787631643-flaps-erp-performance-progress-report.md`，與本計畫同 session 前綴）→v2.0（1793788660000）；install guide v1→v2→v3→v4→v5→v6（1793788300000/9000000/9500000）；deep-verification report（1793789700000）。另有其他專案計畫 ~50 份（ISMS/ekpi/MTRIX/Wellfit/ARES/KNB 系列）——歸各專案，不複製 |
+| ⑤**Kilo 快照區完整計畫庫** | `~/.local/share/kilo/plans/`（**~70 份 .md**，工作區外） | 2026-11-01~09 | 跨專案 | **效能家族演化鏈完整現蹤**：progress v1（`1793787631643-flaps-erp-performance-progress-report.md`，與本計畫同 session 前綴）→v2.0（1793788660000）；install guide v1→v2→v3→v4→v8→v6（1793788300000/9000000/9500000）；deep-verification report（1793789700000）。另有其他專案計畫 ~50 份（ISMS/ekpi/MTRIX/Wellfit/ARES/KNB 系列）——歸各專案，不複製 |
 
 **風險**：①②同名（FlapsErp效能評估進度報告_v2.0）、同 v2.0、不同線（Electron 產品 vs Rust 平台）——正是 §0.5 語義漂移定理命中案例：同概念、邊界無契約。**擁有者記憶正確**：①內容含 config.ini 調優（附錄C：備份→DISABLE_HARDWARE_ACCELERATION→IGNORE_CERT_ERR→重跑量測→回滾），即「調整哪些設定改善效能」之文件。③之發現另揭：`docs/management/FlapsErp_RPA_Ecommerce_Project_Plan_v2.1.md` 頭註宣稱「v2.1 前檔為 0 bytes 空殼，本版首次補實全文」**對家族歷史不實**——.md 檔本身 0 bytes 屬實，但家族 v2.1 內容一直存在於根目錄 HTML（見 RP-5 修正）。
 

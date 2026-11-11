@@ -48,8 +48,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .ok()
         .and_then(|p| p.parse().ok())
         .unwrap_or(8090);
-    let addr = std::net::SocketAddr::from(([127, 0, 0, 1], port));
-    let listener = tokio::net::TcpListener::bind(addr).await?;
+    // 綁定位址：預設 127.0.0.1（僅本機，安全）；跨裝置/跨平台存取時設
+    // FLAPS_BIND=0.0.0.0（區網開放；生產環境建議反向代理 + HTTPS）。
+    let bind = std::env::var("FLAPS_BIND")
+        .ok()
+        .filter(|b| !b.trim().is_empty())
+        .unwrap_or_else(|| "127.0.0.1".to_string());
+    let addr = format!("{bind}:{port}");
+    let listener = tokio::net::TcpListener::bind(&addr).await?;
 
     println!("Flaps ERP server listening on http://{addr} (zero-JS UI)");
     axum::serve(listener, app).await?;

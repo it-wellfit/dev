@@ -26,4 +26,67 @@ ignore = [
     # Revisit if: (a) sqlx releases a version widening the range to >=0.39,
     # or (b) the app ever opens third-party-provided database files.
     "RUSTSEC-2026-0459",
+    # RUSTSEC-2024-0436 (paste 1.0.15 — crate archived by its author)
+    # Transitive path: paddleocr_rs_onnx 0.2.8 -> image 0.25 (default features
+    # include "avif") -> ravif 0.13 -> rav1e 0.8.1 -> paste 1.0.15.
+    # Verified 2026-11-10 via crates.io: rav1e 0.8.1 is the latest release and
+    # declares paste as a NON-optional normal dependency, so it cannot be
+    # feature-gated away by this workspace; paddleocr_rs_onnx declares
+    # `image = "0.25"` with default features, so image's "avif" feature is
+    # enabled in the unified feature set.
+    # Severity assessment: unmaintained (not a vulnerability). paste is a
+    # compile-time macro utility used by rav1e's build path; there is no known
+    # exploit, no untrusted input reaches it, and the vendored code is not
+    # exposed to the application's data plane. The AV1 encoder is not invoked
+    # by the OCR pipeline (text detection/recognition on PNG/JPEG input).
+    # Disposition: accepted risk (no safe upgrade path available upstream).
+    # Revisit if: (a) rav1e publishes a release that drops paste, (b)
+    # paddleocr_rs_onnx publishes a release that pins image with
+    # default-features = false, or (c) the AV1 encode path is enabled.
+    "RUSTSEC-2024-0436",
+    # RUSTSEC-2026-0192 (ttf-parser 0.25.1 — author declared the crate
+    # unmaintained; suggested replacement: skrifa)
+    # Transitive paths: (1) pdf-extract 0.12.1 -> lopdf 0.42.0 -> ttf-parser
+    # 0.25.1 (non-optional); (2) paddleocr_rs_onnx 0.2.8 -> imageproc 0.27 ->
+    # ab_glyph 0.2 -> owned_ttf_parser -> ttf-parser 0.25.1.
+    # Verified 2026-11-10 via crates.io: pdf-extract 0.12.1 is the latest
+    # release and pins lopdf "^0.42"; lopdf 0.47.0 (2026-11-04) replaces
+    # ttf-parser with the maintained skrifa, but the caret requirement
+    # excludes it, and imageproc 0.27.0 is the latest release with ab_glyph
+    # (and therefore owned_ttf_parser) enabled by default.
+    # Severity assessment: unmaintained (not a vulnerability). ttf-parser is a
+    # read-only font-table parser used by PDF text extraction and by imageproc
+    # glyph rasterisation; no advisory identifies an exploitable defect, and
+    # the parser never processes operator-supplied executable content.
+    # Disposition: accepted risk (no safe upgrade path available upstream).
+    # Revisit if: (a) pdf-extract releases a version requiring lopdf >= 0.45,
+    # (b) imageproc drops ab_glyph in favour of skrifa, or (c) a security
+    # advisory is issued against ttf-parser itself.
+    "RUSTSEC-2026-0192",
+    # RUSTSEC-2024-0370 (proc-macro-error 1.0.4 — crate archived by its author)
+    # Transitive path (desktop app workspace web/src-tauri): tauri -> gtk (Linux
+    # backend) -> glib-macros -> proc-macro-error. The crate is a build-time
+    # macro utility; it never links into the shipped binary.
+    # Severity assessment: unmaintained, not a vulnerability. The crate is not
+    # compiled at all for our only release target (windows-x86_64): the gtk
+    # backend is Linux-only, so proc-macro-error is present in Cargo.lock but
+    # absent from the delivered artifact.
+    # Disposition: accepted risk (zero exposure in the Windows artifact).
+    # Revisit if: (a) a Linux build target is added to the release pipeline,
+    # (b) tauri drops the gtk backend, or (c) a maintained replacement is
+    # published upstream.
+    "RUSTSEC-2024-0370",
+    # RUSTSEC-2024-0429 (glib 0.18 — unsound Iterator/DoubleEndedIterator impls
+    # for glib::VariantStrIter)
+    # Transitive path: tauri -> gtk (Linux backend) -> glib. Same scope as the
+    # entry above: present in Cargo.lock, not compiled into the Windows build.
+    # Severity assessment: unsound (not memory-unsafe in the advisory's sense);
+    # the defect requires a caller to rely on the specific iterator semantics
+    # of glib::VariantStrIter. No untrusted input reaches glib in our runtime,
+    # and the crate is not part of the shipped artifact.
+    # Disposition: accepted risk (zero exposure in the Windows artifact).
+    # Revisit if: (a) a Linux build target is added, (b) the tauri gtk backend
+    # is enabled for any build we distribute, or (c) a fixed glib release is
+    # published and can be pinned.
+    "RUSTSEC-2024-0429",
 ]

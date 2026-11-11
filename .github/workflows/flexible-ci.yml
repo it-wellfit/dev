@@ -1,4 +1,11 @@
 ﻿# Flexible CI/CD Pipeline — 配置驅動，動態調整
+#
+# 供應鏈硬化（2026-11-10）：
+# - 第三方 action 一律以 commit SHA 釘版（附版本註解），避免 tag 被重新指向。
+# - Rust 工具鏈版本由根目錄 rust-toolchain.toml（channel = 1.99.1）唯一決定，
+#   CI 不再自訂 toolchain，確保本機與 CI 可重現一致。
+# - 工具安裝一律 --locked（使用 crate 自身 Cargo.lock 的相依版本）。
+# - 新增五閘中的供應鏈二閘：cargo-deny 政策檢查與 CycloneDX SBOM 產出。
 name: Flexible CI/CD
 
 on:
@@ -26,7 +33,6 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  RUSTFLAGS: -D warnings
   CONFIG_FILE: .github/config/ci-config.yml
 
 defaults:
@@ -43,13 +49,13 @@ jobs:
       rust_channel: ${{ steps.config.outputs.rust_channel }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Read config
         id: config
         run: |
           $branches = '["main","develop","test","release"]'
           $os = '["ubuntu-latest","windows-latest"]'
-          $rust = "stable"
+          $rust = "1.99.1"
           "branches=$branches" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
           "os_matrix=$os" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
           "rust_channel=$rust" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
@@ -62,16 +68,13 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
-        rust: [stable]
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
-      - name: Setup Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: ${{ matrix.rust }}
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Setup Rust toolchain (rust-toolchain.toml pins 1.99.1)
+        uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master (含 1.99.1)
       - name: Cache cargo
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: |
             ~/.cargo/registry
@@ -81,14 +84,54 @@ jobs:
       - name: Format check
         run: cargo fmt -- --check
       - name: Clippy lint
-        run: cargo clippy --all-targets -- -D warnings
+        run: cargo clippy --all-targets --locked -- -D warnings
       - name: Run tests
         if: github.event.inputs.skip_tests != 'true'
         run: cargo test --locked
-      - name: Security audit
+      - name: Security audit (RustSec)
         run: |
-          cargo install cargo-audit
+          cargo install cargo-audit --locked
           cargo audit
+      - name: Dependency policy (cargo-deny advisories/bans/licenses/sources)
+        run: |
+          cargo install cargo-deny --locked
+          cargo deny check
+      - name: Checkout Wellfit subproject (desktop app path dependencies)
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: it-wellfit/wellfit
+          ref: ecac383f85f5f4b4eb511a892035335b376e3beb
+          path: Wellfit
+      - name: Desktop app gates (fmt / clippy / test, Windows target only)
+        if: matrix.os == 'windows-latest'
+        run: |
+          cargo fmt --manifest-path web/src-tauri/Cargo.toml -- --check
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          cargo clippy --manifest-path web/src-tauri/Cargo.toml --all-targets --locked -- -D warnings
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          cargo test --manifest-path web/src-tauri/Cargo.toml --locked
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Desktop app security audit (RustSec, desktop lockfile)
+        run: |
+          cargo audit --file web/src-tauri/Cargo.lock
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Desktop app dependency policy (cargo-deny)
+        working-directory: web/src-tauri
+        run: |
+          cargo deny check
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: SBOM (CycloneDX 1.5)
+        run: |
+          cargo install cargo-cyclonedx --locked
+          cargo cyclonedx --format json --spec-version 1.5 --all --manifest-path platform/Cargo.toml
+          cargo cyclonedx --format json --spec-version 1.5 --all --manifest-path web/src-tauri/Cargo.toml
+      - name: Upload SBOM artifacts
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: sbom-${{ matrix.os }}
+          path: "**/*.cdx.json"
+          if-no-files-found: error
+          retention-days: 30
       - name: Memory lint gates (fmt / clippy / test)
         env:
           CARGO_TARGET_DIR: target/memlint
@@ -114,11 +157,9 @@ jobs:
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
-      - name: Setup Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: stable
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Setup Rust toolchain (rust-toolchain.toml pins 1.99.1)
+        uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master (含 1.99.1)
       - name: Build release
         run: cargo build --release --locked
       - name: Deploy

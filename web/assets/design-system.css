@@ -19,6 +19,12 @@
    ============================================================ */
 
 :root {
+  /* --- Platform capabilities (2026 native CSS) --- */
+  /* 原生表單控制項／捲軸隨系統深色模式調整（WCAG 1.4.11 非文字對比）。 */
+  color-scheme: light dark;
+  /* 允許在 auto 等內建尺寸關鍵字間插值（Chrome/Edge 129+；其他引擎忽略宣告）。 */
+  interpolate-size: allow-keywords;
+
   /* --- Brand / Primary (Blue) --- */
   --color-primary-50: #eff6ff;
   --color-primary-100: #dbeafe;
@@ -689,6 +695,15 @@ select.input {
   transition: box-shadow var(--transition-base), transform var(--transition-base);
 }
 
+.panel {
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  box-shadow: var(--shadow-sm);
+  scroll-margin-top: 72px;
+}
+
 .card:hover {
   box-shadow: var(--shadow-md);
   transform: translateY(-2px);
@@ -1313,6 +1328,14 @@ legend {
   color: var(--color-text-primary);
 }
 
+label {
+  display: block;
+  margin-bottom: var(--space-1);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+}
+
 .form-row {
   margin-bottom: var(--space-5);
 }
@@ -1337,6 +1360,72 @@ legend {
   gap: var(--space-3);
   flex-wrap: wrap;
   margin-top: var(--space-6);
+}
+
+/* ============================================================
+   Components — Confirm Submit（二段式送出確認）
+   零 JS：送出鈕收合於 <details>（原生互動，鍵盤/觸控可用）；
+   高利害操作須兩次互動才可送出，防誤觸。
+   ============================================================ */
+details.confirm-submit {
+  display: inline-block;
+}
+
+details.confirm-submit > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  cursor: pointer;
+  user-select: none;
+  list-style: none;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+details.confirm-submit > summary::-webkit-details-marker {
+  display: none;
+}
+
+details.confirm-submit > summary::before {
+  content: "▸";
+  color: var(--color-text-secondary);
+}
+
+details.confirm-submit[open] > summary::before {
+  content: "▾";
+}
+
+details.confirm-submit > summary:hover {
+  border-color: var(--color-primary);
+}
+
+details.confirm-submit > summary:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+details.confirm-submit .confirm-hint {
+  margin: var(--space-3) 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+/* 進度回饋（零 JS）：交易清單已填入時顯示提示
+   （:has() + :placeholder-shown；瀏覽器原生狀態，無腳本）。 */
+form[data-bulk-review] .bulk-hint {
+  display: none;
+  color: var(--color-warning);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+form[data-bulk-review]:has(#bulk-ids:not(:placeholder-shown)) .bulk-hint {
+  display: block;
 }
 
 /* ============================================================
@@ -1601,6 +1690,11 @@ legend {
 .login-panel {
   max-width: 26rem;
   margin-inline: auto;
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  box-shadow: var(--shadow-md);
 }
 
 .login-panel h2 {
@@ -1987,4 +2081,98 @@ html {
   gap: var(--space-2);
   flex-wrap: wrap;
   margin-bottom: var(--space-3);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   現代原生平台能力（2026；零 JS、漸進增強）
+   來源：MDN／Chrome for Developers／caniuse 2026-11 實測基線。
+   每一項皆為「不支援即退回既有行為」，不影響零 JS 與 CSP 契約。
+   ═══════════════════════════════════════════════════════════════ */
+
+/* 跨文件視圖轉場（MPA）：@view-transition（Chrome/Edge 126+、Safari 18.2+、
+   Firefox 144+ 部分支援）。同一來源的使用者主動導覽淡入淡出；
+   伺服器回應（POST PRG）與非使用者發起導覽不觸發。 */
+@media (prefers-reduced-motion: no-preference) {
+  @view-transition {
+    navigation: auto;
+  }
+}
+
+/* 轉場時保持頁首與導覽列的連續性（每頁各一個同名元素，命名唯一）。 */
+.site-nav { view-transition-name: site-nav; }
+.app-header { view-transition-name: app-header; }
+
+/* 零 JS 下拉進場動效（@starting-style：Chrome 117+、Firefox 129+、
+   Safari 17.5+）。未支援者直接顯示（無閃爍）。 */
+@starting-style {
+  .site-nav details.nav-menu[open] .nav-menu-items {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+.site-nav details.nav-menu[open] .nav-menu-items {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity var(--transition-base), transform var(--transition-base);
+}
+
+/* <details> 內容展開動效（::details-content：Chrome/Edge 131+、
+   Firefox 143+、Safari 18.4+；block-size 插值另需 interpolate-size，
+   Chrome/Edge 129+）。僅套用於「內容在流內」的展開區；
+   導覽下拉為覆蓋層，不受影響。 */
+@supports selector(::details-content) {
+  details:not(.nav-menu)::details-content {
+    block-size: 0;
+    overflow: clip;
+    transition:
+      block-size var(--transition-base),
+      content-visibility var(--transition-base) allow-discrete;
+  }
+  details:not(.nav-menu)[open]::details-content {
+    block-size: auto;
+  }
+}
+
+/* 排版與捲軸現代化（漸進增強，不改變版面語意）。 */
+h1, h2, h3 { text-wrap: balance; }
+p, li, td, th { text-wrap: pretty; }
+html { scrollbar-gutter: stable; }
+input[type="checkbox"],
+input[type="radio"],
+input[type="range"] {
+  accent-color: var(--color-primary);
+}
+
+/* 高對比偏好（WCAG 1.4.6）：強化邊界對比，不以顏色為唯一傳達。 */
+@media (prefers-contrast: more) {
+  :root {
+    --color-border: var(--color-text-secondary);
+    --color-border-strong: var(--color-text-primary);
+  }
+  .input,
+  .btn,
+  .card,
+  .panel,
+  fieldset {
+    border-width: 2px;
+  }
+}
+
+/* Windows 高對比模式（forced-colors）：以系統色為準，保留可見焦點。 */
+@media (forced-colors: active) {
+  .btn,
+  .input,
+  .card,
+  .panel,
+  fieldset,
+  .table-wrap {
+    border: 1px solid CanvasText;
+  }
+  .badge,
+  .pill {
+    border: 1px solid CanvasText;
+  }
+  :focus-visible {
+    outline: 3px solid Highlight;
+  }
 }

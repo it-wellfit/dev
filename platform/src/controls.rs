@@ -38,7 +38,10 @@ pub const CONTROL_LIBRARY: &[Control] = &[
     Control {
         control_id: "CTRL-REVIEW",
         name: "覆核裁決控制",
-        event_types: &["REVIEW_BULK"],
+        // REVIEW_BULK_SUMMARY（D-5/B-1）為同控制之批次摘要事件：每 POST
+        // 一列，承載 batch_size/ok_count/fail_count/elapsed_ms。未映射將
+        // 觸發 UNMAPPED_EVENT lint（治理稽核視其為未控制活動）。
+        event_types: &["REVIEW_BULK", "REVIEW_BULK_SUMMARY"],
         frameworks: &["ISO-27001-A.5.3", "INTERNAL-IC-03"],
     },
     Control {

@@ -92,7 +92,19 @@ pub struct PageFamily {
     pub title: &'static str,
     /// 基數：`fn(claims, ledger_entries) -> usize`。
     pub cardinality: fn(usize, usize) -> usize,
+    /// 族內第 N 筆（1-based）的路徑模板；`{}` 為序號佔位符。
+    pub path_template: &'static str,
 }
+
+impl PageFamily {
+    /// 族內第 `index` 筆（1-based）的伺服路徑。
+    pub fn path(&self, index: usize) -> String {
+        self.path_template.replace("{}", &index.to_string())
+    }
+}
+
+/// 靜態控制台伺服根路徑（platform 以 `/console/*` 託管 KEM 生成物）。
+pub const STATIC_ROOT: &str = "/console";
 
 /// 導覽群組（§3.1；順序即渲染順序）。
 #[derive(Debug, Clone, Copy)]
@@ -212,6 +224,20 @@ pub const PAGES: &[PageSpec] = &[
         tier: Tier::Operator,
         gate: Gate::All,
         workflows: &[WF_TX_CREATE, WF_IMPORT_PARSE, WF_REPORTS],
+    },
+    // ── D-6 自我稽核視圖（計畫 1793033761021 B-5.0）：僅本人稽核事件，
+    // 伺服器端強制 performed_by=self；Gate::All＝任一登入者可自查。──
+    PageSpec {
+        id: "my.decisions",
+        path: "/my-decisions",
+        method: Method::Get,
+        title: "我的裁決紀錄",
+        nav_group: Some("overview"),
+        nav_href: None,
+        renderer: Renderer::Dynamic,
+        tier: Tier::Operator,
+        gate: Gate::All,
+        workflows: &[WF_REVIEW_DECIDE, WF_GOVERN],
     },
     // ── ledger（帳務作業）──
     PageSpec {
@@ -1003,11 +1029,13 @@ pub const FAMILIES: &[PageFamily] = &[
         id: "kb.claim",
         title: "主張詳情",
         cardinality: |claims, _ledger| claims,
+        path_template: "/console/claims/{}.html",
     },
     PageFamily {
         id: "kb.ledger-chunk",
         title: "帳本分頁",
         cardinality: |_claims, ledger| ledger.max(1).div_ceil(200),
+        path_template: "/console/ledger-{}.html",
     },
 ];
 
@@ -1029,6 +1057,36 @@ pub fn page_by_id(id: &str) -> Option<&'static PageSpec> {
 /// 導覽用連結：`nav_href` 覆寫優先，否則用 `path`。
 pub fn nav_href_of(page: &PageSpec) -> &'static str {
     page.nav_href.unwrap_or(page.path)
+}
+
+/// 依 id 查靜態頁（`renderer == Static`）的伺服路徑。
+pub fn static_path_of(id: &str) -> Option<&'static str> {
+    PAGES
+        .iter()
+        .find(|p| p.id == id && p.renderer == Renderer::Static)
+        .map(|p| p.path)
+}
+
+/// 列出以 `prefix` 開頭的靜態頁 id（宣告序）；例如 `"console.workflow."` → 13 筆。
+pub fn static_ids_with_prefix(prefix: &str) -> Vec<&'static str> {
+    PAGES
+        .iter()
+        .filter(|p| p.renderer == Renderer::Static && p.id.starts_with(prefix))
+        .map(|p| p.id)
+        .collect()
+}
+
+/// 依 id 查高基數族。
+pub fn family_by_id(id: &str) -> Option<&'static PageFamily> {
+    FAMILIES.iter().find(|f| f.id == id)
+}
+
+/// 靜態頁路徑轉為相對於 `depth` 層子目錄的連結（`depth`＝頁面在 `/console` 下的
+/// 目錄深度；0＝根頁）。KEM 生成器以零 JS 相對連結互相引用，故路徑由 manifest 推導。
+pub fn relative_static_path(path: &str, depth: usize) -> String {
+    let rest = path.strip_prefix(STATIC_ROOT).unwrap_or(path);
+    let rest = rest.trim_start_matches('/');
+    format!("{}{}", "../".repeat(depth), rest)
 }
 
 #[cfg(test)]
@@ -1163,6 +1221,8 @@ mod tests {
         // 組成：Public 1（login）＋GET 39（38 實測路由＋W3 前瞻登記之
         // accounts.detail；含 bankpay.batch-detail）＋POST 2＝42。
         // 路由對帳測試（W2）須於 W3 落地 /accounts/:id 後方成立。
+        // 〔修訂 2026-11-10，計畫 1793033761021 B-5.0〕＋my.decisions
+        // （D-6 自我稽核視圖，/my-decisions）→ Dynamic 43。
         let dynamic = PAGES
             .iter()
             .filter(|p| p.renderer == Renderer::Dynamic)
@@ -1171,7 +1231,47 @@ mod tests {
             .iter()
             .filter(|p| p.renderer == Renderer::Static)
             .count();
-        assert_eq!(dynamic, 42);
+        assert_eq!(dynamic, 43);
         assert_eq!(static_html, 23);
+    }
+
+    #[test]
+    fn static_workflow_and_role_families_are_complete() {
+        let workflows = static_ids_with_prefix("console.workflow.");
+        assert_eq!(workflows.len(), 13, "13 工作流頁必須全數登記");
+        let roles = static_ids_with_prefix("console.role.");
+        assert_eq!(roles.len(), 5, "5 角色視角頁必須全數登記");
+        for id in workflows.iter().chain(roles.iter()) {
+            let path = static_path_of(id).expect("static path");
+            assert!(
+                path.starts_with(STATIC_ROOT),
+                "{id} 靜態路徑須位於 {STATIC_ROOT} 之下：{path}"
+            );
+        }
+    }
+
+    #[test]
+    fn family_paths_are_derived_from_template() {
+        let claims = family_by_id("kb.claim").expect("claim family");
+        assert_eq!(claims.path(1), "/console/claims/1.html");
+        let ledger = family_by_id("kb.ledger-chunk").expect("ledger family");
+        assert_eq!(ledger.path(1), "/console/ledger-1.html");
+        assert_eq!(ledger.path(12), "/console/ledger-12.html");
+    }
+
+    #[test]
+    fn relative_static_path_resolves_depth() {
+        assert_eq!(
+            relative_static_path("/console/workflows/capture.html", 0),
+            "workflows/capture.html"
+        );
+        assert_eq!(
+            relative_static_path("/console/workflows/capture.html", 1),
+            "../workflows/capture.html"
+        );
+        assert_eq!(
+            relative_static_path("/console/index.html", 1),
+            "../index.html"
+        );
     }
 }

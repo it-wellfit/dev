@@ -1247,6 +1247,28 @@ pub async fn apihub_net(
         status_class: "badge-warning".to_string(),
         note: "OQ-E3：玉山 Sandbox 憑證申請中；取得前不猜測端點（ADR-0012 D1）".to_string(),
     });
+    let ocr_state = crate::ocr::availability(&state.pool).await;
+    checks.push(NetCheckRow {
+        item: "OCR 引擎".to_string(),
+        value: ocr_state.note.clone(),
+        status: if ocr_state.available {
+            "可用"
+        } else {
+            "未設定"
+        }
+        .to_string(),
+        status_class: if ocr_state.available {
+            "badge-success"
+        } else {
+            "badge-neutral"
+        }
+        .to_string(),
+        note: ocr_state
+            .models_dir
+            .as_deref()
+            .map(|d| format!("模型目錄：{d}"))
+            .unwrap_or_else(|| "未設定模型目錄".to_string()),
+    });
     checks.push(NetCheckRow {
         item: "V2.8 規格埠".to_string(),
         value: "8443（內部）/ 9443（外部 eospt.testesunbank.com.tw）".to_string(),

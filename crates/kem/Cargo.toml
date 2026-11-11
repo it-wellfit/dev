@@ -3,10 +3,11 @@ name = "kem"
 version = "0.1.0"
 edition = "2021"
 description = "Knowledge Evolution Module: immutable capture, atomic claims, rule vetting, hash-chained ledger, BM25 retrieval, evolution and governance"
-license = "UNLICENSED"
+license = "LicenseRef-Proprietary"
+publish = false
 
 [dependencies]
-console_manifest = { path = "../console_manifest" }
+console_manifest = { path = "../console_manifest", version = "0.1.0" }
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }

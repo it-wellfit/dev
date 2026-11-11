@@ -37,7 +37,7 @@ environments:
 
 build:
   os: [ubuntu-latest, windows-latest]
-  rust_channel: stable
+  rust_channel: "1.99.1"   # 與根 rust-toolchain.toml（channel = 1.99.1）一致
   features: []
   profile: release
 
@@ -47,12 +47,14 @@ quality_gates:
   clippy_deny_warnings: true
   test: true
   audit: true
+  deny: true          # cargo-deny：公告／版本／授權／來源政策（deny.toml 為政策 SSOT）
+  sbom: true          # CycloneDX 1.5 SBOM（docs/release/sbom/）
   min_test_count: 0
 
 deploy:
   method: native-binary
   windmill: true
-  target_dir: "$LOCALAPPDATA\Temp\dev-target"
+  target_dir: '$LOCALAPPDATA\Temp\dev-target'
 
 notifications:
   on_failure: true

@@ -3,7 +3,8 @@ name = "flaps_bridge"
 version = "0.1.0"
 edition = "2021"
 description = "COM batching bridge for FlapsErp (FLAPSConsoleCOM) - T-102/T-301"
-license = "UNLICENSED"
+license = "LicenseRef-Proprietary"
+publish = false
 
 [features]
 # EULA-gated: real COM transport requires vendor written policy confirmation (RSK-E1)

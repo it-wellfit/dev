@@ -1,4 +1,4 @@
-> 強制規則（C-01..C-12；ID 前綴 `C-` 為 correction，與 plan C-01..23 不同命名空間）。
+> 強制規則（C-01..C-13；ID 前綴 `C-` 為 correction，與 plan C-01..23 不同命名空間）。
 > 每條以單行六欄表（ID＋五內容欄）固定格式；編號一經賦予不得改序；作廢者標 SUPERSEDED 不刪號。
 
 | 規則 ID | 規則 | 為什麼 | 證據 | 驗證 | 狀態 |
@@ -13,5 +13,6 @@
 | C-08 | 偽影甄別（掃描器失敗先區分假陽性與真錯誤，再決定修文件或修掃描器） | 字串多一空格／歷史記錄區塊誤判為文件錯誤 | deep3 三項失敗經 deep4 甄別全為偽影（`§24` 歷史列） | 每項失敗有偽影或真錯誤之判定紀錄 | ACTIVE |
 | C-09 | 寫入通道（PowerShell 5.1：heredoc 不支援；中文佔位；寫檔先 here-string 寫 temp，再由 PowerShell 原生 `[IO.File]::AppendAllText` 或 Rust 工具併入）〔原「Python append」SUPERSEDED 2026-11-10（Rust-first，見 C-11）；原句保留於軌跡〕 | heredoc／BOM 節入事件將檔案截斷至 41 行 | `WriteAllText` 需 `[Text.UTF8Encoding]::new($false)` 防 BOM | 寫入後檔案可讀、行數與預期一致 | ACTIVE |
 | C-10 | 誠實註記（未量測標 UNKNOWN，`UNKNOWN ≠ PASS ≠ FAIL`；數字聲明附方法與日期） | `PLAN_REGISTER.md:174` 登載「plan stub」負面紀錄（聲明與實況不符） | `1792865422970-* §0 證據紀律（第 2 條）`；`§25.8` 全部數字附實測日期 | 數字聲明皆有量測方法與日期可追溯 | ACTIVE |
-| C-11 | Rust-first 工件規範（新增工具與開發一律 Rust；不得新增 Python 工件；既存 `.ps1` 工具鏈為例外） | 2026-11-10 使用者指令「必須嚴格遵守 Rust-first」；原 Python 版 lint 已刪、改以 Rust 實作（D-05） | `tools/memory_lint/`（零依賴 Rust crate）；`.kilo/plans/1792461065184-*` 2026-11-10 更新段 | 新增檔案清單（`git status`）掃描零 `*.py`；本列修訂時更新 | ACTIVE |
+| C-11 | Rust-first 工件規範（新增工具與開發一律 Rust；不得新增 Python 工件；既存 `.ps1` 工具鏈為例外） | 2026-11-10 使用者指令「必須嚴格遵守 Rust-first」；原 Python 版 lint 已刪、改以 Rust 實作（D-05） | `tools/memory_lint/`（零依賴 Rust crate）；`.kilo/plans/1792461065184-*` 2026-11-10 更新段 | 新增檔案清單（`git status`）掃描零 `*.py`；本列修訂時更新。基線（2026-11-10 `git ls-files *.py`）：Dev 0、Knowledge 0、ekpi-platform 既有 17（`.opencode/skills` 10／`eval/reference-python` 5／`scripts` 2）——既有者視為例外、不得再增 | ACTIVE |
 | C-12 | 同名 ID 前綴多檔防呆（以 ID 前綴 glob 挑檔時，須以「含結構標題＋最大檔」剔除舊 stub；挑選邏輯須有測試） | v2.0 首跑誤選 stub（`quality-restoration-plan`／`unified-approval-channel`）致引用全數誤判 | `tools/memory_lint/src/lib.rs`（`_pick_plan`）；`.kilo/sessions/20261110-dev-memory-v2/manifest.md` Notes | `tests/negative.rs` fixture 含 stub 檔仍正確挑選（6/6 綠）；或手動印出被選檔核對 | ACTIVE |
+| C-13 | Evidence-Driven 演進制度（迭代交付須含 A–L 節；發布判定僅五級：PASS／CONDITIONAL PASS／BLOCKED／REJECTED／NOT VERIFIED；禁無證據之重大變更與未驗證宣稱） | 2026-11-11 使用者頒佈《MASTER PROMPT：Evidence-Driven Global Engineering, Research & Evolution System》 | `.kilo/plans/1794365729846-master-prompt-evidence-driven-evolution.md`（全文逐字轉錄） | 迭代交付與發布紀錄含 A–L 節與閘門判定；重大變更附來源研究、實驗證據與回滾條件 | ACTIVE |

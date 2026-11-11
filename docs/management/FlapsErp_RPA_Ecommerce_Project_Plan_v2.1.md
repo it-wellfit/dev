@@ -1,8 +1,11 @@
 # FlapsErp RPA 電商整合專案計畫 v2.1
 
-> 文件編號：PLAN-FLAPSERP-V2.1｜狀態：**現行計畫（Active）**｜簽發：2026-11-07
-> 上游：`docs/PLAN_REGISTER.md`（效力位階登記處）｜本檔取代 v2.0 及更早草案（v2.1 前檔為 0 bytes 空殼，本版首次補實全文）
-> 定位：FlapsErp（輔翼 ERP）RPA 支援線之執行計畫 SSOT——範圍、階段、驗收、證據與回滾。
+> ⚠️ **SUPERSEDED by [`FlapsErp_RPA_電商系統對接_專案文件與開發前準備報告_v2.1.md`](FlapsErp_RPA_電商系統對接_專案文件與開發前準備報告_v2.1.md)** — 原始專案主文件（Dev 根目錄 HTML v2.1，863 行，charter 級）已轉錄為 .md 版本入冊 docs/management/。本檔（2026-11-10 撰寫之摘要版）之獨有「現況對齊」段已併入主文件 §0 附錄。本檔保留供追溯，不得作為對外計畫依據。
+> **修正記錄**：前版頭註宣稱「v2.1 前檔為 0 bytes 空殼，本版首次補實全文」對家族歷史不實——.md 檔本身 0 bytes 屬實，但家族 v2.1 內容一直存在於根目錄 HTML（2026-10-27 撰寫、11-03 Gate1 複審修訂）。依誠實紀律（GOVERNANCE P7）修正。
+
+> 文件編號：PLAN-FLAPSERP-V2.1｜狀態：**SUPERSEDED**｜簽發：2026-11-07
+> 上游：`docs/PLAN_REGISTER.md`（效力位階登記處）
+> 定位：~~FlapsErp（輔翼 ERP）RPA 支援線之執行計畫 SSOT~~（已由主文件取代——本檔降級為執行狀態附錄）
 > 事實紀律：`[FACT:CODE]` 已驗證代碼事實／`[FACT:DOC]` 已確認規範／`[PROP]` 提案未實作／`[LIMIT]` 已知限制。
 
 ---

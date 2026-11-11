@@ -162,6 +162,7 @@
                outcome-failed row class). #}
             <form method="post" action="/reviews/bulk" class="section-gap" data-bulk-review>
                 <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <input type="hidden" name="queue_opened_at" value="{{ queue_opened_at }}">
                 <label for="bulk-decision">批量裁決（僅作用於待覆核列；每列獨立審計與回報）</label>
                 <div class="form-row">
                     <select class="input" id="bulk-decision" name="decision">
@@ -174,7 +175,12 @@
                     <textarea class="input" id="bulk-ids" name="tx_ids" rows="2" placeholder="tx-001, tx-002"></textarea>
                 </div>
                 <div class="form-actions">
-                    <button class="btn btn-primary" type="submit">送出批量裁決</button>
+                    <p class="bulk-hint" data-bulk-hint>交易清單已填入；展開「送出批量裁決」完成確認。</p>
+                    <details class="confirm-submit" data-bulk-confirm>
+                        <summary>送出批量裁決…</summary>
+                        <p class="confirm-hint">送出後每列獨立審計且不可改寫；撤銷須另發反向裁決並留軌跡。請確認裁決方向（核准／駁回）與筆數。</p>
+                        <button class="btn btn-primary" type="submit">確認送出</button>
+                    </details>
                 </div>
             </form>
 

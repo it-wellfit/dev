@@ -3,6 +3,49 @@
 本檔記錄根 workspace（`core/`、`platform/`、`web/`、`crates/flaps_bridge`）的實際變更。格式參考 Keep a Changelog。子專案（ekpi-platform、Wellfit、SyncMesh）各自有變更記錄。
 
 
+## [Unreleased] — 2026-11-10（供應鏈硬化＋W10 端到端：cargo-deny 四層閘、SBOM、requireSignedVersion、latest.json 工具與簽章負向用例；addendum #26）
+
+### Added
+- **cargo-deny 政策**（新 `deny.toml`）：公告／版本／授權／來源四層；`wildcards = deny`、僅 crates.io 來源、內部 crate 以 `private.ignore` 排除授權政策。輸出 `advisories ok, bans ok, licenses ok, sources ok`。
+- **SBOM**：CycloneDX 1.5 共 7 份（platform／flaps_core／kem／console_manifest／flaps_bridge／web／flaps-erp-web）落地 `docs/release/sbom/`。
+- **rust-toolchain.toml**：channel = 1.99.1（components rustfmt/clippy）——本機與 CI 工具鏈一致、可重現。
+- **CI 供應鏈閘**（`.github/workflows/flexible-ci.yml`）：cargo-deny 檢查＋CycloneDX SBOM 產出＋artifact 上傳；第三方 action 全部 commit SHA 釘版。
+- **latest.json 產生器**（`web/src-tauri/src/bin/make_latest_json.rs`，Rust）：以設定公鑰實際驗簽＋檢查 `version:<v>` 綁定後才寫 feed，零人工編輯。
+- **更新鏈驗收測試**（`web/src-tauri/tests/updater_artifact.rs`）：設定層不變量＋正例（產物驗簽）＋三負例（篡改簽章／篡改產物／宣告版本不符）。
+- **公告處置**（`.cargo/audit.toml`）：RUSTSEC-2026-0459／RUSTSEC-2024-0436／RUSTSEC-2026-0192 逐條書面理由、緩解措施與複核觸發條件。
+
+### Changed
+- **requireSignedVersion = true**（`web/src-tauri/tauri.conf.json`）：簽章 trusted comment 的 `version:<v>` 與 feed 宣告版本不符即拒裝；同步收緊 CSP（移除 `style-src 'unsafe-inline'`）。
+- **內部 crate 授權**：`UNLICENSED` → `LicenseRef-Proprietary` ＋ `publish = false`（`UNLICENSED` 非合法 SPDX，會使 SBOM 產生警告）。
+- **askama 功能收斂**：`default-features = false, features = ["derive","std"]`——根除 unmaintained 的 basic-toml／glob（repo 無 askama.toml，行為等價）。
+- **path 依賴補 version**（kem→console_manifest、platform→flaps_core/console_manifest/kem）：滿足 cargo-deny `wildcards = deny` 的可重現解析要求。
+- **`admin_users.html` 導覽一致性**：補 `studio_nav` macro ＋ `AdminUsersTemplate.nav`（依 ROLE_MANAGE 過濾、active 指向 /admin/users）。
+- **CI 設定檔**：rust_channel → "1.99.1"、quality_gates 增 `deny`／`sbom`；修正 `ci-config.yml` 內非法跳脫 `\T`（雙引號 → 單引號）。
+- **Runbook v1.1**（`docs/release/UPDATER_RUNBOOK.md`）：校正簽章環境變數（`cargo tauri build` 只讀 `TAURI_SIGNING_PRIVATE_KEY` **內容**，路徑變數僅 `sign` 子命令支援）、補 latest.json 產生流程與供應鏈閘節、端到端清單附實測結果。
+
+### Verified
+- 量測（2026-11-10）：`cargo deny check` 四層全綠；`cargo audit` 掃描 459 個 crate 依賴、1446 則公告、無未處置輸出；`cargo check --workspace --offline` EXIT=0；`cargo test --manifest-path web/src-tauri/Cargo.toml --test updater_artifact` → 2 passed。
+- W10 建置實測：`cargo tauri build` 產出 `Flaps ERP_0.2.0_x64-setup.exe`（5,116,505 bytes）＋`.sig`（440 bytes）；`make_latest_json` 以設定公鑰驗簽通過並產出 latest.json（version 0.2.0）。
+- /console 靜態服務實測：開發版 `GET /console/index.html` 200（session 保護）；`knowledge/console` 65 檔已由 NSIS `resources` 捆綁。
+- 未竟（誠實記錄）：安裝版升級演練（需 feed 主機）、Authenticode 購證、私鑰密碼輪換、`cargo vet`／`cargo auditable`（未安裝 → UNKNOWN）。
+
+
+## [Unreleased] — 2026-11-11（供應鏈狀態審查補齊：桌面套件納入閘門、跨 repo 修正、實測數字更正）
+
+### Fixed
+- **桌面套件（`web/src-tauri` 為獨立 workspace）原本不在任何供應鏈閘內**：根 `Cargo.lock`／`cargo audit`／`cargo deny`／SBOM 皆不涵蓋實際交付的安裝包依賴圖（509 個 crate）。現補齊 fmt／clippy／test／audit／deny／SBOM 六閘，2026-11-11 實測全綠。
+- `flaps-erp-web` manifest 補 `license = "LicenseRef-Proprietary"` ＋ `publish = false`（原為 unlicensed，cargo-deny 授權閘失敗）；桌面 SBOM 重新產出（SBOM 元資料已含 SPDX 運算式）。
+- 桌面套件 path 依賴（`wellfit_bankpay`／`wellfit_core`）補 `version = "0.1.0"`；跨 repo 修正 `Wellfit/Cargo.toml` 工作區內部 path 依賴補 `version`（消除 cargo-deny `wildcard for crate 'wellfit_bankpay'` 錯誤）——此項**必須於 Wellfit repo 另行提交**，Dev CI 的 Wellfit `ref` 須同步更新。
+- CI 桌面 SBOM 步驟原為無條件執行，乾淨 checkout 缺 `Wellfit/`（獨立 repo、被根 `.gitignore` 排除）將使 CI 失敗；現加入 it-wellfit/wellfit 的 `actions/checkout`（SHA 釘版、`ref` 釘 commit）與桌面閘步驟。
+
+### Changed
+- `deny.toml`：圖範圍改 `all-features = true`（兩 workspace 實測 `advisories/bans/licenses/sources` 全 ok）；授權白名單新增 `MPL-2.0`（僅 Tauri css 解析鏈）；新增 `RUSTSEC-2024-0370`／`RUSTSEC-2024-0429` 忽略項（Linux-only GTK/glib 路徑，不入 Windows 交付物），並註記 cargo-deny 0.20.2 之 `--config` 覆寫陷阱（CLI 覆寫會使本檔 ignore／allow 策略全部失效）。
+- `.cargo/audit.toml`：補上述兩則桌面套件公告之書面處置（理由／緩解／複核觸發條件）。
+
+### Docs
+- `docs/release/UPDATER_RUNBOOK.md` v1.1 補充：桌面套件六閘與 Wellfit checkout 機制、`cargo deny --config` 陷阱說明、端到端清單新增第 12–14 列實測結果。
+- **實測數字更正（誠實記錄）**：本次審查時根 workspace 因平行編輯中的 `platform/src/api.rs` 暫時無法編譯（`break` in async fn 等 6 個錯誤），2026-11-10 的「五閘全綠／test 294 passed」屬**歷史量測值**，須於該變更落地後重測；依既有實測分項合計為 **293**，未重測前不得宣稱 294 為現行值。
+
 ## [Unreleased] — 2026-11-10（統一營運控制台 manifest 雙渲染器；addendum #20）
 
 ### Added

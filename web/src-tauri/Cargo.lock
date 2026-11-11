@@ -976,6 +976,7 @@ version = "0.2.0"
 dependencies = [
  "base64 0.22.1",
  "chrono",
+ "minisign-verify",
  "serde",
  "serde_json",
  "tauri",

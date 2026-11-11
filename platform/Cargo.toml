@@ -2,6 +2,8 @@
 name = "platform"
 version = "0.0.1"
 edition = "2021"
+license = "LicenseRef-Proprietary"
+publish = false
 
 [lib]
 name = "platform"
@@ -21,7 +23,7 @@ reqwest = { version = "0.12", features = ["json", "native-tls"] }
 
 # Zero-JS web tier (ADR-0002): axum HTTP server + server-rendered templates
 axum = { version = "0.7", features = ["http1", "form", "tokio", "multipart"] }
-askama = "0.16"
+askama = { version = "0.16", default-features = false, features = ["derive", "std"] }
 # Authentication (G-1): Argon2id password hashing (OWASP recommended params)
 argon2 = { version = "0.5", features = ["std"] }
 # Slice 8: CSV import parsing and file fingerprinting (traceability)
@@ -30,18 +32,19 @@ csv = "1.3"
 calamine = { version = "0.38", features = ["dates"] }
 # PDF 文字層匯入轉接器（V2）：純 Rust 擷取（crates-io 實證：0.12.1、7.9M 下載、2026-09-16 更新）
 pdf-extract = "0.12"
+
 sha2 = "0.10"
 
 # Core crate dependency
-flaps_core = { path = "../core" }
+flaps_core = { path = "../core", version = "0.0.1" }
 
 # Unified ops console manifest (single page/registry SSOT; plan 1793033568961 §3)
-console_manifest = { path = "../crates/console_manifest" }
+console_manifest = { path = "../crates/console_manifest", version = "0.1.0" }
 
 # PHASE-R (RAG-S2): reuse the proven embedder pool + cosine from the
 # knowledge module. Path dependency — zero new external crates (kem's deps
 # are a subset of platform's).
-kem = { path = "../crates/kem" }
+kem = { path = "../crates/kem", version = "0.1.0" }
 
 # Database
 sqlx = { version = "0.9", features = ["runtime-tokio", "macros", "sqlite", "chrono"] }
@@ -53,6 +56,13 @@ windows = { package = "windows", version = "0.58", features = ["Win32_Foundation
 
 # thiserror for error handling
 thiserror = "1.0"
+paddleocr_rs_onnx = "0.2"
+image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
+# DOCX 匯入轉接器（V3-C）：zip 容器讀取（word/document.xml）＋OOXML 流式解析
+zip = { version = "9.5", default-features = false, features = ["deflate"] }
+quick-xml = "0.42"
+# Email 附件遞迴進料（V3-A；D-EML1）：純 Rust MIME 解析（stalwartlabs，5.4M 下載、2026-11-02）
+mail-parser = "1.0"
 
 [dev-dependencies]
 # Testing

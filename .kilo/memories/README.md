@@ -6,7 +6,7 @@
 
 ## 讀取順序（新 session 標準動作）
 
-1. `corrections.md`（強制規則，`C-01..C-12`，以 `instructions` 自動加載，手動查閱為備援）。
+1. `corrections.md`（強制規則，`C-01..C-13`，以 `instructions` 自動加載，手動查閱為備援）。
 2. `project.md`（事實索引，workspace 標籤制）。
 3. `decisions.md`（決策記錄），再回本 README 查索引狀態。
 4. 情節（episodic）僅於「任務與過去事件相關」時檢索 `.kilo/sessions/`；常駐不載入（S-05：聚焦勝全量）。
@@ -58,7 +58,7 @@
 
 | 檔案 | 條目數 | 狀態 |
 |---|---|---|
-| `corrections.md` | C-01..C-12（12 條） | VERIFIED |
+| `corrections.md` | C-01..C-13（13 條） | VERIFIED |
 | `project.md` | 7 條（跨 session 現況） | VERIFIED |
 | `decisions.md` | D-01..D-07（7 條） | VERIFIED |
 

@@ -3,6 +3,7 @@ name = "console_manifest"
 version = "0.1.0"
 edition = "2021"
 description = "Unified ops console manifest: single page/registry SSOT consumed by the platform dynamic renderer and the KEM static renderer"
-license = "UNLICENSED"
+license = "LicenseRef-Proprietary"
+publish = false
 
 [dependencies]

@@ -108,7 +108,8 @@
 | [`management/OEaAP_Platform_Design_and_Development_Plan_v1.0.md`](management/OEaAP_Platform_Design_and_Development_Plan_v1.0.md) | OEKAP 計畫 | 主產品設計開發計畫 |
 | [`management/OQ-E3_Resolution_Plan.md`](management/OQ-E3_Resolution_Plan.md) | OQ-E3 | 未決問題解法計畫 |
 | [`management/ERP_Reconnaissance_Session_Decision.md`](management/ERP_Reconnaissance_Session_Decision.md) | 偵察決策 | ERP 偵察 session 裁定 |
-| [`management/FlapsErp_RPA_Ecommerce_Project_Plan_v2.1.md`](management/FlapsErp_RPA_Ecommerce_Project_Plan_v2.1.md) | **FlapsErp 計畫 v2.1（現行）** | RPA 電商整合計畫（v1.0 已 superseded） |
+| [`management/FlapsErp_RPA_電商系統對接_專案文件與開發前準備報告_v2.1.md`](management/FlapsErp_RPA_電商系統對接_專案文件與開發前準備報告_v2.1.md) | **FlapsErp RPA-ECOM 專案主文件 v2.1（charter 級）** | 現行 |
+| [`management/FlapsErp_RPA_Ecommerce_Project_Plan_v2.1.md`](management/FlapsErp_RPA_Ecommerce_Project_Plan_v2.1.md) | ~~FlapsErp 計畫 v2.1（執行摘要版）~~ | ⚠️ **SUPERSEDED by 主文件** |
 | [`management/templates/`](management/templates/) | 範本 | 週報 T-02、閘門 T-03、ADR T-04、研究 T-08 |
 
 ### 2.7 研究與交付（research/、delivery/、demo/、production/）
@@ -120,7 +121,7 @@
 | [`research/FlapsErp效能基線報告_v1.0.md`](research/FlapsErp效能基線報告_v1.0.md) | 產品效能基線（2026-11-03） | 現行（對照基準） |
 | [`research/FlapsErp效能評估進度報告_v2.0.md`](research/FlapsErp效能評估進度報告_v2.0.md) | **全程進度報告（2026-11-09）**：開發至今時間軸、246 測試、SLA 422ms、RAG、安全處置 | 現行 |
 | [`research/FlapsErp優化_合規風險追蹤表.md`](research/FlapsErp優化_合規風險追蹤表.md) | 合規風險 | 現行 |
-| [`research/A1檔案通道端到端操作手冊_v1.0.md`](research/A1檔案通道端到端操作手冊_v1.0.md)、[`research/CDP自動化Playbook_A3軌道_v0.1.md`](research/CDP自動化Playbook_A3軌道_v0.1.md) | 操作手冊 | 現行 |
+| [`04-operations/A1檔案通道端到端操作手冊_v1.0.md`](04-operations/A1檔案通道端到端操作手冊_v1.0.md)、[`research/CDP自動化Playbook_A3軌道_v0.1.md`](research/CDP自動化Playbook_A3軌道_v0.1.md) | 操作手冊 | 現行 |
 | [`research/flaps_bridge測試規格_v1.0.md`](research/flaps_bridge測試規格_v1.0.md) | bridge 測試規格 | 現行 |
 | [`research/proposals/OQ-F1_F2_輔翼ERP正式需求提案_v2.1.md`](research/proposals/OQ-F1_F2_輔翼ERP正式需求提案_v2.1.md) | **OQ-F1/F2 正式提案（現行）** | v2.1 |
 | [`research/proposals/OQ-F1_F2_輔翼ERP正式需求提案_v1.0.md`](research/proposals/OQ-F1_F2_輔翼ERP正式需求提案_v1.0.md) | OQ-F1/F2 提案 | ⚠️ **SUPERSEDED by v2.1**（保留供追溯） |

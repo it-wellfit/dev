@@ -118,33 +118,59 @@ fn esc(s: &str) -> String {
         .replace('"', "&quot;")
 }
 
-fn href_fix(key: &str, active: &str) -> String {
-    let base = if active == "index" { "" } else { "../" };
+/// 主導覽項目 → manifest 靜態頁 id（`None`＝高基數族首頁）。
+const NAV_ITEMS: [(&str, &str, Option<&str>); 7] = [
+    ("index", "首頁", Some("console.index")),
+    ("roles", "角色", Some("console.index")),
+    ("workflows", "工作流", Some("console.workflow.capture")),
+    ("claims", "主張", Some("console.claims-index")),
+    ("ledger", "帳本", None),
+    ("gov", "治理", Some("console.queue")),
+    ("ops", "維運", Some("console.maintenance")),
+];
+
+/// manifest 靜態頁 id → 相對於 `depth` 層的零 JS 相對連結。
+fn console_href(id: &str, depth: usize) -> String {
+    let path = console_manifest::static_path_of(id)
+        .unwrap_or_else(|| panic!("manifest 未登記靜態頁：{id}"));
+    console_manifest::relative_static_path(path, depth)
+}
+
+/// 高基數族首頁連結（帳本分頁族第 1 頁）。
+fn family_first_href(family_id: &str, depth: usize) -> String {
+    let family = console_manifest::family_by_id(family_id)
+        .unwrap_or_else(|| panic!("manifest 未登記頁族：{family_id}"));
+    console_manifest::relative_static_path(&family.path(1), depth)
+}
+
+/// 主導覽連結（路徑全部由 manifest 推導；`depth`＝目前頁面在 `/console` 下的層數）。
+fn nav_href(key: &str, depth: usize) -> String {
     match key {
-        "index" => format!("{base}index.html"),
-        "roles" => format!("{base}index.html#roles"),
-        "workflows" => format!("{base}workflows/capture.html"),
-        "claims" => format!("{base}claims/index.html"),
-        "ledger" => format!("{base}ledger-1.html"),
-        "gov" => format!("{base}queue.html"),
-        "ops" => format!("{base}maintenance.html"),
-        _ => format!("{base}index.html"),
+        "roles" => format!("{}#roles", console_href("console.index", depth)),
+        "ledger" => family_first_href("kb.ledger-chunk", depth),
+        other => {
+            let id = NAV_ITEMS
+                .iter()
+                .find(|(k, _, _)| *k == other)
+                .and_then(|(_, _, id)| *id)
+                .unwrap_or("console.index");
+            console_href(id, depth)
+        }
     }
 }
 
-fn workflow_href(active: &str, name: &str) -> String {
-    let base = if active == "index" {
-        "workflows/"
-    } else {
-        "../workflows/"
-    };
-    format!("{base}{name}.html")
+/// 工作流頁連結（id 由 manifest 推導；新增工作流不需再改生成器）。
+fn workflow_href(name: &str, depth: usize) -> String {
+    console_href(&format!("console.workflow.{name}"), depth)
 }
 
 /// 共用頁框：頭部導航＋內容＋頁腳（CSS 由 assets/console.css 提供）。
-fn page(title: &str, active: &str, body: &str) -> String {
+///
+/// `depth`＝頁面在 `/console` 下的目錄深度（0＝根頁；1＝roles／workflows／claims），
+/// 供相對連結與樣式表路徑推導，避免生成器自造路徑與 manifest 漂移。
+fn page(title: &str, active: &str, depth: usize, body: &str) -> String {
     let mut h = String::with_capacity(8 * 1024);
-    let css = if active == "index" {
+    let css = if depth == 0 {
         "assets/console.css"
     } else {
         "../assets/console.css"
@@ -161,16 +187,7 @@ fn page(title: &str, active: &str, body: &str) -> String {
     h.push_str("<header><h1>KEM 操作主控台</h1><p class=\"sub\">零 JavaScript｜系統與流程操作介面｜知識演進模組 v");
     h.push_str(crate::SCHEMA_VERSION);
     h.push_str("</p><nav aria-label=\"主導航\">");
-    let nav = [
-        ("index", "首頁"),
-        ("roles", "角色"),
-        ("workflows", "工作流"),
-        ("claims", "主張"),
-        ("ledger", "帳本"),
-        ("gov", "治理"),
-        ("ops", "維運"),
-    ];
-    for (key, label) in &nav {
+    for (key, label, _) in &NAV_ITEMS {
         let cls = if *key == active {
             " class=\"active\""
         } else {
@@ -180,7 +197,7 @@ fn page(title: &str, active: &str, body: &str) -> String {
             h,
             "<a{} href=\"{}\">{}</a>",
             cls,
-            href_fix(key, active),
+            nav_href(key, depth),
             label
         );
     }
@@ -263,10 +280,13 @@ a:focus-visible{outline:3px solid var(--color-primary);outline-offset:2px;border
 footer{color:var(--color-text-secondary);font-size:.74rem;padding:var(--space-4);max-width:1100px;margin:0 auto}
 @media print{header{position:static}nav{display:none}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+/* 跨文件視圖轉場（零 JS：@view-transition；Chrome/Edge 126+、Safari 18.2+） */
+@media (prefers-reduced-motion:no-preference){@view-transition{navigation:auto}}
+header{view-transition-name:kem-console-header}
 "#;
 
 /// 工作流詳情頁本體。
-fn workflow_body(name: &str, active: &str) -> String {
+fn workflow_body(name: &str, depth: usize) -> String {
     let mut b = String::new();
     let _ = write!(b, "<section class=\"panel\"><h2>工作流：{}</h2>", esc(name));
     if let Some(w) = WORKFLOWS.iter().find(|w| w.0 == name) {
@@ -291,13 +311,7 @@ fn workflow_body(name: &str, active: &str) -> String {
             WORKFLOWS
                 .iter()
                 .filter(|w| w.0 != name)
-                .map(|w| {
-                    format!(
-                        "<a href=\"{}\">{}</a>",
-                        workflow_href(active, w.0),
-                        esc(w.0)
-                    )
-                })
+                .map(|w| { format!("<a href=\"{}\">{}</a>", workflow_href(w.0, depth), esc(w.0)) })
                 .collect::<Vec<_>>()
                 .join(" · "),
         );
@@ -350,10 +364,11 @@ fn claim_body(c: &Claim, vec_present: bool) -> String {
     b.push_str(&esc(&c.body));
     b.push_str("</p><h2 class=\"mt-4\">證據</h2><table><thead><tr><th>來源檔</th><th>修訂版</th><th>逐字引證</th></tr></thead><tbody>");
     for ev in &c.evidence {
+        // 原始證據檔不隨主控台部署（平台 /console 僅供應 .html/.css/.json），
+        // 故以文字呈現路徑，避免產生部署後的死連結；逐字引證與修訂版仍完整保留。
         let _ = write!(
             b,
-            "<tr><td><a href=\"../../../{}\"><code>{}</code></a></td><td><code>{}</code></td><td>{}</td></tr>",
-            esc(&ev.path),
+            "<tr><td><code>{}</code></td><td><code>{}</code></td><td>{}</td></tr>",
             esc(&ev.path),
             esc(&ev.rev),
             esc(&ev.quote)
@@ -423,11 +438,11 @@ pub fn generate(
         for (key, label, flows, desc) in &ROLES {
             let _ = write!(
                 b,
-                "<div class=\"panel\"><h2>{}</h2><p>{}</p><p class=\"mono\">{}</p><p><a href=\"roles/{}.html\">進入 {} 視角 →</a></p></div>",
+                "<div class=\"panel\"><h2>{}</h2><p>{}</p><p class=\"mono\">{}</p><p><a href=\"{}\">進入 {} 視角 →</a></p></div>",
                 esc(label),
                 esc(desc),
                 esc(flows),
-                key,
+                console_href(&format!("console.role.{key}"), 0),
                 esc(label)
             );
         }
@@ -436,20 +451,14 @@ pub fn generate(
         b.push_str(
             &WORKFLOWS
                 .iter()
-                .map(|w| {
-                    format!(
-                        "<a href=\"{}\">{}</a>",
-                        workflow_href("index", w.0),
-                        esc(w.0)
-                    )
-                })
+                .map(|w| format!("<a href=\"{}\">{}</a>", workflow_href(w.0, 0), esc(w.0)))
                 .collect::<Vec<_>>()
                 .join(" · "),
         );
         b.push_str(
             "</p><p class=\"type\">擴展律：頁數 ≈ 21 + 主張數 + ⌈帳本/200⌉——隨知識庫成長有機擴展。</p></section>",
         );
-        std::fs::write(base.join("index.html"), page("首頁", "index", &b))?;
+        std::fs::write(base.join("index.html"), page("首頁", "index", 0, &b))?;
         pages += 1;
     }
 
@@ -471,19 +480,23 @@ pub fn generate(
                 let _ = write!(
                     b,
                     "<tr><td><a href=\"{}\"><code>{}</code></a></td><td>{}</td></tr>",
-                    workflow_href(key, w.0),
+                    workflow_href(w.0, 1),
                     esc(w.0),
                     esc(w.3)
                 );
             }
         }
         b.push_str("</tbody></table></section>");
-        b.push_str(
-            "<section class=\"panel\"><h2>快捷</h2><p><a href=\"../index.html\">回首頁</a>｜<a href=\"../queue.html\">審查佇列</a>｜<a href=\"../ledger-1.html\">帳本</a>｜<a href=\"../maintenance.html\">維運排程</a></p></section>",
-        );
+        b.push_str(&format!(
+            "<section class=\"panel\"><h2>快捷</h2><p><a href=\"{}\">回首頁</a>｜<a href=\"{}\">審查佇列</a>｜<a href=\"{}\">帳本</a>｜<a href=\"{}\">維運排程</a></p></section>",
+            console_href("console.index", 1),
+            console_href("console.queue", 1),
+            family_first_href("kb.ledger-chunk", 1),
+            console_href("console.maintenance", 1),
+        ));
         std::fs::write(
             base.join("roles").join(format!("{key}.html")),
-            page(&format!("{label}視角"), key, &b),
+            page(&format!("{label}視角"), "roles", 1, &b),
         )?;
         pages += 1;
     }
@@ -496,7 +509,8 @@ pub fn generate(
             page(
                 &format!("工作流 {name}"),
                 "workflows",
-                &workflow_body(name, "workflows"),
+                1,
+                &workflow_body(name, 1),
             ),
         )?;
         pages += 1;
@@ -526,7 +540,7 @@ pub fn generate(
         b.push_str("</tbody></table></section>");
         std::fs::write(
             base.join("claims").join("index.html"),
-            page("主張索引", "claims", &b),
+            page("主張索引", "claims", 1, &b),
         )?;
         pages += 1;
 
@@ -544,7 +558,7 @@ pub fn generate(
                 .unwrap_or(false);
             std::fs::write(
                 base.join("claims").join(format!("{}.html", c.id)),
-                page(&c.title, "claims", &claim_body(c, vec_present)),
+                page(&c.title, "claims", 1, &claim_body(c, vec_present)),
             )?;
             std::fs::write(
                 base.join("claims").join(format!("{}.json", c.id)),
@@ -583,16 +597,23 @@ pub fn generate(
                 );
             }
             b.push_str("</tbody></table><p class=\"mono\">");
+            let ledger_family =
+                console_manifest::family_by_id("kb.ledger-chunk").expect("manifest 帳本分頁族");
             if p > 0 {
-                let _ = write!(b, "<a href=\"ledger-{}.html\">上一頁</a>｜", p);
+                let href = console_manifest::relative_static_path(&ledger_family.path(p), 0);
+                let _ = write!(b, "<a href=\"{}\">上一頁</a>｜", href);
             }
             if p + 1 < chunks {
-                let _ = write!(b, "<a href=\"ledger-{}.html\">下一頁</a>", p + 2);
+                let href = console_manifest::relative_static_path(&ledger_family.path(p + 2), 0);
+                let _ = write!(b, "<a href=\"{}\">下一頁</a>", href);
             }
             b.push_str("</p></section>");
             std::fs::write(
-                base.join(format!("ledger-{}.html", p + 1)),
-                page("帳本", "ledger", &b),
+                base.join(console_manifest::relative_static_path(
+                    &ledger_family.path(p + 1),
+                    0,
+                )),
+                page("帳本", "ledger", 0, &b),
             )?;
             pages += 1;
         }
@@ -619,7 +640,7 @@ pub fn generate(
         b.push_str(
             "</section><section class=\"panel\"><h2>处置命令</h2><p><code class=\"cmd\">kem review --claim <ID> --disposition accept|reject|supersede|defer [--reviewer R] [--note N]</code></p></section>",
         );
-        std::fs::write(base.join("queue.html"), page("審查佇列", "gov", &b))?;
+        std::fs::write(base.join("queue.html"), page("審查佇列", "gov", 0, &b))?;
         pages += 1;
     }
 
@@ -656,7 +677,7 @@ pub fn generate(
             ),
         }
         b.push_str("</section>");
-        std::fs::write(base.join("vectors.html"), page("向量索引", "gov", &b))?;
+        std::fs::write(base.join("vectors.html"), page("向量索引", "gov", 0, &b))?;
         pages += 1;
     }
 
@@ -685,7 +706,7 @@ pub fn generate(
             b.push_str("<div class=\"empty\">日誌尚未生成（排程未觸發或窗口外）。</div>");
         }
         b.push_str("</section>");
-        std::fs::write(base.join("maintenance.html"), page("維運", "ops", &b))?;
+        std::fs::write(base.join("maintenance.html"), page("維運", "ops", 0, &b))?;
         pages += 1;
     }
 
@@ -778,5 +799,123 @@ mod tests {
             }
         }
         n
+    }
+
+    /// 產生主控台到暫存目錄（連結完整性與 manifest 覆蓋檢查共用）。
+    /// 無知識庫時回傳 `None`（誠實跳過；UNKNOWN ≠ PASS）。
+    fn generate_console_fixture(tag: &str) -> Option<PathBuf> {
+        let root = PathBuf::from("../../knowledge");
+        if !root.join("claims").is_dir() {
+            eprintln!("skip: knowledge root not found at {}", root.display());
+            return None;
+        }
+        let claims = crate::filing::load_claims(&root.join("claims")).expect("load claims");
+        let ledger_path = root.join("ledger.jsonl");
+        let entries = if ledger_path.exists() {
+            crate::ledger::read_all(&ledger_path).expect("read ledger")
+        } else {
+            Vec::new()
+        };
+        let queue =
+            crate::gov::pending_queue(&root.join(".kem/review-queue.jsonl")).unwrap_or_default();
+        let vectors = crate::embed::load_vectors(&root.join(".kem/vectors.json"))
+            .ok()
+            .flatten();
+        let out = std::env::temp_dir().join(format!("kem-console-{tag}-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&out);
+        std::fs::create_dir_all(&out).expect("temp out");
+        let root_tmp = out.join("knowledge");
+        std::fs::create_dir_all(&root_tmp).expect("tmp knowledge root");
+        generate(&root_tmp, &claims, &entries, &queue, vectors.as_ref()).expect("generate");
+        Some(root_tmp.join("console"))
+    }
+
+    fn collect_html(dir: &Path, out: &mut Vec<PathBuf>) {
+        if let Ok(rd) = std::fs::read_dir(dir) {
+            for e in rd.flatten() {
+                let p = e.path();
+                if p.is_dir() {
+                    collect_html(&p, out);
+                } else if p.extension().and_then(|x| x.to_str()) == Some("html") {
+                    out.push(p);
+                }
+            }
+        }
+    }
+
+    /// W11：生成物連結完整性——所有內部相對連結必須解析到實際存在的檔案
+    /// （零 JS 主控台無路由可用，死連結即功能缺口）。
+    #[test]
+    fn generated_console_links_resolve_within_bundle() {
+        let Some(console) = generate_console_fixture("links") else {
+            return;
+        };
+        let mut htmls = Vec::new();
+        collect_html(&console, &mut htmls);
+        assert!(!htmls.is_empty(), "generated console has no html");
+        let mut problems = Vec::new();
+        for file in &htmls {
+            let text = std::fs::read_to_string(file).unwrap_or_default();
+            for attr in ["href=\"", "src=\""] {
+                let mut rest = text.as_str();
+                while let Some(idx) = rest.find(attr) {
+                    rest = &rest[idx + attr.len()..];
+                    let Some(end) = rest.find('"') else { break };
+                    let value = &rest[..end];
+                    rest = &rest[end..];
+                    if value.is_empty()
+                        || value.starts_with('#')
+                        || value.starts_with("http://")
+                        || value.starts_with("https://")
+                        || value.starts_with("mailto:")
+                        || value.starts_with("data:")
+                    {
+                        continue;
+                    }
+                    let path = value.split('#').next().unwrap_or(value);
+                    let path = path.split('?').next().unwrap_or(path);
+                    if path.is_empty() {
+                        continue;
+                    }
+                    if path.starts_with('/') {
+                        problems.push(format!(
+                            "{}: absolute internal link {} (bundle 可攜性)",
+                            file.display(),
+                            value
+                        ));
+                        continue;
+                    }
+                    let resolved = file.parent().unwrap_or(Path::new(".")).join(path);
+                    if !resolved.exists() {
+                        problems.push(format!("{}: dead link {}", file.display(), value));
+                    }
+                }
+            }
+        }
+        assert!(
+            problems.is_empty(),
+            "generated console link integrity violated:\n{}",
+            problems.join("\n")
+        );
+    }
+
+    /// W11：manifest 登記的 23 個靜態頁必須全部實際生成（雙向對帳）。
+    #[test]
+    fn generated_console_covers_every_manifest_static_page() {
+        let Some(console) = generate_console_fixture("coverage") else {
+            return;
+        };
+        let ids = console_manifest::static_ids_with_prefix("console.");
+        assert_eq!(ids.len(), 23, "manifest 靜態頁應為 23 筆");
+        for id in ids {
+            let path = console_manifest::static_path_of(id).expect("static path");
+            let rel = console_manifest::relative_static_path(path, 0);
+            let file = console.join(&rel);
+            assert!(
+                file.is_file(),
+                "manifest 靜態頁 {id} 未生成：{}",
+                file.display()
+            );
+        }
     }
 }

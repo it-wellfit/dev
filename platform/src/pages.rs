@@ -289,6 +289,71 @@ pub async fn audit_page(
 }
 
 // ---------------------------------------------------------------------------
+// 1b. 我的裁決紀錄（D-6 自我稽核視圖；計畫 1793033761021 B-5.0）
+// ---------------------------------------------------------------------------
+
+#[derive(Template)]
+#[template(path = "my_decisions.html")]
+pub struct MyDecisionsTemplate {
+    pub acting_user: String,
+    pub nav: crate::nav::NavModel,
+    pub role_code: String,
+    pub rows: Vec<AuditView>,
+    pub total: i64,
+    pub page: i64,
+    pub total_pages: i64,
+}
+
+/// 分頁是本頁唯一接受的查詢參數：不存在任何可改變使用者範圍的欄位。
+#[derive(Debug, Default, Deserialize)]
+pub struct MyDecisionsQuery {
+    pub page: Option<String>,
+}
+
+/// GET /my-decisions — 自我稽核視圖（D-6）：僅列出**本人**的稽核事件。
+/// 伺服器端強制 `performed_by = session.user_id`（audit_rows_page 的 user
+/// 參數由程式端綁定，非來自請求）；查詢字串不提供 user/action 等範圍
+/// 參數，範圍無法以任何輸入改寫（滲透面：無）。全公司軌跡仍由 /audit
+/// （Gate::Manage）承擔，本頁不擴大權限模型。
+pub async fn my_decisions(
+    State(state): State<AppState>,
+    Extension(session): Extension<Session>,
+    nav: Extension<crate::nav::NavModel>,
+    Query(q): Query<MyDecisionsQuery>,
+) -> Response {
+    let page = q
+        .page
+        .as_deref()
+        .and_then(|s| s.parse::<i64>().ok())
+        .unwrap_or(1)
+        .max(1);
+    let limit = 25i64;
+    let total = audit_total(&state.pool, Some(&session.user_id), None, None, None).await;
+    let total_pages = ((total + limit - 1) / limit).max(1);
+    let page = page.min(total_pages);
+    let rows = audit_rows_page(
+        &state.pool,
+        Some(&session.user_id),
+        None,
+        None,
+        None,
+        limit,
+        (page - 1) * limit,
+    )
+    .await;
+    let role_code = primary_role(&state.pool, &session.user_id).await;
+    render(MyDecisionsTemplate {
+        acting_user: session.user_id.clone(),
+        nav: nav.0.clone(),
+        role_code,
+        rows,
+        total,
+        page,
+        total_pages,
+    })
+}
+
+// ---------------------------------------------------------------------------
 // 2. 試算表（報表工作室）：借貸合計＋平衡檢查
 // ---------------------------------------------------------------------------
 

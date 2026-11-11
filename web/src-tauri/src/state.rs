@@ -23,14 +23,20 @@ impl AppState {
     pub fn new() -> Self {
         Self {
             environment: std::env::var("ESUN_ENV").unwrap_or_else(|_| "development".to_string()),
-            mock_mode: std::env::var("ESUN_MOCK_MODE").unwrap_or_else(|_| "true".to_string()) == "true",
-            esun_base_url: std::env::var("ESUN_BASE_URL").unwrap_or_else(|_| "https://127.0.0.1:8443".to_string()),
-            esun_external_url: std::env::var("ESUN_EXTERNAL_URL").unwrap_or_else(|_| "https://eospt.testesunbank.com.tw:9443".to_string()),
+            mock_mode: std::env::var("ESUN_MOCK_MODE").unwrap_or_else(|_| "true".to_string())
+                == "true",
+            esun_base_url: std::env::var("ESUN_BASE_URL")
+                .unwrap_or_else(|_| "https://127.0.0.1:8443".to_string()),
+            esun_external_url: std::env::var("ESUN_EXTERNAL_URL")
+                .unwrap_or_else(|_| "https://eospt.testesunbank.com.tw:9443".to_string()),
             source_system_id: std::env::var("ESUN_SOURCE_SYSTEM_ID").unwrap_or_default(),
             client_cert_path: std::env::var("ESUN_CLIENT_CERT").ok(),
             client_key_path: std::env::var("ESUN_CLIENT_KEY").ok(),
             ca_cert_path: std::env::var("ESUN_CA_CERT").ok(),
-            timeout_secs: std::env::var("ESUN_TIMEOUT").ok().and_then(|s| s.parse().ok()).unwrap_or(30),
+            timeout_secs: std::env::var("ESUN_TIMEOUT")
+                .ok()
+                .and_then(|s| s.parse().ok())
+                .unwrap_or(30),
         }
     }
 }
@@ -244,8 +250,3 @@ pub struct PrintResultResponse {
     pub pdf_base64: Option<String>,
     pub file_name: Option<String>,
 }
-
-
-
-
-

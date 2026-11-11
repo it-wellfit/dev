@@ -1,286 +1,465 @@
-# Flaps ERP UI V2 — Data-Driven Premium 設計系統重構
+# Flaps ERP UI V2 — 全面 QA 盤點 + Demo 手冊
 
-## 狀態：✅ Grill-me 完成（7/7 節點裁決）— 實作就緒
+## 狀態：✅ 設計系統已上線 — 待全面 QA + Demo 驗證
 
-## 產品脈絡（事實，已查證）
+## ⚠️ 開發原則規範合規（強制 — 違反即中止實作）
 
-- **產品**：Flaps ERP 工作台 — 台灣中小企業帳務登帳、查詢、玉山銀行支付整合
-- **使用者**：finance（財務，長時間）、admin（管理）、store（店面）、pos（零售）
-- **剛性規範**：Rust/Axum + Askama + SQLite，**零 JavaScript**、零 Electron、零新依賴
-- **現況**：31 頁 200、145 tests 綠、dark theme（prefers-color-scheme 自動）、頂部導航
-- **起因**：使用者批評介面醜、比 tauri-preview（1420 銀行金流平台）差、未經 grill-me 設計
+本計畫所有實作任務**必須**遵守既有規範。來源：`.kilo/memories/corrections.md`（C-01..C-12）+ `AGENTS.md` + `WORKSPACE_CHARTER.md`。
 
-## 已裁決的設計決策（Grill-me 7/7）
+| 規範 | 要求 | 本計畫如何遵守 |
+|------|------|----------------|
+| **C-01 不亂覆蓋亂刪** | 修訂先保留被取代內容；不亂刪既有程式碼 | CSS 改動全部採「**附加覆蓋層**」模式（`ui-v2.css` 獨立檔、cascade 覆蓋）——**不刪不重寫 design-system.css 既有 2090 行**；模板僅替換導航標記區塊（其餘原封不動）；不刪除任何既有模板/路由 |
+| **C-03 先量測後動刀** | 編輯前先機器掃描目標檔 | 每個任務前置「讀取確認現況」；實作前重新量測行數/內容/hash |
+| **C-04 斷言式補丁** | 每次檔改先斷言目標字串存在且唯一，失敗即中止 | 所有編輯使用 Edit 工具（精確字串匹配）；任何腳本式修改必須含 assertion（存在+唯一） |
+| **C-05 並行編輯先定基準** | 動手前重測檔案狀態對帳 | 與平行流共用工作樹：編輯前 `git status` + 檔案 hash 對帳；已被平行流修改的檔案先重讀 |
+| **C-09 寫入通道** | PowerShell here-string 不可用；UTF-8 無 BOM | 使用 Edit/Write 工具（原生 UTF-8 無 BOM）；如需腳本用 `[IO.File]::WriteAllText` + `UTF8Encoding(false)` |
+| **C-11 Rust-first** | 不得新增 Python 工件；既有 `.ps1` 為例外 | 所有工具用 Rust 或既有 PowerShell 工具鏈；**不新增 .py 檔** |
+| **零 JavaScript** | 表現層 100% 零 JS（`<script>` 數 = 0、無內聯事件） | 所有互動用 CSS（`:hover`/`:focus-visible`/`:target`/`:has()`）；meta refresh 而非 JS 輪詢 |
+| **Design Token** | 禁止內聯硬編碼顏色/間距/字體 | 所有樣式引用 `var(--...)` token；V2 覆蓋層也只用 token；QA 掃描殘留 inline style |
+| **互動元件七態** | 每個互動元件至少具備 Default/Hover/Focus/Disabled/Loading/Empty/Error | QA 逐元件檢查；缺態即補（純 CSS） |
+| **錯誤訊息三要素** | 錯誤訊息需含「問題＋可能原因＋處理方式」 | 既有 BankPay/表單錯誤已遵守；QA 抽查確認 |
+| **WCAG 2.2 AA** | 對比 4.5:1、可見焦點、鍵盤導航、reduced-motion、不以顏色為唯一傳達 | QA 對比掃描；`prefers-reduced-motion` 規則已存在 |
+| **金額整數分（INV-01）** | 禁浮點 | 既有實作已遵守；demo 資料灌入走**真實 API**（`parse_decimal_to_minor`），不 SQL 直插造假 |
+| **讀取 GET／變更 POST／PRG** | 既有慣例 | 已遵守；新增頁面沿用 |
+| **文檔同步** | 代碼與文檔同一提交更新 | CSS 改動同步 `docs/design-system.css` 快照；計畫修訂記於 §24/附錄 |
+| **單調改進原則** | 每版必須優於之前所有版本；改動須縝密計算+實證對比；無實證即回滾 | 見下方「單調改進框架」——所有改動走五步協議；禁止未經量測的改動 |
 
-| # | 決策 | 裁決 | 為什麼 | 依據 |
-|---|------|------|--------|------|
-| Q1 | 視覺方向 | **A. Data-Driven Premium**（dark-first、高密度、sidebar） | 使用者偏好 tauri-preview（暗色側邊欄+卡片）；2026 專業工具 dark-first 預設；帳務=長時間工作階段 | Linear/Vercel/Grafana/Supabase |
-| Q2 | Accent 主色 | **玉山綠 Teal**（`#14b8a6` 系） | 品牌對齊玉山合作夥伴；綠=金錢/信任；暗底對比 8.9:1 (AAA)；與通用 SaaS 藍區隔 | 玉山銀行品牌 + WCAG |
-| Q3 | 字體 | **自架 Inter（拉丁/數字）+ JetBrains Mono（金額）** latin 子集 woff2，中文用系統微軟正黑體 | Linear/Vercel 同款排版跨平台一致；~50KB；CSP `font-src 'self'` 合規；CJK 系統字體零下載 | 2026 SaaS 字體趨勢 |
-| Q4 | 導航 | **左側 220px sticky 側邊欄**，details 分組可折疊 | 31 頁長導航需固定位置；頂部下拉不符工具類慣例 | Linear/Grafana 標準 |
-| Q5 | 密度 | **緊湊預設**（padding 16px、表格緊湊列） | 工具類每日使用；資訊密度優先於留白 | 2026 minimal chrome |
-| Q6 | 動畫 | **僅互動回饋 150ms ease**（hover/active/focus），無載入動畫 | fadeIn 造成面板半透明 bug（已移除）；動效只為回饋不為炫技 | 本專案實證教訓 |
-| Q7 | 資訊層級 | **狀態列→KPI→面板→表格**（Grafana 節奏）；金額 tabular-nums+mono | 帳務工具第一眼=狀態；金額對齊=可信度 | Grafana/Mercury 模式 |
-
-## 色彩系統（已裁決，dark-only v1）
-
-| 語義 | 值 | 對比 |
-|------|-----|------|
-| Background | `#020617` slate-950 | — |
-| Surface（面板） | `#1e293b` slate-800 | lighter=closer |
-| Border | `#334155` slate-700 | — |
-| Text Primary | `#f1f5f9` | 15.9:1 AAA |
-| Text Secondary | `#94a3b8` | 7.4:1 AA |
-| **Accent（玉山綠）** | `#14b8a6`（teal-500，連結/圖示） | 8.9:1 AAA |
-| **Accent Button** | `#0d9488`（teal-600，白字按鈕） | 白字 4.6:1 AA |
-| Success | `#4ade80` / Warning `#fbbf24` / Error `#f87171` / Info `#38bdf8` | 暗底亮色版 |
-
-**既有 slate 系 90% 相同**——只需：dark 翻轉為永遠預設（V2 :root 覆寫）+ accent 從藍換綠。
+**違反處理**：任何任務若無法通過單調改進框架的「實證對比」步驟，實作代理人必須**回滾該改動**並在計畫登錄為 `REJECTED（未通過實證）`。改動允許取代既有成果——前提是證明了更優。
 
 ---
 
-## 實作任務（依序執行）
+## 單調改進框架（每版必優於前版 — 核心迭代紀律）
 
-### A1. design-system.css 末尾附加 V2 覆蓋層
-`web/assets/design-system.css` — 完整 CSS 區塊如下（附加於檔尾，cascade 覆蓋）：
+> 使用者裁定：「不是不准推翻任何既有成果，而是經過縝密計算與優化後必須**實證比現有哪些優良**，確定改哪些而不會亂改而發生錯誤或**比之前版本還差**——保證每一版比之前所有版本都要優良，達到**快速穩定迭代超越之前所有版本**。」
 
-```css
-/* ══════════════════════════════════════════════
-   V2 — Data-Driven Premium（grill-me 7/7 裁決）
-   原則: dark-first · 高密度 · minimal chrome · 側邊欄
-   ══════════════════════════════════════════════ */
+### 五步改動協議（每一項改動都必須走完）
 
-/* ── 色彩：dark 永遠預設 + 玉山綠 accent ── */
-:root {
-  --color-background: #020617;
-  --color-surface: #0f172a;
-  --color-surface-raised: #1e293b;
-  --color-surface-sunken: #020617;
-  --color-border: #334155;
-  --color-border-subtle: #1e293b;
-  --color-text-primary: #f1f5f9;
-  --color-text-secondary: #94a3b8;
-  --color-text-tertiary: #64748b;
-  --color-primary: #14b8a6;
-  --color-primary-subtle: rgba(20, 184, 166, 0.12);
-  --color-primary-muted: rgba(20, 184, 166, 0.25);
-  --color-border-focus: #14b8a6;
-  --gradient-primary: linear-gradient(135deg, #14b8a6, #0d9488);
-  --color-success: #4ade80;
-  --color-warning: #fbbf24;
-  --color-error: #f87171;
-  --color-info: #38bdf8;
-}
+| 步驟 | 內容 | 產出 |
+|------|------|------|
+| 1. 量測基準 | 記錄改動前的可量化狀態 | 基準數據（見下方量測表） |
+| 2. 縝密計算 | 分析改什麼、為何更優、預期增益、風險評估 | 改動理由（問題→方案→預期） |
+| 3. 最小改動 | 以最小範圍達成增益（C-04 斷言式） | 精確 patch |
+| 4. 實證對比 | 改動後量測同一組指標，新舊對比 | 前後對照表 |
+| 5. 裁決 | 新 > 舊 → 保留（舊內容標 SUPERSEDED）；否則 → **回滾** | 裁決記錄 |
 
-/* 中和 light/dark 媒體查詢（dark-only v1） */
-@media (prefers-color-scheme: light) {
-  :root {
-    --color-background: #020617;
-    --color-surface: #0f172a;
-    --color-surface-raised: #1e293b;
-    --color-surface-sunken: #020617;
-    --color-border: #334155;
-    --color-text-primary: #f1f5f9;
-    --color-text-secondary: #94a3b8;
-    --color-text-tertiary: #64748b;
-  }
-}
+### 量測表（每一版迭代都跑同一組）
 
-/* ── 字體：Inter + JetBrains Mono（自架 woff2） ── */
-@font-face {
-  font-family: "Inter";
-  src: url("/assets/fonts/inter-latin.woff2") format("woff2");
-  font-weight: 100 900;
-  font-display: swap;
-  unicode-range: U+0000-00FF, U+2000-206F, U+2074, U+20B9;
-}
-@font-face {
-  font-family: "JetBrains Mono";
-  src: url("/assets/fonts/jetbrains-mono-latin.woff2") format("woff2");
-  font-weight: 100 800;
-  font-display: swap;
-  unicode-range: U+0000-00FF, U+2000-206F;
-}
+| 指標 | 量測方法 | 門檻 |
+|------|----------|------|
+| 測試數 | `cargo test --locked -p platform` 計數 | ≥ 153 且 0 failed（只增不減） |
+| 動態頁可達 | 43 頁 HTTP 掃描 | 100% 200/303 |
+| 靜態頁可達 | console 抽樣掃描 | 100% |
+| 零 JS | `<script` 計數掃描 | 0 |
+| 對比合規 | 暗色文字 vs 背景 ≥ 4.5:1 | 100% |
+| fmt/clippy | 閘門 | PASS / 0 warnings |
+| 導覽深度 | 第一層群組數 | 5 大工作室（目標） |
+| CSS 大小 | served bytes | 記錄趨勢（非膨脹） |
+| 角色正確性 | 4 角色 × 導覽矩陣 | finance 無稽核/管理；pos 僅 Read |
 
-/* ── 佈局：左側欄 220px + 頂欄 + 主區（CSS Grid，零 HTML 變更） ── */
-body {
-  display: grid;
-  grid-template-columns: 220px 1fr;
-  grid-template-rows: auto 1fr;
-  min-height: 100vh;
-  background: var(--color-background);
-}
+### 回滾安全網
 
-.site-nav {
-  grid-column: 1;
-  grid-row: 1 / 3;
-  position: sticky;
-  top: 0;
-  height: 100vh;
-  overflow-y: auto;
-  overflow-x: hidden;
-  background: var(--color-surface);
-  border-right: 1px solid var(--color-border);
-  border-bottom: none;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-  z-index: var(--z-sticky);
-}
+- CSS 改動：`ui-v2.css` 獨立檔案 → 刪除即回滾（此次迭代已符合）
+- 模板改動：Edit 精確字串 → 反向 patch 即回滾
+- Rust 改動：git diff 為準；測試紅燈即 `git checkout -- <file>` 回滾單檔
+- **歷史保存**：被取代的內容就地標 `SUPERSEDED`（C-01），不刪原文
 
-.site-nav .container {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: var(--space-3) var(--space-2);
-  max-width: none;
-  overflow-x: visible;
-}
+---
 
-.site-nav .container > a,
-.site-nav details.nav-menu > summary {
-  display: flex;
-  align-items: center;
-  width: 100%;
-  padding: var(--space-2) var(--space-3);
-  border-bottom: none;
-  border-radius: var(--radius-sm);
-  color: var(--color-text-secondary);
-  font-size: var(--font-size-sm);
-}
+## 多維度取捨框架（全域優化 — 避免局部最優陷阱）
 
-.site-nav .container > a:hover,
-.site-nav details.nav-menu > summary:hover {
-  background: var(--color-primary-subtle);
-  color: var(--color-primary);
-}
+> 使用者裁定：「現實問題複雜會遇到**多項與多維度改進**，此時要思考**取捨**，還要**擴大思考整體**避免陷在**局部優化**而造成**整體下降**；每次取捨與權衡都是為了**整體所有維度綜合表現提升**、整體效能更優。」
 
-.site-nav details.nav-menu .nav-menu-items {
-  position: static;
-  display: none;
-  border: none;
-  background: none;
-  box-shadow: none;
-  padding: 0 0 0 var(--space-4);
-  min-width: 0;
-}
+### 維度權重（P0 為硬約束，不可妥協）
 
-.site-nav details.nav-menu[open] .nav-menu-items {
-  display: flex;
-  flex-direction: column;
-}
+| 維度 | 等級 | 定義 | 量測方式 |
+|------|------|------|----------|
+| 正確性 | **P0** | 角色/權限/金額/稽核正確 | 153 tests + 角色矩陣 + 冪等測試 |
+| 穩定性 | **P0** | 不得紅燈、不得回歸 | 全套件綠 + B7a 回歸 |
+| 無障礙/可讀性 | **P0** | WCAG 2.2 AA | 對比 ≥4.5:1 全站掃描 |
+| 資安 | **P0** | 零 JS、CSP、CSRF、RBAC | 掃描 + curl 實證 |
+| 資訊密度 | P1 | 每頁有意義資料、緊湊排版 | 逐頁非空確認 |
+| 操作效率 | P1 | 流程步驟數、點擊距離 | 使用者旅程步數 |
+| 一致性 | P1 | 設計系統統一、命名統一 | Token 使用掃描 |
+| 效能 | P2 | CSS/字體大小、頁面回應 | served bytes + 回應時間 |
+| 美觀 | P2 | 品牌質感、精緻度 | 截圖目視 + 使用者回饋 |
+| 可維護性 | P2 | 單一事實來源、低耦合 | manifest SSOT 覆蓋率 |
 
-.app-header {
-  grid-column: 2;
-  grid-row: 1;
-  position: sticky;
-  top: 0;
-  z-index: var(--z-sticky);
-  background: var(--color-surface);
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-}
+### 取捨決策規則（多維度衝突時）
 
-.app-header .container { max-width: none; }
+1. **P0 先勝**：任何改動不得違反 P0（正確/穩定/無障礙/資安）——P2 的增益不能補償 P0 的損失
+2. **Pareto 影響表**：每個候選改動列出所有受影響維度與正負號
+3. **補償證明**：若某維度下降（非 P0），必須以**系統級量測**證明另一維度的增益充分補償——不接受局部推論
+4. **全域掃描**：改動後必須跑「系統級量測表」（43 動態頁 + 角色矩陣 + 全套件）——不得只看改動的頁面
+5. **反局部最優**：若兩個改動方案都可行，選「系統綜合得分高」者，不選「單頁最漂亮」者
+6. **裁決入帳**：每次取捨寫入下方裁決表（維度對比＋系統級證據）
 
-main.container {
-  grid-column: 2;
-  grid-row: 2;
-  max-width: none;
-  padding: var(--space-5) var(--space-6);
-}
+### 系統級量測（每次取捨後必跑同一組）
 
-/* ── 面板：1px 邊框 + raised 表面，minimal chrome ── */
-.panel {
-  background: var(--color-surface-raised);
-  border: 1px solid var(--color-border);
-  border-radius: 4px;
-  padding: var(--space-4);
-  margin-bottom: var(--space-4);
-  box-shadow: none;
-}
-
-.panel h3 {
-  font-size: var(--font-size-lg);
-  border-bottom: 1px solid var(--color-border-subtle);
-  padding-bottom: var(--space-2);
-  margin-bottom: var(--space-3);
-}
-
-.panel h3::after { display: none; }
-
-/* ── 表格：tabular-nums + 緊湊 ── */
-table { font-variant-numeric: tabular-nums; }
-th, td { padding: var(--space-2) var(--space-3); }
-
-/* ── KPI：mono 數字 ── */
-.kpi { border-radius: 4px; padding: var(--space-4); }
-.kpi dd { font-family: var(--font-family-mono); font-size: var(--font-size-2xl); }
-
-/* ── 按鈕/輸入：radius 4px + accent ── */
-.btn, .input { border-radius: 4px; }
-.btn-primary { background: var(--gradient-primary); border: none; }
-
-/* ── 登入頁：無側邊欄 ── */
-body:has(.login-panel) { display: block; }
-body:has(.login-panel) .site-nav { display: none; }
-
-/* ── 響應式：≤900px 折疊回頂欄 ── */
-@media (max-width: 900px) {
-  body { display: block; background: var(--color-surface); }
-  .site-nav {
-    position: static;
-    height: auto;
-    border-right: none;
-    border-bottom: 1px solid var(--color-border);
-  }
-  .site-nav .container { flex-direction: row; flex-wrap: wrap; }
-  .site-nav .container > a,
-  .site-nav details.nav-menu > summary { width: auto; }
-  .site-nav details.nav-menu .nav-menu-items {
-    position: absolute;
-    background: var(--color-surface-raised);
-    border: 1px solid var(--color-border);
-    padding: var(--space-2);
-  }
-  main.container { padding: var(--space-4); }
-}
+```
+① cargo test --locked -p platform         → 正確性+穩定性（≥153 綠）
+② 43 動態頁 × admin 掃描                   → 全系統完整性（非局部）
+③ 未登入 303 + 4 角色矩陣                  → 資安+正確性
+④ 對比掃描（暗色所有文字）                  → 無障礙
+⑤ <script 計數 = 0                        → 零 JS
+⑥ served CSS/字體 bytes                   → 效能趨勢
+⑦ 截圖對比（關鍵 6 頁）                     → 美觀+一致性
 ```
 
-### A2. 下載字體檔案
-`web/assets/fonts/`：`inter-latin.woff2`（變數字重 ~45KB）+ `jetbrains-mono-latin.woff2`（~25KB）。
-來源：GitHub 官方 releases（rsms/inter、JetBrains/JetBrainsMono，OFL 授權）。curl 下載。
-**退路**：若下載失敗，@font-face 404 → 靜默退回系統字體堆疊（零風險）。
+### 本專案已發生的多維度取捨（實例裁決表）
 
-### A3. CSS 路由：字體檔案
-`api.rs` public 群組加：`.route("/assets/fonts/:file", get(serve_font))` — Content-Type `font/woff2`，路徑白名單限定 `fonts/` 目錄（防路徑穿越）。CSP `font-src 'self'` ✓。
+| 取捨 | 維度衝突 | 裁決 | 系統級效果 |
+|------|----------|------|------------|
+| 自架字體 (400KB) | 排版一致性+美觀 (+) vs 效能 (−400KB) | ✅接受：`font-display:swap` + 404 靜默退回 + immutable 快取 | 全平台一致排版；僅首次載入成本 |
+| 側邊欄 220px | 導覽可見性 (+) vs 內容寬度 (−220px) | ✅接受：≤900px 折疊回頂欄 | 桌面效率↑；行動可用 |
+| 對比提升 `#64748b→#94a3b8` | 無障礙 (+) vs 暗色氛圍 (−) | ✅接受：P0 硬約束 | 全站可讀；截圖實證 |
+| 移除面板 fadeIn | 可讀性+穩定 (+) vs 動效美感 (−) | ✅接受：bug 實證（半透明截圖） | 內容即時可見 |
+| 隔離 target dir 測試 | 穩定性 (+) vs 編譯時間 (−3min) | ✅接受：不殺 demo 伺服器 | demo 零中斷 |
+| 導覽 11 群組 → 4 工作室+總覽置頂 | 操作效率+高度 (+) vs 「所有入口一眼可見」(−) | ✅裁決（見下方「導覽 IA 重構」）：實作後必跑 R4 矩陣+B7a | 第一層=1 置頂+4 區段標頭 |
 
-### A4. docs 同步 + 重建 + 重啟
-`Copy-Item docs`；`cargo build`（CSS/字體 include_str 或路由）；重啟 8090。
+### 反局部最優檢查清單（每次改動前自問）
 
-### A5. 全套件驗證（見下方）
+1. 這個改動是否只優化了「我看得到的那一頁」而忽略了其他 42 頁？
+2. 這個改動是否讓「某角色的體驗」變好但讓「另一角色」變差？
+3. 這個改動是否讓「視覺」變好但讓「測試/效能/可維護性」變差？
+4. 改動後我是否跑了系統級量測（而非只測改動點）？
+5. 如果兩個方案都可以，我是否選了「系統綜合最優」而非「單點最優」？
 
 ---
 
-## 驗證計畫
+### 本計畫已完成的單調改進證據（前輪已實證）
 
-1. 編譯通過 → 重啟伺服器（port 8090，demo-flaps.db：admin/finance/store/pos + 3 科目 + 3 交易 + 2 批次）
-2. **視覺**（整合瀏覽器截圖）：`/login`（無側邊欄、亮 CTA）、`/`（側邊欄+玉山綠+面板 1px 邊框）、`/bankpay`、`/reports/trial-balance`（tabular-nums）
-3. **功能**：31 頁 200（admin）、未登入 303、pos 寫入 403
-4. **全套件**：145 tests 綠
-5. **字體**：devtools network 確認 woff2 200；fallback 驗證（字體檔 404 時頁面仍正常）
+| 改動 | 改動前 | 改動後 | 實證 |
+|------|--------|--------|------|
+| 面板淡出動畫 | fadeIn 半透明 bug（截圖證據） | 移除動畫 | 登入頁截圖對比：全清晰 |
+| 暗色 tertiary 對比 | #64748b（3.5:1 不合格） | #94a3b8（7:1） | WCAG 數值計算 |
+| 導航路由 | cross_module 在 middleware 後 merge（未認證漏洞） | 先 merge 後掛層 | curl 未登入 303 實證 |
+| BankPay feature gate | default=[] 功能未交付 | 移除 gate | 31 頁 200 實證 |
+| 稽核 INSERT | 4 binds vs 3 placeholders（必敗） | 3 binds 正確 | 整合測試通過 |
+
+---
+
+## 完整結構地圖（六度思考）
+
+### 架構全貌：雙渲染器 + manifest SSOT
+
+```
+console_manifest（SSOT：11 群組 + 66+ PageSpec + 2 靜態族）
+├─ Dynamic 渲染器（platform/axum+Askama）：43 頁
+│   ├─ 核心業務：home/tx×3/accounts×2/ai/mydecisions
+│   ├─ 匯入草稿：import×2/drafts/review.bulk/ai.suggestion
+│   ├─ 銀行支付：bankpay×4
+│   ├─ 報表：reports×5
+│   ├─ 治理：audit/search/status/help/profile
+│   ├─ 管理：admin×5
+│   ├─ API 中樞：apihub×8
+│   └─ 技術：login/states/tauri-preview
+└─ Static 渲染器（KEM generate() → knowledge/console/）：23+ 頁（擴展律）
+    ├─ 索引：console.index/claims-index/queue/vectors/maintenance
+    ├─ 角色：role.developer/reviewer/operator/pm/auditor（5）
+    ├─ 工作流：workflow.capture/ingest/ask/sync/supersede/embed/eval/vet2/review/lint/doctor/status/finalize（13）
+    └─ 動態族：kb.claim（高基數）/kb.ledger-chunk（⌈帳本/200⌉）→ 潛在數千頁
+```
+
+### 六度盤點（本計畫的完整覆蓋）
+
+| 維度 | 定義 | 覆蓋方式 |
+|------|------|----------|
+| **深度** | 每頁功能深度（非只存在，要有真資料+可操作+錯誤態） | Step 1 灌入 20+ 交易 + 2 CSV；逐頁 QA 清單 |
+| **廣度** | 全部 66+ 頁 × 4 角色 | 43 動態頁掃描 + 23 靜態 console 頁驗證 + 角色矩陣 |
+| **密度** | 資訊密度——每頁有意義資料，非空表 | 示範資料灌入後逐頁確認非空 |
+| **強度** | 韌性——153 tests + B7a 死連結回歸 + RBAC/CSRF/冪等 | Step 3 全套閘門；不推翻任何已通過測試 |
+| **高度** | 策略視野——5 大工作室 IA、manifest SSOT、雙渲染器 | 導覽重構（若使用者確認）；保留雙渲染器架構 |
+| **厚度** | 實質內容——真實流程端到端（記帳→覆核→過帳→付款→對帳） | Step 1 走真實 API；Demo 動線涵蓋完整流程 |
+
+### 靜態控制台（KEM）QA 要點——只驗證不修改（C-01）
+
+| 檢查 | 方法 |
+|------|------|
+| `/console/index.html` 可達 | HTTP 200 |
+| 23+ 靜態頁可達 | 抽樣掃描（含 role.* 與 workflow.* 各頁） |
+| 零 JS 驗證 | 掃描 `<script` = 0 |
+| 擴展律正確 | `static_console_pages` 函式回傳值 = 實際生成頁數 |
+| **不修改 KEM 生成器/生成物** | 純驗證；任何修改需另案 |
+
+### 既有成果處置表（單調改進視角：哪些保留、哪些可改）
+
+**原則**：保留 ≠ 禁止改動。表中「本版動作」是量測後的裁決——「僅驗證」＝未找到實證更優的方案（改動收益 < 風險）；「可改」＝已識別具體改進點，走五步協議後可取代。
+
+| 成果 | 歸屬 | 本版裁決 | 若改動的前置條件 |
+|------|------|----------|------------------|
+| KEM 控制台（console.rs + knowledge/console/） | 平行流 | 僅驗證 | 需先證明新版生成物在多頁基數下仍零 JS + 效能更優 |
+| NavModel + console_manifest（11 群組） | 平行流＋我 | **可改**：5 大工作室二層式 IA | 需實證：導覽深度 11→5、B7a 回歸仍綠、角色矩陣仍正確 |
+| pages.rs 12 頁工作室批次 | 我（前輪） | 僅驗證 | 各頁需先有「空→有資料」的前後對照才動 |
+| V2 CSS + 字體 | 我（前輪） | **可修正**：對比、密度統一 | 每項改動附前後對照（對比數值/CSS bytes） |
+| E.Sun V2.8 API 模組 | 我＋平行流 | 僅驗證 | 需先有更優契約對齊方案（wellfit_bankpay 一致性測試） |
+| 153 tests | 共同 | 回歸防線 | 永不減少；新增測試只能加 |
+| bm25/search 混合檢索 | 平行流 | 僅驗證 | 需先證明檢索品質指標（命中率/延遲）更優 |
+| 動態頁 43 頁結構 | 共同 | 僅驗證 | 需先證明合併/拆分後使用者旅程更短 |
+
+## 已完成（有程式碼與 HTTP 驗證）
+
+- 44 模板、31+ 路由、153 tests 全綠、fmt/clippy PASS
+- V2 CSS 上線（玉山綠、sidebar、tabular-nums、minimal chrome）
+- 完整 token 覆蓋（含 palette 反轉、語義 subtle/muted、neutral 反轉、陰影）
+- 字體上線（Inter 352KB + JBM 40KB，CSP font-src 'self' 合規）
+- E.Sun V2.8 API（8 端點、冪等、CSRF、RBAC、稽核 fail-closed）
+- 導航 NavModel（manifest SSOT 驅動、gate 過濾、B7a 死連結回歸通過）
+
+## 本輪 QA 發現的已知問題
+
+| # | 問題 | 根因 | 修復方案 |
+|---|------|------|----------|
+| 1 | 有些文字需反白才看得到 | 暗色主題 text-tertiary #64748b 在面板 #1e293b 上對比僅 3.5:1 | V2 已改 #94a3b8（7:1）✅；需確認伺服器用最新 build |
+| 2 | 多個按鈕按了沒反應 | demo DB 可能無足夠資料（空表格 = 按了看不到變化） | 灌入更豐富的示範資料（見下方 Demo 資料清單） |
+| 3 | 介面排版「凌亂」 | 11 個導覽群組平鋪；部分面板 padding 不一致 | 5 大工作室二層式導航（已實作）；面板統一 padding |
+| 4 | 伺服器瞬斷 → 整合瀏覽器 403 | 重建週期中 `Stop-Process` 誤殺 demo 伺服器 | 已改用獨立 CARGO_TARGET_DIR 測試，不再殺 8090 |
+| 5 | 某些功能頁面內容空泛 | 後端資料對接不完整（Phase B 範圍） | 逐頁補全（見下方功能補全清單） |
+
+---
+
+## Demo 前檢查清單（每次 demo 前執行）
+
+1. 伺服器存活：`curl http://127.0.0.1:8090/api/health` → 200
+2. DB 正確：確認使用 `data/demo-flaps.db`（非空 DB）
+3. CSS 正確：`curl http://127.0.0.1:8090/assets/design-system.css | grep "UI V2"` → 找到
+4. 字體正確：`curl -I http://127.0.0.1:8090/assets/fonts/inter-latin.woff2` → 200 font/woff2
+5. 瀏覽器：Ctrl+Shift+R 強制刷新（清除 CSS 快取）
+
+## Demo 資料清單（已在 demo-flaps.db 中）
+
+| 類型 | 數量 | 內容 |
+|------|------|------|
+| 使用者 | 4 | admin/finance/store/pos（各自角色） |
+| 會計科目 | 3+ | CASH-001、REV-4001、EXP-6001、FIN-TEST-1 |
+| 交易 | 3+ | 示範銷貨收入 50,000、辦公費用 3,500、財務角色交易 12,800 |
+| 銀行批次 | 2 | DEMO-BATCH-001（COMPLETED 50,000）、FIN-BATCH-001（SUBMITTED 12,800） |
+| 稽核軌跡 | 10+ | 所有上述操作的完整軌跡 |
+
+---
+
+## 逐頁 QA 清單（7 區 × 逐頁）
+
+### 1. 工作台總覽（`/`）
+
+| 項目 | 預期 | 檢查 |
+|------|------|------|
+| 側邊欄 | 220px 左欄、5 大工作室 header、角色徽章 | 目視 |
+| 狀態列 | sticky 頂部、6 模組 chip、三態色 | 目視 |
+| KPI 卡 | 交易總數/金額/待覆核（tabular-nums） | 目視 |
+| BankPay 卡 | 模擬模式徽章 + 批次統計 + 最近 5 筆 | 目視 |
+| 稽核摘要 | 最近 10 筆 + 語義徽章 | 目視 |
+
+### 2. 銀行支付（`/bankpay`）
+
+| 項目 | 預期 | 檢查 |
+|------|------|------|
+| 就緒檢查卡 | V2.8 契約、端點、SourceSystemId、mTLS | 目視 |
+| 匯出表單 | 批次 ID + 金額 + 幣別 → 提交 → PRG → 聚焦批次 | 操作 |
+| 匯入表單 | 檔名 → 提交 → PRG → 匹配筆數橫幅 | 操作 |
+| 查詢表單 | esun_ref → 提交 → 結果面板 | 操作 |
+| 設定表單 | 10 欄位 + 儲存 → PRG → 已儲存橫幅 | 操作 |
+| 批次清單 | 最近 20 筆 + 狀態徽章（中文） | 目視 |
+| PRG 聚焦 | 匯出後自動捲到聚焦批次 | 操作 |
+
+### 3. 匯入與草稿（`/import`、`/drafts`）
+
+| 項目 | 預期 | 檢查 |
+|------|------|------|
+| CSV 上傳 | 選檔 → 預覽 → 確認 → 導向交易 | 操作 |
+| 草稿解析 | 貼文字 → AI 建議 → 採納 | 操作 |
+| 匯入歷史 | 表格顯示過往匯入記錄 | 目視 |
+
+### 4. 稽核軌跡（`/audit`）
+
+| 項目 | 預期 | 檢查 |
+|------|------|------|
+| 篩選 | 使用者/動作/日期 → 表格更新 | 操作 |
+| 分頁 | 上一頁/下一頁連結 | 操作 |
+| 語義徽章 | BANKPAY_* 綠/紅、其他藍 | 目視 |
+
+### 5. 報表分析（`/reports/*`）
+
+| 頁面 | 預期 | 檢查 |
+|------|------|------|
+| 月報表 | 當月彙總（預設當月，不需參數） | 目視 |
+| 試算表 | 借貸合計 + 平衡徽章 | 目視 |
+| 總分類帳 | 選科目 → 明細 + 累計餘額 | 操作 |
+| 樞紐 | 列/欄/值選擇 → 交叉表 | 操作 |
+| 平行座標 | SVG 可視化 | 目視 |
+
+### 6. 系統狀態（`/status`）
+
+| 項目 | 預期 | 檢查 |
+|------|------|------|
+| 整體狀態 | healthy/degraded/error 徽章 | 目視 |
+| 模組表 | 6 模組狀態（db/search/sync/com/ai/bankpay） | 目視 |
+| 自動更新 | 30 秒 meta refresh | 等待 30s |
+
+### 7. 管理（`/admin/*`）
+
+| 頁面 | 預期 | 檢查 |
+|------|------|------|
+| 使用者 | 列表 + 啟用/停用/重設密碼 | 操作 |
+| 角色權限 | 矩陣 ✓/— | 目視 |
+| 工作階段 | 活動 session + 清除過期 | 操作 |
+| 系統資訊 | 版本/遷移/資料量 KPI | 目視 |
+| API 中樞 | 8 端點目錄 + 測試台 + 日誌 + 設定 | 操作 |
+
+### 8. 操作指引（`/help`）
+
+| 項目 | 預期 | 檢查 |
+|------|------|------|
+| 角色 KPI | role_code 顯示 | 目視 |
+| 工作流程 | 6 步驟 ol 列表 | 目視 |
+| 常用入口 | 4 個按鈕連結 | 操作 |
+
+---
+
+## 功能補全清單（Phase B — 逐項完成）
+
+| # | 區域 | 缺口 | 修復 | 優先 |
+|---|------|------|------|------|
+| B1 | 銀行支付 | 匯入表單需要 `data/bankpay/inbound/` 內有 CSV 檔 | 建立示範 CSV 供 demo | 高 |
+| B2 | 匯入與草稿 | CSV 上傳後預覽/確認流程需真實資料 | 準備示範 CSV | 高 |
+| B3 | 草稿解析 | AI 建議需 ai 模組（目前 Idle） | 標示「AI 未設定」+ 純規則建議 | 中 |
+| B4 | 報表 | 3 筆交易太少，圖表/樞紐看起來空 | 灌入 20+ 筆示範交易（跨 3 個月） | 高 |
+| B5 | 稽核軌跡 | 只有 demo 操作的軌跡 | 灌入更多歷史軌跡 | 中 |
+| B6 | 操作指引 | 角色落地邏輯需與 help 頁面一致 | 確認 finance 登入落地試算表 ✓ | 低 |
+| B7 | 管理 | 工作階段頁需要活動 session 資料 | admin 登入即產生 ✓ | 低 |
+
+---
+
+## 多輪驗證協議（8 聚焦輪 + 1 閉環輪 = 驗證完全的定義）
+
+> 使用者裁定：「必須多驗證幾輪——上一輪、上上輪、上上上輪……**至少八輪**。多輪測試是為了未來得到**最大效益與最佳全維度最大幅度提升**。」
+
+### 為什麼單輪不算驗證
+- 單輪只覆蓋一個透鏡：**tests 綠 ≠ 視覺對 ≠ 權限對 ≠ 流程通**
+- 修正一個缺陷可能破壞另一處（**交互效應**）——只有多輪交叉驗證才測得到
+- 每輪數據形成**趨勢基準**——下一版迭代才能量測「全維度最大幅度提升」
+
+### 輪次設計（每輪一個透鏡，順序不可跳）
+
+| 輪 | 透鏡 | 方法 | 通過標準 | 產出 |
+|----|------|------|----------|------|
+| **R0** | 基準量測 | 改動前記錄現況 | — | 基準數據表 |
+| **R1** | 編譯靜態 | `cargo check` / `fmt --check` / `clippy -D warnings` | 0 errors / 0 warnings | 閘門證據 |
+| **R2** | 測試套件 | `cargo test`（隔離 target，不殺 8090） | **≥153 綠 / 0 failed** | 測試計數 |
+| **R3** | 路由完整性 | 43 動態頁 × admin HTTP 掃描 | **100% 200/303** | 掃描清單 |
+| **R4** | 權限矩陣 | 4 角色導覽矩陣 + 寫入 403 + 未登入 303 | 全對（finance 無稽核/管理；pos 僅 Read） | 角色矩陣表 |
+| **R5** | 視覺無障礙 | 暗色對比掃描 + `<script`=0 + focus-visible + reduced-motion | **100% ≥4.5:1** / 零 JS | 對比表 |
+| **R6** | 端到端流程 | HTTP 實走：登入→記帳→覆核→付款→對帳→稽核 | 全流程成功 | 流程證據鏈 |
+| **R7** | 靜態控制台＋跨裝置 | `/console/*` 抽樣 + 900px 折疊 + print 樣式 | 全通過 | 截圖 |
+| **R8** | 效能資源 | served bytes + 回應時間 vs R0 基準 | **非劣化** | 趨勢表 |
+| **R9** | **閉環輪** | **全 9 輪重跑於最終成品** | **零新缺陷** | 驗證完成宣告 |
+
+### 缺陷處理規則（回退與重驗）
+
+1. 任何輪發現缺陷 → 修復 → **重跑該輪 + 所有受影響的下游輪**（例：修 CSS 破壞測試 → 重跑 R2）
+2. 修復破壞了先前輪次（交互效應）→ **回滾修復**或重設計（單調改進框架五步協議）
+3. **驗證完全的唯一定義**：**R9 閉環輪以「零新缺陷」通過**——且 R1-R8 在同一次完整輪迴中全綠
+4. **輪迴計數**：若 R9 發現缺陷 → 修正後回到 R1 重啟新輪迴（第 2 迴）→ 重複直到某整迴全綠
+5. 歷史保存：每輪的通過證據與缺陷紀錄留檔（C-01）
+
+### 「至少八輪」的依據
+
+- 8 個聚焦透鏡各覆蓋一類風險：靜態閘門／邏輯／路由完整性／權限安全／視覺無障礙／端到端流程／靜態控制台跨裝置／效能
+- 少於 8 輪必有死角（例：只跑 R1+R2 = 編譯測試綠但視覺、權限、流程全未驗證——正是使用者實際遭遇的「過度自信」）
+- **幾輪算完全？一整個 9 輪輪迴全綠 = 驗證完全**；任一輪紅 → 該輪迴不成立，修復後重啟新輪迴
+
+### 趨勢記錄表（未來迭代的最大效益基準）
+
+| 指標 | R0 基準 | 本次 R9 | 下一版目標 |
+|------|---------|---------|-----------|
+| tests 數 | 153 | ≥153 | 只增不減 |
+| 頁面可達率 | 記錄 | 100% | 維持 100% |
+| 對比合規率 | 記錄 | 100% | 維持 100% |
+| `<script` 計數 | 0 | 0 | 永遠 0 |
+| CSS bytes | 記錄 | 記錄 | 非膨脹 |
+| 字體 bytes | 記錄 | 記錄 | 非膨脹 |
+| E2E 流程耗時 | 記錄 | 記錄 | 遞減 |
+
+→ 下一版迭代以 R9 為新基準，量測「全維度最大幅度提升」（多維度取捨框架 + 單調改進框架雙重約束）。
+
+---
+
+## 實作順序（每步驟標註規範合規要求）
+
+### Step 1：準備示範資料（B1+B2+B4）— 只加不減
+- **前置量測（C-03）**：確認伺服器存活（`/api/health` 200）+ DB 路徑 + 現有資料筆數
+- **B4 灌入 20+ 交易**：
+  - 方式：**透過 HTTP API 建立**（真實流程：登入 → POST /transactions），不 SQL 直插
+  - 内容：跨 3 個月、5+ 科目組合、金額 1,000–100,000 TWD
+  - 驗證：`/transactions` 顯示 20+ 筆；`/reports/trial-balance` 借貸平衡
+  - 規範：金額走 `parse_decimal_to_minor`（INV-01）；每筆都會自動寫稽核（B5 一併完成）
+- **B1 銀行匯入 CSV**：在 `data/bankpay/inbound/` 建立 `demo-responses.csv`（**新增檔案**，不動既有）
+- **B2 匯入示範 CSV**：建立可供 `/import` 上傳的 `demo-import.csv`（**新增檔案**）
+- **斷言（C-04）**：每筆 API 呼叫後驗證 HTTP 狀態（303/200）
+
+### Step 2：稽核軌跡（B5）— 自動完成
+- Step 1 的每筆 API 操作自動寫入 `audit_log` → 稽核頁自然豐富
+- **驗證**：`/audit` 顯示 20+ 筆，含 TRANSACTION/BANKPAY/LOGIN 事件
+
+### Step 3：全面驗證（T13）— 依「多輪驗證協議」執行 9 輪輪迴
+- **R0 基準量測**：先記錄現況（tests 數、頁面可達率、CSS bytes、E2E 耗時）→ 填入趨勢表
+- **R1 編譯靜態**：`cargo check --locked -p platform` / `fmt --check` / `clippy --all-targets -- -D warnings` → 0 errors / 0 warnings
+- **R2 測試套件**：`cargo test --locked -p platform`（隔離 `CARGO_TARGET_DIR`，**不殺 8090 demo 伺服器**）→ ≥153 綠
+- **R3 路由完整性**：43 動態頁 × admin HTTP 掃描 → 100% 200/303
+- **R4 權限矩陣**：4 角色導覽矩陣 + pos 寫入 403 + 未登入 303 → 全對
+- **R5 視覺無障礙**：暗色對比掃描（≥4.5:1）+ `<script`=0 + focus-visible + reduced-motion
+- **R6 端到端流程**：HTTP 實走完整流程（登入→記帳→覆核→付款→對帳→稽核）
+- **R7 靜態控制台＋跨裝置**：`/console/*` 抽樣 + 900px 折疊 + print 樣式
+- **R8 效能資源**：served bytes + 回應時間 vs R0 → 非劣化
+- **R9 閉環輪**：全 9 輪重跑於最終成品 → **零新缺陷 = 驗證完全**；若有缺陷 → 修復後重啟新輪迴
+- **視覺截圖**：`/login`、`/`、`/bankpay`、`/reports/trial-balance`、`/audit`、`/status`
+- **趨勢表**：R9 數據寫入趨勢表，作為下一版迭代基準
+
+### Step 4：次要補全（B3+B6+B7）— 只加不減
+- **B3 草稿解析**：確認 `ai_suggest` 在 AI 未設定時有誠實標示（P7），不造假建議
+- **B6 角色落地**：驗證 finance 登入 → `/reports/trial-balance`（已實作，確認即可）
+- **B7 工作階段**：admin 登入產生活動 session（已自然發生，確認即可）
+
+### Step 5：交付 Demo
+- 依「Demo 前檢查清單」逐項驗證
+- 提供登入憑證表 + 建議展示動線
+- 誠實標示：模擬模式、AI 未設定（治理 P7）
+
+---
+
+## 跨裝置與跨平台（已實作並驗證）
+
+### 實作
+- `flaps-server.rs` 加 `FLAPS_BIND` 環境變數（預設 `127.0.0.1` 安全；設 `0.0.0.0` 開放區網）
+- 啟動器 `%TEMP%\flaps-demo-start.cmd` 已設 `FLAPS_BIND=0.0.0.0`
+
+### 驗證（實測）
+| 端點 | 結果 |
+|------|------|
+| `http://127.0.0.1:8090/api/health`（本機） | 200 |
+| `http://192.168.1.160:8090/api/health`（區網） | 200 |
+
+### 跨裝置使用方式
+- 同區網任何裝置（手機/平板/其他電腦）瀏覽器開 `http://192.168.1.160:8090`
+- 登入 `admin / Admin1234`（或 finance/store/pos 各角色）
+- 響應式：≤900px 自動折疊為頂欄模式（手機可用）
+
+### 資安注意（誠實標示）
+- 區網為 HTTP 明文：密碼以 Argon2id 驗證但傳輸未加密——內部 demo 可接受；正式環境需反向代理 + HTTPS
+- 防火牆規則 `netsh advfirewall` 需管理員權限——本次實測區網已可達（既有規則放行）；若其他裝置連不上，以管理員執行：
+  `netsh advfirewall firewall add rule name="Flaps ERP 8090" dir=in action=allow protocol=TCP localport=8090`
+
+---
 
 ## 風險與對策
 
 | 風險 | 對策 |
 |------|------|
-| Grid 佈局破壞特殊頁面 | 登入頁 `:has()` 排除；30 頁結構已驗證一致 |
-| 字體下載失敗 | @font-face 404 → 系統字體堆疊靜默退回（零風險） |
-| dark-only 影響列印 | `@media print` 已有白底規則 ✓ |
-| 覆蓋層與既有規則衝突 | cascade 附加於檔尾 = 後者勝；衝突僅限預期覆蓋項 |
-| 使用者不滿意 | 覆蓋層獨立區塊，刪除即回滾 |
-
-## 明確不在範圍（Phase B 另案）
-
-- 各頁功能完成度（使用者指出的 7 區實質內容——後端資料對接）
-- 淺色主題、密度切換 toggle、KPI hero 強調
-- 圖表/資料視覺化（目前無圖表庫，零 JS 限制下需評估 SVG server-render）
+| 灌入資料後頁面仍空 | 確認伺服器使用的 DB 路徑與灌入目標一致 |
+| 示範交易金額不合計 | 確保借=貸（使用真實 API 建立而非 SQL 直插） |
+| 測試套件因新資料失敗 | 測試使用 in-memory DB，不受 demo DB 影響 |
+| 伺服器重啟遺失 memory state | sessions 存 DB，重啟不遺失 |
+| **實作代理人亂覆蓋既有程式碼（C-01）** | 本計畫所有改動為「新增檔案」或「精確字串替換」；**禁止重寫整檔**；如需覆蓋先登錄理由並取得確認 |
+| **實作代理人未斷言就改檔（C-04）** | 每筆 Edit 必須精確匹配舊字串；任何腳本式修改須含存在+唯一 assertion，失敗即中止 |
+| **實作代理人新增 Python 工件（C-11）** | Demo 資料灌入用 PowerShell `Invoke-WebRequest` 或 Rust 既有工具；不新增 `.py` |
+| **實作代理人推翻已通過測試的邏輯** | 153 tests 為回歸防線：任何改動後必跑全套件；測試失敗即回滾該改動 |
+| **與平行流編輯衝突（C-05）** | 動手前 `git status` 對帳；平行流已改的檔案（platform/src/*、templates/*）先重讀再動手 |

@@ -144,6 +144,8 @@ pub(crate) fn audit_event_display(event_type: &str) -> (String, &'static str) {
         "TRANSACTION_CREATED" => "交易建立",
         "TRANSACTION_POSTED" => "交易過帳",
         "TRANSACTION_REJECTED" => "交易駁回",
+        "REVIEW_BULK" => "批量覆核裁決",
+        "REVIEW_BULK_SUMMARY" => "批量覆核摘要",
         "IMPORT_CONFIRMED" => "匯入確認",
         "DRAFT_ADOPTED" => "草稿採用",
         "USER_CREATED" => "使用者建立",
@@ -211,6 +213,10 @@ impl FormValues {
 pub struct IndexTemplate {
     pub acting_user: String,
     pub csrf_token: String,
+    /// M-1 量測（D-5/B-1）：伺服器渲染的隊列開啟時間戳（epoch 毫秒），
+    /// 隨批量裁決表單回傳；POST 端據以計算 elapsed_ms。fail-open：
+    /// 缺欄或不可解析一律記 "unknown"，量測絕不阻擋業務操作。
+    pub queue_opened_at: String,
     pub can_manage_users: bool,
     /// G1.3 (WP-05): primary role code of the acting user; empty when the
     /// user has no role assignment (bootstrap admin) or the DB is degraded.
@@ -406,6 +412,8 @@ pub fn router(state: AppState) -> Router {
         .route("/import", get(import_upload_page))
         .route("/import/preview", post(import_preview))
         .route("/import/confirm", post(import_confirm))
+        .route("/import/mapping", get(mapping_page))
+        .route("/import/mapping/apply", post(mapping_apply))
         .route("/drafts", get(drafts_page))
         .route("/drafts/parse", post(drafts_parse))
         .route("/new", get(wizard_page))
@@ -426,6 +434,8 @@ pub fn router(state: AppState) -> Router {
         .route("/ai-decisions/reject", post(ai_decisions_reject))
         // ── 工作室頁面批次（27+ 頁；零 JS，session 保護）──
         .route("/audit", get(crate::pages::audit_page))
+        // D-6 自我稽核視圖（B-5.0）：登入即可自查本人稽核事件。
+        .route("/my-decisions", get(crate::pages::my_decisions))
         .route(
             "/reports/trial-balance",
             get(crate::pages::trial_balance_page),
@@ -980,6 +990,7 @@ pub struct AdminUserRow {
 #[template(path = "admin_users.html")]
 pub struct AdminUsersTemplate {
     pub acting_user: String,
+    pub nav: crate::nav::NavModel,
     pub csrf_token: String,
     pub users: Vec<AdminUserRow>,
     pub roles: Vec<(String, String)>,
@@ -2540,6 +2551,9 @@ pub struct BulkReviewForm {
     pub csrf_token: String,
     pub decision: String,
     pub tx_ids: String,
+    /// M-1 量測（D-5/B-1）：index 隊列頁渲染時間戳（epoch 毫秒）。
+    /// Option：缺欄（舊表單／直接 POST）→ None → elapsed 記 "unknown"。
+    pub queue_opened_at: Option<String>,
 }
 
 /// POST /reviews/bulk — bulk adjudication of PENDING_REVIEW transactions
@@ -2684,6 +2698,38 @@ async fn reviews_bulk(
 
     let ok_count = outcomes.iter().filter(|o| o.ok).count();
     let fail_count = outcomes.len() - ok_count;
+
+    // ── M-1 量測（D-5/B-1）：每批次一列 REVIEW_BULK_SUMMARY ──
+    // 語義＝隊列頁渲染→提交送達之伺服器時間差（毫秒）。fail-open：
+    // 缺欄／不可解析／時間不合理（負數或 >24h，含時鐘偏移）一律記
+    // "unknown"；量測是觀測面，絕不阻擋裁決。transaction_id 為 NULL
+    // （批次層事件，schema 不變）；performed_by＝動作者簽名。
+    let elapsed_ms = form
+        .queue_opened_at
+        .as_deref()
+        .and_then(|s| s.parse::<i64>().ok())
+        .and_then(|opened| {
+            let delta = chrono::Utc::now().timestamp_millis() - opened;
+            (0..=86_400_000).contains(&delta).then_some(delta)
+        });
+    let summary = serde_json::json!({
+        "batch_size": outcomes.len(),
+        "ok_count": ok_count,
+        "fail_count": fail_count,
+        "elapsed_ms": elapsed_ms
+            .map(|v| serde_json::json!(v))
+            .unwrap_or(serde_json::json!("unknown")),
+    });
+    let _ = sqlx::query(
+        "INSERT INTO audit_log (log_id, transaction_id, event_type, event_data, performed_by) \
+         VALUES (?, NULL, 'REVIEW_BULK_SUMMARY', ?, ?)",
+    )
+    .bind(uuid::Uuid::new_v4().to_string())
+    .bind(summary.to_string())
+    .bind(&session.user_id)
+    .execute(&state.pool)
+    .await;
+
     render_or_500(BulkReviewTemplate {
         acting_user: session.user_id.clone(),
         nav: nav.0.clone(),
@@ -3113,8 +3159,14 @@ async fn build_admin_page(
             .await
             .unwrap_or_default();
 
+    // 導覽與其他工作台頁一致（studio_nav macro）：依權限旗標過濾，admin 群組
+    // 於 ROLE_MANAGE 者可見；目前路徑 /admin/users 使該項標記為 active。
+    let flags = nav_flags(state, &session.user_id).await;
+    let nav = crate::nav::NavModel::build(&flags, "/admin/users");
+
     AdminUsersTemplate {
         acting_user: session.user_id.clone(),
+        nav,
         csrf_token: session.csrf_token.clone(),
         users,
         roles,
@@ -3269,7 +3321,7 @@ async fn load_batch_view(state: &AppState, batch_id: &str) -> Option<ImportBatch
 }
 
 /// 格式中立欄位驗證（CSV 與 XLSX 轉接器共用同一契約；規則＝表單同款）。
-fn validate_fields(
+pub(crate) fn validate_fields(
     date_raw: &str,
     debit_raw: &str,
     credit_raw: &str,
@@ -3319,37 +3371,34 @@ fn validate_fields(
     })
 }
 
-/// Validate one CSV record into an import draft（薄殼：委派 validate_fields）。
-fn validate_import_row(record: &csv::StringRecord) -> Result<ImportRowDraft, String> {
-    if record.len() < 6 {
-        return Err(format!(
-            "欄位不足（需 6 欄：date, debit_account, credit_account, amount, currency, description），實得 {} 欄",
-            record.len()
-        ));
-    }
-    validate_fields(
-        record.get(0).unwrap(),
-        record.get(1).unwrap(),
-        record.get(2).unwrap(),
-        record.get(3).unwrap(),
-        record.get(4).unwrap(),
-        record.get(5).unwrap(),
-    )
-}
-
 /// 匯入格式偵測（magic bytes）：ZIP 開頭＝XLSX（Office Open XML），其餘走 CSV。
 #[derive(Debug, PartialEq, Eq)]
 enum ImportFormat {
     Csv,
     Xlsx,
+    Docx,
     Pdf,
+    Image,
+    Eml,
 }
 
 fn detect_import_format(data: &[u8]) -> ImportFormat {
     if data.len() >= 4 && data[0] == 0x50 && data[1] == 0x4B && data[2] == 0x03 && data[3] == 0x04 {
-        ImportFormat::Xlsx
+        // OOXML 容器同為 ZIP（PK magic）：以內容路徑分流 xlsx／docx。
+        if data.windows(17).any(|w| w == b"word/document.xml") {
+            ImportFormat::Docx
+        } else {
+            ImportFormat::Xlsx
+        }
     } else if data.len() >= 4 && &data[0..4] == b"%PDF" {
         ImportFormat::Pdf
+    } else if data.len() >= 3
+        && ((data[0] == 0x89 && data[1] == 0x50 && data[2] == 0x4E && data[3] == 0x47)
+            || (data[0] == 0xFF && data[1] == 0xD8 && data[2] == 0xFF))
+    {
+        ImportFormat::Image // PNG or JPEG
+    } else if looks_like_eml(data) {
+        ImportFormat::Eml
     } else {
         ImportFormat::Csv
     }
@@ -3395,6 +3444,111 @@ fn parse_xlsx_rows(data: &[u8]) -> Result<Vec<(usize, Vec<String>)>, String> {
     Ok(out)
 }
 
+/// OCR 行 → 欄位（分隔啟發鏈：TAB → 2+ 連續空白 → |；皆無 → 單欄）。
+/// PDF 與圖片轉接器共用（單一啟發、單一測試面）。
+fn split_ocr_line(line: &str) -> Vec<String> {
+    let trimmed = line.trim();
+    if trimmed.is_empty() {
+        return Vec::new();
+    }
+    if trimmed.contains('\t') {
+        trimmed.split('\t').map(|s| s.trim().to_string()).collect()
+    } else if trimmed.contains("  ") {
+        trimmed
+            .split("  ")
+            .filter(|s| !s.trim().is_empty())
+            .map(|s| s.trim().to_string())
+            .collect()
+    } else if trimmed.contains('|') {
+        trimmed.split('|').map(|s| s.trim().to_string()).collect()
+    } else {
+        vec![trimmed.to_string()]
+    }
+}
+/// V3-C：DOCX 表格抽取（zip 容器→word/document.xml→OOXML 流式解析）。
+/// 每個 <w:tr> 一列，儲存格串接其 <w:t> 文字；無表格時退回段落行（單欄，
+/// 交由分隔啟發鏈處理）。命名空間前綴不相干——以 local-name 比對。
+fn parse_docx_rows(data: &[u8]) -> Result<Vec<(usize, Vec<String>)>, String> {
+    use std::io::Read as _;
+    let mut archive = zip::ZipArchive::new(std::io::Cursor::new(data))
+        .map_err(|e| format!("DOCX 開啟失敗：{e}"))?;
+    let mut xml = String::new();
+    archive
+        .by_name("word/document.xml")
+        .map_err(|_| "DOCX 內缺 word/document.xml（非 Word 文件？）".to_string())?
+        .read_to_string(&mut xml)
+        .map_err(|e| format!("document.xml 讀取失敗：{e}"))?;
+
+    use quick_xml::events::Event;
+    let mut reader = quick_xml::Reader::from_str(&xml);
+    reader.config_mut().trim_text(false);
+
+    let mut out = Vec::new();
+    let mut in_table = false;
+    let mut in_row = false;
+    let mut in_cell = false;
+    let mut cell = String::new();
+    let mut row: Vec<String> = Vec::new();
+    let mut paragraph = String::new();
+    let mut row_no = 0usize;
+
+    let mut buf = Vec::new();
+    loop {
+        buf.clear();
+        match reader.read_event_into(&mut buf) {
+            Ok(Event::Start(e)) => {
+                let name = e.local_name();
+                if name.as_ref() == "tbl" {
+                    in_table = true;
+                } else if in_table && name.as_ref() == "tr" {
+                    in_row = true;
+                    row.clear();
+                } else if in_row && name.as_ref() == "tc" {
+                    in_cell = true;
+                    cell.clear();
+                } else if name.as_ref() == "p" {
+                    paragraph.clear();
+                }
+            }
+            Ok(Event::Text(t)) => {
+                let text = t.to_string();
+                if in_cell {
+                    cell.push_str(&text);
+                } else if !in_table {
+                    paragraph.push_str(&text);
+                }
+            }
+            Ok(Event::End(e)) => {
+                let name = e.local_name();
+                if in_row && name.as_ref() == "tc" {
+                    in_cell = false;
+                    row.push(std::mem::take(&mut cell));
+                } else if in_row && name.as_ref() == "tr" {
+                    in_row = false;
+                    row_no += 1;
+                    out.push((row_no, row.clone()));
+                } else if in_table && name.as_ref() == "tbl" {
+                    in_table = false;
+                } else if !in_table && name.as_ref() == "p" {
+                    // 表格外的段落：以單欄行保留（分隔鏈可吃 TAB/雙空白格式）。
+                    let text = paragraph.trim().to_string();
+                    if !text.is_empty() {
+                        row_no += 1;
+                        out.push((row_no, vec![text]));
+                    }
+                    paragraph.clear();
+                }
+            }
+            Ok(Event::Eof) => {
+                break;
+            }
+            Err(e) => return Err(format!("OOXML 解析失敗：{e}")),
+            _ => {}
+        }
+    }
+    Ok(out)
+}
+
 /// V2：PDF 文字層匯入（pdf-extract；掃描式 PDF 無文字層 → 明確錯誤訊息，OCR 屬 V2.5）。
 /// 欄位分隔啟發式（依序）：TAB → 「2+ 連續空白」→ 「|」；皆無 → 單欄（後續以欄位不足 fail-closed）。
 /// 每行一筆；首列由呼叫端 skip(1) 視為標題（與 CSV/XLSX 對稱）。
@@ -3407,20 +3561,42 @@ fn parse_pdf_rows(data: &[u8]) -> Result<Vec<(usize, Vec<String>)>, String> {
         if trimmed.is_empty() {
             continue;
         }
-        let cells: Vec<String> = if trimmed.contains('\t') {
-            trimmed.split('\t').map(|s| s.trim().to_string()).collect()
-        } else if trimmed.contains("  ") {
-            trimmed
-                .split("  ")
-                .filter(|s| !s.trim().is_empty())
-                .map(|s| s.trim().to_string())
-                .collect()
-        } else if trimmed.contains('|') {
-            trimmed.split('|').map(|s| s.trim().to_string()).collect()
-        } else {
-            vec![trimmed.to_string()]
-        };
+        let cells = split_ocr_line(line);
         out.push((idx + 1, cells));
+    }
+    Ok(out)
+}
+
+/// V3-A：EML 啟發式偵測（無 magic bytes；前 4KB 內 ≥2 個標準標頭行）。
+fn looks_like_eml(data: &[u8]) -> bool {
+    let head = &data[..data.len().min(4096)];
+    let text = String::from_utf8_lossy(head).to_lowercase();
+    let headers = [
+        "received:",
+        "from:",
+        "to:",
+        "subject:",
+        "message-id:",
+        "mime-version:",
+    ];
+    headers.iter().filter(|h| text.contains(*h)).count() >= 2
+}
+
+/// V3-A：EML 附件擷取（mail-parser；D-EML1 遞迴進料的載體層）。
+/// 附件數上限 10（D-EML1）；單件 2MB 沿用 IMPORT_MAX_BYTES（呼叫端把關）；
+/// 格式白名單由後續 detect_import_format 以 magic-sniff 執行（此處僅收集）。
+fn parse_eml_attachments(data: &[u8]) -> Result<Vec<(String, Vec<u8>)>, String> {
+    let message = mail_parser::MessageParser::default()
+        .parse(data)
+        .ok_or_else(|| "EML 解析失敗：非 RFC 5322/MIME 格式".to_string())?;
+    let mut out = Vec::new();
+    for part in message.attachments() {
+        let name = part.attachment_name().unwrap_or("unnamed").to_string();
+        let bytes = part.decoded().to_vec();
+        out.push((name, bytes));
+        if out.len() >= 10 {
+            break; // 附件數上限（D-EML1）
+        }
     }
     Ok(out)
 }
@@ -3491,6 +3667,9 @@ async fn import_preview(
     let batch_id = uuid::Uuid::new_v4().to_string();
     let mut drafts: Vec<(usize, ImportRowDraft)> = Vec::new();
     let mut errors: Vec<(usize, String, String)> = Vec::new();
+    // V3-A：EML 多批次收集（每附件一 batch）；redirect 指向第一個批次。
+    let mut eml_batches: Vec<(String, String, i64, i64)> = Vec::new();
+    let mut eml_redirect: Option<String> = None;
 
     /// 單列入列（列數上限 fail-closed；欄位不足給明確訊息）。
     fn push_import_row(
@@ -3533,56 +3712,491 @@ async fn import_preview(
                 .has_headers(true)
                 .flexible(true)
                 .from_reader(data.as_slice());
+            let header_cells: Vec<String> = reader
+                .headers()
+                .map(|h| h.iter().map(|s| s.to_string()).collect())
+                .unwrap_or_default();
+            let mut rows_all: Vec<(usize, Vec<String>)> = vec![(1usize, header_cells.clone())];
             for (idx, record) in reader.records().enumerate() {
-                let line_no = idx + 2; // 1-based, after the header row
-                if drafts.len() + errors.len() >= IMPORT_MAX_ROWS {
-                    errors.push((
-                        line_no,
-                        String::new(),
-                        format!("超過 {IMPORT_MAX_ROWS} 列上限，其餘列未處理"),
-                    ));
-                    break;
-                }
                 match record {
                     Ok(rec) => {
-                        let raw = rec.iter().collect::<Vec<_>>().join(",");
-                        match validate_import_row(&rec) {
-                            Ok(draft) => drafts.push((line_no, draft)),
-                            Err(msg) => errors.push((line_no, raw, msg)),
-                        }
+                        let cells: Vec<String> = rec.iter().map(|s| s.to_string()).collect();
+                        rows_all.push((idx + 2, cells));
                     }
-                    Err(e) => errors.push((line_no, String::new(), format!("CSV 解析失敗：{e}"))),
+                    Err(e) => errors.push((idx + 2, String::new(), format!("CSV 解析失敗：{e}"))),
+                }
+            }
+            // V3-B 決策鏈（D-MAP1）：profile → 同義詞 → 映射待辦（零 JS 映射頁）。
+            match crate::ingest::decide_mapping(&state.pool, &header_cells).await {
+                Some((mapping, needs_reorder)) => {
+                    if needs_reorder {
+                        let _ =
+                            crate::ingest::save_profile(&state.pool, &header_cells, &mapping).await;
+                    }
+                    for (row_no, cells) in rows_all.into_iter().skip(1) {
+                        let line_no = row_no;
+                        let raw = cells.join(" | ");
+                        let cells = crate::ingest::apply_row(&cells, &mapping, needs_reorder);
+                        push_import_row(&mut drafts, &mut errors, line_no, &cells, raw);
+                    }
+                }
+                None => {
+                    // 映射待辦：原始列（含標題）以 TAB 保存，PRG 至零 JS 映射頁。
+                    if let Err(e) = crate::ingest::persist_mapping_batch(
+                        &state,
+                        &batch_id,
+                        &sha_hex,
+                        &rows_all,
+                        &session.user_id,
+                    )
+                    .await
+                    {
+                        return (
+                            StatusCode::INTERNAL_SERVER_ERROR,
+                            format!("映射待辦批次建立失敗：{e}"),
+                        )
+                            .into_response();
+                    }
+                    return Redirect::to(&format!("/import/mapping?batch={batch_id}"))
+                        .into_response();
                 }
             }
         }
         ImportFormat::Xlsx => {
-            // 第一列視為欄位標題（與 CSV has_headers(true) 對稱）；row_no+1 對齊 Excel 顯示列號。
             match parse_xlsx_rows(&data) {
                 Ok(rows) => {
-                    for (row_no, cells) in rows.into_iter().skip(1) {
-                        let line_no = row_no + 1;
-                        let raw = cells.join(" | ");
-                        push_import_row(&mut drafts, &mut errors, line_no, &cells, raw);
+                    let header = rows.first().map(|(_, h)| h.clone()).unwrap_or_default();
+                    // V3-B 決策鏈：profile → 同義詞 → 映射待辦。
+                    match crate::ingest::decide_mapping(&state.pool, &header).await {
+                        Some((mapping, needs_reorder)) => {
+                            if needs_reorder {
+                                let _ = crate::ingest::save_profile(&state.pool, &header, &mapping)
+                                    .await;
+                            }
+                            for (row_no, cells) in rows.into_iter().skip(1) {
+                                let line_no = row_no + 1;
+                                let raw = cells.join(" | ");
+                                let cells =
+                                    crate::ingest::apply_row(&cells, &mapping, needs_reorder);
+                                push_import_row(&mut drafts, &mut errors, line_no, &cells, raw);
+                            }
+                        }
+                        None => {
+                            if let Err(e) = crate::ingest::persist_mapping_batch(
+                                &state,
+                                &batch_id,
+                                &sha_hex,
+                                &rows,
+                                &session.user_id,
+                            )
+                            .await
+                            {
+                                return (
+                                    StatusCode::INTERNAL_SERVER_ERROR,
+                                    format!("映射待辦批次建立失敗：{e}"),
+                                )
+                                    .into_response();
+                            }
+                            return Redirect::to(&format!("/import/mapping?batch={batch_id}"))
+                                .into_response();
+                        }
                     }
                 }
                 Err(msg) => errors.push((1, String::new(), msg)),
             }
         }
         ImportFormat::Pdf => {
-            // 首列視為欄位標題（與 CSV/XLSX 對稱）；PDF 擷取行序即列號。
             match parse_pdf_rows(&data) {
                 Ok(rows) => {
-                    for (row_no, cells) in rows.into_iter().skip(1) {
-                        let line_no = row_no + 1;
-                        let raw = cells.join(" | ");
-                        push_import_row(&mut drafts, &mut errors, line_no, &cells, raw);
+                    let header = rows.first().map(|(_, h)| h.clone()).unwrap_or_default();
+                    // V3-B 決策鏈：profile → 同義詞 → 映射待辦。
+                    match crate::ingest::decide_mapping(&state.pool, &header).await {
+                        Some((mapping, needs_reorder)) => {
+                            if needs_reorder {
+                                let _ = crate::ingest::save_profile(&state.pool, &header, &mapping)
+                                    .await;
+                            }
+                            for (row_no, cells) in rows.into_iter().skip(1) {
+                                let line_no = row_no + 1;
+                                let raw = cells.join(" | ");
+                                let cells =
+                                    crate::ingest::apply_row(&cells, &mapping, needs_reorder);
+                                push_import_row(&mut drafts, &mut errors, line_no, &cells, raw);
+                            }
+                        }
+                        None => {
+                            if let Err(e) = crate::ingest::persist_mapping_batch(
+                                &state,
+                                &batch_id,
+                                &sha_hex,
+                                &rows,
+                                &session.user_id,
+                            )
+                            .await
+                            {
+                                return (
+                                    StatusCode::INTERNAL_SERVER_ERROR,
+                                    format!("映射待辦批次建立失敗：{e}"),
+                                )
+                                    .into_response();
+                            }
+                            return Redirect::to(&format!("/import/mapping?batch={batch_id}"))
+                                .into_response();
+                        }
                     }
                 }
                 Err(msg) => errors.push((1, String::new(), msg)),
             }
         }
+        ImportFormat::Docx => match parse_docx_rows(&data) {
+            Ok(rows) => {
+                // 第一列視為欄位標題（與其他格式對稱）。
+                let (mapping, needs_reorder) = rows
+                    .first()
+                    .map(|(_, header)| {
+                        crate::ingest::normalize_decision(header)
+                            .unwrap_or((vec![None; header.len()], false))
+                    })
+                    .unwrap_or((Vec::new(), false));
+                if needs_reorder {
+                    if let Some((_, header)) = rows.first() {
+                        let _ = crate::ingest::save_profile(&state.pool, header, &mapping).await;
+                    }
+                }
+                for (row_no, cells) in rows.into_iter().skip(1) {
+                    let line_no = row_no + 1;
+                    let raw = cells.join(" | ");
+                    let cells = crate::ingest::apply_row(&cells, &mapping, needs_reorder);
+                    push_import_row(&mut drafts, &mut errors, line_no, &cells, raw);
+                }
+            }
+            Err(msg) => errors.push((1, String::new(), msg)),
+        },
+        ImportFormat::Image => {
+            // V2.5（D-OCR1 v1.2）：內嵌 PaddleOCR 引擎；圖片 → 行 → 分隔鏈 → 同一契約。
+            let ocr_state = crate::ocr::availability(&state.pool).await;
+            if !ocr_state.available {
+                errors.push((
+                    1,
+                    String::new(),
+                    format!(
+                        "OCR 引擎不可用：{}；處理方式：安裝 Tesseract 或由管理員部署模型",
+                        ocr_state.note
+                    ),
+                ));
+            } else {
+                match crate::ocr::get_or_init_engine(std::path::Path::new(
+                    ocr_state.models_dir.as_deref().unwrap_or("models/ocr"),
+                )) {
+                    Ok(engine) => match crate::ocr::image_to_lines(engine, &data) {
+                        Ok(lines) => {
+                            for (line_no, (text, confidence)) in lines.into_iter().enumerate() {
+                                let line_no = line_no + 1;
+                                if confidence < crate::ocr::CONFIDENCE_GATE {
+                                    errors.push((
+                                        line_no,
+                                        text.clone(),
+                                        format!(
+                                            "低置信度（{:.0}%），請人工核對原文",
+                                            confidence * 100.0
+                                        ),
+                                    ));
+                                    continue;
+                                }
+                                let cells = split_ocr_line(&text);
+                                let raw = cells.join(" | ");
+                                push_import_row(&mut drafts, &mut errors, line_no, &cells, raw);
+                            }
+                        }
+                        Err(msg) => errors.push((1, String::new(), msg)),
+                    },
+                    Err(msg) => errors.push((1, String::new(), msg)),
+                }
+            }
+        }
+        ImportFormat::Eml => {
+            // V3-A（D-EML1）：郵件＝格式的載體——附件逐一遞迴（每附件一 batch，
+            // sha256 逐檔追溯）；巢狀 eml 不展開（首發限制，明示不靜默）。
+            let attachments = match parse_eml_attachments(&data) {
+                Ok(a) => a,
+                Err(msg) => {
+                    errors.push((1, String::new(), msg));
+                    Vec::new()
+                }
+            };
+            if attachments.is_empty() {
+                errors.push((
+                    1,
+                    String::new(),
+                    "郵件解析成功但無可匯入附件（支援 csv/xlsx/pdf/圖片）。".to_string(),
+                ));
+            }
+            let ocr_state = crate::ocr::availability(&state.pool).await;
+            for (att_name, att_bytes) in &attachments {
+                if att_bytes.len() > IMPORT_MAX_BYTES {
+                    errors.push((
+                        1,
+                        att_name.clone(),
+                        format!("附件超過 2MB 上限（{} bytes）。", att_bytes.len()),
+                    ));
+                    continue;
+                }
+                use sha2::Digest as _;
+                let att_sha = format!("{:x}", sha2::Sha256::digest(att_bytes));
+                let att_batch = uuid::Uuid::new_v4().to_string();
+                let mut att_drafts: Vec<(usize, ImportRowDraft)> = Vec::new();
+                let mut att_errors: Vec<(usize, String, String)> = Vec::new();
+                match detect_import_format(att_bytes) {
+                    ImportFormat::Csv => {
+                        let mut reader = csv::ReaderBuilder::new()
+                            .has_headers(true)
+                            .flexible(true)
+                            .from_reader(att_bytes.as_slice());
+                        let header_cells: Vec<String> = reader
+                            .headers()
+                            .map(|h| h.iter().map(|s| s.to_string()).collect())
+                            .unwrap_or_default();
+                        let (mapping, needs_reorder) =
+                            crate::ingest::normalize_decision(&header_cells)
+                                .unwrap_or((vec![None; header_cells.len()], false));
+                        if needs_reorder {
+                            let _ =
+                                crate::ingest::save_profile(&state.pool, &header_cells, &mapping)
+                                    .await;
+                        }
+                        for (idx, record) in reader.records().enumerate() {
+                            let line_no = idx + 2;
+                            match record {
+                                Ok(rec) => {
+                                    let mut cells: Vec<String> =
+                                        rec.iter().map(|s| s.to_string()).collect();
+                                    if needs_reorder {
+                                        cells = crate::ingest::apply_row(&cells, &mapping, true);
+                                    }
+                                    let raw = cells.join(" | ");
+                                    push_import_row(
+                                        &mut att_drafts,
+                                        &mut att_errors,
+                                        line_no,
+                                        &cells,
+                                        raw,
+                                    );
+                                }
+                                Err(e) => att_errors.push((
+                                    line_no,
+                                    String::new(),
+                                    format!("CSV 解析失敗：{e}"),
+                                )),
+                            }
+                        }
+                    }
+                    ImportFormat::Xlsx => match parse_xlsx_rows(att_bytes) {
+                        Ok(rows) => {
+                            let (mapping, needs_reorder) = rows
+                                .first()
+                                .map(|(_, header)| {
+                                    crate::ingest::normalize_decision(header)
+                                        .unwrap_or((vec![None; header.len()], false))
+                                })
+                                .unwrap_or((Vec::new(), false));
+                            if needs_reorder {
+                                if let Some((_, header)) = rows.first() {
+                                    let _ =
+                                        crate::ingest::save_profile(&state.pool, header, &mapping)
+                                            .await;
+                                }
+                            }
+                            for (row_no, cells) in rows.into_iter().skip(1) {
+                                let line_no = row_no + 1;
+                                let raw = cells.join(" | ");
+                                let cells =
+                                    crate::ingest::apply_row(&cells, &mapping, needs_reorder);
+                                push_import_row(
+                                    &mut att_drafts,
+                                    &mut att_errors,
+                                    line_no,
+                                    &cells,
+                                    raw,
+                                );
+                            }
+                        }
+                        Err(msg) => att_errors.push((1, String::new(), msg)),
+                    },
+                    ImportFormat::Pdf => match parse_pdf_rows(att_bytes) {
+                        Ok(rows) => {
+                            let (mapping, needs_reorder) = rows
+                                .first()
+                                .map(|(_, header)| {
+                                    crate::ingest::normalize_decision(header)
+                                        .unwrap_or((vec![None; header.len()], false))
+                                })
+                                .unwrap_or((Vec::new(), false));
+                            if needs_reorder {
+                                if let Some((_, header)) = rows.first() {
+                                    let _ =
+                                        crate::ingest::save_profile(&state.pool, header, &mapping)
+                                            .await;
+                                }
+                            }
+                            for (row_no, cells) in rows.into_iter().skip(1) {
+                                let line_no = row_no + 1;
+                                let raw = cells.join(" | ");
+                                let cells =
+                                    crate::ingest::apply_row(&cells, &mapping, needs_reorder);
+                                push_import_row(
+                                    &mut att_drafts,
+                                    &mut att_errors,
+                                    line_no,
+                                    &cells,
+                                    raw,
+                                );
+                            }
+                        }
+                        Err(msg) => att_errors.push((1, String::new(), msg)),
+                    },
+                    ImportFormat::Docx => match parse_docx_rows(att_bytes) {
+                        Ok(rows) => {
+                            let (mapping, needs_reorder) = rows
+                                .first()
+                                .map(|(_, header)| {
+                                    crate::ingest::normalize_decision(header)
+                                        .unwrap_or((vec![None; header.len()], false))
+                                })
+                                .unwrap_or((Vec::new(), false));
+                            if needs_reorder {
+                                if let Some((_, header)) = rows.first() {
+                                    let _ =
+                                        crate::ingest::save_profile(&state.pool, header, &mapping)
+                                            .await;
+                                }
+                            }
+                            for (row_no, cells) in rows.into_iter().skip(1) {
+                                let line_no = row_no + 1;
+                                let raw = cells.join(" | ");
+                                let cells =
+                                    crate::ingest::apply_row(&cells, &mapping, needs_reorder);
+                                push_import_row(
+                                    &mut att_drafts,
+                                    &mut att_errors,
+                                    line_no,
+                                    &cells,
+                                    raw,
+                                );
+                            }
+                        }
+                        Err(msg) => att_errors.push((1, String::new(), msg)),
+                    },
+                    ImportFormat::Image => {
+                        if !ocr_state.available {
+                            att_errors.push((
+                                1,
+                                att_name.clone(),
+                                format!("OCR 引擎不可用：{}", ocr_state.note),
+                            ));
+                        } else {
+                            match crate::ocr::get_or_init_engine(std::path::Path::new(
+                                ocr_state.models_dir.as_deref().unwrap_or("models/ocr"),
+                            )) {
+                                Ok(engine) => match crate::ocr::image_to_lines(engine, att_bytes) {
+                                    Ok(lines) => {
+                                        for (line_no, (text, confidence)) in
+                                            lines.into_iter().enumerate()
+                                        {
+                                            let line_no = line_no + 1;
+                                            if confidence < crate::ocr::CONFIDENCE_GATE {
+                                                att_errors.push((
+                                                    line_no,
+                                                    text.clone(),
+                                                    format!(
+                                                        "低置信度（{:.0}%），請人工核對原文",
+                                                        confidence * 100.0
+                                                    ),
+                                                ));
+                                                continue;
+                                            }
+                                            let cells = split_ocr_line(&text);
+                                            let raw = cells.join(" | ");
+                                            push_import_row(
+                                                &mut att_drafts,
+                                                &mut att_errors,
+                                                line_no,
+                                                &cells,
+                                                raw,
+                                            );
+                                        }
+                                    }
+                                    Err(msg) => att_errors.push((1, String::new(), msg)),
+                                },
+                                Err(msg) => att_errors.push((1, String::new(), msg)),
+                            }
+                        }
+                    }
+                    ImportFormat::Eml => att_errors.push((
+                        1,
+                        att_name.clone(),
+                        "巢狀 EML 附件暫不支援（首發限制，明示不靜默）。".to_string(),
+                    )),
+                }
+                let row_total = (att_drafts.len() + att_errors.len()) as i64;
+                let row_ok = att_drafts.len() as i64;
+                if let Err(e) = persist_batch(
+                    &state,
+                    ImportBatchStaging {
+                        batch_id: &att_batch,
+                        sha_hex: &att_sha,
+                        row_total,
+                        row_ok,
+                        created_by: &session.user_id,
+                        drafts: &att_drafts,
+                        errors: &att_errors,
+                    },
+                )
+                .await
+                {
+                    att_errors.push((1, att_name.clone(), format!("批次暫存失敗：{e}")));
+                    continue;
+                }
+                eml_batches.push((att_name.clone(), att_batch, row_ok, row_total));
+            }
+            if eml_batches.is_empty() {
+                errors.push((
+                    1,
+                    String::new(),
+                    "郵件附件皆未成功建立批次（詳見上方錯誤列）。".to_string(),
+                ));
+            }
+            // 多批次摘要 → PRG 至第一個批次；其餘批次清單以 notice 帶出。
+            let summary = eml_batches
+                .iter()
+                .map(|(name, batch, ok, total)| format!("{name} → {batch}（合格 {ok}/{total}）"))
+                .collect::<Vec<_>>()
+                .join("；");
+            let notice = format!(
+                "郵件匯入完成：{} 個附件建立批次。{}",
+                eml_batches.len(),
+                summary
+            );
+            let encoded: String = notice
+                .bytes()
+                .map(|b| {
+                    if b.is_ascii_alphanumeric() || b" -._~".contains(&b) {
+                        (b as char).to_string()
+                    } else {
+                        format!("%{:02X}", b)
+                    }
+                })
+                .collect();
+            eml_redirect = Some(format!(
+                "/import?batch={}&notice={}",
+                eml_batches[0].1, encoded
+            ));
+        }
     }
 
+    // V3-A：EML 多批次已於分支內各自持久化——此處僅單檔流程。
+    if let Some(url) = eml_redirect {
+        return Redirect::to(&url).into_response();
+    }
     let row_total = (drafts.len() + errors.len()) as i64;
     let row_ok = drafts.len() as i64;
 
@@ -3667,6 +4281,256 @@ async fn persist_batch(
 pub struct ConfirmImportForm {
     pub csrf_token: String,
     pub batch_id: String,
+}
+
+/// GET /import/mapping?batch= — 零 JS 欄位映射頁（V3-B；D-MAP1）。
+/// 僅處理 status='mapping' 的批次；同義詞猜測預填、原始列預覽。
+#[derive(Template)]
+#[template(path = "mapping.html")]
+pub struct MappingTemplate {
+    pub acting_user: String,
+    pub nav: crate::nav::NavModel,
+    pub csrf_token: String,
+    pub batch_id: String,
+    pub selects: Vec<MappingSelectView>,
+    pub preview_rows: Vec<Vec<String>>,
+}
+
+pub struct MappingSelectView {
+    pub target_idx: usize,
+    pub label: String,
+    pub selected_source: usize,
+    /// usize::MAX 表示未選（渲染為「忽略」預選）。
+    pub options: Vec<(usize, String)>,
+}
+
+async fn mapping_page(
+    State(state): State<AppState>,
+    session: Extension<Session>,
+    nav: Extension<crate::nav::NavModel>,
+    axum::extract::Query(query): axum::extract::Query<std::collections::HashMap<String, String>>,
+) -> Response {
+    if !state
+        .permissions
+        .has_permission_db(&session.user_id, "LEDGER_WRITE")
+        .await
+    {
+        return (
+            StatusCode::FORBIDDEN,
+            "需要 LEDGER_WRITE 權限。".to_string(),
+        )
+            .into_response();
+    }
+    let Some(batch_id) = query.get("batch").cloned() else {
+        return (StatusCode::BAD_REQUEST, "缺少批次參數 batch。".to_string()).into_response();
+    };
+    let rows: Vec<(i64, String, String)> = sqlx::query_as(
+        "SELECT row_no, raw_line, draft_json FROM import_rows \
+         WHERE batch_id = ? AND status = 'mapping' ORDER BY row_no",
+    )
+    .bind(&batch_id)
+    .fetch_all(&state.pool)
+    .await
+    .unwrap_or_default();
+    if rows.is_empty() {
+        return (
+            StatusCode::NOT_FOUND,
+            "映射批次不存在或已完成映射。".to_string(),
+        )
+            .into_response();
+    }
+    let headers = crate::ingest::cells_from_json(&rows[0].2);
+    // 同義詞猜測：目標欄位 → 來源欄索引（反向索引）。
+    let guesses = crate::ingest::synonym_match(&headers);
+    let mut selected_source: Vec<Option<usize>> = vec![None; 6];
+    if let Some(mapped) = &guesses {
+        for (cell_idx, target) in mapped.iter().enumerate() {
+            if let Some(field) = target {
+                selected_source[*field as usize] = Some(cell_idx);
+            }
+        }
+    }
+    let labels = ["日期", "借方科目", "貸方科目", "金額", "幣別", "摘要"];
+    let selects: Vec<MappingSelectView> = labels
+        .iter()
+        .enumerate()
+        .map(|(target_idx, label)| MappingSelectView {
+            target_idx,
+            label: label.to_string(),
+            selected_source: selected_source[target_idx].unwrap_or(usize::MAX),
+            options: headers
+                .iter()
+                .enumerate()
+                .map(|(i, h)| (i, h.clone()))
+                .collect(),
+        })
+        .collect();
+    let preview_rows: Vec<Vec<String>> = rows
+        .iter()
+        .skip(1)
+        .take(3)
+        .map(|(_, _, json)| crate::ingest::cells_from_json(json))
+        .collect();
+    let template = MappingTemplate {
+        acting_user: session.user_id.clone(),
+        nav: nav.0.clone(),
+        csrf_token: session.csrf_token.clone(),
+        batch_id,
+        selects,
+        preview_rows,
+    };
+    match template.render() {
+        Ok(body) => Html(body).into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("頁面渲染失敗：{e}"),
+        )
+            .into_response(),
+    }
+}
+
+/// POST /import/mapping/apply — 套用使用者映射 → 驗證 → 批次轉 draft（D-MAP1）。
+/// 欄位驗證仍為最後一關（映射不繞資金契約）；profile 按簽名冪等儲存。
+#[derive(Debug, Deserialize)]
+pub struct MappingApplyForm {
+    pub csrf_token: String,
+    pub batch_id: String,
+    pub f0: String,
+    pub f1: String,
+    pub f2: String,
+    pub f3: String,
+    pub f4: String,
+    pub f5: String,
+}
+
+async fn mapping_apply(
+    State(state): State<AppState>,
+    session: Extension<Session>,
+    Form(form): Form<MappingApplyForm>,
+) -> Response {
+    if !state
+        .permissions
+        .has_permission_db(&session.user_id, "LEDGER_WRITE")
+        .await
+    {
+        return (
+            StatusCode::FORBIDDEN,
+            "需要 LEDGER_WRITE 權限。".to_string(),
+        )
+            .into_response();
+    }
+    if form.csrf_token != session.csrf_token {
+        return (
+            StatusCode::FORBIDDEN,
+            "CSRF 驗證失敗；請重新整理頁面後再操作。".to_string(),
+        )
+            .into_response();
+    }
+    let parse_col = |s: &str| -> Option<usize> { s.trim().parse::<usize>().ok() };
+    let mapping: Vec<Option<usize>> = vec![
+        parse_col(&form.f0),
+        parse_col(&form.f1),
+        parse_col(&form.f2),
+        parse_col(&form.f3),
+        parse_col(&form.f4),
+        parse_col(&form.f5),
+    ];
+    // 每個目標欄位至多一個來源（重複 → 400，不猜測）。
+    let mut seen = [false; 6];
+    for idx in mapping.iter().flatten() {
+        if *idx < 6 {
+            if seen[*idx] {
+                return (
+                    StatusCode::BAD_REQUEST,
+                    "同一來源欄位被指定給多個目標；請修正映射。".to_string(),
+                )
+                    .into_response();
+            }
+            seen[*idx] = true;
+        }
+    }
+    let rows: Vec<(i64, String, String)> = sqlx::query_as(
+        "SELECT row_no, raw_line, draft_json FROM import_rows \
+         WHERE batch_id = ? AND status = 'mapping' ORDER BY row_no",
+    )
+    .bind(&form.batch_id)
+    .fetch_all(&state.pool)
+    .await
+    .unwrap_or_default();
+    if rows.is_empty() {
+        return (
+            StatusCode::NOT_FOUND,
+            "映射批次不存在或已完成映射。".to_string(),
+        )
+            .into_response();
+    }
+
+    // 標題列（row 0）→ profile 冪等儲存（索引 → TargetField 同序轉換）。
+    let header_cells = crate::ingest::cells_from_json(&rows[0].2);
+    let profile_mapping: Vec<Option<crate::ingest::TargetField>> = mapping
+        .iter()
+        .map(|m| {
+            m.map(|i| match i {
+                0 => crate::ingest::TargetField::Date,
+                1 => crate::ingest::TargetField::DebitAccount,
+                2 => crate::ingest::TargetField::CreditAccount,
+                3 => crate::ingest::TargetField::Amount,
+                4 => crate::ingest::TargetField::Currency,
+                _ => crate::ingest::TargetField::Description,
+            })
+        })
+        .collect();
+    let _ = crate::ingest::save_profile(&state.pool, &header_cells, &profile_mapping).await;
+
+    // 逐列：套用映射 → 6 欄契約驗證 → 更新列狀態。
+    let mut ok = 0i64;
+    for (row_no, _raw, json) in &rows {
+        let cells = crate::ingest::cells_from_json(json);
+        let mut mapped: [String; 6] = Default::default();
+        for (target_idx, source_idx) in mapping.iter().enumerate() {
+            if let Some(src) = source_idx {
+                if *src < cells.len() {
+                    mapped[target_idx] = cells[*src].clone();
+                }
+            }
+        }
+        match validate_fields(
+            &mapped[0], &mapped[1], &mapped[2], &mapped[3], &mapped[4], &mapped[5],
+        ) {
+            Ok(draft) => {
+                ok += 1;
+                let _ = sqlx::query(
+                    "UPDATE import_rows SET status = 'ok', draft_json = ?, error_msg = NULL \
+                     WHERE batch_id = ? AND row_no = ?",
+                )
+                .bind(serde_json::to_string(&draft).unwrap_or_default())
+                .bind(&form.batch_id)
+                .bind(row_no)
+                .execute(&state.pool)
+                .await;
+            }
+            Err(msg) => {
+                let _ = sqlx::query(
+                    "UPDATE import_rows SET status = 'error', error_msg = ? \
+                     WHERE batch_id = ? AND row_no = ?",
+                )
+                .bind(&msg)
+                .bind(&form.batch_id)
+                .bind(row_no)
+                .execute(&state.pool)
+                .await;
+            }
+        }
+    }
+    let _ = sqlx::query(
+        "UPDATE import_batches SET row_ok = ?, status = 'draft' WHERE batch_id = ? AND status = 'mapping'",
+    )
+    .bind(ok)
+    .bind(&form.batch_id)
+    .execute(&state.pool)
+    .await;
+
+    Redirect::to(&format!("/import?batch={}", form.batch_id)).into_response()
 }
 
 /// POST /import/confirm — post all valid rows of a draft batch. IMP-002/003.
@@ -4795,6 +5659,8 @@ async fn build_index(
     IndexTemplate {
         acting_user: session.user_id.clone(),
         csrf_token: session.csrf_token.clone(),
+        // M-1（D-5/B-1）：渲染當下即為「隊列開啟」時點（epoch 毫秒）。
+        queue_opened_at: chrono::Utc::now().timestamp_millis().to_string(),
         can_manage_users: can_manage_users(state, &session.user_id).await,
         // G1.3 (WP-05): role-driven landing — the session user's primary
         // role code (empty when unassigned, e.g., the bootstrap admin).
@@ -7033,6 +7899,250 @@ mod tests {
         assert_eq!(
             audited.1, "user-admin",
             "audit rows carry the actor signature"
+        );
+    }
+
+    // ------------------------------------------------------------------
+    // M-1 量測（D-5/B-1）：REVIEW_BULK_SUMMARY 每批次一列；fail-open。
+    // ------------------------------------------------------------------
+    #[tokio::test]
+    async fn bulk_review_summary_event_carries_batch_and_elapsed() {
+        let (app, pool, cookie, csrf) = seeded_app_with_admin().await;
+        seed_transactions(&pool, 2, "PENDING_REVIEW").await;
+        let opened = chrono::Utc::now().timestamp_millis() - 5_000;
+        let form = format!(
+            "csrf_token={csrf}&decision=approve&tx_ids=tx-seed-0,tx-seed-1&queue_opened_at={opened}"
+        );
+        let request = Request::builder()
+            .method("POST")
+            .uri("/reviews/bulk")
+            .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+            .header(header::COOKIE, cookie)
+            .body(Body::from(form))
+            .expect("build bulk request");
+        let (status, _, _) = send(app, request).await;
+        assert_eq!(status, StatusCode::OK);
+
+        let rows: Vec<(String, String)> = sqlx::query_as(
+            "SELECT event_data, performed_by FROM audit_log WHERE event_type = 'REVIEW_BULK_SUMMARY'",
+        )
+        .fetch_all(&pool)
+        .await
+        .expect("fetch summary");
+        assert_eq!(
+            rows.len(),
+            1,
+            "exactly one summary event per batch POST (per-row rows unchanged)"
+        );
+        assert_eq!(rows[0].1, "user-admin", "summary is actor-signed");
+        let data: serde_json::Value = serde_json::from_str(&rows[0].0).expect("summary JSON");
+        assert_eq!(data["batch_size"], 2);
+        assert_eq!(data["ok_count"], 2);
+        assert_eq!(data["fail_count"], 0);
+        let elapsed = data["elapsed_ms"].as_i64().expect("elapsed is numeric");
+        assert!(
+            (0..=86_400_000).contains(&elapsed),
+            "elapsed within plausible window (fail-open bounds): {elapsed}"
+        );
+    }
+
+    #[tokio::test]
+    async fn bulk_review_summary_fails_open_without_timestamp() {
+        let (app, pool, cookie, csrf) = seeded_app_with_admin().await;
+        seed_transactions(&pool, 1, "PENDING_REVIEW").await;
+        // 無 queue_opened_at（舊表單／直接 POST）：裁決必須照常成功，
+        // 摘要事件的 elapsed 記 "unknown"——量測永不阻擋業務操作。
+        let form = format!("csrf_token={csrf}&decision=approve&tx_ids=tx-seed-0");
+        let request = Request::builder()
+            .method("POST")
+            .uri("/reviews/bulk")
+            .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+            .header(header::COOKIE, cookie)
+            .body(Body::from(form))
+            .expect("build bulk request");
+        let (status, _, _) = send(app, request).await;
+        assert_eq!(
+            status,
+            StatusCode::OK,
+            "measurement must never block adjudication"
+        );
+
+        let rows: Vec<(String,)> = sqlx::query_as(
+            "SELECT event_data FROM audit_log WHERE event_type = 'REVIEW_BULK_SUMMARY'",
+        )
+        .fetch_all(&pool)
+        .await
+        .expect("fetch summary");
+        assert_eq!(rows.len(), 1);
+        let data: serde_json::Value = serde_json::from_str(&rows[0].0).expect("summary JSON");
+        assert_eq!(
+            data["elapsed_ms"], "unknown",
+            "missing timestamp → fail-open unknown"
+        );
+        assert_eq!(data["ok_count"], 1, "business outcome unaffected");
+    }
+
+    // ------------------------------------------------------------------
+    // D-6（B-5.0）：自我稽核視圖——伺服器端 self 過濾；範圍不可被參數改寫。
+    // ------------------------------------------------------------------
+    #[tokio::test]
+    async fn my_decisions_is_self_scoped_and_ignores_scope_params() {
+        let (app, pool, cookie, _csrf) = seeded_app_with_admin().await;
+        // 一筆本人事件、一筆他人事件（以 details 標記供 HTML 斷言）。
+        sqlx::query(
+            "INSERT INTO audit_log (log_id, transaction_id, event_type, event_data, performed_by) \
+             VALUES ('ev-self-pin', NULL, 'REVIEW_BULK', '{\"decision\":\"SELF-MARKER\"}', 'user-admin')",
+        )
+        .execute(&pool)
+        .await
+        .expect("seed self event");
+        sqlx::query(
+            "INSERT INTO audit_log (log_id, transaction_id, event_type, event_data, performed_by) \
+             VALUES ('ev-other-pin', NULL, 'REVIEW_BULK', '{\"decision\":\"OTHER-MARKER\"}', 'user-someone-else')",
+        )
+        .execute(&pool)
+        .await
+        .expect("seed other event");
+
+        // 一般 GET：本人事件可見，他人事件絕不出現。
+        let request = Request::builder()
+            .uri("/my-decisions")
+            .header(header::COOKIE, cookie.clone())
+            .body(Body::empty())
+            .expect("build request");
+        let (status, body, _) = send(app.clone(), request).await;
+        assert_eq!(status, StatusCode::OK);
+        assert!(body.contains("SELF-MARKER"), "own events are visible");
+        assert!(
+            !body.contains("OTHER-MARKER"),
+            "another user's events must never appear (D-6 isolation PIN)"
+        );
+
+        // 範圍覆寫嘗試必須無效：查詢字串不存在範圍參數，頁面仍為 self 範圍。
+        let request = Request::builder()
+            .uri("/my-decisions?user=user-someone-else&performed_by=user-someone-else")
+            .header(header::COOKIE, cookie)
+            .body(Body::empty())
+            .expect("build request");
+        let (status, body, _) = send(app, request).await;
+        assert_eq!(status, StatusCode::OK);
+        assert!(
+            !body.contains("OTHER-MARKER"),
+            "query params must not widen the scope"
+        );
+        assert!(body.contains("SELF-MARKER"), "self scope preserved");
+    }
+
+    #[tokio::test]
+    async fn my_decisions_nav_link_renders_for_all_authenticated() {
+        // D-6：Gate::All → nav 入口對所有登入者可見（覆核者 ≤2 步自查）。
+        let (app, _pool, cookie, _csrf) = seeded_app_with_admin().await;
+        let request = Request::builder()
+            .uri("/")
+            .header(header::COOKIE, cookie)
+            .body(Body::empty())
+            .expect("build request");
+        let (status, body, _) = send(app, request).await;
+        assert_eq!(status, StatusCode::OK);
+        assert!(
+            body.contains("href=\"/my-decisions\""),
+            "nav entry for the self-audit view must render"
+        );
+    }
+
+    // ------------------------------------------------------------------
+    // B-1 尾段（D-5）：M-1 機器下限基線——經真實路由量測「隊列渲染→
+    // 提交送達→處理完成」的系統耗時（人類裁量時間為 0 的下限）。
+    // 執行：cargo test -p platform m1_baseline -- --nocapture
+    // ------------------------------------------------------------------
+    #[tokio::test]
+    async fn m1_baseline_machine_floor_ten_row_batch() {
+        let (app, pool, cookie, csrf) = seeded_app_with_admin().await;
+        seed_transactions(&pool, 10, "PENDING_REVIEW").await;
+
+        // 1) GET / — 隊列頁真實渲染（伺服器此刻寫入 queue_opened_at）。
+        let request = Request::builder()
+            .uri("/")
+            .header(header::COOKIE, cookie.clone())
+            .body(Body::empty())
+            .expect("build request");
+        let (status, body, _) = send(app.clone(), request).await;
+        assert_eq!(status, StatusCode::OK);
+        let marker = "name=\"queue_opened_at\" value=\"";
+        let pos = body
+            .find(marker)
+            .expect("bulk form must render queue_opened_at");
+        let rest = &body[pos + marker.len()..];
+        let end = rest.find('"').expect("closing quote");
+        let queue_opened_at: i64 = rest[..end].parse().expect("numeric timestamp");
+
+        // 2) 立即 POST（人類裁量＝0 秒）→ 系統端端到端耗時即機器下限。
+        let ids = (0..10)
+            .map(|i| format!("tx-seed-{i}"))
+            .collect::<Vec<_>>()
+            .join(",");
+        let form = format!(
+            "csrf_token={csrf}&decision=approve&tx_ids={ids}&queue_opened_at={queue_opened_at}"
+        );
+        let request = Request::builder()
+            .method("POST")
+            .uri("/reviews/bulk")
+            .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+            .header(header::COOKIE, cookie)
+            .body(Body::from(form))
+            .expect("build bulk request");
+        let (status, _, _) = send(app, request).await;
+        assert_eq!(status, StatusCode::OK);
+
+        // 3) 從 REVIEW_BULK_SUMMARY 提取真實量測值。
+        let rows: Vec<(String,)> = sqlx::query_as(
+            "SELECT event_data FROM audit_log WHERE event_type = 'REVIEW_BULK_SUMMARY'",
+        )
+        .fetch_all(&pool)
+        .await
+        .expect("fetch summary");
+        assert_eq!(rows.len(), 1);
+        let data: serde_json::Value = serde_json::from_str(&rows[0].0).expect("summary JSON");
+        assert_eq!(data["batch_size"], 10);
+        assert_eq!(data["ok_count"], 10);
+        assert_eq!(data["fail_count"], 0);
+        let elapsed = data["elapsed_ms"].as_i64().expect("elapsed numeric");
+        assert!(
+            (0..=86_400_000).contains(&elapsed),
+            "machine floor within fail-open bounds: {elapsed}"
+        );
+        // 固化用輸出（--nocapture 可見；數值人工謄入計畫 addendum 並附日期方法）。
+        println!("M1_BASELINE machine_floor_elapsed_ms={elapsed} batch=10 ok=10");
+    }
+
+    // ------------------------------------------------------------------
+    // B-5.1（D-3）：批量裁決防誤觸——二段式送出確認（零 JS <details>）。
+    // ------------------------------------------------------------------
+    #[tokio::test]
+    async fn bulk_review_requires_two_step_confirmation() {
+        let (app, _pool, cookie, _csrf) = seeded_app_with_admin().await;
+        let request = Request::builder()
+            .uri("/")
+            .header(header::COOKIE, cookie)
+            .body(Body::empty())
+            .expect("build request");
+        let (status, body, _) = send(app, request).await;
+        assert_eq!(status, StatusCode::OK);
+        assert!(
+            body.contains("data-bulk-confirm"),
+            "two-step confirm wrapper must render (zero-JS <details>)"
+        );
+        assert!(
+            body.contains("確認送出"),
+            "actual submit control is revealed only after expansion"
+        );
+        assert!(
+            body.contains("bulk-hint"),
+            "zero-JS progress feedback element present (:has() + :placeholder-shown)"
+        );
+        assert!(
+            body.contains("queue_opened_at"),
+            "M-1 measurement field stays wired to the form"
         );
     }
 
