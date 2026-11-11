@@ -541,11 +541,11 @@ This addendum records execution facts only; it does not approve product scope, c
 
 | Item | Disposition | Evidence |
 |---|---|---|
-| Plan | `.kilo/plans/1794395575776-flaps-erp-product-system-settings.md`（範圍：產品 7 鍵、AP/TLS、Windows 宿主、衛生、外部工作台、監控/回滾） | 計畫檔 |
+| Plan | `.kilo/plans/1794395575776-flaps-erp-product-system-settings.md`（範圍：產品 7 鍵、AP/TLS、Windows 宿主、衛生、外部工作台、監控/回滾；軟體邊界：原廠 FlapsErp vs 自建 Wellfit） | 計畫檔 |
 | 執行邊界 | 代理唯讀；IT 套用（RSK-E5 不變）；系統級變更需 IT 核准＋系統級 A/B；不得為 FlapsErp 拖垮其他程式 | 計畫 §0.5／§4.10／§6.9 |
-| 實測證據（2026-11-11） | config 7 鍵；AP 預設 `8E2EDBE` HTTP；測試 AP `test2.flaps.tw:10113` CERT-VALID（Let's Encrypt/TLS1.2/2027-01-21）；`FlapsErp.exe` i386 **LAA=True（0x0122）**；module→menu 17.087 s；manifest drift 1/9；softwareId 報告繕寫錯誤已更正 | `Wellfit/artifacts/perf/20261111-*` |
-| 工具 | `Wellfit/scripts/perf/flaps-perf.ps1` 擴充 `settings/app/tls/pe/full`（唯讀；ASCII；無 BOM） | `-Probe settings/app/tls/pe` 實跑 |
-| 交付物 | 新增 `FlapsErp最佳設定基線_v1.0.md`、`FlapsErp設定變更runbook_v1.0.md`、`FlapsErp設定AB實測報告_v1.0.md`；更正 `FlapsErp效能優化操作手冊_v1.0.md` §3.2/§3.4、`A1檔案通道端到端操作手冊_v1.0.md`、`FlapsErp效能基線報告_v1.0.md` §7.1/§7.3、`FlapsErp優化_合規風險追蹤表.md` v1.2 | 各檔 |
+| 實測證據（2026-11-11） | config 7 鍵；AP 預設 `8E2EDBE` HTTP；測試 AP `test2.flaps.tw:10113` CERT-VALID（Let's Encrypt/TLS1.2/2027-01-21）；`FlapsErp.exe` i386 **LAA=True（0x0122）**；module→menu 17.087 s；manifest drift 1/9；softwareId 報告繕寫錯誤已更正；自建 Wellfit MTRIX fixture exit 0／冪等重跑 exit 1（非 FlapsErp 效能） | `Wellfit/artifacts/perf/20261111-*`、`Wellfit/artifacts/erp-batch/20261111-194835/` |
+| 工具 | `Wellfit/scripts/perf/flaps-perf.ps1` 擴充 `settings/app/tls/pe/host/endpoints/full`（唯讀；ASCII；無 BOM） | `-Probe settings/app/tls/pe/host/endpoints/full` 實跑 |
+| 交付物 | 新增 `FlapsErp最佳設定基線_v1.0.md`、`FlapsErp設定變更runbook_v1.0.md`、`FlapsErp設定AB實測報告_v1.0.md`；更正 `FlapsErp效能優化操作手冊_v1.0.md` §3.2/§3.4、`A1檔案通道端到端操作手冊_v1.0.md`、`FlapsErp效能基線報告_v1.0.md` §7.1/§7.3、`FlapsErp優化_合規風險追蹤表.md` v1.2、`docs/architecture/效能架構.md`（COM 變異）、`FlapsErp產品線效能進度報告_v2.0.md`／`輔翼ERP逆向分析`／`OQ-F1/F2 v2.1`（LAA/HTTP）、`FlapsErp平台線效能評估進度報告_v2.0.md`（原廠/自建標註） | 各檔 |
 | 發布判定 | **NOT VERIFIED**（僅唯讀證據；IT 變更/系統級 A/B/8h soak 未執行） | 報告 §L |
 
 This addendum records execution facts only; it does not approve product scope, certification, or release.

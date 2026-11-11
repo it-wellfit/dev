@@ -4,7 +4,7 @@
 > **版本**：v2.1（2026-11-03 Gate1 複審修訂版）  
 > **撰寫日期**：2026-10-27｜修訂日期：2026-11-03  
 > **狀態**：Active（現行專案主文件）  
-> **來源**：Dev 根目錄 `FlapsErp_RPA_電商系統對接_專案文件與開發前準備報告_v2.1.html`（863 行，本文件為其 Markdown 轉錄版，.html 為 A4 列印呈現產物）  
+> **來源**：`FlapsErp_RPA_電商系統對接_專案文件與開發前準備報告_v2.1.html`（同目錄，863 行；本文件為其 Markdown 權威版，.html 為 A4 列印呈現產物；2026-11-11 RP-5③ 自 Dev 根目錄遷入 docs/management/）  
 > **相依文件**：`docs/research/輔翼ERP逆向分析與最佳化方案_v1.0.md`（§9 引用本文件）、`docs/architecture/效能架構.md`（§10.2 驗收指標引用）、`docs/04-operations/FlapsErp效能優化操作手冊_v1.0.md`（§3.2 config.ini 調優整合）  
 > **相關 ADR**：ADR-001（既有資產關係與複用決策，草案）、ADR-002（對接工具選型決策，草案）、ADR-003（Layer3 技術選型修正 RDA-CDP-COM 三軌，草案）  
 > **相關追蹤**：Gate1 複審報告 v1

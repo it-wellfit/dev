@@ -108,7 +108,7 @@
 
 | # | 事項 | 證據 | 等級 |
 |---|---|---|---|
-| S-1 | `IGNORE_CERT_ERR=1` 預設生效（`!== '0'` 即忽略憑證錯誤） | main.js:190-192 + E-05 ✔ | 高 — MITM 風險 |
+| S-1 | `IGNORE_CERT_ERR=1` 預設生效（`!== '0'` 即忽略憑證錯誤）；**預設 AP 為 HTTP（對生產無作用）**；測試 AP CERT-VALID | main.js:190-192 + E-05 ✔ | 高 — AP HTTP 明文／憑證 |
 | S-2 | `nodeIntegration:true` + `ExecuteCommand`/`ExecuteFile` 任意行程執行 API | mainApi.js:570-598 ✔ | 高 — 若 webview 內容被注入即可指揮本機 |
 | S-3 | `Set-ExecutionPolicy Unrestricted` + regsvr32 -Verb RunAs | dllManager.js:225 ✔ | 中 — 提權面擴大 |
 | S-4 | 舊 OpenSSL、Vue 2 EOL、Chromium 版本未知（v0.0.4 2025-04 建置） | E-02 ✔ | 中 |
@@ -133,7 +133,7 @@
 | 優先 | 建議 | 依據 |
 |---|---|---|
 | P0 | 提供 **64-bit (x64) 打包**（至少雙架構並行） | B-1 |
-| P0 | 移除 `IGNORE_CERT_ERR` 預設開啟，改為明確設定 + 憑證釘選 | S-1 |
+| P0 | 移除 `IGNORE_CERT_ERR` 預設開啟，改為明確設定 + 憑證釘選；要求原廠 AP 轉 HTTPS＋正式憑證 | S-1 |
 | P1 | COM 呼叫改 **非同步 IPC（ipcRenderer.invoke + 佇列）**，或提供官方批次 API | B-2 |
 | P1 | 移除每次 IPC 的 `console.log(args)`，改條件式 debug log | B-8 |
 | P1 | `backgroundThrottling` 依分頁可見性動態開啟 | B-4 |
@@ -145,7 +145,7 @@
 |---|---|---|---|
 | P0 | **批次工作全部外移 Wellfit**：ERP 只做「人機確認 + 匯入/匯出」，重活（清洗、驗證、比對、大檔）由 Wellfit CLI 執行 | 現行 7-crate 管線已具備：ColumnContract 名稱解析、冪等帳本、ReleaseGate、ScaledDecimal 整數分 | `build.ps1 test --workspace` 全綠（現行 235+ 通過）✔ 基線已達 |
 | P0 | **效能基線量測**（先測再優化）：記錄啟動時間、分頁開啟時間、報表渲染時間、RAM 峰值、COM 呼叫延遲 | PowerShell 計時 + `Get-Process FlapsErp` 採樣 + ETW（Windows Performance Recorder） | 產出 `docs/research/efficiency-baseline-YYYYMMDD.md`，含 5 欄基線表 |
-| P1 | config.ini 環境調優：`DISABLE_HARDWARE_ACCELERATION` A/B 實測（部分內顯環境開啟反而更穩）、關閉非必要 readonly 分頁、`FORCE_DEVICE_SCALE_FACTOR` 高 DPI 環境確認 | 編輯 `C:\SYSTEM_PROGRAM_DIRECTORY\.conf\config.ini`（先備份 + 記錄 SHA256） | A/B 對照數據 ≥ 3 次取中位數 |
+| P1 | config.ini 環境調優（原廠；IT 變更管制）：`DISABLE_HARDWARE_ACCELERATION` A/B（含系統級 CPU）、關閉非必要 readonly 分頁、`FORCE_DEVICE_SACLE_FACTOR`（原廠拼字；main.js 同時檢查正確鍵）高 DPI 確認 | 編輯 `C:\SYSTEM_PROGRAM_DIRECTORY\.conf\config.ini`（先備份 + 記錄 SHA256；IT 執行） | A/B 對照數據 ≥ 5 次取中位數 |
 | P1 | **COM 批次化包裝**：我方需要大量 COM 互動時，不在渲染進程逐筆 sendSync；改由 Wellfit 側 Rust COM bridge 以單一處理序批次執行 | `platform/src/com/bridge.rs`（重構為 FLAPSConsoleCOM 目標）+ 物件池 pool.rs | PoC：1000 次呼叫延遲對比（sendSync 逐筆 vs Rust 批次） |
 | P1 | 報表/大檔避免客端開啟：導出為檔後交 Wellfit 解析（8 欄契約、零 OCR） | 既有 wellfit_reports 管線 | 月結對帳自動化 KPI（藍圖 100% reconciliation）|
 | P2 | 靜態資源快取與預熱：固定 AP 伺服器、排程 TestConnection 預檢（netUtil 已有 ConnectionTester） | flapserp:// + 排程工作 | 斷線預警 < 60s |
@@ -250,7 +250,7 @@
 
 | 項目 | 動作 |
 |---|---|
-| config.ini | 快照後 A/B 調優（§3 B 線 P1）；**勿**長期維持 IGNORE_CERT_ERR=1 — 對我方 AP 連線要求原廠提供憑證正規化解法 |
+| config.ini | 快照後 A/B 調優（§3 B 線 P1）；**預設 AP 為 HTTP，`IGNORE_CERT_ERR` 對生產無作用**；要求原廠 AP 轉 HTTPS＋正式憑證；測試 AP CERT-VALID；其他 HTTPS 端點盤點後才 0 |
 | flapserp:// | 註冊為我方排程器出口（Windmill → flapserp:// 啟動指定作業）|
 | Playwright | 以「外殼測試」思維建立我方 E2E（先驗證 CDP 可連性）|
 | Wellfit | 作為預設批次引擎接入日常（§6）|

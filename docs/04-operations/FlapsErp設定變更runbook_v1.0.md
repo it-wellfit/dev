@@ -3,6 +3,7 @@
 > 文件編號：OPS-2026-1111-002｜版本：v1.0｜日期：2026-11-11｜狀態：Active
 > 適用：FlapsErp v0.0.4（`C:\SYSTEM_PROGRAM_DIRECTORY\FlapsErp`）＋共用 Windows 宿主。
 > 紅線：**代理唯讀**；任何寫入 `C:\SYSTEM_PROGRAM_DIRECTORY` 或 OS 的變更由 IT 變更管制執行；不得關閉 AV／UAC／WDAC；不得降低其他程式效能。
+> **軟體邊界**：`config.ini` 為原廠 FlapsErp（僅 IT 變更）；`FlapsErpData` 為原廠資料（唯讀）；`Wellfit\artifacts` 為自建產出（可寫）；OS 設定為 Windows 宿主（IT）。
 
 ---
 
@@ -85,7 +86,7 @@
 4. HTTPS/CA：測試 AP 憑證已有效；其他 HTTPS 端點盤點後再決定 `IGNORE_CERT_ERR`；必要時 `Import-Certificate -FilePath <ca.crt> -CertStoreLocation Cert:\LocalMachine\Root`（IT）。
 5. 驗證：`Test-NetConnection 210.64.124.59 -Port 10578`；`-Probe tls`。
 
-## 6. 驗證
+## 6. 驗證（自建工具 + 原廠 app）
 
 ### 6.1 FlapsErp
 ```powershell

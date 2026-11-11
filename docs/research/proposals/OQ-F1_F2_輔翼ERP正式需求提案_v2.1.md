@@ -43,7 +43,7 @@
 | F1-3 | flapserp:// 協定規格 | 支援的 JSON 欄位清單、多開協商協議、錯誤碼、穩定性承諾 | P1 |
 | F1-4 | COM 物件清單 | FLAPSConsoleCOM.* 的 ProgID 清單、方法/屬性簽名、生命週期 | P1 |
 | F1-5 | 64-bit 打包提供 | 目前安裝檔為 ia32（32-bit）；請求提供 x64 雙架構或純 x64 版本 | P0 |
-| F1-6 | 憑證模式修正 | 目前 IGNORE_CERT_ERR=1 預設生效；請求提供正式 TLS 憑證配置方案 | P0 |
+| F1-6 | 憑證模式修正 | 目前預設 AP 為 **HTTP 明文**；`IGNORE_CERT_ERR=1`（對 HTTP 無作用）；請求提供 AP HTTPS＋正式 TLS 憑證配置方案 | P0 |
 | F1-7 | 同步 IPC 改非同步 | COM 呼叫目前走 send:'sendSync'，批次作業時 UI 凍結 | P1 |
 | F1-8 | 更新通知機制 | 請求提供元件版本變更通知（.ver 檔機制是否有 webhook/公告管道） | P2 |
 
@@ -117,7 +117,7 @@
 
 | # | 事項 | 證據 | 等級 |
 |---|---|---|---|
-| S-1 | IGNORE_CERT_ERR=1 預設生效 | main.js:190-192 + config.ini | 高 — MITM 風險 |
+| S-1 | 預設 AP 為 **HTTP 明文**；`IGNORE_CERT_ERR=1`（對 HTTP 無作用）；測試 AP CERT-VALID | main.js:190-192 + config.ini + `-Probe tls` | 高 — AP 明文／憑證 |
 | S-2 | nodeIntegration:true + ExecuteCommand/ExecuteFile 任意行程執行 | mainApi.js:570-598 | 高 |
 | S-3 | Set-ExecutionPolicy Unrestricted + regsvr32 -Verb RunAs | dllManager.js:225 | 中 |
 | S-4 | 舊 OpenSSL、Vue 2 EOL、Chromium 版本未知 | E-04/E-03 | 中 |

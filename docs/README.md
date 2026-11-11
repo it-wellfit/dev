@@ -109,6 +109,11 @@
 | [`management/OQ-E3_Resolution_Plan.md`](management/OQ-E3_Resolution_Plan.md) | OQ-E3 | 未決問題解法計畫 |
 | [`management/ERP_Reconnaissance_Session_Decision.md`](management/ERP_Reconnaissance_Session_Decision.md) | 偵察決策 | ERP 偵察 session 裁定 |
 | [`management/FlapsErp_RPA_電商系統對接_專案文件與開發前準備報告_v2.1.md`](management/FlapsErp_RPA_電商系統對接_專案文件與開發前準備報告_v2.1.md) | **FlapsErp RPA-ECOM 專案主文件 v2.1（charter 級）** | 現行 |
+| [`management/FlapsErp_RPA_電商系統對接_專案文件與開發前準備報告_v2.1.html`](management/FlapsErp_RPA_電商系統對接_專案文件與開發前準備報告_v2.1.html) | 主文件 HTML 渲染版（A4 列印） | 現行 |
+| [`management/FlapsErp_RPA_電商系統對接_ADR-001_既有資產關係與複用決策_草案.md`](management/FlapsErp_RPA_電商系統對接_ADR-001_既有資產關係與複用決策_草案.md) | RPA-ECOM ADR-001（既有資產複用；M1 前會簽） | 草案 |
+| [`management/FlapsErp_RPA_電商系統對接_ADR-002_對接工具選型決策_草案.md`](management/FlapsErp_RPA_電商系統對接_ADR-002_對接工具選型決策_草案.md) | RPA-ECOM ADR-002（對接工具選型；M2 前會簽） | 草案 |
+| [`management/FlapsErp_RPA_電商系統對接_ADR-003_Layer3技術選型修正_RDA-CDP-COM三軌_草案.md`](management/FlapsErp_RPA_電商系統對接_ADR-003_Layer3技術選型修正_RDA-CDP-COM三軌_草案.md) | RPA-ECOM ADR-003（Layer 3 技術選型修正；RDA/CDP/COM 三軌） | 草案 |
+| [`management/FlapsErp_RPA_電商系統對接_Gate1複審報告_v1.md`](management/FlapsErp_RPA_電商系統對接_Gate1複審報告_v1.md) | RPA-ECOM Gate 1 複審與放行紀錄 | 現行 |
 | [`management/FlapsErp_RPA_Ecommerce_Project_Plan_v2.1.md`](management/FlapsErp_RPA_Ecommerce_Project_Plan_v2.1.md) | ~~FlapsErp 計畫 v2.1（執行摘要版）~~ | ⚠️ **SUPERSEDED by 主文件** |
 | [`management/templates/`](management/templates/) | 範本 | 週報 T-02、閘門 T-03、ADR T-04、研究 T-08 |
 

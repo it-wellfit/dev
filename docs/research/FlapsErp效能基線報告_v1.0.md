@@ -1,7 +1,7 @@
 # FlapsErp 效能基線報告 v1.0
 
 > 報告編號：PERF-2026-1103-001｜日期：2026-11-03｜狀態：Baseline（首次量測）
-> 量測工具：`Wellfit/scripts/perf/flaps-perf.ps1`（T-101）
+> 量測工具：`Wellfit/scripts/perf/flaps-perf.ps1`（自建工具；T-101）
 > 量測環境：Windows 11, FlapsErp v0.0.4 (ia32), 11 行程常駐
 > 原始資料：`Wellfit/artifacts/perf/20261103-160315/`
 
@@ -33,7 +33,7 @@
 | 中位數單行程 RAM | 46.2 MB |
 | 最小單行程 RAM | 15.3 MB |
 | 最大單行程 RAM | 103.9 MB |
-| 32-bit 位址空間使用率 | ~31% (623.8 / 2048 MB) |
+| 32-bit LAA 位址空間使用率 | ~15% (623.8 / 4096 MB；LAA=True) |
 
 ### 2.2 行程分布（推導）
 
@@ -49,7 +49,7 @@
 
 | 風險 | 評估 | 證據 |
 |---|---|---|
-| 32-bit OOM | **中風險** | 623.8MB / 2048MB = 31% 使用率；大報表/大批次可能撞牆 |
+| 32-bit LAA OOM | **低-中風險** | 623.8MB / 4096MB = 15% 使用率（LAA=True）；大報表/大批次仍可能撞牆 |
 | 記憶體洩漏 | **未量測** | 需 24h 長時間採樣（T-101 後續） |
 | GC 停頓 | **未量測** | 需 ETW 追蹤（T-101 後續） |
 
@@ -117,7 +117,7 @@ CDP 通道在預設啟動下不可用。需在 11/10 偵察 session 中驗證帶
 
 | 鍵 | 值 | 說明 |
 |---|---|---|
-| IGNORE_CERT_ERR | 1 | ⚠ TLS 憑證忽略（MITM 風險） |
+| IGNORE_CERT_ERR | 1 | ⚠ TLS 憑證忽略；預設 AP 為 HTTP（對生產無作用）；測試 AP CERT-VALID |
 | KEEP_MACHINE_ID | 1 | 授權綁定 |
 | DISABLE_HARDWARE_ACCELERATION | 0 | 硬體加速開啟 |
 | DEBUG_FASTREPORT | 0 | FastReport 除錯關閉 |
@@ -137,7 +137,7 @@ CDP 通道在預設啟動下不可用。需在 11/10 偵察 session 中驗證帶
 
 ---
 
-## 6. Wellfit 批次處理基線
+## 6. Wellfit 批次處理基線（自建；非 FlapsErp）
 
 ### 6.1 MTRIX 管線實測
 

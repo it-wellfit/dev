@@ -74,13 +74,13 @@
 | 全系統 RAM（WorkingSet64） | 623.8 MB（11 行程） | ✔ |
 | 中位數單行程 RAM | 46.2 MB | ✔ |
 | 最大單行程 RAM | 103.9 MB | ✔ |
-| 32-bit 位址空間使用率 | ~31%（623.8 / 2048 MB） | ✔ |
+| 32-bit LAA 位址空間使用率 | ~15%（623.8 / 4096 MB；LAA=True） | ✔ |
 | COM 每呼叫延遲 P50 | 0.2636 ms（n=1000） | ✔ |
 | COM 每呼叫延遲 P95 | 0.3884 ms | ✔ |
 | COM 每呼叫延遲 P99 | 0.4740 ms | ✔ |
 | CDP 埠 9222 | NOT-FOUND（原廠未帶 `--remote-debugging-port`） | ✔ |
 | `DISABLE_HARDWARE_ACCELERATION` | `0`（硬體加速開啟） | ✔ |
-| `IGNORE_CERT_ERR` | `1`（MITM 風險） | ✔ |
+| `IGNORE_CERT_ERR` | `1`（預設 AP HTTP 下無作用；測試 AP CERT-VALID） | ✔ |
 
 > ⚠ 以上數字僅為 2026-11-03 單次基線量測結果，不同機器與安裝版本可能有差異，後續優化應以本環境重新量測的基線為對照基準。
 
@@ -171,7 +171,7 @@ FlapsErp（輔翼 ERP）為輔翼系統開發的桌面應用程式，版本 v0.0
 | L2 UI | 實際 ERP 畫面由 AP 伺服器以 web 頁面渲染（webview 分頁載入），外殼僅提供分頁/標題/選單/下載；外殼自身 UI 用 Vue 2.6.12 + Bootstrap 5.0.1 | main.js `connectInfo.ap`、`js/vue2.6.12.js` ✔ |
 | L3 後端 | Java JSP（`{apUrl}/RDAPortal.jsp`），XML 協定 `com.flaps.Module.RDA.TGetModuleInfo` | dllManager.js ✔ + 官網 ✔ |
 | L4 元件 | COM DLL 動態部署：RDAPortal 取得模組資訊 → 下載至 `C:\SYSTEM_PROGRAM_DIRECTORY\` → PowerShell `regsvr32 -Verb RunAs` 註冊（`.ver` 版本控管）；含 midas.dll、MReportViewer.dll、POSMachineController.dll 等 | dllManager.js + E-04 ✔ |
-| L5 授權與配置 | machineId/hardwareId/softwareId 綁定（`KEEP_MACHINE_ID=1`）；config.ini（`IGNORE_CERT_ERR=1`、`DEBUG_FASTREPORT`、`LANG=zh_TW`） | E-05/E-06 ✔ |
+| L5 授權與配置 | machineId/hardwareId/softwareId 綁定（`KEEP_MACHINE_ID=1`）；config.ini（`IGNORE_CERT_ERR=1`；預設 AP HTTP 下無作用、`DEBUG_FASTREPORT`、`LANG=zh_TW`） | E-05/E-06 ✔ |
 
 ---
 
@@ -185,7 +185,7 @@ FlapsErp（輔翼 ERP）為輔翼系統開發的桌面應用程式，版本 v0.0
 | 總 RAM (WorkingSet64) | 623.8 MB |
 | 中位數單行程 RAM | 46.2 MB |
 | 最大單行程 RAM | 103.9 MB |
-| 32-bit 位址空間使用率 | ~31% (623.8 / 2048 MB) |
+| 32-bit LAA 位址空間使用率 | ~15% (623.8 / 4096 MB；LAA=True) |
 | 32-bit OOM 風險 | 中 |
 
 ## 4.2 COM 呼叫延遲基線（1000 迴路，✔）
@@ -212,7 +212,7 @@ FlapsErp（輔翼 ERP）為輔翼系統開發的桌面應用程式，版本 v0.0
 ## 4.4 CDP 通道與 config 基線（✔）
 - CDP 埠 9222 `/json/list`：NOT-FOUND（FlapsErp 未帶 `--remote-debugging-port` 啟動）
 - `DISABLE_HARDWARE_ACCELERATION=0`（硬體加速開啟）
-- `IGNORE_CERT_ERR=1`（MITM 風險，RSK-E2）
+- `IGNORE_CERT_ERR=1`（預設 AP HTTP 下無作用；測試 AP CERT-VALID；RSK-E2）
 
 ---
 
@@ -347,7 +347,7 @@ FlapsErp（輔翼 ERP）為輔翼系統開發的桌面應用程式，版本 v0.0
 | 風險 ID | 風險描述 | 機率 | 影響 | 分數 | 等級 | 狀態 | 緩解措施 |
 |---|---|---|---|---|---|---|---|
 | RSK-E1 | EULA/授權邊界未明（COM/CDP/RDA 自動化可能超出原廠授權） | 3 | 5 | 15 | 極高 | Open | OQ-F1 書面回覆前僅用官方入口；COM/RDA 僅 PoC |
-| RSK-E2 | 憑證忽略 (`IGNORE_CERT_ERR=1`) MITM 風險 | 3 | 5 | 15 | 極高 | Open | C-05 提案包要求原廠修正；過渡期網路層補償 |
+| RSK-E2 | 憑證忽略／AP HTTP 明文（`IGNORE_CERT_ERR=1`；預設 AP 為 HTTP；測試 AP CERT-VALID） | 3 | 5 | 15 | 極高 | Open | C-05 提案包要求原廠 AP 轉 HTTPS＋正式憑證；過渡期受控 LAN/白名單；`IGNORE_CERT_ERR=0` 僅在 HTTPS 端點盤點完成後 |
 | RSK-E3 | 32-bit LAA 4 GB 上限（實測 LAA=True；大報表/大批次仍可能撞牆） | 4 | 3 | 12 | 高 | Open | 批次工作外移 Wellfit；監控 RAM 基線；A 線要求 64-bit |
 | RSK-E4 | 元件漂移（Winax.node 2026-11-03 已更新，原廠活躍開發中） | 3 | 4 | 12 | 高 | Open | flaps-bridge `.ver` 偵測 + 契約測試；變動即告警 |
 | RSK-E5 | 誤寫原廠元件區 (`C:\SYSTEM_PROGRAM_DIRECTORY`) | 2 | 5 | 10 | 高 | Open | 紅線入所有腳本頭註；唯讀開啟；寫入僅允許 `%TEMP%\flaps` |
@@ -485,8 +485,8 @@ FlapsErp（輔翼 ERP）為輔翼系統開發的桌面應用程式，版本 v0.0
 | 1 | 1.1 | 執行 flaps-perf.ps1 -Probe all | | perf-result.json | 基線量測 |
 | 1 | 1.2 | 記錄基線數字 | | perf-summary.md | 對照基準 |
 | 2 | 2.1 | 備份 config.ini | | .bak 檔 | 調優前必備 |
-| 2 | 2.2 | 調優 DISABLE_HARDWARE_ACCELERATION | | | △ 需自行驗證 |
-| 2 | 2.3 | 調優 IGNORE_CERT_ERR | | | △ 需自行驗證 |
+| 2 | 2.2 | A/B `DISABLE_HARDWARE_ACCELERATION`（含系統級 CPU） | | | △ 需自行驗證 |
+| 2 | 2.3 | `IGNORE_CERT_ERR`：HTTP 下無作用；測試 AP CERT-VALID；其他 HTTPS 端點盤點後才 0 | | | △ 需自行驗證 |
 | 2 | 2.4 | 重跑基線量測並比對 | | | △ 需自行判斷 |
 | 3 | 3.1 | 確認 wellfit.exe 路徑 | | | |
 | 3 | 3.2 | 執行 MTRIX 管線首跑 | | run-summary.json | |

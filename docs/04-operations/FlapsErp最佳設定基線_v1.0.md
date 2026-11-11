@@ -4,10 +4,11 @@
 > 範圍：FlapsErp v0.0.4 桌面產品（`C:\SYSTEM_PROGRAM_DIRECTORY\FlapsErp`）＋共用 Windows 宿主＋與 FlapsErp 直接相接的 Wellfit 批次。
 > 紅線：**不得寫入 `C:\SYSTEM_PROGRAM_DIRECTORY` 的原廠元件**（config.ini 由 IT 變更管制）；不得關閉 AV／UAC／WDAC；不得以 FlapsErp 效能為由拖垮其他程式。
 > 事實標記：✔ 2026-11-11 唯讀實測｜△ 待實機驗證｜⚠ 需 IT／原廠確認。
+> **軟體邊界**：FlapsErp（原廠）｜Wellfit（自建）｜Windows 宿主（微軟/IT）。本文件 §1–§3 為原廠 FlapsErp／Windows；§5 工作台為自建 Wellfit；`FlapsErpData` 僅唯讀。
 
 ---
 
-## 1. 產品層設定（`.conf\config.ini`）
+## 1. 產品層設定（原廠 FlapsErp；`.conf\config.ini`）
 
 **實機路徑**：`C:\SYSTEM_PROGRAM_DIRECTORY\.conf\config.ini`（✔）。
 **完整內容（2026-11-11 實測）**：
@@ -48,7 +49,7 @@ KEEP_MACHINE_ID_MIGRATED=1
 
 > `app.asar` 掃描：無其他 `https://...flaps/wellfit...` literal 端點；更新/授權若由 config/變數提供，需 runtime 監控。
 
-## 3. Windows 宿主設定（系統級；先做 FlapsErp-only）
+## 3. Windows 宿主設定（微軟/IT；系統級；先做 FlapsErp-only）
 
 > Scope：`F`=FlapsErp-only；`S`=system-wide；`C`=conditional。任何 `S`/`C` 變更需 IT 核准＋系統級 A/B（§6.4），不得降低其他程式效能。
 > **本機實測（2026-11-11）**：Windows 11 Home、Ryzen 7 4800HS 8C/16T、15.79 GB RAM（3.4–5.0 GB free，取樣）、CPU 7–73%（取樣；受其他程式/本工具影響）、磁碟佇列 0–1（取樣）、溫度 UNKNOWN；同時跑 Code/ChatGPT/Chrome/Outlook。因此本機預設：Balanced 電源、system-managed 分頁檔、保留快速啟動/USB/NIC/GPU/視覺/搜尋；只做 FlapsErp-only＋AV 排除（IT 核准）＋AP 白名單。
@@ -87,7 +88,7 @@ KEEP_MACHINE_ID_MIGRATED=1
 | `processed.ini`/`.ver` | 啟動前後比對；若每次變動→DLL 重註冊 | `-Probe settings` |
 | 下載資料夾 | 指向 SSD（若目前非 SSD） | △ |
 
-## 5. 外部工作台（最大效益；繞開原始碼瓶頸）
+## 5. 外部工作台（自建 Wellfit；最大效益；繞開原始碼瓶頸）
 
 | 工作台 | 做法 | 繞開 |
 |---|---|---|
@@ -102,7 +103,7 @@ KEEP_MACHINE_ID_MIGRATED=1
 - **守門**：CPU>80% 或 RAM>85% 持續 5 min → 中止；磁碟佇列>2.0 持續 5 min → 延後。
 - **其他程式**：批次前後跑代表程式（瀏覽器/Office/檔案總管）；任一退步 >10% → 中止。
 
-## 6. 監控／備份／更新
+## 6. 監控／備份／更新（自建工具＋IT）
 
 | 項目 | 頻率 | 工具 |
 |---|---|---|
@@ -151,7 +152,7 @@ KEEP_MACHINE_ID_MIGRATED=1
 
 ## 10. 證據與未決
 
-- 實測命令：`powershell -ExecutionPolicy Bypass -File "Wellfit\scripts\perf\flaps-perf.ps1" -Probe settings`（另 `app`/`tls`/`pe`/`full`）。
-- Artifacts：`Wellfit/artifacts/perf/<ts>/perf-result.json`、`perf-summary.md`。
+- 實測命令：`powershell -ExecutionPolicy Bypass -File "Wellfit\scripts\perf\flaps-perf.ps1" -Probe settings`（另 `app`／`tls`／`pe`／`host`／`endpoints`／`full`）。
+- Artifacts：`Wellfit/artifacts/perf/<ts>/perf-result.json`、`perf-summary.md`、`system-baseline.json`、`endpoints.json`。
 - 未決：IT 變更所有者/測試機；其他 HTTPS 端點盤點；批次主機（另機/同機）；8h soak；`FORCE_DEVICE_SACLE_FACTOR` 正確鍵行為。
 - 本基線僅規劃/記錄；任何寫入 `C:\SYSTEM_PROGRAM_DIRECTORY` 由 IT 變更管制執行；UNKNOWN ≠ PASS ≠ FAIL。

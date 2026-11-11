@@ -4,7 +4,8 @@
 **版本**：v1.0（2026-11-10）  
 **狀態**：Active（現行）  
 **目標讀者**：IT 管理人員、系統維運工程師、桌面自動化維運人員  
-**適用範疇**：輔翼 ERP（FlapsErp）根工作區 Rust 平台（`core/`、`platform/`、`web/`、`crates/flaps_bridge`、`crates/kem`）  
+**適用範疇**：(A) 原廠 FlapsErp 桌面產品（`C:\SYSTEM_PROGRAM_DIRECTORY\FlapsErp`）；(B) 根工作區 Rust 平台（`core/`、`platform/`、`web/`、`crates/flaps_bridge`、`crates/kem`；自建）。兩者不得混淆。  
+> **軟體邊界**：原廠 FlapsErp 的設定/二進位/資料在 `C:\SYSTEM_PROGRAM_DIRECTORY`（唯讀；config 僅 IT 變更）；自建 Rust 平台/Wellfit 在 `Dev\`（可改）。§3.2 為原廠 config；§2.2/§3.3 的 `platform/data/flaps.db`、`flaps-server`、Axum/Tokio 為自建平台，不得當成 FlapsErp。  
 **相依文件**：  
 - `docs/research/輔翼ERP效能基線報告_v1.0.md`（產品效能基線，2026-11-03）  
 - `docs/research/FlapsErp平台線效能評估進度報告_v2.0.md`（平台線效能現況，2026-11-09）  
@@ -74,7 +75,7 @@
 
 ### 2.2 監控命令（PowerShell）
 
-#### 2.2.1 資料庫與檔案層級
+#### 2.2.1 資料庫與檔案層級（自建 Rust 平台；非 FlapsErp）
 
 ```powershell
 # 檢查 SQLite 資料庫與 WAL 大小
@@ -88,7 +89,7 @@ Get-Process flaps-server -ErrorAction SilentlyContinue | Select-Object Id, CPU, 
 Get-Volume | Select-Object DriveLetter, FileSystemLabel, Size, FreeSpace
 ```
 
-#### 2.2.2 執行品質閘門（本機）
+#### 2.2.2 執行品質閘門（自建 Rust 平台；本機）
 
 ```powershell
 cargo fmt --all -- --check
@@ -97,7 +98,7 @@ cargo test --locked --workspace --no-fail-fast
 cargo audit
 ```
 
-### 2.3 常見效能瓶頸診斷流程
+### 2.3 常見效能瓶頸診斷流程（自建 Rust 平台；非 FlapsErp）
 
 當使用者回報「系統變慢」或監控觸發告警時，請依下列流程診斷：
 
@@ -223,7 +224,7 @@ WHERE transaction_date < '2025-01-01';
 
 ---
 
-### 3.2 應用程式配置調整（config.ini）
+### 3.2 應用程式配置調整（原廠 FlapsErp；config.ini）
 
 > **更正（2026-11-11）**：本節原指向 `Dev\platform\config.ini` 與 `ORG/PERM/...` 項目，**與實機不符**。實機設定檔為 `C:\SYSTEM_PROGRAM_DIRECTORY\.conf\config.ini`，只有 7 個鍵；SSOT 見 `docs/04-operations/FlapsErp最佳設定基線_v1.0.md`。變更由 IT 於變更管制下執行，代理唯讀。
 
@@ -249,6 +250,7 @@ WHERE transaction_date < '2025-01-01';
    ```
 
 > **[強制規則]** 所有編輯必須使用 UTF-8 無 BOM；PowerShell 寫檔禁用 `>` 重導向；config 變更由 IT 變更管制執行（備份＋SHA256＋回滾），代理不得寫入 `C:\SYSTEM_PROGRAM_DIRECTORY`。
+> 完整備份（`config.ini`／`processed.ini`／`*.version.txt`／`Module\*.ver`／`AP\*.json`）與還原命令見 `FlapsErp設定變更runbook_v1.0.md` §2.2／§7。
 
 #### 3.2.2 可調整項目（實機 7 鍵）
 
@@ -272,7 +274,7 @@ powershell -ExecutionPolicy Bypass -File "Wellfit\scripts\perf\flaps-perf.ps1" -
 
 ---
 
-### 3.3 應用程式配置調整（通用原則）
+### 3.3 應用程式配置調整（自建 Rust 平台；非 FlapsErp）
 
 #### 3.3.1 併發連線數
 
@@ -315,7 +317,7 @@ WHERE ur.role_id IS NULL;
 
 ---
 
-### 3.4 硬體與基礎架構建議
+### 3.4 硬體與基礎架構建議（原廠 FlapsErp＋自建平台）
 
 | 項目 | 建議規格 | 說明 |
 |------|----------|------|
