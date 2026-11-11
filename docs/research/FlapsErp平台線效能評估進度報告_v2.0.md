@@ -1,5 +1,6 @@
-# FlapsErp／輔翼 ERP 效能評估進度報告 v2.0 — 從開發起點到現況的最佳完整版
+# FlapsErp／輔翼 ERP 效能評估進度報告 v2.0（平台線）— 從開發起點到現況的最佳完整版
 
+> **線別聲明**：本報告為 **Rust 平台線**（`platform/`＋`core/`＋`web/` 工作區）。另有 **Electron 產品線**報告見 [`FlapsErp產品線效能進度報告_v2.0.md`](FlapsErp產品線效能進度報告_v2.0.md)（2026-11-11 RP-1 同名消歧）。
 > 文件編號：PERF-PROGRESS-V2.0｜狀態：**現行（Active）**｜簽發：2026-11-09
 > 上游：`FlapsErp效能基線報告_v1.0.md`（2026-11-03 產品基線，本報告繼承其全部量測）｜登錄：`docs/PLAN_REGISTER.md` addendum #17
 > 紀律：`[FACT:CODE]` 附命令與 exit code；UNKNOWN ≠ PASS ≠ FAIL；金額/分數分離（INV-01 只限金額）。

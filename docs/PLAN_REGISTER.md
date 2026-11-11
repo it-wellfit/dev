@@ -524,3 +524,28 @@ This addendum records execution facts only; it does not approve product scope, c
 | 未竟（誠實 BLOCKED/OPEN） | (1) 安裝版升級演練（安裝 v0.2 → feed 指向 v0.3 → passive 更新 → 重啟版本正確）需 `updates.flaps.internal` HTTPS 主機（未建）＋裝機；(2) Authenticode 需購證；(3) 私鑰密碼生產前輪換；(4) `cargo vet`／`cargo auditable` 未安裝 → 該層 UNKNOWN；(5) `platform/src/com/*` 6 處 Windows COM `unsafe` 與「每檔 forbid(unsafe_code)」憲章衝突（治理缺口，未解） | — |
 
 This addendum records execution facts only; it does not approve product scope, certification, or release.
+## 2026-11-11 addendum #32 (PHASE-RP RP-1：效能報告同名消歧——對稱改名＋入冊＋互鏈)
+
+Executed per `.kilo/plans/1793787631643-three-studio-slice-execution-plan.md` v8 PHASE-RP RP-1. Trigger: 同名混淆已實際發生三次（Kilo HTML 誤認、config.ini 文件遍尋不著、重複疑慮）。
+
+| Item | Disposition | Evidence |
+|---|---|---|
+| 平台線改名 | `docs/research/FlapsErp效能評估進度報告_v2.0.md` → `docs/research/FlapsErp平台線效能評估進度報告_v2.0.md`（Rust 平台線：`platform/`＋`core/`＋`web/`）；頭註加線別聲明＋互鏈 | `git mv` 實證；檔長 10,666 bytes |
+| 產品線入冊 | Kilo 快照區 `1793788660000-flaps-erp-performance-progress-report-v2.0.md`（552 行；Electron 產品線 v0.0.4；FLAPS-PERF-PRG-2026-1105-003）複製入工作區 `docs/research/FlapsErp產品線效能進度報告_v2.0.md`；頭註加線別聲明（Kilo 快照區另有 .html 渲染版）＋互鏈 | 檔長 35,198 bytes；Kilo 快照區檔案保留（不搬不刪） |
+| 活引用更新 | 2 處同一提交更新：`docs/04-operations/FlapsErp效能優化操作手冊_v1.0.md` L10、`docs/README.md` §2.7；PLAN_REGISTER addendum #17 為點時記錄不回改 | grep 實證 3 處（1 處點時保留） |
+| 裁決依據 | 語義漂移定理（計畫 §0.5）：同名異線＝邊界無線別契約 → 對稱命名永久消歧＋互鏈，不合併單檔；改名為雙向門（revert＝改回） | PLAN_REGISTER addendum #32（本行） |
+
+This addendum records execution facts only; it does not approve product scope, certification, or release.
+
+## 2026-11-11 addendum #33 (FlapsErp 產品優化設定與系統最佳設定計畫)
+
+| Item | Disposition | Evidence |
+|---|---|---|
+| Plan | `.kilo/plans/1794395575776-flaps-erp-product-system-settings.md`（範圍：產品 7 鍵、AP/TLS、Windows 宿主、衛生、外部工作台、監控/回滾） | 計畫檔 |
+| 執行邊界 | 代理唯讀；IT 套用（RSK-E5 不變）；系統級變更需 IT 核准＋系統級 A/B；不得為 FlapsErp 拖垮其他程式 | 計畫 §0.5／§4.10／§6.9 |
+| 實測證據（2026-11-11） | config 7 鍵；AP 預設 `8E2EDBE` HTTP；測試 AP `test2.flaps.tw:10113` CERT-VALID（Let's Encrypt/TLS1.2/2027-01-21）；`FlapsErp.exe` i386 **LAA=True（0x0122）**；module→menu 17.087 s；manifest drift 1/9；softwareId 報告繕寫錯誤已更正 | `Wellfit/artifacts/perf/20261111-*` |
+| 工具 | `Wellfit/scripts/perf/flaps-perf.ps1` 擴充 `settings/app/tls/pe/full`（唯讀；ASCII；無 BOM） | `-Probe settings/app/tls/pe` 實跑 |
+| 交付物 | 新增 `FlapsErp最佳設定基線_v1.0.md`、`FlapsErp設定變更runbook_v1.0.md`、`FlapsErp設定AB實測報告_v1.0.md`；更正 `FlapsErp效能優化操作手冊_v1.0.md` §3.2/§3.4、`A1檔案通道端到端操作手冊_v1.0.md`、`FlapsErp效能基線報告_v1.0.md` §7.1/§7.3、`FlapsErp優化_合規風險追蹤表.md` v1.2 | 各檔 |
+| 發布判定 | **NOT VERIFIED**（僅唯讀證據；IT 變更/系統級 A/B/8h soak 未執行） | 報告 §L |
+
+This addendum records execution facts only; it does not approve product scope, certification, or release.

@@ -260,10 +260,12 @@ RAG-S1～S4 已全數實作完成並驗證（詳見 addendum #17——原 #15 �
 | ①**產品線**進度報告 | `~/.local/share/kilo/plans/1793788660000-*`（.md 552 行＋.html；Kilo 快照區，**工作區外**） | 2026-11-05 | **Electron 產品線**（FlapsErp v0.0.4 桌面） | FLAPS-PERF-PRG-2026-1105-003「效能問題評估與解決方案—專案進度暨改善追蹤報告」：config.ini 調優核對表（附錄C）、A/B 雙軌、P1-P4 藍圖、RSK-E1~E9、五閘門前身（G0-G4 雛形） |
 | ②**平台線**進度報告 | `docs/research/FlapsErp效能評估進度報告_v2.0.md`（**工作區內 SSOT**） | 2026-11-09 | **Rust 平台線** | 132 行：246 tests、422ms SLA、MT 100%、RAG、十二切片 |
 | ③**RPA-ECOM 專案主文件 v2.1** | `FlapsErp_RPA_電商系統對接_專案文件與開發前準備報告_v2.1.html`（**Dev 根目錄**，863 行；未登錄 docs 索引） | 2026-10-27 撰寫／11-03 Gate1 複審修訂 | **RPA-ECOM 對接線**（Electron→電商） | 專案代碼 FLAPS-RPA-ECOM-2026：G1–G6 KPI（G4＝斷路器：連續失敗 5 次觸發、重試 ≤3、恢復 ≤5min——即 G2.2 之驗收準則源）、OQ-01~08、交付物規格 DEL-M/D/C/T、WBS 101 人日、甘特（至 2027-02-08 結案）、RACI、風險登記冊、§10 部署維運、§11 最佳化（「文件即程式碼」原則自述）、ADR-001/002 草案清單 |
-| ④**Dev 根目錄未登錄文件群**（8+ 份 .md，全未入 docs 索引） | 根目錄 glob 實測 | 2026-10-26~11-05 | 產品線＋跨線 | `flaps_erp_performance_analysis.md`（133 行＝DOC-01 產品線逆向分析）、`flaps_erp_project_plan.md`（308 行＝DOC-02 專案章程 FLAPS-PERF-PRJ-001）、`flaps_erp_architecture_optimization_plan.md`（816 行＝DOC-03 架構優化 FLAPS-ARCH-OPT-002 v2.0）、`PHASE1_IMPLEMENTATION_README.md`（311 行，Phase 1 實作記錄）、`FREE_AI_SYSTEM_UPDATE.md`（459 行，免費 AI 研究——FREE_AI_ROUTING 之前身/補充）、`DOCUMENTATION_MASTER_SPEC.md`（205 行，**文檔治理憲政規格**：SSOT/反模擬/漸進式揭露/八角色驗收）、`WORKTREE_WORKFLOW.md`（209 行，八環境協作，Active）、`GEMINI.md`（75 行，WEB3 工作區規則，跨區） |
-| ⑤**Kilo 快照區完整計畫庫** | `~/.local/share/kilo/plans/`（**~70 份 .md**，工作區外） | 2026-11-01~09 | 跨專案 | **效能家族演化鏈完整現蹤**：progress v1（`1793787631643-flaps-erp-performance-progress-report.md`，與本計畫同 session 前綴）→v2.0（1793788660000）；install guide v1→v2→v3→v4→v8→v6（1793788300000/9000000/9500000）；deep-verification report（1793789700000）。另有其他專案計畫 ~50 份（ISMS/ekpi/MTRIX/Wellfit/ARES/KNB 系列）——歸各專案，不複製 |
+| ④**Dev 根目錄未登錄文件群**（8+ 份 .md，全未入 docs 索引） | 根目錄 glob 實測 | 2026-10-26~11-05 | 產品線＋跨線 | **除 DOC-01/02/03 由 ① 搬移處理外**：`PHASE1_IMPLEMENTATION_README.md`（311 行，Phase 1 實作記錄）、`FREE_AI_SYSTEM_UPDATE.md`（459 行，免費 AI 研究——FREE_AI_ROUTING 之前身/補充）、`DOCUMENTATION_MASTER_SPEC.md`（205 行，**文檔治理憲政規格**：SSOT/反模擬/漸進式揭露/八角色驗收）、`WORKTREE_WORKFLOW.md`（209 行，八環境協作，Active）、`GEMINI.md`（75 行，WEB3 工作區規則，跨區）、`README.md`（根目錄 README，待 audit 與 docs/README.md 區分） |
+| ⑤**Kilo 快照區完整計畫庫** | `~/.local/share/kilo/plans/`（**~70 份 .md**，工作區外） | 2026-11-01~09 | 跨專案 | **效能家族演化鏈完整現蹤**：progress v1（`1793787631643-flaps-erp-performance-progress-report.md`，與本計畫同 session 前綴——Kilo 計畫 ID＝session 時間戳前綴，非唯一計畫 ID）→v2.0（1793788660000）；install guide **v1→v2.0→v3.0→v4.0→v5.0→v6.0**（1793788300000/9000000/9500000——版本鏈已核實無 v8）；deep-verification report（1793789700000）。另有其他專案計畫 ~50 份（ISMS/ekpi/MTRIX/Wellfit/ARES/KNB 系列）——歸各專案，不複製 |
 
 **風險**：①②同名（FlapsErp效能評估進度報告_v2.0）、同 v2.0、不同線（Electron 產品 vs Rust 平台）——正是 §0.5 語義漂移定理命中案例：同概念、邊界無契約。**擁有者記憶正確**：①內容含 config.ini 調優（附錄C：備份→DISABLE_HARDWARE_ACCELERATION→IGNORE_CERT_ERR→重跑量測→回滾），即「調整哪些設定改善效能」之文件。③之發現另揭：`docs/management/FlapsErp_RPA_Ecommerce_Project_Plan_v2.1.md` 頭註宣稱「v2.1 前檔為 0 bytes 空殼，本版首次補實全文」**對家族歷史不實**——.md 檔本身 0 bytes 屬實，但家族 v2.1 內容一直存在於根目錄 HTML（見 RP-5 修正）。
+
+**RP-1 執行狀態更新（2026-11-11 18:42 實證）**：兩份報告之 `.md` **均已在工作區**——`docs/research/FlapsErp平台線效能評估進度報告_v2.0.md`（10,950 B，平台線改名完成）＋`docs/research/FlapsErp產品線效能進度報告_v2.0.md`（35,577 B，產品線入冊完成，內容自 Kilo 快照 552 行複製）。**惟 HTML 渲染狀態不對稱**：產品線 `.html`（66,298 B）僅存在於 Kilo 快照區；平台線 `.html` **不存在**（僅 .md）——待 RP-7 以 pandoc 渲染補齊（置於各報告同目錄；產出後兩線對稱：.md 權威＋.html 渲染成對）。
 
 ## RP.1 切片（消解同名衝突，可查證可追溯）
 
@@ -281,8 +283,8 @@ RAG-S1～S4 已全數實作完成並驗證（詳見 addendum #17——原 #15 �
   - ②**Kilo 快照區追溯表**落盤於 README 索引：效能家族演化鏈（progress v1→v2.0、install guide v1→v6、deep-verification，含 Kilo 內路徑與版本鏈）——**不搬移**（Kilo 管理），僅登錄位置與版本鏈供追溯。
   - ③其他專案計畫 ~50 份（ISMS/ekpi/MTRIX/Wellfit/ARES/KNB）＝README 索引單一指引行（「其他專案計畫見 Kilo 快照區」），**不複製不搬移**（歸各專案 SSOT）。
   - ④四份待分類裁決：`PHASE1_IMPLEMENTATION_README.md`（audit 後 register 或 superseded）、`FREE_AI_SYSTEM_UPDATE.md`（與 `docs/engineering/FREE_AI_ROUTING.md` 關係裁定：合併或標 superseded——同一主題兩份，語義漂移風險）、`DOCUMENTATION_MASTER_SPEC.md`（→ **併入 PHASE-K.5 移交件**：文檔治理憲政規格與 L4 治理層直接互補）、`WORKTREE_WORKFLOW.md`（Active → 入 `docs/standards/` 登錄）；`GEMINI.md`（WEB3 工作區規則，非本工作區管轄）→ 標記待擁有者裁決去留，本計畫不動。
-  - ⑤`web/legacy-1420.html`＋`web/assets/legacy-1420.css`（並行線新增，1420 原版 UI 重現）：納入零 JS 適應度驗證（script=0 斷言）＋登錄 web/ 說明。
-  - ⑥`docs/research/A1檔案通道端到端操作手冊_v1.0.md`（236 行 Runbook，RUN-2026-1103-001，已登錄 README:123）→ **搬入 `docs/04-operations/`**（放置一致性：操作手冊家族同目錄；Runbook 不應在 research/；README §2.7→§2.6 索引同步；雙向門）。
+  - ⑤`web/legacy-1420.html`＋`web/assets/legacy-1420.css`（並行線新增，1420 原版 UI 重現）：納入零 JS 適應度驗證（script=0 斷言）＋登錄 web/ 說明。另：並行線已產出 `docs/research/legacy-1420_vs_platform_深度比較分析.md`（13.8KB，2026-11-10）——已存在於 research/（自動納入索引，無需搬移）。
+  - ⑥`docs/research/A1檔案通道端到端操作手冊_v1.0.md`（236 行 Runbook，RUN-2026-1103-001）→ ✅ **已完成搬移**（2026-11-10 實證：glob 顯示僅存 `docs/04-operations/A1檔案通道端到端操作手冊_v1.0.md`，research/ 無殘留；README §2.7→§2.6 索引同步已由先前回合完成）。
   - DoD：Dev 根目錄 .md 零未登錄（README 索引全覆蓋）；Kilo 追溯表落盤；每檔有去向（register/supersede/移交/待裁決）；操作手冊家族三冊同目錄互鏈；addendum #18 記錄。
 - DoD：兩報告可區分（檔名＋頭註）、零內容重複、README＋PLAN_REGISTER 已登錄、addendum #18 落盤。
 
@@ -291,4 +293,4 @@ RAG-S1～S4 已全數實作完成並驗證（詳見 addendum #17——原 #15 �
 - 語義漂移定理（§0.5）：同名異線＝邊界無單位/線別契約 → 命名區分＋互鏈，不合併為單檔（單向門：合併需擁有者 ADR，且兩線讀者/節奏不同）。
 - SSOT 紀律：Kilo 快照區（工作區外）非 SSOT；`docs/research/` 為 SSOT；快照檔由 Kilo 管理**不搬移不刪除**，僅入冊索引（RP-1）。
 - RPA-ECOM 家族（RP-5）：原始主文件在先（10-27）、內容最富、被上游引用（逆向分析 §9）→ 為家族 SSOT；後建摘要版（11-10，不知情重複）＝降級併入。「文件即程式碼」原則（RPA-ECOM 主文件 §11 自述：架構圖/介面矩陣/工作流/腳本納入版控）支持 .md 權威＋.html 渲染成對。
-- 命名裁決（RP-1）：對稱改名為雙向門（revert＝改回原名），引用更新 ≤3 處同一提交、addendum #18 留痕——符合「該刪就刪該保留就保留該發展就發展」與零静默變更紀律。
+- 命名裁決（RP-1）：對稱改名為雙向門（revert＝改回原名），引用更新 ≤3 處同一提交、addendum #18 留痕——符合「該刪就刪該保留就保留該發展就發展」與零静默變更紀律。**活引用實證（2026-11-10 grep）＝3 處**：效能優化操作手冊 L10、README L121、PLAN_REGISTER addendum #17（點時記錄不回改）——全部同一提交更新。

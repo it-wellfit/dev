@@ -83,7 +83,7 @@
 
 | 優點 ✔ | 缺點 ✔ | 缺陷 ✔ |
 |---|---|---|
-| 殼分離：商業邏輯在伺服器，client 薄殼升級容易（UpdateAsar 熱更新機制） | Electron 殼承重過多：COM、FFI、序列埠全塞進 GUI 處理序 | **32-bit 打包（ia32）**：~2GB 記憶體上限，大報表/大批次必撞牆（electron-builder-dev.yml `arch: ia32`） |
+| 殼分離：商業邏輯在伺服器，client 薄殼升級容易（UpdateAsar 熱更新機制） | Electron 殼承重過多：COM、FFI、序列埠全塞進 GUI 處理序 | **32-bit 打包（ia32）**：LAA 實測 True（x64 下 4 GB），大報表/大批次仍可能撞牆（electron-builder-dev.yml `arch: ia32`） |
 | 元件版本控管（.ver + 動態下載註冊） | DLL 註冊需 UAC 提權 + `Set-ExecutionPolicy Unrestricted`（dllManager.js:225） | 元件層 DLL 與殼耦合：殼更新不會同步修 DLL（各別 .ver 漂移風險） |
 | 多 AP 伺服器設定（AP/*.json 3 台）+ 連線測試器（netUtil.ConnectionTester） | 同步 IPC 承載 COM 呼叫（見 §3 B-2） | `GetThumbnail` 硬編碼 'AnyDesk' 寫 3222.png（mainApi.js:766-788，死碼/開發殘留） |
 | 冪等式單一實例鎖 + 多開協商設計細膩 | 配置鍵有拼字錯誤且需雙寫相容：`FORCE_DEVICE_SACLE_FACTOR`（main.js:186 同時檢查正確鍵） | 空檔案殘留：dllManager.html 0 bytes、apManagerRenderer.js 0 bytes ✔ |

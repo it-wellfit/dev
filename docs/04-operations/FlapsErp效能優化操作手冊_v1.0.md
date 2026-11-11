@@ -7,7 +7,7 @@
 **適用範疇**：輔翼 ERP（FlapsErp）根工作區 Rust 平台（`core/`、`platform/`、`web/`、`crates/flaps_bridge`、`crates/kem`）  
 **相依文件**：  
 - `docs/research/輔翼ERP效能基線報告_v1.0.md`（產品效能基線，2026-11-03）  
-- `docs/research/FlapsErp效能評估進度報告_v2.0.md`（效能現況，2026-11-09）  
+- `docs/research/FlapsErp平台線效能評估進度報告_v2.0.md`（平台線效能現況，2026-11-09）  
 - `docs/research/輔翼ERP逆向分析與最佳化方案_v1.0.md`（逆向分析與優化方案，2026-11-03）  
 - `docs/architecture/效能架構.md`（軟硬體槓桿與效能預算，2026-11-06）  
 - `docs/architecture/DATABASE_DESIGN.md`（資料庫設計）  
@@ -225,46 +225,50 @@ WHERE transaction_date < '2025-01-01';
 
 ### 3.2 應用程式配置調整（config.ini）
 
-`platform/src/config.rs` 所對應的實體設定檔位於 `C:\Users\stephanie.huang\Desktop\新人訓練\Projects\2026\Dev\platform\config.ini`（依實際部署位置而定，請先確認實際路徑）。
+> **更正（2026-11-11）**：本節原指向 `Dev\platform\config.ini` 與 `ORG/PERM/...` 項目，**與實機不符**。實機設定檔為 `C:\SYSTEM_PROGRAM_DIRECTORY\.conf\config.ini`，只有 7 個鍵；SSOT 見 `docs/04-operations/FlapsErp最佳設定基線_v1.0.md`。變更由 IT 於變更管制下執行，代理唯讀。
 
 #### 3.2.1 修改前的必做步驟
 
 1. **完整備份原始檔案：**
    ```powershell
    $date = Get-Date -Format "yyyyMMdd_HHmmss"
-   Copy-Item "platform/config.ini" "backup/config.ini_$date" -Force
+   $src = "C:\SYSTEM_PROGRAM_DIRECTORY\.conf\config.ini"
+   $dst = "Wellfit\artifacts\config-backup\$date\config.ini"
+   New-Item -ItemType Directory -Path (Split-Path $dst) -Force | Out-Null
+   Copy-Item -LiteralPath $src -Destination $dst -Force
    ```
 2. **計算 SHA256 雜湊並記錄：**
    ```powershell
-   Get-FileHash "platform/config.ini" -Algorithm SHA256 | Select-Object Hash
+   Get-FileHash -LiteralPath $src -Algorithm SHA256 | Select-Object Hash
    ```
-3. **僅在備份完成後，才進行編輯：**
+3. **僅在備份完成後，才進行編輯（逐行替換、保留 CRLF、UTF-8 無 BOM）：**
    ```powershell
-   [System.IO.File]::WriteAllText("platform/config.ini", $newContent, (New-Object System.Text.UTF8Encoding($false)))
+   $lines = [System.IO.File]::ReadAllLines($src)
+   $newContent = ($lines -join "`r`n") + "`r`n"
+   [System.IO.File]::WriteAllText($src, $newContent, (New-Object System.Text.UTF8Encoding($false)))
    ```
 
-> **[強制規則]** 所有編輯必須使用 UTF-8 無 BOM 編碼；PowerShell 寫檔禁用 `>` 重導向，請使用 `[System.IO.File]::WriteAllText` 搭配 `New-Object System.Text.UTF8Encoding($false)`。詳見 `docs/encoding-standard.md`。
+> **[強制規則]** 所有編輯必須使用 UTF-8 無 BOM；PowerShell 寫檔禁用 `>` 重導向；config 變更由 IT 變更管制執行（備份＋SHA256＋回滾），代理不得寫入 `C:\SYSTEM_PROGRAM_DIRECTORY`。
 
-#### 3.2.2 可調整項目
+#### 3.2.2 可調整項目（實機 7 鍵）
 
-根據 `docs/research/輔翼ERP逆向分析與最佳化方案_v1.0.md` §3 B 線 P1，config.ini 可調整項目如下：
-
-| 設定項 | 說明 | 建議操作 |
-|--------|------|----------|
-| `ORG (組織)` | 組織相關設定 | 依實際部門架構調整，勿臆造 |
-| `PERM (權限)` | 權限相關設定 | 僅授予最小權限 |
-| `ACT (動作)` | 動作相關設定 | 與業務流程對齊 |
-| `STORE (門市)` | 門市相關設定 | 依實際門市數量調整 |
-| `POS (POS 終端)` | POS 終端相關設定 | 與實際部署數量對齊 |
-| `INV (存貨)` | 存貨相關設定 | 與庫存模組同步 |
+| 設定項 | 現值 | 說明 | 建議操作 |
+|--------|------|------|----------|
+| `IGNORE_CERT_ERR` | 1 | TLS 憑證錯誤處理 | 預設 1；測試 AP 已實測 CERT-VALID；其他 HTTPS 端點盤點後可 0 |
+| `KEEP_MACHINE_ID` | 1 | 保持機器 ID | 保持 1 |
+| `DISABLE_HARDWARE_ACCELERATION` | 0 | 硬體加速 | 0；A/B 後定案 |
+| `DEBUG_FASTREPORT` | 0 | 報表除錯 | 0；僅原廠指示時 1 |
+| `FORCE_DEVICE_SACLE_FACTOR` | 0 | 縮放（原廠拼字） | 0；UI 裁切才評估 |
+| `LANG` | zh_TW | 語言 | 保持 |
+| `KEEP_MACHINE_ID_MIGRATED` | 1 | 機器 ID 遷移 | 保持 1 |
 
 #### 3.2.3 修改後驗證
 
-修改完成後，必須重新執行品質閘門：
 ```powershell
-cargo test --locked --workspace --no-fail-fast
+powershell -ExecutionPolicy Bypass -File "Wellfit\scripts\perf\flaps-perf.ps1" -Probe full
 ```
-並重新量測目標指標（如啟動時間、報表查詢時間），與備份前的基準值比較。
+
+並執行 app smoke：① 啟動→登入→選單就緒；② FAS 應付憑單→列表載入；③ HRS 員工→列表載入；④ 報表→匯出 CSV；⑤ 關閉→重啟→再登入。任一失敗即回滾。
 
 ---
 
@@ -316,12 +320,13 @@ WHERE ur.role_id IS NULL;
 | 項目 | 建議規格 | 說明 |
 |------|----------|------|
 | CPU | 4 核心以上 | Axum/Tokio 非同步模型對單核心效能較敏感 |
-| 記憶體 | 8 GB 以上 | 給予 SQLite 頁面快取與應用程式記憶體充足空間 |
+| 記憶體 | 16 GB 以上（共用工作站） | FlapsErp 11 行程＋瀏覽器／Office；8 GB 僅能勉強，需關閉其他程式 |
 | 儲存裝置 | SSD (NVMe) | SQLite 為檔案型資料庫，SSD 可顯著改善寫入與查詢效能 |
 | 作業系統 | Windows 10/11 專業版或伺服器版 | 支援 Win32 COM 自動化（RPA 必需） |
 | 備份 | 每日自動備份至獨立磁碟 | 防止資料遺失 |
 
 > **[注意]** 輔翼ERP 的 RPA 功能依賴 Windows COM 元件，因此伺服器必須為 Windows 桌面環境，且需確保桌面不被自動鎖定（否則 RPA 操作會失敗）。
+> **[共用環境]** 這台 Windows 同時跑瀏覽器／Office／其他程式；不得為了 FlapsErp 關閉 AV／UAC／WDAC，也不得讓批次/報表在營業時間搶 CPU／I/O。系統級變更見 `docs/04-operations/FlapsErp最佳設定基線_v1.0.md` §4.3／§4.10。
 
 ---
 

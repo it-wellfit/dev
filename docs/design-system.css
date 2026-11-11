@@ -754,7 +754,80 @@ select.input {
 /* ============================================================
    Components — Badge
    ============================================================ */
-.badge {
+.api-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+}
+
+.api-card .name { font-weight: var(--font-weight-semibold); color: var(--color-text-primary); }
+.api-card .endpoint { font-family: var(--font-family-mono, monospace); font-size: var(--font-size-xs); color: var(--color-primary-400); margin: var(--space-1) 0; overflow-wrap: anywhere; }
+.api-card .desc { font-size: var(--font-size-xs); color: var(--color-text-tertiary); }
+.api-card .status-text { font-size: var(--font-size-xs); color: var(--color-success); text-align: right; }
+.health-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-4);
+}
+
+.health-item {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  font-size: var(--font-size-sm);
+}
+
+.health-item .k {
+  color: var(--color-text-tertiary);
+  display: block;
+  margin-bottom: var(--space-2);
+}
+
+.health-item .check { color: var(--color-success); font-weight: var(--font-weight-bold); }
+.bankpay-subnav {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  gap: var(--space-1);
+  padding: var(--space-2) 0;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+  margin-bottom: var(--space-5);
+  overflow-x: auto;
+}
+
+.bankpay-subnav a {
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.bankpay-subnav a:hover { background: var(--color-surface-raised); color: var(--color-text-primary); }
+.bankpay-subnav a[aria-current="true"] { background: var(--color-primary-subtle, rgba(59, 130, 246, 0.1)); color: var(--color-primary); font-weight: var(--font-weight-medium); }
+ color: var(--color-error); font-weight: var(--font-weight-bold); }
+ font-size: var(--font-size-xs); color: var(--color-text-tertiary); margin-top: var(--space-1); text-align: right; }
+
+  background: rgba(251, 191, 36, 0.15);
+  color: #fbbf24;
+  border: 1px solid rgba(251, 191, 36, 0.3);
+}
+
+.badge-ok {
+  background: rgba(74, 222, 128, 0.15);
+  color: #4ade80;
+  border: 1px solid rgba(74, 222, 128, 0.3);
+}
+
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);

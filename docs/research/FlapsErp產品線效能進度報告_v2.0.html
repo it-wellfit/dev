@@ -1,0 +1,2358 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc 3.13" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>輔翼 ERP（FlapsErp）效能問題評估與解決方案 — 產品線進度報告 v2.0</title>
+  <style>
+
+html {
+color: #1a1a1a;
+color: light-dark(#1a1a1a, #fdfdfd);
+background-color: #fdfdfd;
+background-color: light-dark(#fdfdfd, #1a1a1a);
+color-scheme: light dark;
+}
+body {
+margin: 0 auto;
+max-width: 36em;
+padding-left: 50px;
+padding-right: 50px;
+padding-top: 50px;
+padding-bottom: 50px;
+hyphens: auto;
+overflow-wrap: break-word;
+text-rendering: optimizeLegibility;
+font-kerning: normal;
+}
+@media (max-width: 600px) {
+body {
+font-size: 0.9em;
+padding: 12px;
+}
+h1 {
+font-size: 1.8em;
+}
+}
+@media print {
+html {
+color-scheme: light only;
+}
+html, body, pre, code {
+background-color: transparent;
+}
+body, a, a:visited, blockquote {
+color: black;
+}
+pre, code {
+padding: 0;
+}
+p, h2, h3 {
+orphans: 3;
+widows: 3;
+}
+h2, h3, h4 {
+page-break-after: avoid;
+}
+}
+p {
+margin: 1em 0;
+}
+a, a:visited {
+color: inherit;
+}
+img {
+max-width: 100%;
+}
+svg {
+height: auto;
+max-width: 100%;
+}
+h1, h2, h3, h4, h5, h6 {
+margin-top: 1.4em;
+}
+h5, h6 {
+font-size: 1em;
+font-style: italic;
+}
+h6 {
+font-weight: normal;
+}
+ol, ul {
+padding-left: 1.7em;
+margin-top: 1em;
+}
+li > ol, li > ul {
+margin-top: 0;
+}
+blockquote {
+margin: 1em 0 1em 1.7em;
+padding-left: 1em;
+border-left: 2px solid;
+border-color: #e6e6e6;
+border-color: light-dark(#e6e6e6, #4c4c4c);
+color: #606060;
+color: light-dark(#606060, #b6b6b6);
+}
+code {
+white-space: pre-wrap;
+font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+font-size: 85%;
+margin: 0;
+hyphens: manual;
+}
+pre {
+margin: 1em 0;
+overflow: auto;
+}
+pre code {
+padding: 0;
+overflow: visible;
+overflow-wrap: normal;
+}
+.sourceCode {
+background-color: transparent;
+overflow: visible;
+}
+hr {
+border: none;
+border-top: 1px solid currentColor;
+height: 1px;
+margin: 1em 0;
+}
+table {
+margin: 1em 0;
+border-collapse: collapse;
+width: 100%;
+overflow-x: auto;
+display: block;
+font-variant-numeric: lining-nums tabular-nums;
+}
+table caption {
+margin-bottom: 0.75em;
+}
+tbody {
+margin-top: 0.5em;
+border-top: 1px solid currentColor;
+border-bottom: 1px solid currentColor;
+}
+th {
+border-top: 1px solid currentColor;
+padding: 0.25em 0.5em 0.25em 0.5em;
+}
+td {
+padding: 0.125em 0.5em 0.25em 0.5em;
+}
+header {
+margin-bottom: 4em;
+text-align: center;
+}
+#TOC li {
+list-style: none;
+}
+#TOC ul {
+padding-left: 1.3em;
+}
+#TOC > ul {
+padding-left: 0;
+}
+#TOC a:not(:hover) {
+text-decoration: none;
+}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+
+ul.task-list[class]{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+font-size: inherit;
+width: 0.8em;
+margin: 0 0.8em 0.2em -1.6em;
+vertical-align: middle;
+}
+
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+{ counter-reset: source-line 0; }
+pre.numberSource code > span
+{ position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+color: #aaaaaa;
+}
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa; padding-left: 4px; }
+div.sourceCode
+{ }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } 
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.at { color: #7d9029; } 
+code span.bn { color: #40a070; } 
+code span.bu { color: #008000; } 
+code span.cf { color: #007020; font-weight: bold; } 
+code span.ch { color: #4070a0; } 
+code span.cn { color: #880000; } 
+code span.co { color: #60a0b0; font-style: italic; } 
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.do { color: #ba2121; font-style: italic; } 
+code span.dt { color: #902000; } 
+code span.dv { color: #40a070; } 
+code span.er { color: #ff0000; font-weight: bold; } 
+code span.ex { } 
+code span.fl { color: #40a070; } 
+code span.fu { color: #06287e; } 
+code span.im { color: #008000; font-weight: bold; } 
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.kw { color: #007020; font-weight: bold; } 
+code span.op { color: #666666; } 
+code span.ot { color: #007020; } 
+code span.pp { color: #bc7a00; } 
+code span.sc { color: #4070a0; } 
+code span.ss { color: #bb6688; } 
+code span.st { color: #4070a0; } 
+code span.va { color: #19177c; } 
+code span.vs { color: #4070a0; } 
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } 
+</style>
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">輔翼 ERP（FlapsErp）效能問題評估與解決方案 —
+產品線進度報告 v2.0</h1>
+</header>
+<h1 id="輔翼-erpflapserp效能問題評估與解決方案">輔翼
+ERP（FlapsErp）效能問題評估與解決方案</h1>
+<h2 id="專案進度暨改善追蹤報告">專案進度暨改善追蹤報告</h2>
+<blockquote>
+<p><strong>報告編號</strong>：FLAPS-PERF-PRG-2026-1105-003<br />
+<strong>版本</strong>：v2.0（專業提交版）<br />
+<strong>報告日期</strong>：2026-11-05<br />
+<strong>報告期間</strong>：2026-10-26 ~ 2026-11-05<br />
+<strong>報告人</strong>：工程團隊<br />
+<strong>對象</strong>：主管及相關利害關係人<br />
+<strong>狀態</strong>：Phase 1 已完成，進入 Phase 2 準備<br />
+<strong>分級</strong>：內部專業報告，可正式提交主管審閱<br />
+<strong>線別聲明</strong>：本報告為 <strong>Electron
+產品線</strong>（FlapsErp v0.0.4 桌面應用）效能報告；Kilo 快照區另有
+<code>.html</code>
+渲染版（<code>~/.local/share/kilo/plans/1793788660000-*.html</code>）。另有
+<strong>Rust 平台線</strong>報告見 <a href="FlapsErp平台線效能評估進度報告_v2.0.md"><code>FlapsErp平台線效能評估進度報告_v2.0.md</code></a>（2026-11-11
+RP-1 同名消歧）。</p>
+</blockquote>
+<hr />
+<h2 id="文件控制與事實等級說明">文件控制與事實等級說明</h2>
+<h3 id="報告分級與用途">1.1 報告分級與用途</h3>
+<p>本報告為專業技術與管理報告，旨在向主管及相關單位說明輔翼
+ERP（FlapsErp）效能優化專案的現況、已驗證事實、風險與後續規劃。所有技術數據與測試結果均來自工作區既有原始文件與實際執行過的命令，未虛構任何效能改善數字。</p>
+<h3 id="事實等級標記定義">1.2 事實等級標記定義</h3>
+<p>為確保資訊真實性與效度，本報告採用三層事實等級標記，讀者應依標記判斷各項內容的可信度與決策適用性：</p>
+<table>
+<colgroup>
+<col style="width: 35%" />
+<col style="width: 21%" />
+<col style="width: 21%" />
+<col style="width: 21%" />
+</colgroup>
+<thead>
+<tr>
+<th style="text-align: center;">標記</th>
+<th>名稱</th>
+<th>定義</th>
+<th>對讀者的要求</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: center;">✔</td>
+<td>已確認事實</td>
+<td>可在指定檔案與位址重複觀測，或經過實際測試通過</td>
+<td>可作為專案決策與向主管匯報的依據</td>
+</tr>
+<tr>
+<td style="text-align: center;">△</td>
+<td>初步研判</td>
+<td>依據現有證據與架構分析推論，尚未在目標環境中完全驗證</td>
+<td>實務應用前建議先在測試機自行驗證</td>
+</tr>
+<tr>
+<td style="text-align: center;">⚠</td>
+<td>待驗證事項</td>
+<td>需進一步測試、原廠回覆或外部條件滿足才能確認</td>
+<td>不得對外宣稱為既成事實，主管決策前應先取得確認</td>
+</tr>
+</tbody>
+</table>
+<h3 id="原始文件清單事實來源">1.3 原始文件清單（事實來源）</h3>
+<p>本報告所有技術內容皆引用自下列工作區既有文件，未額外引入外部未驗證資料：</p>
+<table>
+<colgroup>
+<col style="width: 35%" />
+<col style="width: 21%" />
+<col style="width: 21%" />
+<col style="width: 21%" />
+</colgroup>
+<thead>
+<tr>
+<th style="text-align: center;">編號</th>
+<th>文件名稱</th>
+<th>路徑</th>
+<th>主要內容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: center;">DOC-01</td>
+<td>輔翼 FlapsErp 效能問題深度分析與最佳解決方案</td>
+<td><code>flaps_erp_performance_analysis.md</code></td>
+<td>效能瓶頸（10 項）、解決方案（三階段）、KPI</td>
+</tr>
+<tr>
+<td style="text-align: center;">DOC-02</td>
+<td>輔翼 FlapsErp 效能優化專案—完整專案文件與開發前準備報告</td>
+<td><code>flaps_erp_project_plan.md</code></td>
+<td>專案目標、範圍、需求、架構、里程碑、驗收標準</td>
+</tr>
+<tr>
+<td style="text-align: center;">DOC-03</td>
+<td>Flaps ERP 系統架構全面優化計畫—第一性原理設計</td>
+<td><code>flaps_erp_architecture_optimization_plan.md</code></td>
+<td>架構優化 v2.0、更嚴格 KPI、管線拆分、資料模型</td>
+</tr>
+<tr>
+<td style="text-align: center;">DOC-04</td>
+<td>輔翼 ERP（FlapsErp）逆向工程分析與效能最佳化方案 v1.0</td>
+<td><code>docs/research/輔翼ERP逆向分析與最佳化方案_v1.0.md</code></td>
+<td>逆向解構（五層）、六條整合通道、十項瓶頸、雙軌策略</td>
+</tr>
+<tr>
+<td style="text-align: center;">DOC-05</td>
+<td>輔翼 ERP 優化多階段執行藍圖 v1.0</td>
+<td><code>docs/research/輔翼ERP優化多階段執行藍圖_v1.0.md</code></td>
+<td>P1–P4 階段任務、退出條件、回滾矩陣、Phase 1 執行紀錄</td>
+</tr>
+<tr>
+<td style="text-align: center;">DOC-06</td>
+<td>FlapsErp 效能基線報告 v1.0</td>
+<td><code>docs/research/FlapsErp效能基線報告_v1.0.md</code></td>
+<td>2026-11-03 首測：RAM、COM 延遲、CDP、config 基線</td>
+</tr>
+<tr>
+<td style="text-align: center;">DOC-07</td>
+<td>FlapsErp 優化—合規風險追蹤表 v1.0</td>
+<td><code>docs/research/FlapsErp優化_合規風險追蹤表.md</code></td>
+<td>RSK-E1~E9 風險矩陣、紅線禁忌</td>
+</tr>
+<tr>
+<td style="text-align: center;">DOC-08</td>
+<td>T-02 週度狀態報告模板</td>
+<td><code>docs/management/templates/T-02_週度狀態報告.md</code></td>
+<td>報告格式參考</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="修訂歷史">修訂歷史</h2>
+<table>
+<colgroup>
+<col style="width: 35%" />
+<col style="width: 21%" />
+<col style="width: 21%" />
+<col style="width: 21%" />
+</colgroup>
+<thead>
+<tr>
+<th style="text-align: center;">版本</th>
+<th>日期</th>
+<th>變更說明</th>
+<th>編寫人</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: center;">v1.0</td>
+<td>2026-11-04</td>
+<td>初版：進度報告，涵蓋 Phase 1 完成狀態與 Phase 2 準備</td>
+<td>工程團隊</td>
+</tr>
+<tr>
+<td style="text-align: center;">v1.1</td>
+<td>2026-11-04</td>
+<td>增補「安裝新輔翼 ERP 後的優化操作手冊」（後拆分為獨立文件）</td>
+<td>工程團隊</td>
+</tr>
+<tr>
+<td style="text-align: center;">v2.0</td>
+<td>2026-11-05</td>
+<td>全面重編：新增管理層摘要、問題排查紀錄、關鍵組件清單、驗收標準、附錄核對表；嚴格區分事實等級；統一技術名詞與格式</td>
+<td>工程團隊</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h1 id="管理層摘要">1. 管理層摘要</h1>
+<h2 id="專案定位與核心發現">1.1 專案定位與核心發現</h2>
+<p>輔翼 ERP（FlapsErp v0.0.4）為閉源 Electron 桌面應用（Chromium +
+Node.js 16.16.0，ia32 32-bit），透過 winax/ActiveX 與後端 ERP 系統（Java
+JSP + COM 物件）通訊。經逆向解構與基線量測，確認核心效能瓶頸為
+<strong>「同步 COM 呼叫阻塞 Electron 主執行緒」</strong> 與
+<strong>「缺乏快取與生命週期管理」</strong>，並疊加 <strong>32-bit
+位址空間上限（約 2GB）</strong> 與 <strong>同步檔案 I/O</strong>。</p>
+<p>由於原廠程式為閉源且受 bytenode 保護，我方
+<strong>無法直接修改原廠程式碼</strong>。本專案採
+<strong>雙軌策略</strong>： - <strong>A
+線（向原廠）</strong>：透過正式提案包（OQ-F1/F2）回報需求與建議（64-bit、非同步
+IPC、憑證模式、RDA API 規格等），依賴原廠回覆； - <strong>B
+線（我方環境）</strong>：透過 Utility Process、非同步 IPC、表單 LRU
+快取、COM 物件池、批次 COM 呼叫、Wellfit 批次外移、flapserp://
+排程、config.ini 調優，可立即執行。</p>
+<h2 id="現況摘要-已驗收">1.2 現況摘要（✔ 已驗收）</h2>
+<ul>
+<li><strong>Phase 1（量測與軌道建置）</strong>：全部 7 項任務（T-101 ~
+T-107）驗收通過，符合退出條件。</li>
+<li><strong>整體進度</strong>：約 30%（四階段中第一階段完成）。</li>
+<li><strong>風險燈</strong>：🟡 黃（EULA/授權邊界未明、32-bit
+記憶體上限、元件漂移）。</li>
+<li><strong>下一階段</strong>：Phase 2 批次上線試行，排程於 2026-11-10
+至 11-16，尚未開工。</li>
+</ul>
+<h2 id="關鍵基線數據-2026-11-03-首測">1.3 關鍵基線數據（✔ 2026-11-03
+首測）</h2>
+<table>
+<thead>
+<tr>
+<th>指標</th>
+<th>數值</th>
+<th>事實等級</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>全系統 RAM（WorkingSet64）</td>
+<td>623.8 MB（11 行程）</td>
+<td>✔</td>
+</tr>
+<tr>
+<td>中位數單行程 RAM</td>
+<td>46.2 MB</td>
+<td>✔</td>
+</tr>
+<tr>
+<td>最大單行程 RAM</td>
+<td>103.9 MB</td>
+<td>✔</td>
+</tr>
+<tr>
+<td>32-bit 位址空間使用率</td>
+<td>~31%（623.8 / 2048 MB）</td>
+<td>✔</td>
+</tr>
+<tr>
+<td>COM 每呼叫延遲 P50</td>
+<td>0.2636 ms（n=1000）</td>
+<td>✔</td>
+</tr>
+<tr>
+<td>COM 每呼叫延遲 P95</td>
+<td>0.3884 ms</td>
+<td>✔</td>
+</tr>
+<tr>
+<td>COM 每呼叫延遲 P99</td>
+<td>0.4740 ms</td>
+<td>✔</td>
+</tr>
+<tr>
+<td>CDP 埠 9222</td>
+<td>NOT-FOUND（原廠未帶 <code>--remote-debugging-port</code>）</td>
+<td>✔</td>
+</tr>
+<tr>
+<td><code>DISABLE_HARDWARE_ACCELERATION</code></td>
+<td><code>0</code>（硬體加速開啟）</td>
+<td>✔</td>
+</tr>
+<tr>
+<td><code>IGNORE_CERT_ERR</code></td>
+<td><code>1</code>（MITM 風險）</td>
+<td>✔</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>⚠ 以上數字僅為 2026-11-03
+單次基線量測結果，不同機器與安裝版本可能有差異，後續優化應以本環境重新量測的基線為對照基準。</p>
+</blockquote>
+<h2 id="對主管的建議">1.4 對主管的建議</h2>
+<ol type="1">
+<li><strong>儘快簽核 ADR-003</strong>（Layer 3 技術選型修正：FlaUI/UIA →
+RDA/CDP/COM 三軌），預定於 2026-11-10 偵察 session 前完成。</li>
+<li><strong>關注原廠 OQ-F1/F2 回覆</strong>（回覆期限
+2026-11-19），此為影響 Phase 4 原廠通道升級的關鍵路徑。</li>
+<li><strong>在等待原廠回覆期間，授權 B
+線全速執行</strong>，不被原廠回覆阻塞。</li>
+<li><strong>建議先在測試機依操作手冊執行完整基線對照</strong>，量測前後差異後，再決定是否推廣至生產環境。</li>
+</ol>
+<hr />
+<h1 id="專案背景與目標">2. 專案背景與目標</h1>
+<h2 id="專案來源與定位">2.1 專案來源與定位</h2>
+<p>FlapsErp（輔翼 ERP）為輔翼系統開發的桌面應用程式，版本 v0.0.4，安裝檔
+SHA-256：<code>DC77C024629629149842714B8F599565DB04121AF043F5517450BAA5F0AE79B6</code>。應用執行環境為
+Electron (Chromium + Node.js 16.16.0)，打包架構為 ia32 32-bit，前端為
+Vue 2.6.12 + Bootstrap 5.0.1，後端為 Java
+JSP（<code>RDAPortal.jsp</code>，XML 協定
+<code>com.flaps.Module.RDA.TGetModuleInfo</code>），元件層為 Delphi/C++
+COM DLL（midas.dll、MReportViewer.dll、POSMachineController.dll
+等）。</p>
+<h2 id="專案目標">2.2 專案目標</h2>
+<p>將 FlapsErp 效能提升至可接受水準，具體包括： - 消除 UI 凍結 -
+降低記憶體增長 - 縮短表單載入與啟動時間</p>
+<h2 id="量化成功指標kpi">2.3 量化成功指標（KPI）</h2>
+<table>
+<colgroup>
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+</colgroup>
+<thead>
+<tr>
+<th>指標</th>
+<th>現況（估）</th>
+<th>目標</th>
+<th>測量方式</th>
+<th>事實等級</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>表單載入時間</td>
+<td>3–5 s</td>
+<td>&lt; 500 ms</td>
+<td>Playwright E2E 計時</td>
+<td>△ 目標值來自專案計畫</td>
+</tr>
+<tr>
+<td>COM 呼叫延遲</td>
+<td>100–500 ms</td>
+<td>&lt; 50 ms</td>
+<td>主程序日誌</td>
+<td>△ 目標值來自專案計畫</td>
+</tr>
+<tr>
+<td>UI 凍結頻率</td>
+<td>高（每次 COM 呼叫）</td>
+<td>0</td>
+<td>使用者回報 + 自動化</td>
+<td>△ 目標值來自專案計畫</td>
+</tr>
+<tr>
+<td>記憶體（8 h 連續使用）</td>
+<td>+200 MB</td>
+<td>&lt; +50 MB</td>
+<td>Electron process memory</td>
+<td>△ 目標值來自專案計畫</td>
+</tr>
+<tr>
+<td>啟動時間</td>
+<td>8–12 s</td>
+<td>&lt; 4 s</td>
+<td>冷啟動計時</td>
+<td>△ 目標值來自專案計畫</td>
+</tr>
+<tr>
+<td>COM 物件數量上限</td>
+<td>無限制</td>
+<td>≤ 50</td>
+<td>物件池監控</td>
+<td>△ 目標值來自專案計畫</td>
+</tr>
+</tbody>
+</table>
+<p>架構優化計畫（DOC-03, v2.0）進一步設定更嚴格指標：帳務登帳延遲 &lt;
+10 ms、帳務查詢延遲 &lt; 50 ms、系統啟動時間 &lt; 2 s、記憶體（8 h）&lt;
++20 MB。</p>
+<h2 id="專案範圍">2.4 專案範圍</h2>
+<h3 id="範圍內in-scope">2.4.1 範圍內（In Scope）</h3>
+<ul>
+<li>Electron 主程序與渲染程序的 IPC 架構改造（同步→非同步）</li>
+<li>COM/ActiveX 呼叫移至 Worker/Utility Process</li>
+<li>表單資料快取層（LRU + TTL）</li>
+<li>COM 物件池與生命週期管理</li>
+<li>批次 COM 呼叫合併</li>
+<li>效能監控與基準測試工具</li>
+<li>長期 Rust 後端遷移可行性評估（Phase 3）</li>
+</ul>
+<h3 id="範圍外out-of-scope">2.4.2 範圍外（Out of Scope）</h3>
+<ul>
+<li>ERP 後端系統（SAP/鼎新等）修改</li>
+<li>UI 視覺重新設計</li>
+<li>新功能開發（僅效能優化）</li>
+<li>行動裝置支援</li>
+</ul>
+<hr />
+<h1 id="問題現況與效能瓶頸">3. 問題現況與效能瓶頸</h1>
+<h2 id="已確認的效能瓶頸10-項來自逆向分析">3.1 已確認的效能瓶頸（10
+項，來自逆向分析）</h2>
+<table>
+<colgroup>
+<col style="width: 20%" />
+<col style="width: 12%" />
+<col style="width: 12%" />
+<col style="width: 12%" />
+<col style="width: 12%" />
+<col style="width: 20%" />
+<col style="width: 12%" />
+</colgroup>
+<thead>
+<tr>
+<th style="text-align: center;">#</th>
+<th>瓶頸代碼</th>
+<th>瓶頸描述</th>
+<th>影響</th>
+<th>證據來源</th>
+<th style="text-align: center;">影響度</th>
+<th>現況</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: center;">1</td>
+<td>B-1</td>
+<td>32-bit 位址空間上限</td>
+<td>大量 SKU/報表 JSON 記憶體壓力、GC 停頓</td>
+<td>electron-builder-dev.yml <code>ia32</code> ✔</td>
+<td style="text-align: center;">高</td>
+<td>未根治（原廠程式）；B 線外移重活；A 線要求 64-bit</td>
+</tr>
+<tr>
+<td style="text-align: center;">2</td>
+<td>B-2</td>
+<td>COM 呼叫走同步 IPC (<code>sendSync</code>)</td>
+<td>UI 凍結；批次掃碼/出貨延遲疊加</td>
+<td>mainApi.js:193,195,225 ✔</td>
+<td style="text-align: center;">高</td>
+<td>Phase 1 PoC 驗證批次化可行；待生產化</td>
+</tr>
+<tr>
+<td style="text-align: center;">3</td>
+<td>B-3</td>
+<td>Electron 基底記憶體高</td>
+<td>桌面常駐 300–500 MB+</td>
+<td>E-02 ✔</td>
+<td style="text-align: center;">中</td>
+<td>監控中</td>
+</tr>
+<tr>
+<td style="text-align: center;">4</td>
+<td>B-4</td>
+<td><code>backgroundThrottling:false</code></td>
+<td>背景分頁持續耗 CPU</td>
+<td>main.js:294 ✔</td>
+<td style="text-align: center;">中</td>
+<td>待 Phase 2 啟用節流</td>
+</tr>
+<tr>
+<td style="text-align: center;">5</td>
+<td>B-5</td>
+<td>UI 操作全走網路往返</td>
+<td>網速敏感；斷線即無 UI</td>
+<td>架構 ✔</td>
+<td style="text-align: center;">中</td>
+<td>TestConnection 補救中</td>
+</tr>
+<tr>
+<td style="text-align: center;">6</td>
+<td>B-6</td>
+<td>報表客端渲染（MReportViewer 14.6 MB + FastReport）</td>
+<td>大報表佔用 client CPU/RAM</td>
+<td>E-04/E-05 ✔</td>
+<td style="text-align: center;">中</td>
+<td>B 線導出後交 Wellfit 解析</td>
+</tr>
+<tr>
+<td style="text-align: center;">7</td>
+<td>B-7</td>
+<td>DLL 註冊流程（UAC + regsvr32 同步等待）</td>
+<td>部署/修復摩擦，第一次啟動慢</td>
+<td>dllManager.js ✔</td>
+<td style="text-align: center;">中</td>
+<td>不干預原廠流程</td>
+</tr>
+<tr>
+<td style="text-align: center;">8</td>
+<td>B-8</td>
+<td>每 IPC <code>console.log(args)</code></td>
+<td>序列化開銷、console 卡頓</td>
+<td>main.js:265,277 ✔</td>
+<td style="text-align: center;">低</td>
+<td>A 線建議移除</td>
+</tr>
+<tr>
+<td style="text-align: center;">9</td>
+<td>B-9</td>
+<td>下載流程暫存檔 + shell.openPath</td>
+<td>大檔下載→開啟延遲雙倍</td>
+<td>main.js:448-512 ✔</td>
+<td style="text-align: center;">低</td>
+<td>未處理</td>
+</tr>
+<tr>
+<td style="text-align: center;">10</td>
+<td>B-10</td>
+<td>舊版 OpenSSL / Vue 2 EOL / Chromium 版本未知</td>
+<td>安全修補停滯 → 長期風險</td>
+<td>E-02/E-03 ✔</td>
+<td style="text-align: center;">中</td>
+<td>A 線建議升級</td>
+</tr>
+</tbody>
+</table>
+<h2 id="問題分類矩陣">3.2 問題分類矩陣</h2>
+<table>
+<thead>
+<tr>
+<th>類別</th>
+<th>症狀</th>
+<th>根因</th>
+<th>影響度</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>UI 凍結</td>
+<td>操作 ERP 物件時畫面卡死</td>
+<td><code>sendSync</code> + COM 同步</td>
+<td>高</td>
+</tr>
+<tr>
+<td>啟動慢</td>
+<td>啟動 &gt; 10 s</td>
+<td>winax 載入 + COM 物件初始化</td>
+<td>中</td>
+</tr>
+<tr>
+<td>記憶體增長</td>
+<td>長時間使用後記憶體上升</td>
+<td>COM 物件未釋放、無 GC</td>
+<td>高</td>
+</tr>
+<tr>
+<td>表單載入慢</td>
+<td>開啟表單 &gt; 3 s</td>
+<td>無快取、重複 COM 呼叫</td>
+<td>中</td>
+</tr>
+<tr>
+<td>網路延遲</td>
+<td>API 呼叫阻塞</td>
+<td><code>netUtil.js</code> 同步風格</td>
+<td>中</td>
+</tr>
+<tr>
+<td>更新失敗</td>
+<td>更新器 VBScript 不穩定</td>
+<td>VBScript + regsvr32 同步</td>
+<td>低</td>
+</tr>
+</tbody>
+</table>
+<h2 id="軟體架構解構五層-逆向分析確認">3.3 軟體架構解構（五層，✔
+逆向分析確認）</h2>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th>層</th>
+<th>內容</th>
+<th>證據</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>L1 外殼</td>
+<td>Electron（Chromium+Node.js），exe 134 MB；視窗 1500×720
+無邊框；<code>nodeIntegration:true</code>、<code>webviewTag:true</code>、<code>backgroundThrottling:false</code>；多
+BrowserView</td>
+<td>main.js ✔</td>
+</tr>
+<tr>
+<td>L2 UI</td>
+<td>實際 ERP 畫面由 AP 伺服器以 web 頁面渲染（webview
+分頁載入），外殼僅提供分頁/標題/選單/下載；外殼自身 UI 用 Vue 2.6.12 +
+Bootstrap 5.0.1</td>
+<td>main.js <code>connectInfo.ap</code>、<code>js/vue2.6.12.js</code>
+✔</td>
+</tr>
+<tr>
+<td>L3 後端</td>
+<td>Java JSP（<code>{apUrl}/RDAPortal.jsp</code>），XML 協定
+<code>com.flaps.Module.RDA.TGetModuleInfo</code></td>
+<td>dllManager.js ✔ + 官網 ✔</td>
+</tr>
+<tr>
+<td>L4 元件</td>
+<td>COM DLL 動態部署：RDAPortal 取得模組資訊 → 下載至
+<code>C:\SYSTEM_PROGRAM_DIRECTORY\</code> → PowerShell
+<code>regsvr32 -Verb RunAs</code> 註冊（<code>.ver</code> 版本控管）；含
+midas.dll、MReportViewer.dll、POSMachineController.dll 等</td>
+<td>dllManager.js + E-04 ✔</td>
+</tr>
+<tr>
+<td>L5 授權與配置</td>
+<td>machineId/hardwareId/softwareId
+綁定（<code>KEEP_MACHINE_ID=1</code>）；config.ini（<code>IGNORE_CERT_ERR=1</code>、<code>DEBUG_FASTREPORT</code>、<code>LANG=zh_TW</code>）</td>
+<td>E-05/E-06 ✔</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h1 id="效能分析與基線量測">4. 效能分析與基線量測</h1>
+<h2 id="記憶體基線2026-11-03-首測">4.1 記憶體基線（2026-11-03
+首測，✔）</h2>
+<table>
+<thead>
+<tr>
+<th>指標</th>
+<th>數值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>總行程數</td>
+<td>11</td>
+</tr>
+<tr>
+<td>總 RAM (WorkingSet64)</td>
+<td>623.8 MB</td>
+</tr>
+<tr>
+<td>中位數單行程 RAM</td>
+<td>46.2 MB</td>
+</tr>
+<tr>
+<td>最大單行程 RAM</td>
+<td>103.9 MB</td>
+</tr>
+<tr>
+<td>32-bit 位址空間使用率</td>
+<td>~31% (623.8 / 2048 MB)</td>
+</tr>
+<tr>
+<td>32-bit OOM 風險</td>
+<td>中</td>
+</tr>
+</tbody>
+</table>
+<h2 id="com-呼叫延遲基線1000-迴路">4.2 COM 呼叫延遲基線（1000
+迴路，✔）</h2>
+<p>使用 <code>Scripting.FileSystemObject.GetSpecialFolder(2)</code>
+作為唯讀 COM 呼叫代理（proxy），量測 1000 次呼叫的延遲分布。此方法建立
+COM 每呼叫延遲的 <strong>下限（floor）</strong>，實際 FlapsErp 的 COM
+呼叫（winax sendSync）會在此基礎上疊加 IPC
+序列化、參數編組、結果反序列化等開銷。</p>
+<table>
+<thead>
+<tr>
+<th>指標</th>
+<th>數值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>P50</td>
+<td>0.2636 ms</td>
+</tr>
+<tr>
+<td>P95</td>
+<td>0.3884 ms</td>
+</tr>
+<tr>
+<td>P99</td>
+<td>0.4740 ms</td>
+</tr>
+<tr>
+<td>平均值</td>
+<td>0.3122 ms</td>
+</tr>
+<tr>
+<td>最小值</td>
+<td>~0.15 ms</td>
+</tr>
+<tr>
+<td>最大值</td>
+<td>~0.8 ms</td>
+</tr>
+</tbody>
+</table>
+<h2 id="批次化效益估算-估算值非真實-com-實測">4.3 批次化效益估算（⚠
+估算值，非真實 COM 實測）</h2>
+<p>批次化延遲為 mock 環境估算（batch_round_trip=0.4 ms,
+batch_per_item=0.02 ms），實際效益取決於 COM
+物件的實際呼叫開銷。flaps_bridge PoC 已驗證批次化模式在 mock
+環境下確實勝過逐筆呼叫（<code>batching_beats_per_call_under_measured_envelope</code>
+test，✔）。</p>
+<table>
+<thead>
+<tr>
+<th>場景</th>
+<th>逐筆延遲</th>
+<th>批次化延遲（估算）</th>
+<th>效益</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>100 次 COM 呼叫</td>
+<td>26 ms</td>
+<td>2.4 ms</td>
+<td>10.8x</td>
+</tr>
+<tr>
+<td>1000 次 COM 呼叫</td>
+<td>260 ms</td>
+<td>20.4 ms</td>
+<td>12.7x</td>
+</tr>
+<tr>
+<td>10000 次 COM 呼叫</td>
+<td>2600 ms</td>
+<td>216 ms</td>
+<td>12.0x</td>
+</tr>
+</tbody>
+</table>
+<h2 id="cdp-通道與-config-基線">4.4 CDP 通道與 config 基線（✔）</h2>
+<ul>
+<li>CDP 埠 9222 <code>/json/list</code>：NOT-FOUND（FlapsErp 未帶
+<code>--remote-debugging-port</code> 啟動）</li>
+<li><code>DISABLE_HARDWARE_ACCELERATION=0</code>（硬體加速開啟）</li>
+<li><code>IGNORE_CERT_ERR=1</code>（MITM 風險，RSK-E2）</li>
+</ul>
+<hr />
+<h1 id="問題排查紀錄">5. 問題排查紀錄</h1>
+<table>
+<colgroup>
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+</colgroup>
+<thead>
+<tr>
+<th>排查項目</th>
+<th>方法</th>
+<th>結果</th>
+<th>狀態</th>
+<th>事實等級</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>安裝檔與目錄掃描</td>
+<td><code>Get-FileHash</code> + 目錄掃描</td>
+<td>安裝檔 SHA-256 取得；19 項 + script/ + resources/</td>
+<td>✅ 完成</td>
+<td>✔</td>
+</tr>
+<tr>
+<td><code>resources\app.asar</code> 解析</td>
+<td>asar 解析 + 26 檔案提取 + 逐行分析</td>
+<td>11,832,082 bytes，1,177 檔案；核心 26 檔全讀</td>
+<td>✅ 完成</td>
+<td>✔</td>
+</tr>
+<tr>
+<td>執行時期元件掃描</td>
+<td>目錄掃描</td>
+<td>12 檔 + .ver</td>
+<td>✅ 完成</td>
+<td>✔</td>
+</tr>
+<tr>
+<td>config 與授權檔讀取</td>
+<td>讀取（金鑰值遮蔽）</td>
+<td>config.ini、machineId/hardwareId/softwareId.txt</td>
+<td>✅ 完成</td>
+<td>✔</td>
+</tr>
+<tr>
+<td>Module 目錄掃描</td>
+<td>目錄掃描</td>
+<td>POSMachineController.jsc、Winax.node</td>
+<td>✅ 完成</td>
+<td>✔</td>
+</tr>
+<tr>
+<td>AP 伺服器設定結構檢視</td>
+<td>結構檢視</td>
+<td><code>FlapsErpData\AP\*.json</code>（3 台 AP
+伺服器設定，僅讀結構未取值）</td>
+<td>✅ 結構完整</td>
+<td>✔</td>
+</tr>
+<tr>
+<td>網路官方資訊查證</td>
+<td>websearch</td>
+<td>flaps.com.tw 官方網站 7 頁</td>
+<td>✅ 完成</td>
+<td>✔</td>
+</tr>
+<tr>
+<td>COM 延遲基準測試</td>
+<td><code>flaps-perf.ps1 -Probe com</code></td>
+<td>Scripting.FileSystemObject 唯讀代理，1000 迴路 P50=0.26 ms</td>
+<td>✅ 完成</td>
+<td>✔</td>
+</tr>
+<tr>
+<td>行程 RAM 採樣</td>
+<td><code>flaps-perf.ps1 -Probe baseline</code></td>
+<td>11 行程，總 RAM 623.8 MB</td>
+<td>✅ 完成</td>
+<td>✔</td>
+</tr>
+<tr>
+<td>CDP 埠探測</td>
+<td><code>flaps-perf.ps1 -Probe cdp</code></td>
+<td>埠 9222 NOT-FOUND</td>
+<td>✅ 完成</td>
+<td>✔</td>
+</tr>
+<tr>
+<td>COM 批次化 PoC</td>
+<td><code>cargo test -p flaps_bridge</code></td>
+<td>7 測試通過（mock transport）</td>
+<td>✅ 完成</td>
+<td>✔</td>
+</tr>
+<tr>
+<td>Wellfit 冪等批次外移實測</td>
+<td><code>run-mtrix-pipeline.ps1</code></td>
+<td>首跑 clean (1635 ms)，冪等重跑正確拒絕重複 batch (38 ms)</td>
+<td>✅ 完成</td>
+<td>✔</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h1 id="解決方案架構">6. 解決方案架構</h1>
+<h2 id="整體策略雙軌並行">6.1 整體策略：雙軌並行</h2>
+<table>
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+</colgroup>
+<thead>
+<tr>
+<th>軌道</th>
+<th>內容</th>
+<th>可執行性</th>
+<th>依賴</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A 線（向原廠）</td>
+<td>提供 64-bit 打版、移除 <code>IGNORE_CERT_ERR</code> 預設開啟、COM
+呼叫改非同步 IPC、移除 IPC log、動態
+<code>backgroundThrottling</code>、升級 OpenSSL/Vue/Chromium、RDA API
+文件化</td>
+<td>依賴原廠回覆</td>
+<td>OQ-F1/F2（回覆期限 2026-11-19）</td>
+</tr>
+<tr>
+<td>B 線（我方環境）</td>
+<td>Utility Process、非同步 IPC、表單 LRU 快取、COM 物件池、批次 COM
+呼叫、序列化優化、背景分頁節流、Wellfit 批次外移、flapserp://
+排程、config.ini 調優</td>
+<td>可立即執行</td>
+<td>無外部依賴</td>
+</tr>
+</tbody>
+</table>
+<h2 id="三階段實施路徑">6.2 三階段實施路徑</h2>
+<h3 id="phase-1-立即見效12-週-已完成">Phase 1 — 立即見效（1–2 週，✅
+已完成）</h3>
+<ol type="1">
+<li>COM 呼叫移至 Worker/Utility Process</li>
+<li>同步 IPC → 非同步 IPC (<code>ipcRenderer.invoke</code> +
+Promise)</li>
+<li>啟用硬體加速</li>
+<li>表單資料快取（LRU，TTL 5 分鐘）</li>
+</ol>
+<h3 id="phase-2-架構優化36-週-下期">Phase 2 — 架構優化（3–6 週，⏳
+下期）</h3>
+<ol start="5" type="1">
+<li>COM 物件池 + 生命週期管理（上限 50，WeakRef 自動釋放）</li>
+<li>批次 COM 呼叫（合併屬性讀取，減少 IPC 往返 80%+）</li>
+<li>資料序列化優化（structured clone / transferable）</li>
+<li>背景分頁節流 (<code>backgroundThrottling: true</code>)</li>
+</ol>
+<h3 id="phase-3-長期23-月-待執行">Phase 3 — 長期（2–3 月，⏳
+待執行）</h3>
+<ol start="9" type="1">
+<li>遷移至 Rust 後端（wellfit 整合方向，sidecar）</li>
+<li>效能監控與基準（JS benchmark，目標：表單載入 &lt; 500 ms、COM 呼叫
+&lt; 50 ms、記憶體穩定）</li>
+</ol>
+<h2 id="關鍵組件建構清單">6.3 關鍵組件建構清單</h2>
+<table style="width:99%;">
+<colgroup>
+<col style="width: 16%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
+</colgroup>
+<thead>
+<tr>
+<th>ID</th>
+<th>組件</th>
+<th>優先</th>
+<th>現況</th>
+<th>狀態</th>
+<th>事實等級</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>C-01</td>
+<td>flaps-bridge（Rust COM 客戶端、批次呼叫器、物件池）</td>
+<td>P1</td>
+<td>PoC 完成 (T-102)，待生產化 (T-301)</td>
+<td>處理中</td>
+<td>✔ PoC 測試通過</td>
+</tr>
+<tr>
+<td>C-02</td>
+<td>cdp-pilot（CDP 驅動外殼分頁）</td>
+<td>P2</td>
+<td>Playbook v0.1 完成 (T-104)</td>
+<td>已完成</td>
+<td>✔ Playbook 落盤</td>
+</tr>
+<tr>
+<td>C-03</td>
+<td>效能量測套件（PowerShell + ETW）</td>
+<td>P0</td>
+<td>✅ 完成 (T-101)</td>
+<td>已完成</td>
+<td>✔ 腳本存在並執行</td>
+</tr>
+<tr>
+<td>C-04</td>
+<td>config 快照/備份工具</td>
+<td>P1</td>
+<td>✅ 完成 (T-107)</td>
+<td>已完成</td>
+<td>✔ 快照 + manifest 產出</td>
+</tr>
+<tr>
+<td>C-05</td>
+<td>OQ-F1/F2 提案包（向輔翼索取 RDA
+規格、匯入範本、報表樣本、64-bit、憑證設定）</td>
+<td>P0</td>
+<td>✅ 已送出 (2026-11-03)，回覆期限 2026-11-19</td>
+<td>待確認</td>
+<td>⚠ 待原廠回覆</td>
+</tr>
+<tr>
+<td>C-06</td>
+<td>零 JS 報表看板（PostgreSQL 18 + Askama）</td>
+<td>P2</td>
+<td>待 Phase 3 (T-302)</td>
+<td>尚未執行</td>
+<td>△ 架構設計完成</td>
+</tr>
+</tbody>
+</table>
+<h2 id="自動化通道分級依穩定性排序-逆向分析確認">6.4
+自動化通道分級（依穩定性排序，✔ 逆向分析確認）</h2>
+<table>
+<colgroup>
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+</colgroup>
+<thead>
+<tr>
+<th>級</th>
+<th>通道</th>
+<th>適用場景</th>
+<th>前置</th>
+<th>風險</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A1</td>
+<td>檔案交換 + flapserp:// 啟動</td>
+<td>匯入批次、開啟指定作業頁、匯出報表後取檔</td>
+<td>無（官方入口）✔</td>
+<td>低</td>
+</tr>
+<tr>
+<td>A2</td>
+<td>COM（winax/FLAPSConsoleCOM）</td>
+<td>需要處理序內互動（POS、報表檢視控制）</td>
+<td>Rust COM bridge PoC；⚠ EULA/授權確認</td>
+<td>中（原廠更新元件）</td>
+</tr>
+<tr>
+<td>A3</td>
+<td>CDP/DOM</td>
+<td>無 API 的畫面流程（表單填寫、簽核）</td>
+<td>遠端除錯埠取得方式 ⚠ 需與原廠確認</td>
+<td>中</td>
+</tr>
+<tr>
+<td>A4</td>
+<td>RDAPortal RDA 直連</td>
+<td>大量資料讀寫（訂單、庫存、傳票）</td>
+<td>OQ 登記：向原廠索取 RDA API 規格/白名單</td>
+<td>中（未文件化 △）</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h1 id="執行進度與里程碑">7. 執行進度與里程碑</h1>
+<h2 id="藍圖階段總覽p1p4">7.1 藍圖階段總覽（P1–P4）</h2>
+<table>
+<colgroup>
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+</colgroup>
+<thead>
+<tr>
+<th>階段</th>
+<th>週數</th>
+<th>目標</th>
+<th>關鍵產出</th>
+<th>狀態</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Phase 1</td>
+<td>1–4</td>
+<td>基礎架構搭建</td>
+<td>量測工具、COM 批次化 PoC、Wellfit 冪等批次外移、config 快照、ADR-003
+草案、風險追蹤表</td>
+<td>✅ 已完成</td>
+</tr>
+<tr>
+<td>Phase 2</td>
+<td>5–8</td>
+<td>開發系統建置</td>
+<td>偵察 session、A1 檔案通道端到端、月結對帳試行</td>
+<td>⏳ 處理中（11/10–11/16）</td>
+</tr>
+<tr>
+<td>Phase 3</td>
+<td>9–12</td>
+<td>智能化與自動化</td>
+<td>flaps-bridge 生產化、零 JS 報表看板、AI 裁決閉環</td>
+<td>⏳ 待執行（11/17–12/05）</td>
+</tr>
+<tr>
+<td>Phase 4</td>
+<td>13–16</td>
+<td>整合測試與部署</td>
+<td>RDA API 直連、64-bit/憑證/同步 IPC 需求驗收、CDP 正式化</td>
+<td>⚠ 待原廠回覆</td>
+</tr>
+</tbody>
+</table>
+<h2 id="phase-1-任務完成情形全部">7.2 Phase 1 任務完成情形（全部
+✅）</h2>
+<table>
+<colgroup>
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+</colgroup>
+<thead>
+<tr>
+<th>ID</th>
+<th>任務</th>
+<th>狀態</th>
+<th>產出/證據</th>
+<th>事實等級</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>T-101</td>
+<td>C-03 效能基線量測工具 + 首採樣</td>
+<td>✅ 完成</td>
+<td><code>Wellfit/artifacts/perf/20261103-160315/</code></td>
+<td>✔</td>
+</tr>
+<tr>
+<td>T-102</td>
+<td>COM 批次化 PoC (<code>crates/flaps_bridge</code>)</td>
+<td>✅ 完成</td>
+<td>7 測試綠、clippy 0、fmt 0</td>
+<td>✔</td>
+</tr>
+<tr>
+<td>T-103</td>
+<td>Wellfit 冪等批次外移腳本 + 實測</td>
+<td>✅ 完成</td>
+<td>首跑 98 ms，冪等重跑 18 ms</td>
+<td>✔</td>
+</tr>
+<tr>
+<td>T-104</td>
+<td>CDP/DOM 軌道探測 + Playbook</td>
+<td>✅ 完成</td>
+<td><code>CDP自動化Playbook_A3軌道_v0.1.md</code></td>
+<td>✔</td>
+</tr>
+<tr>
+<td>T-105</td>
+<td>ADR-003 草案（Layer 3 三軌修正）</td>
+<td>✅ 完成（Draft 待會簽）</td>
+<td><code>FlapsErp_RPA_電商系統對接_ADR-003_..._草案.md</code></td>
+<td>✔ 文件落盤，待簽核</td>
+</tr>
+<tr>
+<td>T-106</td>
+<td>合規風險追蹤表</td>
+<td>✅ 完成</td>
+<td>RSK-E1~E8，含原廠元件區唯讀紅線</td>
+<td>✔</td>
+</tr>
+<tr>
+<td>T-107</td>
+<td>config.ini + .conf 快照 + SHA256 manifest</td>
+<td>✅ 完成</td>
+<td><code>artifacts/perf/20261103-160315/config-snapshot/</code></td>
+<td>✔</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Phase 1 退出條件</strong>：T-101<sub>T-103、T-105</sub>T-107
+全數 ✅；T-104 完成（結果可為 NOT-FOUND，不阻塞）。已達成。</p>
+<h2 id="phase-2-任務11101116待啟動">7.3 Phase 2
+任務（11/10–11/16，待啟動）</h2>
+<table>
+<colgroup>
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+</colgroup>
+<thead>
+<tr>
+<th>ID</th>
+<th>任務</th>
+<th>優先</th>
+<th>依賴</th>
+<th>狀態</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>T-201</td>
+<td>偵察 session（11/10）→ 通道可行性表 + ADR-003 簽核</td>
+<td>P0</td>
+<td>T-104, T-105</td>
+<td>待執行</td>
+</tr>
+<tr>
+<td>T-202</td>
+<td>A1 檔案通道端到端（Windmill → Wellfit → flapserp:// →
+匯入回執）</td>
+<td>P0</td>
+<td>T-103, T-201</td>
+<td>待執行</td>
+</tr>
+<tr>
+<td>T-203</td>
+<td>月結對帳試行（真實月結 1 次，差異率 ≤ 0.5%）</td>
+<td>P0</td>
+<td>T-202, 報表樣本 (⚠ OI-006)</td>
+<td>待執行</td>
+</tr>
+</tbody>
+</table>
+<h2 id="phase-34-任務待執行">7.4 Phase 3–4 任務（待執行）</h2>
+<table>
+<colgroup>
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+</colgroup>
+<thead>
+<tr>
+<th>ID</th>
+<th>任務</th>
+<th>優先</th>
+<th>依賴</th>
+<th>狀態</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>T-301</td>
+<td>flaps-bridge 生產化（真實 COM 通道 + 物件池 + .ver 變動偵測）</td>
+<td>P1</td>
+<td>T-102 Go、EULA 書面確認</td>
+<td>待執行</td>
+</tr>
+<tr>
+<td>T-302</td>
+<td>C-06 零 JS 報表看板</td>
+<td>P2</td>
+<td>T-203</td>
+<td>待執行</td>
+</tr>
+<tr>
+<td>T-303</td>
+<td>AI 裁決閉環（ekpi 規則接 Wellfit 隔離列）</td>
+<td>P2</td>
+<td>T-203</td>
+<td>待執行</td>
+</tr>
+<tr>
+<td>T-401</td>
+<td>RDA API 直連落地</td>
+<td>P1</td>
+<td>OQ-F1 書面規格 (⚠)</td>
+<td>待原廠回覆</td>
+</tr>
+<tr>
+<td>T-402</td>
+<td>64-bit/憑證/同步 IPC 需求驗收</td>
+<td>P1</td>
+<td>C-05 回覆</td>
+<td>待原廠回覆</td>
+</tr>
+<tr>
+<td>T-403</td>
+<td>CDP 正式化</td>
+<td>P2</td>
+<td>T-104 現場驗證 + 原廠政策</td>
+<td>待執行</td>
+</tr>
+</tbody>
+</table>
+<h2 id="進度指標">7.5 進度指標</h2>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr>
+<th>項目</th>
+<th>數值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>整體進度 %</td>
+<td>約 30%（Phase 1/4 已完）</td>
+</tr>
+<tr>
+<td>Phase 1 任務完成</td>
+<td>7 / 7 (100%)</td>
+</tr>
+<tr>
+<td>Phase 2 任務完成</td>
+<td>0 / 3</td>
+</tr>
+<tr>
+<td>風險燈</td>
+<td>🟡 黃（EULA/授權邊界未明、32-bit 記憶體上限、元件漂移）</td>
+</tr>
+<tr>
+<td>里程碑</td>
+<td>M1 架構設計確認 ✅ → M2 Phase 1 完成 ✅ → M3 Phase 1 驗收 ✅ → M4
+Phase 2 完成（處理中）</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h1 id="待處理風險與合規">8. 待處理風險與合規</h1>
+<h2 id="風險矩陣rsk-e1-e9">8.1 風險矩陣（RSK-E1 ~ E9）</h2>
+<table>
+<colgroup>
+<col style="width: 12%" />
+<col style="width: 12%" />
+<col style="width: 12%" />
+<col style="width: 12%" />
+<col style="width: 12%" />
+<col style="width: 12%" />
+<col style="width: 12%" />
+<col style="width: 12%" />
+</colgroup>
+<thead>
+<tr>
+<th>風險 ID</th>
+<th>風險描述</th>
+<th>機率</th>
+<th>影響</th>
+<th>分數</th>
+<th>等級</th>
+<th>狀態</th>
+<th>緩解措施</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>RSK-E1</td>
+<td>EULA/授權邊界未明（COM/CDP/RDA 自動化可能超出原廠授權）</td>
+<td>3</td>
+<td>5</td>
+<td>15</td>
+<td>極高</td>
+<td>Open</td>
+<td>OQ-F1 書面回覆前僅用官方入口；COM/RDA 僅 PoC</td>
+</tr>
+<tr>
+<td>RSK-E2</td>
+<td>憑證忽略 (<code>IGNORE_CERT_ERR=1</code>) MITM 風險</td>
+<td>3</td>
+<td>5</td>
+<td>15</td>
+<td>極高</td>
+<td>Open</td>
+<td>C-05 提案包要求原廠修正；過渡期網路層補償</td>
+</tr>
+<tr>
+<td>RSK-E3</td>
+<td>32-bit 記憶體上限（~2GB，大報表/大批次易撞牆）</td>
+<td>4</td>
+<td>3</td>
+<td>12</td>
+<td>高</td>
+<td>Open</td>
+<td>批次工作外移 Wellfit；監控 RAM 基線；A 線要求 64-bit</td>
+</tr>
+<tr>
+<td>RSK-E4</td>
+<td>元件漂移（Winax.node 2026-11-03 已更新，原廠活躍開發中）</td>
+<td>3</td>
+<td>4</td>
+<td>12</td>
+<td>高</td>
+<td>Open</td>
+<td>flaps-bridge <code>.ver</code> 偵測 + 契約測試；變動即告警</td>
+</tr>
+<tr>
+<td>RSK-E5</td>
+<td>誤寫原廠元件區 (<code>C:\SYSTEM_PROGRAM_DIRECTORY</code>)</td>
+<td>2</td>
+<td>5</td>
+<td>10</td>
+<td>高</td>
+<td>Open</td>
+<td>紅線入所有腳本頭註；唯讀開啟；寫入僅允許
+<code>%TEMP%\flaps</code></td>
+</tr>
+<tr>
+<td>RSK-E6</td>
+<td>同步 IPC 凍結擴散（COM sendSync 使 UI 凍結）</td>
+<td>4</td>
+<td>3</td>
+<td>12</td>
+<td>高</td>
+<td>Open</td>
+<td>批次呼叫集中 Wellfit 側；避開營業高峰排程</td>
+</tr>
+<tr>
+<td>RSK-E7</td>
+<td>UAC 提權摩擦（DLL 註冊 regsvr32 -Verb RunAs）</td>
+<td>3</td>
+<td>3</td>
+<td>9</td>
+<td>中</td>
+<td>Open</td>
+<td>不干預原廠更新流程；記錄發生頻率</td>
+</tr>
+<tr>
+<td>RSK-E9</td>
+<td>提案無回應（OQ-F1/F2 送出後原廠無回覆）</td>
+<td>3</td>
+<td>4</td>
+<td>12</td>
+<td>高</td>
+<td>Open</td>
+<td>回覆期限 2026-11-19；14 天無回覆啟動升級</td>
+</tr>
+</tbody>
+</table>
+<p>評分：機率(1-5) × 影響(1-5)；≥15 極高、10–14 高、5–9 中、≤4 低（MOP
+§16.2）。</p>
+<h2 id="紅線禁忌絕對不可違反">8.2 紅線禁忌（絕對不可違反）</h2>
+<ol type="1">
+<li>任何變更不得寫入
+<code>C:\SYSTEM_PROGRAM_DIRECTORY</code>（原廠元件區），唯讀觀測除外。</li>
+<li>在取得原廠 EULA 書面政策前，COM/RDA 自動化僅限 PoC，不上生產。</li>
+<li>所有寫入僅允許 <code>%TEMP%\flaps</code> 與我方輸出目錄。</li>
+<li>不直接寫入 ERP
+資料庫；所有寫入走官方匯入入口，回滾＝不匯入/沖帳反向單據（會計程序）。</li>
+</ol>
+<h2 id="回滾總矩陣">8.3 回滾總矩陣</h2>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th>變更類別</th>
+<th>回滾程序</th>
+<th>驗證方式</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>測量腳本（T-101/T-104）</td>
+<td>刪除 scripts/perf + artifacts；無系統狀態</td>
+<td>Wellfit repo <code>git status</code> 乾淨</td>
+</tr>
+<tr>
+<td>Rust PoC crate（T-102）</td>
+<td>刪 <code>crates/flaps_bridge</code> + 根 Cargo.toml members
+還原</td>
+<td><code>cargo check --workspace</code> 通過</td>
+</tr>
+<tr>
+<td>批次腳本（T-103）</td>
+<td>刪 scripts/erp-batch；執行產物刪 artifacts + 執行 db</td>
+<td>ledger 冪等：同批次重跑被拒即證明可追溯</td>
+</tr>
+<tr>
+<td>config.ini 調優（P1 A/B）</td>
+<td>從 T-107 快照 manifest 逐檔還原 + SHA256 比對</td>
+<td>manifest 比對 100% 一致</td>
+</tr>
+<tr>
+<td>COM 註冊（未來 T-301）</td>
+<td><code>regsvr32 /u &lt;dll&gt;</code> + 移除 Module 檔 + .ver</td>
+<td>COM 物件列舉為空</td>
+</tr>
+<tr>
+<td>ERP 端資料</td>
+<td>我方不直接寫 ERP 資料庫；所有寫入走官方匯入入口</td>
+<td>ledger 對帳</td>
+</tr>
+<tr>
+<td>文件（ADR/風險/藍圖）</td>
+<td>標 Superseded + 移入 archive</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h1 id="後續規劃與行動計畫">9. 後續規劃與行動計畫</h1>
+<h2 id="近-2-週計畫11101116">9.1 近 2 週計畫（11/10–11/16）</h2>
+<table>
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+</colgroup>
+<thead>
+<tr>
+<th>日期</th>
+<th>行動</th>
+<th>負責</th>
+<th>產出</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>2026-11-10</td>
+<td>T-201 偵察 session（檔案匯出路徑 15m / CDP 20m / COM 列舉 20m /
+RDAPortal 探測 20m / ADR-003 定稿 15m）</td>
+<td>PMT + DEV</td>
+<td>會議紀錄、通道可行性表、ADR-003 簽核</td>
+</tr>
+<tr>
+<td>11/10–11/16</td>
+<td>T-202 A1 檔案通道端到端試行</td>
+<td>DEV + OPS</td>
+<td>端到端耗時、人工觸點數 (目標 ≤2)、回執與 ledger 對帳</td>
+</tr>
+<tr>
+<td>11/10–11/16</td>
+<td>T-203 月結對帳試行（1 個真實月結）</td>
+<td>DEV + ERP 領域專家</td>
+<td>差異率 ≤ 0.5%、對帳證據鏈、月結工時對比 (目標 -80%)</td>
+</tr>
+<tr>
+<td>2026-11-19</td>
+<td>OQ-F1/F2 提案包回覆期限</td>
+<td>PMT</td>
+<td>原廠回覆或升級啟動</td>
+</tr>
+</tbody>
+</table>
+<h2 id="決策需求與阻礙需要主管核准">9.2
+決策需求與阻礙（需要主管核准）</h2>
+<table style="width:99%;">
+<colgroup>
+<col style="width: 16%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
+</colgroup>
+<thead>
+<tr>
+<th>#</th>
+<th>項目</th>
+<th>說明</th>
+<th>決策者</th>
+<th>期限</th>
+<th>狀態</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>ADR-003 草案簽核</td>
+<td>Layer 3 技術選型修正（FlaUI/UIA → RDA/CDP/COM 三軌）已落盤，狀態
+Draft</td>
+<td>主管 / 架構團隊</td>
+<td>11/10 偵察 session 前</td>
+<td>待簽核</td>
+</tr>
+<tr>
+<td>2</td>
+<td>EULA/自動化政策書面回覆</td>
+<td>OQ-F1 已送出，回覆期限 2026-11-19；無回覆時 B 線僅用官方入口</td>
+<td>PMT + 法務</td>
+<td>2026-11-19</td>
+<td>待原廠回覆</td>
+</tr>
+<tr>
+<td>3</td>
+<td>ERP 匯入範本/欄位字典（OI-006）</td>
+<td>缺口 open，影響 A1 通道匯入契約定義</td>
+<td>ERP 領域專家 + 原廠</td>
+<td>待原廠提供</td>
+<td>待確認</td>
+</tr>
+<tr>
+<td>4</td>
+<td>報表樣本（VR-12 總額核對）</td>
+<td>缺口 open，影響月結對帳試行</td>
+<td>ERP 領域專家 + 原廠</td>
+<td>待原廠提供</td>
+<td>待確認</td>
+</tr>
+</tbody>
+</table>
+<h2 id="長期規劃phase-34">9.3 長期規劃（Phase 3–4）</h2>
+<ul>
+<li>flaps-bridge 生產化（真實 COM 通道、物件池、.ver 變動偵測，依 EULA
+書面確認）</li>
+<li>零 JS 報表看板（PostgreSQL 18 + Askama，Strict Zero-JS First）</li>
+<li>AI 裁決閉環（ekpi 規則接 Wellfit 隔離列，裁決結果回寫 ANOM
+規則庫）</li>
+<li>RDA API 直連落地（依原廠回覆）</li>
+<li>64-bit/憑證/同步 IPC 需求驗收（依原廠回覆）</li>
+<li>CDP 正式化（依現場驗證 + 原廠政策）</li>
+</ul>
+<hr />
+<h1 id="成效驗證與驗收標準">10. 成效驗證與驗收標準</h1>
+<h2 id="已驗證項目-實際測試通過">10.1 已驗證項目（✔ 實際測試通過）</h2>
+<table>
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+</colgroup>
+<thead>
+<tr>
+<th>驗證項目</th>
+<th>測試方法</th>
+<th>結果</th>
+<th>備註</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>flaps_bridge 批次邏輯</td>
+<td><code>cargo test -p flaps_bridge</code></td>
+<td>7/7 測試通過，0 失敗</td>
+<td>Mock transport 環境，非真實 COM</td>
+</tr>
+<tr>
+<td>flaps_bridge clippy</td>
+<td><code>cargo clippy -p flaps_bridge -- -D warnings</code></td>
+<td>零警告</td>
+<td>✔</td>
+</tr>
+<tr>
+<td>flaps_bridge 格式化</td>
+<td><code>cargo fmt -p flaps_bridge -- --check</code></td>
+<td>0 差異</td>
+<td>✔</td>
+</tr>
+<tr>
+<td>Wellfit MTRIX 管線首跑</td>
+<td><code>run-mtrix-pipeline.ps1</code></td>
+<td>首跑 clean (1635 ms)，5 檔/25 列/37 修復/51 findings，exit 0</td>
+<td>真實 MTRIX 交付 fixtures</td>
+</tr>
+<tr>
+<td>Wellfit 冪等重跑</td>
+<td><code>run-mtrix-pipeline.ps1</code></td>
+<td>18 ms，正確拒絕重複批次</td>
+<td>duplicate batch 已註冊</td>
+</tr>
+<tr>
+<td>效能基線量測工具</td>
+<td><code>flaps-perf.ps1 -Probe all</code></td>
+<td>輸出 JSON + Markdown 基線</td>
+<td>唯讀觀測，不寫入原廠目錄</td>
+</tr>
+</tbody>
+</table>
+<h2 id="待驗證項目-尚未執行">10.2 待驗證項目（⚠ 尚未執行）</h2>
+<table>
+<colgroup>
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+</colgroup>
+<thead>
+<tr>
+<th>驗證項目</th>
+<th>預計方法</th>
+<th>預計時間</th>
+<th>依賴條件</th>
+<th>事實等級</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>真實 COM 批次 vs 逐筆延遲對比</td>
+<td>flaps-bridge 生產化後對真實 FLAPSConsoleCOM 物件量測</td>
+<td>Phase 3 (T-301)</td>
+<td>EULA 書面確認</td>
+<td>⚠</td>
+</tr>
+<tr>
+<td>A1 檔案通道端到端耗時</td>
+<td>Windmill → Wellfit → flapserp:// → 匯入回執</td>
+<td>Phase 2 (T-202)</td>
+<td>ERP 匯入範本 (OI-006)</td>
+<td>⚠</td>
+</tr>
+<tr>
+<td>月結對帳差異率</td>
+<td>真實月結 1 次，差異率 ≤ 0.5%</td>
+<td>Phase 2 (T-203)</td>
+<td>報告樣本 (VR-12)</td>
+<td>⚠</td>
+</tr>
+<tr>
+<td>config.ini A/B 調優效益</td>
+<td>修改 config.ini 前後重跑 flaps-perf.ps1 對比</td>
+<td>安裝新版後立即執行</td>
+<td>僅限 config.ini，不動原廠程式</td>
+<td>△</td>
+</tr>
+</tbody>
+</table>
+<h2 id="驗收標準參考專案計畫-v1.0-8.2">10.3 驗收標準（參考專案計畫 v1.0
+§8.2）</h2>
+<table>
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+</colgroup>
+<thead>
+<tr>
+<th>驗收代碼</th>
+<th>驗收項目</th>
+<th>可量測完成條件</th>
+<th>狀態</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>AC-01</td>
+<td>所有 P1 功能需求實作完成</td>
+<td>FR-01~FR-06 全數實作</td>
+<td>進行中</td>
+</tr>
+<tr>
+<td>AC-02</td>
+<td>KPI 全部達標</td>
+<td>見 §2.3 量化成功指標表</td>
+<td>待驗證</td>
+</tr>
+<tr>
+<td>AC-03</td>
+<td>Soak 測試 8 h 無崩潰、記憶體增長 &lt; 50 MB</td>
+<td>Electron process memory 監控</td>
+<td>待執行</td>
+</tr>
+<tr>
+<td>AC-04</td>
+<td>回歸測試通過率 100%</td>
+<td>Playwright 既有功能不退化</td>
+<td>待執行</td>
+</tr>
+<tr>
+<td>AC-05</td>
+<td>文件更新完整（API、架構、操作手冊）</td>
+<td>本報告與操作手冊 v2.0</td>
+<td>已完成</td>
+</tr>
+<tr>
+<td>AC-06</td>
+<td>主管正式核准</td>
+<td>本報告提交後簽核</td>
+<td>待核准</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h1 id="附錄">附錄</h1>
+<h2 id="附錄-a技術名詞對照表">附錄 A：技術名詞對照表</h2>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr>
+<th>名稱</th>
+<th>說明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>COM</td>
+<td>Component Object Model，Windows 元件物件模型</td>
+</tr>
+<tr>
+<td>winax</td>
+<td>Node.js ActiveX/COM 橋接套件</td>
+</tr>
+<tr>
+<td>IPC</td>
+<td>Inter-Process Communication，程序間通訊</td>
+</tr>
+<tr>
+<td>Utility Process</td>
+<td>Electron 推薦的背景程序執行方式</td>
+</tr>
+<tr>
+<td>LRU</td>
+<td>Least Recently Used，最近最少使用快取策略</td>
+</tr>
+<tr>
+<td>WeakRef / FinalizationRegistry</td>
+<td>JavaScript 弱參考與最終化登記表，用於自動釋放物件</td>
+</tr>
+<tr>
+<td>flapserp://</td>
+<td>FlapsErp 自訂協定啟動通道</td>
+</tr>
+<tr>
+<td>Wellfit</td>
+<td>我方 8-crate Rust 工作區，作為批次引擎與側車</td>
+</tr>
+<tr>
+<td>Windmill</td>
+<td>原生二進位排程系統（非 Docker，依 corrections.md 裁定）</td>
+</tr>
+<tr>
+<td>OQ-F1/F2</td>
+<td>向輔翼提出的正式需求提案</td>
+</tr>
+<tr>
+<td>bytenode</td>
+<td>位元碼保護模組（.jsc），使商業邏輯成為黑箱</td>
+</tr>
+<tr>
+<td>sendSync</td>
+<td>Electron 同步 IPC 發送方式，會阻塞渲染執行緒</td>
+</tr>
+<tr>
+<td>invoke/handle</td>
+<td>Electron 非同步 IPC（Promise-based）</td>
+</tr>
+</tbody>
+</table>
+<h2 id="附錄-b原始文件索引">附錄 B：原始文件索引</h2>
+<table>
+<colgroup>
+<col style="width: 35%" />
+<col style="width: 21%" />
+<col style="width: 21%" />
+<col style="width: 21%" />
+</colgroup>
+<thead>
+<tr>
+<th style="text-align: center;">編號</th>
+<th>文件名稱</th>
+<th>路徑</th>
+<th>主要內容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: center;">DOC-01</td>
+<td>輔翼 FlapsErp 效能問題深度分析與最佳解決方案</td>
+<td><code>flaps_erp_performance_analysis.md</code></td>
+<td>效能瓶頸（10 項）、解決方案（三階段）、KPI</td>
+</tr>
+<tr>
+<td style="text-align: center;">DOC-02</td>
+<td>輔翼 FlapsErp 效能優化專案—完整專案文件與開發前準備報告</td>
+<td><code>flaps_erp_project_plan.md</code></td>
+<td>專案目標、範圍、需求、架構、里程碑、驗收標準</td>
+</tr>
+<tr>
+<td style="text-align: center;">DOC-03</td>
+<td>Flaps ERP 系統架構全面優化計畫—第一性原理設計</td>
+<td><code>flaps_erp_architecture_optimization_plan.md</code></td>
+<td>架構優化 v2.0、更嚴格 KPI、管線拆分、資料模型</td>
+</tr>
+<tr>
+<td style="text-align: center;">DOC-04</td>
+<td>輔翼 ERP（FlapsErp）逆向工程分析與效能最佳化方案 v1.0</td>
+<td><code>docs/research/輔翼ERP逆向分析與最佳化方案_v1.0.md</code></td>
+<td>逆向解構（五層）、六條整合通道、十項瓶頸、雙軌策略</td>
+</tr>
+<tr>
+<td style="text-align: center;">DOC-05</td>
+<td>輔翼 ERP 優化多階段執行藍圖 v1.0</td>
+<td><code>docs/research/輔翼ERP優化多階段執行藍圖_v1.0.md</code></td>
+<td>P1–P4 階段任務、退出條件、回滾矩陣、Phase 1 執行紀錄</td>
+</tr>
+<tr>
+<td style="text-align: center;">DOC-06</td>
+<td>FlapsErp 效能基線報告 v1.0</td>
+<td><code>docs/research/FlapsErp效能基線報告_v1.0.md</code></td>
+<td>2026-11-03 首測：RAM、COM 延遲、CDP、config 基線</td>
+</tr>
+<tr>
+<td style="text-align: center;">DOC-07</td>
+<td>FlapsErp 優化—合規風險追蹤表 v1.0</td>
+<td><code>docs/research/FlapsErp優化_合規風險追蹤表.md</code></td>
+<td>RSK-E1~E9 風險矩陣、紅線禁忌</td>
+</tr>
+<tr>
+<td style="text-align: center;">DOC-08</td>
+<td>T-02 週度狀態報告模板</td>
+<td><code>docs/management/templates/T-02_週度狀態報告.md</code></td>
+<td>報告格式參考</td>
+</tr>
+</tbody>
+</table>
+<h2 id="附錄-c逐項驗證核對表checklist">附錄
+C：逐項驗證核對表（Checklist）</h2>
+<table>
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 15%" />
+<col style="width: 15%" />
+<col style="width: 15%" />
+<col style="width: 15%" />
+<col style="width: 15%" />
+</colgroup>
+<thead>
+<tr>
+<th style="text-align: center;">階段</th>
+<th>項目</th>
+<th>操作內容</th>
+<th>完成 (✔/✖)</th>
+<th>驗證證據</th>
+<th>備註</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: center;">0</td>
+<td>0.1</td>
+<td>建立安裝快照目錄</td>
+<td></td>
+<td></td>
+<td>唯讀</td>
+</tr>
+<tr>
+<td style="text-align: center;">0</td>
+<td>0.2</td>
+<td>複製 config.ini + 授權檔 + .ver</td>
+<td></td>
+<td></td>
+<td>唯讀</td>
+</tr>
+<tr>
+<td style="text-align: center;">0</td>
+<td>0.3</td>
+<td>產生 SHA-256 manifest</td>
+<td></td>
+<td>manifest.sha256</td>
+<td>回滾基準</td>
+</tr>
+<tr>
+<td style="text-align: center;">1</td>
+<td>1.1</td>
+<td>執行 flaps-perf.ps1 -Probe all</td>
+<td></td>
+<td>perf-result.json</td>
+<td>基線量測</td>
+</tr>
+<tr>
+<td style="text-align: center;">1</td>
+<td>1.2</td>
+<td>記錄基線數字</td>
+<td></td>
+<td>perf-summary.md</td>
+<td>對照基準</td>
+</tr>
+<tr>
+<td style="text-align: center;">2</td>
+<td>2.1</td>
+<td>備份 config.ini</td>
+<td></td>
+<td>.bak 檔</td>
+<td>調優前必備</td>
+</tr>
+<tr>
+<td style="text-align: center;">2</td>
+<td>2.2</td>
+<td>調優 DISABLE_HARDWARE_ACCELERATION</td>
+<td></td>
+<td></td>
+<td>△ 需自行驗證</td>
+</tr>
+<tr>
+<td style="text-align: center;">2</td>
+<td>2.3</td>
+<td>調優 IGNORE_CERT_ERR</td>
+<td></td>
+<td></td>
+<td>△ 需自行驗證</td>
+</tr>
+<tr>
+<td style="text-align: center;">2</td>
+<td>2.4</td>
+<td>重跑基線量測並比對</td>
+<td></td>
+<td></td>
+<td>△ 需自行判斷</td>
+</tr>
+<tr>
+<td style="text-align: center;">3</td>
+<td>3.1</td>
+<td>確認 wellfit.exe 路徑</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td style="text-align: center;">3</td>
+<td>3.2</td>
+<td>執行 MTRIX 管線首跑</td>
+<td></td>
+<td>run-summary.json</td>
+<td></td>
+</tr>
+<tr>
+<td style="text-align: center;">3</td>
+<td>3.3</td>
+<td>執行冪等重跑驗證</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td style="text-align: center;">4</td>
+<td>4.1</td>
+<td>建立 Windmill 排程工作</td>
+<td></td>
+<td></td>
+<td>△ 概念確認</td>
+</tr>
+<tr>
+<td style="text-align: center;">4</td>
+<td>4.2</td>
+<td>設定執行時段（避開高峰）</td>
+<td></td>
+<td></td>
+<td>△ 建議值</td>
+</tr>
+<tr>
+<td style="text-align: center;">5</td>
+<td>5.1</td>
+<td>每日 RAM 採樣</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td style="text-align: center;">5</td>
+<td>5.2</td>
+<td>每週 COM 延遲基線對照</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td style="text-align: center;">5</td>
+<td>5.3</td>
+<td>異常時從快照還原 config.ini</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td style="text-align: center;">6</td>
+<td>6.1</td>
+<td>送出 OQ-F1/F2 提案包</td>
+<td></td>
+<td></td>
+<td>✔ 已送出</td>
+</tr>
+<tr>
+<td style="text-align: center;">6</td>
+<td>6.2</td>
+<td>追蹤原廠回覆（期限 11/19）</td>
+<td></td>
+<td></td>
+<td>⚠ 待回覆</td>
+</tr>
+<tr>
+<td style="text-align: center;">7</td>
+<td>7.1</td>
+<td>確認所有 P1 需求完成</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td style="text-align: center;">7</td>
+<td>7.2</td>
+<td>確認 KPI 達標</td>
+<td></td>
+<td></td>
+<td>⚠ 待驗證</td>
+</tr>
+<tr>
+<td style="text-align: center;">7</td>
+<td>7.3</td>
+<td>主管正式核准</td>
+<td></td>
+<td></td>
+<td>待核准</td>
+</tr>
+</tbody>
+</table>
+<h2 id="附錄-d命令速查">附錄 D：命令速查</h2>
+<h3 id="powershell5.1">PowerShell（5.1）</h3>
+<div class="sourceCode" id="cb1"><pre class="sourceCode powershell"><code class="sourceCode powershell"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 建立快照目錄</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">New-Item</span> <span class="op">-</span>ItemType Directory <span class="op">-</span>Path <span class="st">&quot;</span><span class="va">$env</span><span class="op">:</span><span class="va">TEMP</span><span class="st">\flaps-snapshot&quot;</span> <span class="op">-</span>Force</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co"># 複製配置檔（唯讀來源，不寫入原廠目錄）</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="fu">Copy-Item</span> <span class="op">-</span>LiteralPath <span class="st">&quot;C:\SYSTEM_PROGRAM_DIRECTORY\FlapsErp\.conf\config.ini&quot;</span> <span class="op">-</span>Destination <span class="st">&quot;</span><span class="va">$env</span><span class="op">:</span><span class="va">TEMP</span><span class="st">\flaps-snapshot\&quot;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="co"># 產生 SHA-256 manifest</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="fu">Get-ChildItem</span> <span class="op">-</span>LiteralPath <span class="st">&quot;</span><span class="va">$env</span><span class="op">:</span><span class="va">TEMP</span><span class="st">\flaps-snapshot\&quot;</span> <span class="op">|</span> Get-FileHash <span class="op">-</span>Algorithm SHA256 <span class="op">|</span> <span class="fu">Out-File</span> <span class="op">-</span>FilePath <span class="st">&quot;</span><span class="va">$env</span><span class="op">:</span><span class="va">TEMP</span><span class="st">\flaps-snapshot\manifest.sha256&quot;</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="co"># 執行基線量測</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>powershell <span class="op">-</span>ExecutionPolicy Bypass <span class="op">-</span>File <span class="st">&quot;Wellfit/scripts/perf/flaps-perf.ps1&quot;</span> <span class="op">-</span>Probe all</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="co"># 執行 MTRIX 管線</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>powershell <span class="op">-</span>ExecutionPolicy Bypass <span class="op">-</span>File <span class="st">&quot;Wellfit/scripts/erp-batch/run-mtrix-pipeline.ps1&quot;</span> <span class="op">-</span>WellfitExe <span class="st">&quot;&lt;路徑&gt;\wellfit.exe&quot;</span></span></code></pre></div>
+<h3 id="rust-cargo">Rust / cargo</h3>
+<div class="sourceCode" id="cb2"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 設定目標目錄導向 temp，避開桌面路徑應用程式控制原則</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="va">$env</span><span class="ex">:CARGO_TARGET_DIR</span> = <span class="st">&quot;</span><span class="va">$env</span><span class="st">:LOCALAPPDATA\Temp\dev-target&quot;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co"># 建置 wellfit_cli</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="ex">cargo</span> build <span class="at">-p</span> wellfit_cli</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="co"># 執行 flaps_bridge 測試</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="ex">cargo</span> test <span class="at">-p</span> flaps_bridge</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="co"># clippy 零警告檢查</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="ex">cargo</span> clippy <span class="at">-p</span> flaps_bridge <span class="at">--</span> <span class="at">-D</span> warnings</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a><span class="co"># 格式化檢查</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a><span class="ex">cargo</span> fmt <span class="at">-p</span> flaps_bridge <span class="at">--</span> <span class="at">--check</span></span></code></pre></div>
+<h2 id="附錄-e免責聲明與真實性聲明">附錄 E：免責聲明與真實性聲明</h2>
+<ol type="1">
+<li>本報告所有 ✔
+事實均可在指定檔案與位址重複觀測，或經過實際測試通過。</li>
+<li>△
+初步研判項目依據現有證據推論，尚未在目標環境中完全驗證，實務應用前建議先在測試機自行驗證。</li>
+<li>⚠
+待驗證事項需進一步測試、原廠回覆或外部條件滿足才能確認，不得對外宣稱為既成事實。</li>
+<li>測試結果僅反映 2026-11-03 的觀測環境，不同安裝環境、機器規格與
+FlapsErp 版本可能有差異。</li>
+<li>FlapsErp
+為閉源應用，我方無法修改原廠程式碼；所有優化僅限於配置、外部管線與排程，不得寫入
+<code>C:\SYSTEM_PROGRAM_DIRECTORY</code>。</li>
+</ol>
+<hr />
+<p><em>報告編寫完成，可正式提交主管及相關單位審閱。</em></p>
+</body>
+</html>

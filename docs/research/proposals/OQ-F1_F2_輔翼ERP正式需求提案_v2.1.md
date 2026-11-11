@@ -102,7 +102,7 @@
 
 | # | 瓶頸 | 證據 | 影響 |
 |---|---|---|---|
-| B-1 | 32-bit 位址空間上限（~2GB） | electron-builder-dev.yml arch: ia32 | 大報表/大批次 OOM 風險 |
+| B-1 | 32-bit LAA 4 GB 位址空間上限（實測 LAA=True；x64 下） | electron-builder-dev.yml arch: ia32 | 大報表/大批次 OOM 風險 |
 | B-2 | COM 呼叫走同步 IPC | mainApi.js:193,225 | UI 凍結、批次延遲疊加 |
 | B-3 | Electron 基底記憶體 300-500MB+ | E-02 (134MB exe) | 常駐記憶體高 |
 | B-4 | backgroundThrottling:false | main.js:294 | 背景分頁持續耗 CPU |

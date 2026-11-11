@@ -129,9 +129,11 @@ CDP 通道在預設啟動下不可用。需在 11/10 偵察 session 中驗證帶
 
 | 參數 | 實驗 | 目標 |
 |---|---|---|
-| DISABLE_HARDWARE_ACCELERATION | 0 vs 1（A/B） | 測量 RAM/CPU 差異 |
-| IGNORE_CERT_ERR | 1 → 0（若原廠提供憑證方案） | 安全性提升 |
+| DISABLE_HARDWARE_ACCELERATION | 0 vs 1（A/B） | 測量 RAM/CPU 差異（含系統級 CPU） |
+| IGNORE_CERT_ERR | 1 → 0（測試 AP 已實測 CERT-VALID；生產 AP 為 HTTP） | 安全性提升；先盤點其他 HTTPS 端點 |
 | FORCE_DEVICE_SACLE_FACTOR | 0 vs 1（高 DPI 環境） | UI 渲染正確性 |
+
+> 2026-11-11 複測：測試 AP `test2.flaps.tw:10113` 憑證有效（Let's Encrypt；TLS 1.2；到期 2027-01-21）；預設生產 AP 為 HTTP，故 `IGNORE_CERT_ERR` 對生產無作用。
 
 ---
 
@@ -169,7 +171,7 @@ CDP 通道在預設啟動下不可用。需在 11/10 偵察 session 中驗證帶
 | config.ini | 24D07ABF7458C1ABB8F85C645C7CFA96C5C675DC16E36573F2C42A3C0EE0C1C6 |
 | hardwareId.txt | 52D909BE3B69E56197F58BCFE5EE0622A157D6258296723BC9469279ACE8EDDC |
 | machineId.txt | AAF20E774E5FEC202744B574E75ED63C6C376814169DDD19ECF281E3FFBF390A |
-| softwareId.txt | D5E6B4350C1EBC0F049B0D69AD71668EFFFB716D525B4010EE21977F8990F6D8 |
+| softwareId.txt | D5E6B4350C1EBC0F049B0D69AD71668EFFFB716D525B42090C4C1D38567CA453 |
 | Winax.node.ver | 1D463FE1351BA63B2A073D98F63B919609C7C0E82718A010EE21977F8990F6D8 |
 | POSMachineController.CD8240.jsc.ver | 1D463FE1351BA63B2A073D98F63B919609C7C0E82718A010EE21977F8990F6D8 |
 
@@ -178,6 +180,17 @@ CDP 通道在預設啟動下不可用。需在 11/10 偵察 session 中驗證帶
 1. 從 `Wellfit/artifacts/perf/20261103-160315/config-snapshot/` 還原所有檔案
 2. 逐檔 SHA256 比對（manifest 驗證）
 3. 重啟 FlapsErp 驗證功能正常
+
+### 7.3 2026-11-11 複測補充
+
+| 項目 | 實測 | 工具 |
+|---|---|---|
+| AP 預設 | `8E2EDBE…`（大前集團 WELLFIT）HTTP `210.64.124.59:10578` | `-Probe settings` |
+| 測試 AP TLS | `test2.flaps.tw:10113` CERT-VALID（Let's Encrypt；TLS 1.2；到期 2027-01-21） | `-Probe tls` |
+| 螢幕／視窗 | 1536×864（≈125%）／1536×776 | `-Probe app` |
+| PE LAA | i386；LAA=True（`0x0122`） | `-Probe pe` |
+| module→menu | 17.087 s（單次日誌） | `-Probe app` |
+| config 漂移 | `8E2EDBE…version.txt` 與 2026-11-03 manifest 不同（AP 版本更新） | `-Probe settings` |
 
 ---
 
@@ -188,6 +201,9 @@ CDP 通道在預設啟動下不可用。需在 11/10 偵察 session 中驗證帶
 | RAM 採樣 | 每日 3 次（09:00/14:00/18:00） | flaps-perf.ps1 -Probe baseline | 趨勢追蹤 |
 | COM 延遲 | 每週 1 次 | flaps-perf.ps1 -Probe com | 批次化前後對比 |
 | CDP 埠 | 每次 FlapsErp 更新後 | flaps-perf.ps1 -Probe cdp | 通道可用性 |
+| app log | 每日 | flaps-perf.ps1 -Probe app | menu ready／tab 事件 |
+| settings/TLS/PE | 每季／更新後 | flaps-perf.ps1 -Probe settings/tls/pe | 漂移／憑證／LAA |
+| 全量 | 每次基線 | flaps-perf.ps1 -Probe full | 一鍵證據 |
 | config 變更 | 每次修改前 | SHA256 manifest | 回滾基準 |
 
 ---
