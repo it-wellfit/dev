@@ -283,7 +283,7 @@ RAG-S1～S4 已全數實作完成並驗證（詳見 addendum #17——原 #15 �
 
 - [x] **RP-1 命名區分＋入冊（已裁決：對稱改名，雙向門）**：①產品線報告入工作區為 `docs/research/FlapsErp產品線效能進度報告_v2.0.md`（內容自 Kilo 快照 .md 複製，頭註聲明「Electron 產品線；Kilo 快照區另有 .html 渲染版」）；②平台線改名 `docs/research/FlapsErp平台線效能評估進度報告_v2.0.md`——同一提交更新活引用（README §2.7、效能優化操作手冊相依清單；歷史 addendum #14/#17 為點時記錄不回改，由 #18 記錄改名）；③兩者互鏈＋README §2.7 索引登錄＋PLAN_REGISTER addendum #18。**裁決依據**：擁有者核心顧慮＝同名混淆已實際發生三次（Kilo HTML 誤認、config.ini 文件遍尋不著、本輪重複疑慮）；對稱命名永久消歧；改名為雙向門（revert＝改回）。**活引用實證（2026-11-10 grep）＝3 處**：效能優化操作手冊 L10、README L121、PLAN_REGISTER addendum #17（點時記錄不回改）——全部同一提交更新，估算精確。
 - [x] **RP-2 四方整合指引（零內容重複）**：config.ini 調優之**操作源**＝產品線報告附錄C 核對表；**整合手冊**＝`docs/04-operations/FlapsErp效能優化操作手冊_v1.0.md` §3.2；**量測法**＝效能架構 P4；**驗收指標源**＝RPA-ECOM 主文件 §1.1 G4（斷路器：連續失敗 5 次觸發、重試 ≤3、恢復 ≤5min——即 G2.2 之驗收準則）與 §10.2（監控/備份/回滾）。四方互鏈不重寫。另：**操作手冊家族互鏈**——效能優化操作手冊 ↔ A1 檔案通道手冊（RP-6⑥ 遷移後同目錄 `docs/04-operations/`），附錄交叉引用。
-- [ ] **RP-3 演進程序**：平台線報告——每次四關全綠後 7 日內刷新（測試數/SLA/新切片）；產品線報告——隨 P1-P4 藍圖階段更新（歸並行線/承接專案）。
+- [x] **RP-3 演進程序**：平台線報告——每次四關全綠後 7 日內刷新（測試數/SLA/新切片）；產品線報告——隨 P1-P4 藍圖階段更新（歸並行線/承接專案）。
 - [ ] **RP-4 誠實標註維持**：RAM 未量測、M2 登入稽核、fuzz run 等維持 UNKNOWN；拒絕地板/事實等級（✔△⚠）標記沿用。
 - [x] **RP-5 RPA-ECOM v2.1 家族調和（新發現，撤回錯誤宣稱）**：
   - 事實：Dev 根目錄 `FlapsErp_RPA_電商系統對接_專案文件與開發前準備報告_v2.1.html`（863 行）為 RPA-ECOM 線**原始專案主文件**（2026-10-27 撰寫、11-03 Gate1 複審修訂、被逆向分析 §9 引用、有 ADR-001/002 鏈）；`docs/management/FlapsErp_RPA_Ecommerce_Project_Plan_v2.1.md` 頭註宣稱「v2.1 前檔為 0 bytes 空殼，本版首次補實全文」**對家族歷史不實**（.md 檔本身 0 bytes 屬實，但家族 v2.1 內容一直存在於根目錄 HTML）——依誠實紀律（GOVERNANCE P7）必須修正。
@@ -291,7 +291,7 @@ RAG-S1～S4 已全數實作完成並驗證（詳見 addendum #17——原 #15 �
   - 裁決依據：原始主文件在先（10-27）、內容最富（WBS/甘特/RACI/風險/OQ/交付物規格）、被上游引用 → 為家族 SSOT；後建摘要版（11-10，不知情重複）＝降級併入。「文件即程式碼」原則（主文件 §11 自述）支持 .md 權威＋.html 渲染成對。
   - DoD：主文件 .md/.html 成對入冊；錯誤宣稱修正有記錄；ADR 四檔入冊；摘要版 superseded 標記；docs 索引零死鏈。
 - [ ] **RP-6 全域盤點登錄（Dev 根目錄＋Kilo 快照區——消除盤點方法缺口）**：
-  - ①**DOC-01/02/03 搬入 `docs/research/`**（產品線前綴命名：`FlapsErp產品線效能深度分析_v1.0.md`／`FlapsErp產品線專案章程_v1.0.md`／`FlapsErp產品線架構優化計畫_v2.0.md`），同一提交更新產品線報告之來源清單路徑（DOC-01~03 原引無 docs/ 前綴）。
+  - [x] ①**DOC-01/02/03 搬入 `docs/research/`**（產品線前綴命名：`FlapsErp產品線效能深度分析_v1.0.md`／`FlapsErp產品線專案章程_v1.0.md`／`FlapsErp產品線架構優化計畫_v2.0.md`），同一提交更新產品線報告之來源清單路徑（DOC-01~03 原引無 docs/ 前綴）。**（2026-11-11 完成：git mv 三檔；產品線報告來源清單（2 處）＋專案章程 §11.1 引用更新；README §2.7 索引新增 3 列。）**
   - ②**Kilo 快照區追溯表**落盤於 README 索引：效能家族演化鏈（progress v1→v2.0、install guide v1→v6、deep-verification，含 Kilo 內路徑與版本鏈）——**不搬移**（Kilo 管理），僅登錄位置與版本鏈供追溯。
   - ③其他專案計畫 ~50 份（ISMS/ekpi/MTRIX/Wellfit/ARES/KNB）＝README 索引單一指引行（「其他專案計畫見 Kilo 快照區」），**不複製不搬移**（歸各專案 SSOT）。
   - ④四份待分類裁決：`PHASE1_IMPLEMENTATION_README.md`（audit 後 register 或 superseded）、`FREE_AI_SYSTEM_UPDATE.md`（與 `docs/engineering/FREE_AI_ROUTING.md` 關係裁定：合併或標 superseded——同一主題兩份，語義漂移風險）、`DOCUMENTATION_MASTER_SPEC.md`（→ **併入 PHASE-K.5 移交件**：文檔治理憲政規格與 L4 治理層直接互補）、`WORKTREE_WORKFLOW.md`（Active → 入 `docs/standards/` 登錄）；`GEMINI.md`（WEB3 工作區規則，非本工作區管轄）→ 標記待擁有者裁決去留，本計畫不動。

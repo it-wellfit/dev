@@ -126,6 +126,9 @@
 | [`research/FlapsErp效能基線報告_v1.0.md`](research/FlapsErp效能基線報告_v1.0.md) | 產品效能基線（2026-11-03） | 現行（對照基準） |
 | [`research/FlapsErp平台線效能評估進度報告_v2.0.md`](research/FlapsErp平台線效能評估進度報告_v2.0.md) | **平台線全程進度報告（2026-11-09）**：開發至今時間軸、246 測試、SLA 422ms、RAG、安全處置 | 現行（平台線） |
 | [`research/FlapsErp產品線效能進度報告_v2.0.md`](research/FlapsErp產品線效能進度報告_v2.0.md) | **產品線進度報告（2026-11-05，Electron）**：config.ini 調優核對表、A/B 雙軌、P1–P4 藍圖、RSK-E1~E9 | 現行（產品線） |
+| [`research/FlapsErp產品線效能深度分析_v1.0.md`](research/FlapsErp產品線效能深度分析_v1.0.md) | 產品線效能深度分析（DOC-01；2026-11-11 自根目錄遷入） | 現行 |
+| [`research/FlapsErp產品線專案章程_v1.0.md`](research/FlapsErp產品線專案章程_v1.0.md) | 產品線專案章程（DOC-02；2026-11-11 自根目錄遷入） | 現行 |
+| [`research/FlapsErp產品線架構優化計畫_v2.0.md`](research/FlapsErp產品線架構優化計畫_v2.0.md) | 產品線架構優化計畫（DOC-03；2026-11-11 自根目錄遷入） | 現行 |
 | [`research/FlapsErp優化_合規風險追蹤表.md`](research/FlapsErp優化_合規風險追蹤表.md) | 合規風險 | 現行 |
 | [`04-operations/A1檔案通道端到端操作手冊_v1.0.md`](04-operations/A1檔案通道端到端操作手冊_v1.0.md)、[`research/CDP自動化Playbook_A3軌道_v0.1.md`](research/CDP自動化Playbook_A3軌道_v0.1.md) | 操作手冊 | 現行 |
 | [`research/flaps_bridge測試規格_v1.0.md`](research/flaps_bridge測試規格_v1.0.md) | bridge 測試規格 | 現行 |
