@@ -36,7 +36,7 @@ pdf-extract = "0.12"
 sha2 = "0.10"
 
 # Core crate dependency
-flaps_core = { path = "../core", version = "0.0.1" }
+auxbridge_core = { path = "../core", version = "0.0.1" }
 
 # Unified ops console manifest (single page/registry SSOT; plan 1793033568961 §3)
 console_manifest = { path = "../crates/console_manifest", version = "0.1.0" }

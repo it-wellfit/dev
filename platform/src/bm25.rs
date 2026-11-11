@@ -156,9 +156,8 @@ mod tests {
 
     #[test]
     fn tokenize_handles_mixed_ascii_and_cjk() {
-        let tokens = tokenize("Flaps ERP 傳票 STRESS");
-        assert!(tokens.contains(&"flaps".to_string()));
-        assert!(tokens.contains(&"erp".to_string()));
+        let tokens = tokenize("AuxBridge 傳票 STRESS");
+        assert!(tokens.contains(&"auxbridge".to_string()));
         assert!(tokens.contains(&"傳".to_string()), "CJK single-char token");
         assert!(tokens.contains(&"票".to_string()));
         assert!(tokens.contains(&"stress".to_string()));

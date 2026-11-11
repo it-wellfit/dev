@@ -4,7 +4,7 @@
 # Exit code = number of failed assertions (0 = all pass).
 
 param(
-    [string]$ServerExe = "$env:LOCALAPPDATA\Temp\dev-target\debug\flaps-server.exe",
+    [string]$ServerExe = "$env:LOCALAPPDATA\Temp\dev-target\debug\auxbridge-server.exe",
     [int]$Port = 8090
 )
 
@@ -45,7 +45,7 @@ try { $c = New-Object Net.Sockets.TcpClient; $c.Connect("127.0.0.1", $Port); $c.
 if (-not $listening) {
     Assert "server-exe-exists" (Test-Path $ServerExe) $ServerExe
     if (Test-Path $ServerExe) {
-        $env:FLAPS_PORT = "$Port"
+        $env:AUXBRIDGE_PORT = "$Port"
         $spawned = Start-Process -FilePath $ServerExe -WorkingDirectory $Root -PassThru -WindowStyle Hidden
     }
 }

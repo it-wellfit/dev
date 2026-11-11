@@ -1,12 +1,12 @@
 [package]
-name = "flaps_core"
+name = "auxbridge_core"
 version = "0.0.1"
 edition = "2021"
 license = "LicenseRef-Proprietary"
 publish = false
 
 [lib]
-name = "flaps_core"
+name = "auxbridge_core"
 crate-type = ["lib"]
 
 [dependencies]

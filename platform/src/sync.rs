@@ -4,17 +4,17 @@ use tokio::sync::mpsc;
 /// Synchronization engine for data consistency between systems
 pub struct SyncEngine {
     #[allow(dead_code)]
-    config_manager: flaps_core::config::ConfigManager,
+    config_manager: auxbridge_core::config::ConfigManager,
     #[allow(dead_code)]
-    permission_manager: flaps_core::permission::PermissionManager,
+    permission_manager: auxbridge_core::permission::PermissionManager,
     sync_queue: mpsc::Sender<SyncTask>,
 }
 
 impl SyncEngine {
     /// Create a new synchronization engine
     pub fn new(
-        config_manager: flaps_core::config::ConfigManager,
-        permission_manager: flaps_core::permission::PermissionManager,
+        config_manager: auxbridge_core::config::ConfigManager,
+        permission_manager: auxbridge_core::permission::PermissionManager,
     ) -> Result<Self, Box<dyn std::error::Error>> {
         let (sync_sender, sync_receiver) = mpsc::channel(1000);
         let mut sync_processor = SyncProcessor::new(sync_receiver);
@@ -41,7 +41,7 @@ impl SyncEngine {
         let task = SyncTask {
             task_id: uuid::Uuid::new_v4().to_string(),
             task_type: SyncTaskType::Config,
-            source_system: "flaps-erp".to_string(),
+            source_system: "auxbridge".to_string(),
             target_system: target_system.to_string(),
             entity_id: config_id.to_string(),
             data: None,
@@ -65,7 +65,7 @@ impl SyncEngine {
         let task = SyncTask {
             task_id: uuid::Uuid::new_v4().to_string(),
             task_type: SyncTaskType::Permission,
-            source_system: "flaps-erp".to_string(),
+            source_system: "auxbridge".to_string(),
             target_system: target_system.to_string(),
             entity_id: entity_id.to_string(),
             data: None,
@@ -202,7 +202,7 @@ impl SyncProcessor {
                     .ok_or("Missing config_key")?;
 
                 // Here we would send the configuration to the target system
-                // For example: Flaps ERP -> External ERP system
+                // For example: AuxBridge -> External ERP system
                 // This would involve API calls or file transfers
 
                 tracing::info!(

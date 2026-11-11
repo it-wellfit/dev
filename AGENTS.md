@@ -8,7 +8,7 @@
 本工作區包含多個子專案（導航見 `WORKSPACE_CHARTER.md` §1）。2026-11-03 裁定（ADR-0001）：
 
 - **主產品**：`ekpi-platform/`（OEKAP——企業知識與流程智慧平台）。
-- **根 workspace**（`core/`、`platform/`、`web/`、`crates/flaps_bridge`）：FlapsErp RPA 支援線。
+- **根 workspace**（`core/`、`platform/`、`web/`、`crates/flaps_bridge`）：FlapsErp RPA 支援線——自建系統一律命名 **AuxBridge／整合工作台**；**FlapsErp（輔翼ERP）＝原廠第三方產品，僅可深度串接與 config 調整，禁改內容**（2026-11-11 裁定，見 `docs/standards/NAMING_AND_BOUNDARY_DECREE.md`）。
 - **獨立子專案**：`Wellfit/`、`SyncMesh/` 各依其 AGENTS.md 操作。
 
 ## 2. 根 workspace 快速命令
@@ -35,6 +35,7 @@ cargo audit                                           ; # 依賴安全（.cargo/
 | PowerShell 串接用 `;`；`UNKNOWN ≠ PASS ≠ FAIL`；不編造結果 | 憲章 §2.4–§2.5、GOVERNANCE P7 |
 | 不將 Secrets 提交版控；新增依賴前安全審查 | SHARED_STANDARDS §7.1、§2.2 |
 | 文件與代碼同一提交更新 | SHARED_STANDARDS §4.3 |
+| **命名分離**：自建系統＝AuxBridge／整合工作台（bin `auxbridge-server`、env `AUXBRIDGE_*`）；**FlapsErp（輔翼ERP）＝原廠，禁改名於自建系統、禁改原廠內容** | `docs/standards/NAMING_AND_BOUNDARY_DECREE.md`（2026-11-11 裁定；防呆測試 `platform/tests/naming_guard.rs`） |
 
 ## 4. UI/UX 標準（本工作區現行基準）
 

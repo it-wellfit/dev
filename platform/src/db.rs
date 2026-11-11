@@ -1,6 +1,6 @@
 use sqlx::SqlitePool;
 
-/// Database manager for Flaps ERP platform
+/// Database manager for AuxBridge platform
 pub struct DatabaseManager {
     pool: SqlitePool,
 }

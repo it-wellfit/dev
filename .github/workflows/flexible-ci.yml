@@ -100,7 +100,7 @@ jobs:
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           repository: it-wellfit/wellfit
-          ref: ecac383f85f5f4b4eb511a892035335b376e3beb
+          ref: b5cf18e1dd43675f5a4fe0fa8dd396a3ef028fd7
           path: Wellfit
       - name: Desktop app gates (fmt / clippy / test, Windows target only)
         if: matrix.os == 'windows-latest'
@@ -112,8 +112,9 @@ jobs:
           cargo test --manifest-path web/src-tauri/Cargo.toml --locked
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Desktop app security audit (RustSec, desktop lockfile)
+        working-directory: web/src-tauri
         run: |
-          cargo audit --file web/src-tauri/Cargo.lock
+          cargo audit --file Cargo.lock
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Desktop app dependency policy (cargo-deny)
         working-directory: web/src-tauri
@@ -123,8 +124,23 @@ jobs:
       - name: SBOM (CycloneDX 1.5)
         run: |
           cargo install cargo-cyclonedx --locked
-          cargo cyclonedx --format json --spec-version 1.5 --all --manifest-path platform/Cargo.toml
-          cargo cyclonedx --format json --spec-version 1.5 --all --manifest-path web/src-tauri/Cargo.toml
+          # 每個 crate 以自身目錄為 CWD 產生（cargo-cyclonedx 以 CWD 決定
+          # 目前的套件；--manifest-path 從 repo 根執行會產生錯誤範圍的 SBOM）。
+          $crates = @(
+            @{ dir = "platform"; name = "platform" },
+            @{ dir = "core"; name = "auxbridge_core" },
+            @{ dir = "crates/kem"; name = "kem" },
+            @{ dir = "crates/console_manifest"; name = "console_manifest" },
+            @{ dir = "crates/flaps_bridge"; name = "flaps_bridge" },
+            @{ dir = "web"; name = "web" },
+            @{ dir = "web/src-tauri"; name = "auxbridge-web" }
+          )
+          foreach ($c in $crates) {
+            Push-Location $c.dir
+            cargo cyclonedx --format json --spec-version 1.5 --all --override-filename "$($c.name).cdx"
+            if ($LASTEXITCODE -ne 0) { Pop-Location; exit $LASTEXITCODE }
+            Pop-Location
+          }
       - name: Upload SBOM artifacts
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:

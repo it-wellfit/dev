@@ -256,3 +256,72 @@ fn console_css_tokens_are_canonical_design_system_values() {
         );
     }
 }
+
+/// 憲章 §2.2（每個 .rs 第一行 `#![forbid(unsafe_code)]`）與 ADR-0014：
+/// 全工作區 Rust 原始碼不得出現 unsafe 語法，且每個 crate 根必須以
+/// `#![forbid(unsafe_code)]` 讓編譯器強制。
+#[test]
+fn unsafe_code_is_absent_and_forbidden_at_crate_roots() {
+    let root = repo_root();
+    let roots = [
+        "core/src/lib.rs",
+        "platform/src/lib.rs",
+        "web/src/lib.rs",
+        "crates/console_manifest/src/lib.rs",
+        "crates/kem/src/lib.rs",
+        "crates/flaps_bridge/src/lib.rs",
+        "web/src-tauri/src/lib.rs",
+        "web/src-tauri/src/main.rs",
+    ];
+    let mut problems = Vec::new();
+    for rel in roots {
+        let path = root.join(rel);
+        let text = std::fs::read_to_string(&path)
+            .unwrap_or_else(|e| panic!("read {}: {e}", path.display()));
+        if !text.contains("#![forbid(unsafe_code)]") {
+            problems.push(format!("{rel}: missing #![forbid(unsafe_code)]"));
+        }
+    }
+
+    let mut files = Vec::new();
+    for dir in [
+        "core/src",
+        "platform/src",
+        "crates",
+        "web/src",
+        "web/src-tauri/src",
+    ] {
+        collect_text_files(&root.join(dir), &mut files);
+    }
+    for file in &files {
+        if file.extension().and_then(|e| e.to_str()) != Some("rs") {
+            continue;
+        }
+        let text = std::fs::read_to_string(file)
+            .unwrap_or_else(|e| panic!("read {}: {e}", file.display()));
+        for (idx, line) in text.lines().enumerate() {
+            let trimmed = line.trim();
+            if trimmed.starts_with("//") {
+                continue; // 註解中的散文不計
+            }
+            let is_unsafe = trimmed == "unsafe"
+                || trimmed.starts_with("unsafe {")
+                || trimmed.starts_with("unsafe fn")
+                || trimmed.starts_with("unsafe impl")
+                || trimmed.starts_with("unsafe trait")
+                || trimmed.starts_with("unsafe extern");
+            if is_unsafe {
+                problems.push(format!(
+                    "{}:{} unsafe syntax",
+                    file.strip_prefix(&root).unwrap_or(file).display(),
+                    idx + 1
+                ));
+            }
+        }
+    }
+    assert!(
+        problems.is_empty(),
+        "unsafe 邊界違反（ADR-0014）：\n{}",
+        problems.join("\n")
+    );
+}

@@ -1,4 +1,4 @@
-// Performance Tests for Flaps ERP - Load and Stress Testing
+// Performance Tests for AuxBridge - Load and Stress Testing
 use tokio::test;
 use std::time::{Duration, Instant};
 use std::sync::Arc;

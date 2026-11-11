@@ -171,7 +171,7 @@ impl ModelOrchestrator {
 
     pub async fn make_intelligent_decision(
         &self,
-        transaction: &flaps_core::ledger::transaction::Transaction,
+        transaction: &auxbridge_core::ledger::transaction::Transaction,
         items: &[crate::ai::decision_gating::TransactionItem],
         context: AIContext,
     ) -> Result<AIDecision, Box<dyn std::error::Error + Send + Sync>> {

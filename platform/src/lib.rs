@@ -1,3 +1,5 @@
+#![forbid(unsafe_code)]
+
 pub mod api;
 pub mod apihub;
 pub mod auth;

@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>快速匯入 — Flaps ERP 工作台</title>
+    <title>快速匯入 — AuxBridge 整合工作台</title>
     <link rel="stylesheet" href="/assets/design-system.css">
 </head>
 <body>
@@ -102,6 +102,50 @@
                 <p class="section-note">確認後僅合格列登帳（每筆獨立冪等），並寫入稽核軌跡；本操作不可復原，但錯誤列不會被匯入。</p>
             </form>
             {% endif %}
+        </section>
+        {% endif %}
+            {% if !recent_batches.is_empty() %}
+        <section class="panel" aria-labelledby="recent-batches-title">
+            <h3 id="recent-batches-title">最近匯入批次</h3>
+            <div class="table-wrap">
+                <table>
+                    <caption>最近 10 筆（新→舊）</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col">批次 ID</th>
+                            <th scope="col">SHA256（前 12 碼）</th>
+                            <th scope="col">列數</th>
+                            <th scope="col">合格</th>
+                            <th scope="col">狀態</th>
+                            <th scope="col">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for rb in recent_batches %}
+                        <tr>
+                            <td><code>{{ rb.batch_id }}</code></td>
+                            <td><code>{{ rb.sha256_short }}</code></td>
+                            <td>{{ rb.row_total }}</td>
+                            <td>{{ rb.row_ok }}</td>
+                            <td>{{ rb.status_display }}</td>
+                            <td>
+                                {% if rb.is_draft %}
+                                <a class="btn btn-secondary" href="/import?batch={{ rb.batch_id }}">查看</a>
+                                {% else if rb.status == "mapping" %}
+                                <a class="btn btn-secondary" href="/import/mapping?batch={{ rb.batch_id }}">映射</a>
+                                {% else %}
+                                <span class="muted">已登帳</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <p class="section-note">
+                EML 郵件匯入會為每個附件建立獨立批次（sha256 逐檔追溯）；
+                批次狀態「待欄位映射」表示需先完成欄位對應才能確認匯入。
+            </p>
         </section>
         {% endif %}
     </main>

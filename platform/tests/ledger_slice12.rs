@@ -2,7 +2,7 @@
 //! busy-timeout error handling and i128 overflow boundary.
 //!
 //! These tests use the production migration set (DatabaseManager) and the
-//! public flaps_core::ledger API - no product code is modified.
+//! public auxbridge_core::ledger API - no product code is modified.
 
 use platform::db::DatabaseManager;
 
@@ -32,8 +32,8 @@ fn temp_db_url(tag: &str) -> (std::path::PathBuf, String) {
     (path, url)
 }
 
-fn header(id: &str, date: chrono::NaiveDate) -> flaps_core::Transaction {
-    flaps_core::Transaction::builder()
+fn header(id: &str, date: chrono::NaiveDate) -> auxbridge_core::Transaction {
+    auxbridge_core::Transaction::builder()
         .transaction_id(id.to_string())
         .transaction_code(format!("TX-{}", &id[..8.min(id.len())]))
         .transaction_date(date)
@@ -44,8 +44,14 @@ fn header(id: &str, date: chrono::NaiveDate) -> flaps_core::Transaction {
         .expect("header")
 }
 
-fn leg(id: &str, tx: &str, account: &str, kind: &str, amount: i64) -> flaps_core::TransactionItem {
-    flaps_core::TransactionItem::builder()
+fn leg(
+    id: &str,
+    tx: &str,
+    account: &str,
+    kind: &str,
+    amount: i64,
+) -> auxbridge_core::TransactionItem {
+    auxbridge_core::TransactionItem::builder()
         .item_id(id.to_string())
         .transaction_id(tx.to_string())
         .account_id(account.to_string())
@@ -57,7 +63,7 @@ fn leg(id: &str, tx: &str, account: &str, kind: &str, amount: i64) -> flaps_core
         .expect("leg")
 }
 
-fn balanced_pair(tx: &str, amount: i64) -> Vec<flaps_core::TransactionItem> {
+fn balanced_pair(tx: &str, amount: i64) -> Vec<auxbridge_core::TransactionItem> {
     vec![
         leg(&format!("{tx}-d"), tx, "ACC-A", "DEBIT", amount),
         leg(&format!("{tx}-c"), tx, "ACC-B", "CREDIT", amount),
@@ -70,7 +76,7 @@ fn balanced_pair(tx: &str, amount: i64) -> Vec<flaps_core::TransactionItem> {
 async fn duplicate_transaction_id_is_rejected_idempotently() {
     let (_dir, url) = temp_db_url("dup");
     let pool = pool_with_migrations(&url).await;
-    let engine = flaps_core::LedgerEngine::with_pool(pool.clone())
+    let engine = auxbridge_core::LedgerEngine::with_pool(pool.clone())
         .await
         .expect("engine");
     let today = chrono::Utc::now().date_naive();
@@ -105,12 +111,12 @@ async fn duplicate_transaction_id_is_rejected_idempotently() {
 async fn concurrent_postings_are_all_applied_atomically() {
     let (_dir, url) = temp_db_url("conc");
     let pool = pool_with_migrations(&url).await;
-    let engine = flaps_core::LedgerEngine::with_pool(pool.clone())
+    let engine = auxbridge_core::LedgerEngine::with_pool(pool.clone())
         .await
         .expect("engine");
     let today = chrono::Utc::now().date_naive();
 
-    let post = |engine: flaps_core::LedgerEngine, prefix: String| async move {
+    let post = |engine: auxbridge_core::LedgerEngine, prefix: String| async move {
         for n in 0..25 {
             let id = format!("{prefix}-{n}");
             let tx = header(&id, today);
@@ -161,7 +167,7 @@ async fn concurrent_postings_are_all_applied_atomically() {
 async fn busy_timeout_surfaces_as_error_not_hang() {
     let (_dir, url) = temp_db_url("busy");
     let pool = pool_with_migrations(&url).await;
-    let engine = flaps_core::LedgerEngine::with_pool(pool.clone())
+    let engine = auxbridge_core::LedgerEngine::with_pool(pool.clone())
         .await
         .expect("engine");
     let locker = sqlx::SqlitePool::connect(&url).await.expect("locker");

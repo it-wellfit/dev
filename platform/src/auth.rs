@@ -289,7 +289,7 @@ pub async fn security_headers(mut response: axum::response::Response) -> axum::r
 
 /// Seed the initial administrator account exactly once (when no users exist).
 ///
-/// Password source: `FLAPS_ADMIN_PASSWORD`; when absent, a random password is
+/// Password source: `AUXBRIDGE_ADMIN_PASSWORD`; when absent, a random password is
 /// generated and printed ONCE to stdout for the operator to store. Default
 /// credentials are never silently installed.
 pub async fn seed_admin_if_empty(pool: &SqlitePool) -> Result<(), Box<dyn std::error::Error>> {
@@ -300,7 +300,7 @@ pub async fn seed_admin_if_empty(pool: &SqlitePool) -> Result<(), Box<dyn std::e
         return Ok(());
     }
 
-    let password = match std::env::var("FLAPS_ADMIN_PASSWORD") {
+    let password = match std::env::var("AUXBRIDGE_ADMIN_PASSWORD") {
         Ok(p) if !p.trim().is_empty() => p.trim().to_string(),
         _ => {
             let random = uuid::Uuid::new_v4().to_string().replace('-', "");

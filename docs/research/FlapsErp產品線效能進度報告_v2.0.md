@@ -10,6 +10,7 @@
 > **狀態**：Phase 1 已完成，進入 Phase 2 準備  
 > **分級**：內部專業報告，可正式提交主管審閱  
 > **線別聲明**：本報告為 **Electron 產品線**（FlapsErp v0.0.4 桌面應用）效能報告；Kilo 快照區另有 `.html` 渲染版（`~/.local/share/kilo/plans/1793788660000-*.html`）。另有 **Rust 平台線**報告見 [`FlapsErp平台線效能評估進度報告_v2.0.md`](FlapsErp平台線效能評估進度報告_v2.0.md)（2026-11-11 RP-1 同名消歧）。  
+> **演進程序（RP-3）**：隨 P1–P4 藍圖階段更新本報告（歸並行線／承接專案）；每次階段退出條件達成即刷新進度與事實等級。  
 
 ---
 
@@ -32,9 +33,9 @@
 
 | 編號 | 文件名稱 | 路徑 | 主要內容 |
 |:---:|---|---|---|
-| DOC-01 | 輔翼 FlapsErp 效能問題深度分析與最佳解決方案 | `flaps_erp_performance_analysis.md` | 效能瓶頸（10 項）、解決方案（三階段）、KPI |
-| DOC-02 | 輔翼 FlapsErp 效能優化專案—完整專案文件與開發前準備報告 | `flaps_erp_project_plan.md` | 專案目標、範圍、需求、架構、里程碑、驗收標準 |
-| DOC-03 | Flaps ERP 系統架構全面優化計畫—第一性原理設計 | `flaps_erp_architecture_optimization_plan.md` | 架構優化 v2.0、更嚴格 KPI、管線拆分、資料模型 |
+| DOC-01 | 輔翼 FlapsErp 效能問題深度分析與最佳解決方案 | `docs/research/FlapsErp產品線效能深度分析_v1.0.md`（原根目錄；2026-11-11 RP-6① 遷入） | 效能瓶頸（10 項）、解決方案（三階段）、KPI |
+| DOC-02 | 輔翼 FlapsErp 效能優化專案—完整專案文件與開發前準備報告 | `docs/research/FlapsErp產品線專案章程_v1.0.md`（原根目錄；2026-11-11 RP-6① 遷入） | 專案目標、範圍、需求、架構、里程碑、驗收標準 |
+| DOC-03 | Flaps ERP 系統架構全面優化計畫—第一性原理設計 | `docs/research/FlapsErp產品線架構優化計畫_v2.0.md`（原根目錄；2026-11-11 RP-6① 遷入） | 架構優化 v2.0、更嚴格 KPI、管線拆分、資料模型 |
 | DOC-04 | 輔翼 ERP（FlapsErp）逆向工程分析與效能最佳化方案 v1.0 | `docs/research/輔翼ERP逆向分析與最佳化方案_v1.0.md` | 逆向解構（五層）、六條整合通道、十項瓶頸、雙軌策略 |
 | DOC-05 | 輔翼 ERP 優化多階段執行藍圖 v1.0 | `docs/research/輔翼ERP優化多階段執行藍圖_v1.0.md` | P1–P4 階段任務、退出條件、回滾矩陣、Phase 1 執行紀錄 |
 | DOC-06 | FlapsErp 效能基線報告 v1.0 | `docs/research/FlapsErp效能基線報告_v1.0.md` | 2026-11-03 首測：RAM、COM 延遲、CDP、config 基線 |
@@ -466,9 +467,9 @@ FlapsErp（輔翼 ERP）為輔翼系統開發的桌面應用程式，版本 v0.0
 
 | 編號 | 文件名稱 | 路徑 | 主要內容 |
 |:---:|---|---|---|
-| DOC-01 | 輔翼 FlapsErp 效能問題深度分析與最佳解決方案 | `flaps_erp_performance_analysis.md` | 效能瓶頸（10 項）、解決方案（三階段）、KPI |
-| DOC-02 | 輔翼 FlapsErp 效能優化專案—完整專案文件與開發前準備報告 | `flaps_erp_project_plan.md` | 專案目標、範圍、需求、架構、里程碑、驗收標準 |
-| DOC-03 | Flaps ERP 系統架構全面優化計畫—第一性原理設計 | `flaps_erp_architecture_optimization_plan.md` | 架構優化 v2.0、更嚴格 KPI、管線拆分、資料模型 |
+| DOC-01 | 輔翼 FlapsErp 效能問題深度分析與最佳解決方案 | `docs/research/FlapsErp產品線效能深度分析_v1.0.md`（原根目錄；2026-11-11 RP-6① 遷入） | 效能瓶頸（10 項）、解決方案（三階段）、KPI |
+| DOC-02 | 輔翼 FlapsErp 效能優化專案—完整專案文件與開發前準備報告 | `docs/research/FlapsErp產品線專案章程_v1.0.md`（原根目錄；2026-11-11 RP-6① 遷入） | 專案目標、範圍、需求、架構、里程碑、驗收標準 |
+| DOC-03 | Flaps ERP 系統架構全面優化計畫—第一性原理設計 | `docs/research/FlapsErp產品線架構優化計畫_v2.0.md`（原根目錄；2026-11-11 RP-6① 遷入） | 架構優化 v2.0、更嚴格 KPI、管線拆分、資料模型 |
 | DOC-04 | 輔翼 ERP（FlapsErp）逆向工程分析與效能最佳化方案 v1.0 | `docs/research/輔翼ERP逆向分析與最佳化方案_v1.0.md` | 逆向解構（五層）、六條整合通道、十項瓶頸、雙軌策略 |
 | DOC-05 | 輔翼 ERP 優化多階段執行藍圖 v1.0 | `docs/research/輔翼ERP優化多階段執行藍圖_v1.0.md` | P1–P4 階段任務、退出條件、回滾矩陣、Phase 1 執行紀錄 |
 | DOC-06 | FlapsErp 效能基線報告 v1.0 | `docs/research/FlapsErp效能基線報告_v1.0.md` | 2026-11-03 首測：RAM、COM 延遲、CDP、config 基線 |

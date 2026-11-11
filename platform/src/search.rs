@@ -37,7 +37,7 @@ pub const REFUSAL_FLOOR: f32 = 0.55;
 type VectorMap = std::collections::HashMap<String, (String, Vec<f32>)>;
 
 #[derive(Clone)]
-/// Hybrid search engine for the Flaps ERP workbench.
+/// Hybrid search engine for the AuxBridge workbench.
 pub struct SearchEngine {
     documents: Arc<RwLock<HashMap<String, SearchDocument>>>,
     /// doc_id → (content SHA-256, embedding). Absent = BM25-only for the doc.

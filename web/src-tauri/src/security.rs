@@ -1,2 +1,2 @@
-// Security module for Flaps ERP Web
+// Security module for AuxBridge Web
 // Handles certificate management, permission checks, and security boundaries

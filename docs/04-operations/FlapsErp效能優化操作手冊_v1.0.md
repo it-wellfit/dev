@@ -9,6 +9,7 @@
 **相依文件**：  
 - `docs/research/輔翼ERP效能基線報告_v1.0.md`（產品效能基線，2026-11-03）  
 - `docs/research/FlapsErp平台線效能評估進度報告_v2.0.md`（平台線效能現況，2026-11-09）  
+- `docs/research/FlapsErp產品線效能進度報告_v2.0.md`（產品線進度報告；附錄C＝config.ini 調優核對表，§3.2 之操作源）  
 - `docs/research/輔翼ERP逆向分析與最佳化方案_v1.0.md`（逆向分析與優化方案，2026-11-03）  
 - `docs/architecture/效能架構.md`（軟硬體槓桿與效能預算，2026-11-06）  
 - `docs/architecture/DATABASE_DESIGN.md`（資料庫設計）  
@@ -227,6 +228,8 @@ WHERE transaction_date < '2025-01-01';
 ### 3.2 應用程式配置調整（原廠 FlapsErp；config.ini）
 
 > **更正（2026-11-11）**：本節原指向 `Dev\platform\config.ini` 與 `ORG/PERM/...` 項目，**與實機不符**。實機設定檔為 `C:\SYSTEM_PROGRAM_DIRECTORY\.conf\config.ini`，只有 7 個鍵；SSOT 見 `docs/04-operations/FlapsErp最佳設定基線_v1.0.md`。變更由 IT 於變更管制下執行，代理唯讀。
+>
+> **四方整合指引（RP-2；互鏈不重寫）**：①**操作源**＝產品線報告附錄C「config.ini 調優核對表」（`docs/research/FlapsErp產品線效能進度報告_v2.0.md`）；②**整合手冊**＝本節（§3.2）；③**量測法**＝效能架構 P4（`docs/architecture/效能架構.md`）；④**驗收指標源**＝RPA-ECOM 主文件 §1.1 G4 斷路器（連續失敗 5 次觸發、重試 ≤3、恢復 ≤5min）與 §10.2 監控/備份/回滾（`docs/management/FlapsErp_RPA_電商系統對接_專案文件與開發前準備報告_v2.1.md`）。另見 A1 檔案通道手冊（同目錄 `docs/04-operations/`）。
 
 #### 3.2.1 修改前的必做步驟
 

@@ -1,8 +1,8 @@
 use serde::{Deserialize, Serialize};
 use tauri::State;
-use crate::flaps_core::ledger::engine::LedgerEngine;
-use crate::flaps_core::ledger::transaction::Transaction;
-use crate::flaps_core::ledger::account::Account as CoreAccount;
+use crate::auxbridge_core::ledger::engine::LedgerEngine;
+use crate::auxbridge_core::ledger::transaction::Transaction;
+use crate::auxbridge_core::ledger::account::Account as CoreAccount;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Transaction {

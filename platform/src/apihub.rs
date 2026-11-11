@@ -456,7 +456,7 @@ fn forbidden_page(acting_user: &str) -> Response {
     let body = format!(
         "<!DOCTYPE html><html lang=\"zh-Hant-TW\"><head><meta charset=\"UTF-8\">\
          <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\
-         <title>無權限 — Flaps ERP</title>\
+         <title>無權限 — AuxBridge</title>\
          <link rel=\"stylesheet\" href=\"/assets/design-system.css\"></head><body>\
          <a class=\"skip-link\" href=\"#main\">跳至主要內容</a>\
          <header class=\"app-header\"><div class=\"container\"><div>\
@@ -1067,7 +1067,7 @@ pub async fn apihub_records(
                 BankpayBatchRow {
                     batch_id,
                     esun_ref,
-                    amount_display: flaps_core::format_minor(amount_minor, 2),
+                    amount_display: auxbridge_core::format_minor(amount_minor, 2),
                     currency,
                     status: status.clone(),
                     status_class: status_class.to_string(),

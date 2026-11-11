@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
-use flaps_core::ledger::transaction::Transaction;
+use auxbridge_core::ledger::transaction::Transaction;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum DecisionGatingStrategy {

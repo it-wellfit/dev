@@ -5,7 +5,7 @@
 #   * Every demo row is prefixed [DEMO] so it can never be confused with
 #     production data.
 #   * The demo database is a SEPARATE file (data\demo.db) - the production
-#     database (data\flaps.db) is never touched.
+#     database (data\auxbridge.db) is never touched.
 #   * Seeding goes through the REAL HTTP API (server started temporarily),
 #     so demo data exercises exactly the same validation as production.
 #   * Re-running this script rebuilds the demo database from scratch
@@ -24,7 +24,7 @@ $ErrorActionPreference = "Stop"
 $root = Split-Path $PSScriptRoot -Parent
 $dataDir = Join-Path $root "data"
 $dbPath = Join-Path $dataDir "demo.db"
-$exe = Join-Path $root "target\debug\flaps-server.exe"
+$exe = Join-Path $root "target\debug\auxbridge-server.exe"
 $cookieJar = Join-Path $env:TEMP "flaps-seed-cookies.txt"
 
 Write-Host "== Flaps DEMO seeder =="
@@ -39,9 +39,9 @@ Write-Host "[1/6] Demo database reset: $dbPath"
 
 # --- 2) Build the server binary if missing ----------------------------------
 if (-not (Test-Path $exe) -and -not $SkipBuild) {
-    Write-Host "[2/6] Building flaps-server (first run)..."
+    Write-Host "[2/6] Building auxbridge-server (first run)..."
     Push-Location $root
-    cargo build --locked -p platform --bin flaps-server
+    cargo build --locked -p platform --bin auxbridge-server
     Pop-Location
     if ($LASTEXITCODE -ne 0) { throw "build failed" }
 } else {
@@ -50,9 +50,9 @@ if (-not (Test-Path $exe) -and -not $SkipBuild) {
 
 # --- 3) Start a temporary server bound to the demo database -----------------
 # Child processes inherit the current environment (PS 5.1 compatible).
-$env:FLAPS_DB_URL = "sqlite://$($dbPath -replace '\\','/')?mode=rwc"
-$env:FLAPS_PORT = "$Port"
-$env:FLAPS_ADMIN_PASSWORD = $AdminPassword
+$env:AUXBRIDGE_DB_URL = "sqlite://$($dbPath -replace '\\','/')?mode=rwc"
+$env:AUXBRIDGE_PORT = "$Port"
+$env:AUXBRIDGE_ADMIN_PASSWORD = $AdminPassword
 $proc = Start-Process -FilePath $exe -PassThru -WindowStyle Hidden
 Write-Host "[3/6] Temporary server started (pid $($proc.Id), port $Port)"
 
@@ -132,5 +132,5 @@ Write-Host ""
 Write-Host "DEMO READY"
 Write-Host "  Database : $dbPath"
 Write-Host "  Accounts : admin / demo-finance / demo-viewer"
-Write-Host "  Start    : `$env:FLAPS_DB_URL='sqlite://$($dbPath -replace '\\','/')?mode=rwc'; `$env:FLAPS_PORT='8090'; target\debug\flaps-server.exe"
+Write-Host "  Start    : `$env:AUXBRIDGE_DB_URL='sqlite://$($dbPath -replace '\\','/')?mode=rwc'; `$env:AUXBRIDGE_PORT='8090'; target\debug\auxbridge-server.exe"
 Write-Host "  Reset    : powershell -File scripts\reset-demo.ps1"

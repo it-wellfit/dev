@@ -1,11 +1,11 @@
 [workspace]
 
 [package]
-default-run = "flaps-erp-web"
-name = "flaps-erp-web"
+default-run = "auxbridge-web"
+name = "auxbridge-web"
 version = "0.2.0"
 edition = "2021"
-description = "Flaps ERP - Enterprise Bank Integration Frontend"
+description = "AuxBridge - Enterprise Auxiliary Platform"
 license = "LicenseRef-Proprietary"
 publish = false
 
@@ -33,3 +33,8 @@ minisign-verify = "0.3"
 [features]
 default = ["custom-protocol"]
 custom-protocol = ["tauri/custom-protocol"]
+
+[dev-dependencies]
+# 僅供測試：以「與 tauri CLI 相同格式」產生測試金鑰與簽章，做 sign→feed→verify
+# round-trip（不進入安裝包）。與 minisign-verify 同作者、同簽章格式。
+minisign = "0.10"

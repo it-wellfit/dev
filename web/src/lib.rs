@@ -1,5 +1,6 @@
-// Web module for Flaps ERP
-// This module provides web interface components for the Flaps ERP system
+#![forbid(unsafe_code)]
+// Web module for AuxBridge
+// This module provides web interface components for the AuxBridge system
 // The frontend is implemented in HTML/JavaScript (see index.html)
 // The backend API is in src-tauri/
 

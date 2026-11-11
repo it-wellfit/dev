@@ -395,7 +395,7 @@ async fn w2_w6_nav_matrix_headers_anchors_console() {
 
 /// 非頁面路由窮舉清單（資產、下載、表單動作、中間態、靜態主控台託管）。
 /// 每筆都必須在 `api.rs` 實際註冊，否則清單過期（測試會失敗）。
-const NON_PAGE_ROUTES: [&str; 26] = [
+const NON_PAGE_ROUTES: [&str; 27] = [
     "/logout",
     "/assets/design-system.css",
     "/assets/legacy-1420.css",
@@ -422,6 +422,7 @@ const NON_PAGE_ROUTES: [&str; 26] = [
     "/bankpay/import",
     "/bankpay/config",
     "/profile/password",
+    "/admin/audit",
 ];
 
 /// 從 Rust 原始碼抽出 `.route("…")` 註冊：(路徑, 含 GET, 含 POST)。

@@ -1,0 +1,33 @@
+# cargo-audit 政策（桌面套件 workspace：web/src-tauri）
+#
+# 為何需要本檔：cargo-audit 以「workspace 根」為政策搜尋起點；web/src-tauri 是
+# 獨立 workspace，因此不繼承 Dev/.cargo/audit.toml。此檔與 Dev 根政策一致的
+# 三則處置，並補上桌面套件特有的暴露評估（此工作區即實際交付的安裝包依賴圖）。
+#
+# 證據規則（GOVERNANCE_STANDARD P2/P7）：每則忽略皆附理由、緩解與複核觸發條件。
+# 複核週期：每季，或依賴圖變更（cargo update）時。
+
+[advisories]
+ignore = [
+    # RUSTSEC-2026-0459 (CVE-2026-119375, severity 6.8 medium)
+    # libsqlite3-sys 0.37.0（經 wellfit_core -> rusqlite(bundled) 進入本工作區）
+    # 內嵌 SQLite < 3.54.0：開啟 .db 與頁大小不符之 -wal 對時可能洩漏未初始化
+    # 頁快取記憶體。僅 LOCAL 向量（需受害者開啟該檔對）。
+    # 修正需 libsqlite3-sys >= 0.39.0（SQLite 3.54.0），但 sqlx-sqlite 0.9.0
+    # 釘選 ">=0.30.1, <0.38.0"，rusqlite 0.41 尚未發布（2026-11-11 實查），
+    # 故無範圍內修補版。
+    # 緩解：(1) 應用僅開啟操作者自建之本地資料庫；(2) 單機單使用者桌面部署；
+    # (3) 每日備份（RB/Runbook）限縮暴露。
+    # 複核觸發：(a) rusqlite 0.41／libsqlite3-sys >= 0.39 可用；(b) 應用開始
+    # 開啟第三方提供之 DB 檔。
+    "RUSTSEC-2026-0459",
+    # RUSTSEC-2024-0370 (proc-macro-error 1.0.4 — 作者已封存)
+    # 路徑：tauri -> gtk（Linux 後端）-> glib-macros -> proc-macro-error。
+    # 僅建置期巨集工具，且**不編譯進 Windows 交付物**（本產品只有 Windows 產物）。
+    # 複核觸發：(a) 新增 Linux 建置目標；(b) tauri 移除 gtk 後端；(c) 上游釋出替代。
+    "RUSTSEC-2024-0370",
+    # RUSTSEC-2024-0429 (glib 0.18 — VariantStrIter 的 Iterator 實作不健全)
+    # 路徑同上（tauri -> gtk -> glib）。僅 Linux 後端；Windows 產物不含 glib。
+    # 複核觸發：(a) 新增 Linux 建置目標；(b) 上游釋出修補版且可釘選。
+    "RUSTSEC-2024-0429",
+]

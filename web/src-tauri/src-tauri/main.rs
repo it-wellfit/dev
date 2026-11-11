@@ -1,14 +1,14 @@
 ﻿use tauri::{Builder, Manager};
-use crate::flaps_core::ledger::engine::LedgerEngine;
-use crate::flaps_core::ledger::transaction::Transaction;
-use crate::flaps_core::ledger::account::Account as CoreAccount;
+use crate::auxbridge_core::ledger::engine::LedgerEngine;
+use crate::auxbridge_core::ledger::transaction::Transaction;
+use crate::auxbridge_core::ledger::account::Account as CoreAccount;
 use crate::ai::decision_gating::{AIDecisionGating, AIContext};
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
 #[tauri::command]
 fn greet(name: &str) -> String {
-    format!("Hello, {}! Welcome to Flaps ERP!", name)
+    format!("Hello, {}! Welcome to AuxBridge!", name)
 }
 
 #[tauri::command]
@@ -93,7 +93,7 @@ fn main() {
             // Initialize AI clients
             // This will connect to Ollama, Chutes, and Inference.net
             
-            println!("Flaps ERP Web Interface initialized successfully");
+            println!("AuxBridge Web Interface initialized successfully");
             Ok(())
         })
         .run(|_app_handle, event| match event {

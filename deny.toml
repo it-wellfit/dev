@@ -1,4 +1,4 @@
-# cargo-deny 供應鏈政策（根 workspace；Flaps ERP 輔翼線）
+# cargo-deny 供應鏈政策（根 workspace；AuxBridge 輔翼線）
 #
 # 分層基準（2026 產業實務）：cargo audit 掃 RustSec 弱點、cargo deny 治理
 # 授權／版本／來源政策、cargo vet 記錄人工稽核（見 docs/release/UPDATER_RUNBOOK.md

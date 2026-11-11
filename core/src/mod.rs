@@ -1,4 +1,4 @@
-/// Core ledger module for Flaps ERP - accounting engine
+/// Core ledger module for AuxBridge - accounting engine
 /// 
 /// This module implements the core accounting functionality including:
 /// - Transaction records

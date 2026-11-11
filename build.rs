@@ -1,6 +1,6 @@
 #![deny(warnings)]
 fn main() {
-    println!("🔨 Building Flaps ERP workspace...");
+    println!("🔨 Building AuxBridge workspace...");
 
     // Ensure target directory exists
     let target_dir = std::path::Path::new("target");

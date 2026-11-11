@@ -8,7 +8,7 @@
 //! 計算位置：`auth::require_session` middleware 每認證請求一次
 //! （NavFlags 查詢＋純記憶體過濾）；handler 一行從 Extension 複製。
 
-use console_manifest::{Gate, NavKind, NAV_GROUPS, PAGES};
+use console_manifest::{Gate, NavKind, NAV_GROUPS, PAGES, STUDIOS};
 
 use crate::api::NavFlags;
 
@@ -31,10 +31,24 @@ pub struct NavGroupView {
     pub items: Vec<NavItem>,
 }
 
-/// 完整導覽模型（每請求一份；Askama 模板直接迭代）。
-#[derive(Debug, Clone, Default)]
-pub struct NavModel {
+/// 工作室檢視（導覽 IA 第一層：studio header + 所屬群組）。
+#[derive(Debug, Clone)]
+pub struct StudioView {
+    pub id: &'static str,
+    pub label: &'static str,
     pub groups: Vec<NavGroupView>,
+}
+/// 完整導覽模型（每請求一份；Askama 模板直接迭代）。
+///
+/// IA（使用者裁定 studio + section 兩層）：`home`＝總覽置頂連結；
+/// `top`＝overview 群組其餘自我服務頁（我的裁決紀錄，Gate::All）；
+/// `studios`＝5 大工作室（順序＝`STUDIOS` 宣告順序），其下為所屬群組
+/// （gate 過濾；無權限入口不渲染——根治死連結）。
+#[derive(Debug, Clone)]
+pub struct NavModel {
+    pub home: NavItem,
+    pub top: Vec<NavItem>,
+    pub studios: Vec<StudioView>,
     /// 目前角色徽章（bootstrap admin 為空字串時不渲染）。
     pub role_code: String,
 }
@@ -42,35 +56,97 @@ pub struct NavModel {
 impl NavModel {
     /// 由 manifest＋權限旗標建構（無 I/O；除 `role_code` 複製外全為借用過濾）。
     pub fn build(flags: &NavFlags, current_path: &str) -> NavModel {
-        let mut groups: Vec<NavGroupView> = Vec::new();
-        for g in NAV_GROUPS {
-            let mut items: Vec<NavItem> = Vec::new();
-            for p in PAGES.iter().filter(|p| p.nav_group == Some(g.id)) {
-                if !gate_allows(p.gate, flags) {
-                    continue;
+        // 群組 → 過濾後檢視（快取於閉包內部；group.studio 決定所屬工作室）。
+        let group_views: Vec<(&console_manifest::NavGroup, Option<NavGroupView>)> = NAV_GROUPS
+            .iter()
+            .map(|g| {
+                let mut items: Vec<NavItem> = Vec::new();
+                for p in PAGES.iter().filter(|p| p.nav_group == Some(g.id)) {
+                    if !gate_allows(p.gate, flags) {
+                        continue;
+                    }
+                    let href = console_manifest::nav_href_of(p).to_string();
+                    let active = is_active_path(current_path, &href);
+                    items.push(NavItem {
+                        id: p.id,
+                        href,
+                        label: p.title,
+                        active,
+                    });
                 }
-                let href = console_manifest::nav_href_of(p).to_string();
-                let active = is_active_path(current_path, &href);
-                items.push(NavItem {
-                    id: p.id,
-                    href,
-                    label: p.title,
-                    active,
+                // 群組內所有項目皆被過濾 → 整組不渲染（連空 dropdown 都不出現）。
+                let view = if items.is_empty() {
+                    None
+                } else {
+                    Some(NavGroupView {
+                        id: g.id,
+                        label: g.label,
+                        is_menu: g.kind == NavKind::Menu,
+                        items,
+                    })
+                };
+                (g, view)
+            })
+            .collect();
+
+        // home + top：overview 群組（studio=""）拆解——home.index 提升為
+        // 置頂首頁；其餘自我服務頁（我的裁決紀錄）成為頂層平面連結。
+        let mut home = NavItem {
+            id: "",
+            href: "/".to_string(),
+            label: "總覽",
+            active: current_path == "/",
+        };
+        let mut top: Vec<NavItem> = Vec::new();
+        let mut studios: Vec<StudioView> = Vec::new();
+
+        for s in STUDIOS {
+            let mut groups: Vec<NavGroupView> = Vec::new();
+            for (g, view) in &group_views {
+                if g.studio == s.id {
+                    if let Some(v) = view {
+                        groups.push(v.clone());
+                    }
+                }
+            }
+            // 工作室內所有群組皆被過濾 → 整室不渲染。
+            if !groups.is_empty() {
+                studios.push(StudioView {
+                    id: s.id,
+                    label: s.label,
+                    groups,
                 });
             }
-            // 群組內所有項目皆被過濾 → 整組不渲染（連空 dropdown 都不出現）。
-            if items.is_empty() {
-                continue;
-            }
-            groups.push(NavGroupView {
-                id: g.id,
-                label: g.label,
-                is_menu: g.kind == NavKind::Menu,
-                items,
-            });
         }
+
+        for (g, view) in &group_views {
+            if g.id == "overview" {
+                if let Some(v) = view {
+                    for it in &v.items {
+                        if it.id == "home.index" {
+                            home = it.clone();
+                        } else {
+                            top.push(it.clone());
+                        }
+                    }
+                }
+            }
+        }
+
+        // home.index 未過濾成功（例如群組空）→ 防禦性預設。
+        if home.id.is_empty() {
+            home = NavItem {
+                id: "home.index",
+                href: "/".to_string(),
+                label: "總覽",
+                active: current_path == "/",
+            };
+        }
+
         NavModel {
-            groups,
+            home,
+            top,
+            studios,
             role_code: flags.role_code.clone(),
         }
     }
@@ -109,31 +185,35 @@ mod tests {
         }
     }
 
+    /// 工作室輔助：取得指定 id 的 StudioView。
+    fn studio<'a>(m: &'a NavModel, id: &str) -> Option<&'a StudioView> {
+        m.studios.iter().find(|s| s.id == id)
+    }
+
     #[test]
     fn visitor_flags_yield_minimal_nav() {
         // 全 false（未登入者不會走到此，但防禦性：零權限→僅 All 頁）。
         let m = NavModel::build(&flags(false, false, false), "/");
-        let ids: Vec<&str> = m.groups.iter().map(|g| g.id).collect();
-        assert!(ids.contains(&"overview"));
-        assert!(ids.contains(&"query"));
-        assert!(ids.contains(&"system"));
-        assert!(!ids.contains(&"ledger"), "Read 頁不應對零權限者出現");
-        assert!(!ids.contains(&"admin"));
-        assert!(!ids.contains(&"governance"));
+        assert!(m.home.id == "home.index" && m.home.active, "總覽置頂");
+        assert!(studio(&m, "biz").is_some(), "biz 含 All 頁（檢索）");
+        assert!(studio(&m, "ops").is_some(), "ops 含 All 頁（系統/知識）");
+        assert!(studio(&m, "bank").is_none(), "Read 頁不應對零權限者出現");
+        assert!(studio(&m, "gov").is_none(), "Manage 頁不應對零權限者出現");
     }
 
     #[test]
     fn read_only_user_never_sees_audit_link() {
         // 根治死連結：store1（LEDGER_READ）不得見 /audit（Manage 閘）——
-        // governance 群組唯一項目被過濾 → 整組不渲染（連空 dropdown 都不出現）。
+        // gov 工作室所有項目皆被過濾 → 整室不渲染（連空區段都不出現）。
         let m = NavModel::build(&flags(true, false, false), "/transactions");
         assert!(
-            !m.groups.iter().any(|g| g.id == "governance"),
-            "governance 群組對 LEDGER_READ-only 者不應渲染"
+            studio(&m, "gov").is_none(),
+            "gov 工作室對 LEDGER_READ-only 者不應渲染"
         );
         assert!(
-            !m.groups
+            !m.studios
                 .iter()
+                .flat_map(|s| s.groups.iter())
                 .flat_map(|g| g.items.iter())
                 .any(|it| it.id == "audit.page"),
             "稽核連結對 LEDGER_READ-only 者渲染＝死連結（B7a 回歸）"
@@ -143,56 +223,74 @@ mod tests {
     #[test]
     fn manage_user_sees_governance_and_admin() {
         let m = NavModel::build(&flags(true, true, true), "/audit");
-        let gov = m.groups.iter().find(|g| g.id == "governance").expect("gov");
+        let gov = studio(&m, "gov").expect("gov 工作室");
         assert!(gov
-            .items
+            .groups
             .iter()
+            .flat_map(|g| g.items.iter())
             .any(|it| it.id == "audit.page" && it.active));
-        assert!(m.groups.iter().any(|g| g.id == "admin"));
-        assert!(m.groups.iter().any(|g| g.id == "apihub"));
+        assert!(studio(&m, "gov")
+            .expect("gov")
+            .groups
+            .iter()
+            .any(|g| g.id == "admin"));
+        assert!(studio(&m, "gov")
+            .expect("gov")
+            .groups
+            .iter()
+            .any(|g| g.id == "apihub"));
     }
 
     #[test]
     fn aria_current_exact_and_prefix() {
         let f = flags(true, false, false);
         assert!(NavModel::build(&f, "/transactions")
-            .groups
+            .studios
             .iter()
+            .flat_map(|s| s.groups.iter())
             .flat_map(|g| g.items.iter())
             .any(|it| it.id == "tx.list" && it.active));
         // 前綴邊界：/accounts/ACC-1 命中 /accounts；/accounts-foo 不命中。
         assert!(NavModel::build(&f, "/accounts/ACC-1")
-            .groups
+            .studios
             .iter()
+            .flat_map(|s| s.groups.iter())
             .flat_map(|g| g.items.iter())
             .any(|it| it.id == "accounts.list" && it.active));
         assert!(!NavModel::build(&f, "/accounts-foo")
-            .groups
+            .studios
             .iter()
+            .flat_map(|s| s.groups.iter())
             .flat_map(|g| g.items.iter())
             .any(|it| it.active));
         // 首頁僅精確命中。
-        assert!(NavModel::build(&f, "/")
-            .groups
-            .iter()
-            .flat_map(|g| g.items.iter())
-            .any(|it| it.id == "home.index" && it.active));
-        assert!(!NavModel::build(&f, "/transactions")
-            .groups
-            .iter()
-            .flat_map(|g| g.items.iter())
-            .any(|it| it.id == "home.index" && it.active));
+        assert!(NavModel::build(&f, "/").home.active);
+        assert!(!NavModel::build(&f, "/transactions").home.active);
     }
 
     #[test]
     fn knowledge_group_present_for_all_authenticated() {
         let m = NavModel::build(&flags(false, false, false), "/");
-        let kb = m
+        let ops = studio(&m, "ops").expect("ops 工作室");
+        assert!(ops
             .groups
             .iter()
-            .find(|g| g.id == "knowledge")
-            .expect("knowledge");
-        assert_eq!(kb.items.len(), 1);
-        assert_eq!(kb.items[0].href, "/console/index.html");
+            .flat_map(|g| g.items.iter())
+            .any(|it| it.href == "/console/index.html"));
+    }
+
+    #[test]
+    fn home_item_is_overview_top_link() {
+        let m = NavModel::build(&flags(true, true, true), "/");
+        assert_eq!(m.home.id, "home.index");
+        assert_eq!(m.home.href, "/");
+        assert_eq!(m.home.label, "總覽");
+        // home 不重複出現在工作室區段。
+        assert!(!m
+            .studios
+            .iter()
+            .flat_map(|s| s.groups.iter())
+            .flat_map(|g| g.items.iter())
+            .any(|it| it.id == "home.index"));
     }
 }

@@ -2,9 +2,9 @@
   "bomFormat": "CycloneDX",
   "specVersion": "1.5",
   "version": 1,
-  "serialNumber": "urn:uuid:13815b01-01c8-4c6f-9ae3-a61f2915e91c",
+  "serialNumber": "urn:uuid:549a452b-cb31-4009-9e7a-13187c11bcd4",
   "metadata": {
-    "timestamp": "2026-11-10T16:44:10.984051900Z",
+    "timestamp": "2026-11-11T13:24:11.601132400Z",
     "tools": [
       {
         "vendor": "CycloneDX",
@@ -102,16 +102,16 @@
     },
     {
       "type": "library",
-      "bom-ref": "registry+https://github.com/rust-lang/crates.io-index#itoa@1.0.18",
+      "bom-ref": "registry+https://github.com/rust-lang/crates.io-index#itoa@1.0.19",
       "author": "David Tolnay <dtolnay@gmail.com>",
       "name": "itoa",
-      "version": "1.0.18",
+      "version": "1.0.19",
       "description": "Fast integer primitive to string conversion",
       "scope": "required",
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "8f42a60cbdf9a97f5d2305f08a87dc4e09308d1276d28c869c684d7777685682"
+          "content": "3bd1574e617a9a6c1f8f8181bd7e841e1f20e4277607ef28945765188d6284d4"
         }
       ],
       "licenses": [
@@ -119,7 +119,7 @@
           "expression": "MIT OR Apache-2.0"
         }
       ],
-      "purl": "pkg:cargo/itoa@1.0.18",
+      "purl": "pkg:cargo/itoa@1.0.19",
       "externalReferences": [
         {
           "type": "documentation",
@@ -400,16 +400,16 @@
     },
     {
       "type": "library",
-      "bom-ref": "registry+https://github.com/rust-lang/crates.io-index#syn@3.0.9",
+      "bom-ref": "registry+https://github.com/rust-lang/crates.io-index#syn@3.0.10",
       "author": "David Tolnay <dtolnay@gmail.com>",
       "name": "syn",
-      "version": "3.0.9",
+      "version": "3.0.10",
       "description": "Parser for Rust source code",
       "scope": "required",
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "d78c8dee4c7bf0e14673097256fed6142ce9d3b85a408189d07482442145823b"
+          "content": "4ae9ccbea3a7b0b09443036490c8f34a8b1b760fd345e5c0dae0aac718faea79"
         }
       ],
       "licenses": [
@@ -417,7 +417,7 @@
           "expression": "MIT OR Apache-2.0"
         }
       ],
-      "purl": "pkg:cargo/syn@3.0.9",
+      "purl": "pkg:cargo/syn@3.0.10",
       "externalReferences": [
         {
           "type": "documentation",
@@ -462,16 +462,15 @@
     },
     {
       "type": "library",
-      "bom-ref": "registry+https://github.com/rust-lang/crates.io-index#uuid@1.29.0",
-      "author": "Ashley Mannix<ashleymannix@live.com.au>, Dylan DPC<dylan.dpc@gmail.com>, Hunar Roop Kahlon<hunar.roop@gmail.com>",
+      "bom-ref": "registry+https://github.com/rust-lang/crates.io-index#uuid@1.29.2",
       "name": "uuid",
-      "version": "1.29.0",
+      "version": "1.29.2",
       "description": "A library to generate and parse UUIDs.",
       "scope": "required",
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "4a0e2d11620c50695fe12bbbfde96b3477fe606e7284c22d505c12ce51214514"
+          "content": "bed99139f7dac9b5cfe5f17be4d66dc7079a34dee1d74bcc77217119240e267c"
         }
       ],
       "licenses": [
@@ -479,7 +478,7 @@
           "expression": "Apache-2.0 OR MIT"
         }
       ],
-      "purl": "pkg:cargo/uuid@1.29.0",
+      "purl": "pkg:cargo/uuid@1.29.2",
       "externalReferences": [
         {
           "type": "documentation",
@@ -529,7 +528,7 @@
       "dependsOn": [
         "registry+https://github.com/rust-lang/crates.io-index#serde@1.0.229",
         "registry+https://github.com/rust-lang/crates.io-index#serde_json@1.0.154",
-        "registry+https://github.com/rust-lang/crates.io-index#uuid@1.29.0"
+        "registry+https://github.com/rust-lang/crates.io-index#uuid@1.29.2"
       ]
     },
     {
@@ -543,7 +542,7 @@
       ]
     },
     {
-      "ref": "registry+https://github.com/rust-lang/crates.io-index#itoa@1.0.18"
+      "ref": "registry+https://github.com/rust-lang/crates.io-index#itoa@1.0.19"
     },
     {
       "ref": "registry+https://github.com/rust-lang/crates.io-index#memchr@2.8.3"
@@ -578,20 +577,20 @@
       "dependsOn": [
         "registry+https://github.com/rust-lang/crates.io-index#proc-macro2@1.0.107",
         "registry+https://github.com/rust-lang/crates.io-index#quote@1.0.47",
-        "registry+https://github.com/rust-lang/crates.io-index#syn@3.0.9"
+        "registry+https://github.com/rust-lang/crates.io-index#syn@3.0.10"
       ]
     },
     {
       "ref": "registry+https://github.com/rust-lang/crates.io-index#serde_json@1.0.154",
       "dependsOn": [
-        "registry+https://github.com/rust-lang/crates.io-index#itoa@1.0.18",
+        "registry+https://github.com/rust-lang/crates.io-index#itoa@1.0.19",
         "registry+https://github.com/rust-lang/crates.io-index#memchr@2.8.3",
         "registry+https://github.com/rust-lang/crates.io-index#serde_core@1.0.229",
         "registry+https://github.com/rust-lang/crates.io-index#zmij@1.0.23"
       ]
     },
     {
-      "ref": "registry+https://github.com/rust-lang/crates.io-index#syn@3.0.9",
+      "ref": "registry+https://github.com/rust-lang/crates.io-index#syn@3.0.10",
       "dependsOn": [
         "registry+https://github.com/rust-lang/crates.io-index#proc-macro2@1.0.107",
         "registry+https://github.com/rust-lang/crates.io-index#quote@1.0.47",
@@ -602,7 +601,7 @@
       "ref": "registry+https://github.com/rust-lang/crates.io-index#unicode-ident@1.0.27"
     },
     {
-      "ref": "registry+https://github.com/rust-lang/crates.io-index#uuid@1.29.0",
+      "ref": "registry+https://github.com/rust-lang/crates.io-index#uuid@1.29.2",
       "dependsOn": [
         "registry+https://github.com/rust-lang/crates.io-index#getrandom@0.4.3",
         "registry+https://github.com/rust-lang/crates.io-index#serde_core@1.0.229"

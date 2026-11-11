@@ -1,4 +1,4 @@
-//! AI Integration Module for Flaps ERP
+//! AI Integration Module for AuxBridge
 //!
 //! This module provides comprehensive AI integration capabilities including:
 //! - Multiple AI model clients (Ollama, Chutes, Inference.net)

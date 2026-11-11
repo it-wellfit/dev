@@ -1,4 +1,4 @@
-// Integration Tests for Flaps ERP - System Integration Validation
+// Integration Tests for AuxBridge - System Integration Validation
 use tokio::test;
 use std::process::Command;
 

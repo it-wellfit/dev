@@ -1,13 +1,21 @@
-{# 導覽共用 macro（計畫 1793033568961 W2）：由 console_manifest SSOT 經
-   platform::nav::NavModel 生成；middleware 每請求建構，handler 一行複製。
-   規則：無權限入口不渲染（NavModel 已過濾）；目前頁 aria-current="page"；
-   群組為 <details> 零 JS 下拉；角色徽章僅在有 role_code 時渲染。
+{# 導覽共用 macro（計畫 1793033568961 W2 + IA 重構：studio + section 兩層）：
+   由 console_manifest SSOT（STUDIOS + NAV_GROUPS + PAGES）經 platform::nav::NavModel
+   生成；middleware 每請求建構，handler 一行複製。
+   IA：home（總覽）置頂 → 工作室標頭（nav-studio-header）→ 所屬群組
+   （無權限入口不渲染，NavModel 已過濾；目前頁 aria-current="page"；
+   群組為 <details> 零 JS 下拉；角色徽章僅在有 role_code 時渲染）。
    W4：輸出尾端附帶資料八態掛點（每頁 DOM 契約）。 #}
 {% import "partials/state_anchors.html" as state_anchors %}
 {% macro site_nav(nav) %}
 <nav class="site-nav" aria-label="主導覽">
     <div class="container">
-        {% for g in nav.groups %}
+        <a href="{{ nav.home.href }}"{% if nav.home.active %} aria-current="page"{% endif %}>{{ nav.home.label }}</a>
+        {% for it in nav.top %}
+        <a href="{{ it.href }}"{% if it.active %} aria-current="page"{% endif %}>{{ it.label }}</a>
+        {% endfor %}
+        {% for s in nav.studios %}
+        <div class="nav-studio-header">{{ s.label }}</div>
+        {% for g in s.groups %}
         {% if g.is_menu %}
         <details class="nav-menu">
             <summary>{{ g.label }}</summary>
@@ -22,6 +30,7 @@
         <a href="{{ it.href }}"{% if it.active %} aria-current="page"{% endif %}>{{ it.label }}</a>
         {% endfor %}
         {% endif %}
+        {% endfor %}
         {% endfor %}
         {% if !nav.role_code.is_empty() %}
         <span class="nav-role-badge" title="目前角色">{{ nav.role_code }}</span>

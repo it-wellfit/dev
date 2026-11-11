@@ -834,7 +834,7 @@ pub async fn dashboard_card(pool: &SqlitePool, mock_mode: bool) -> Option<BankPa
         pending_batches: pending,
         failed_batches: failed,
         rejected_batches: rejected,
-        completed_amount_display: flaps_core::format_minor(total_amount.unwrap_or(0), 2),
+        completed_amount_display: auxbridge_core::format_minor(total_amount.unwrap_or(0), 2),
         recent,
     })
 }
@@ -1022,7 +1022,7 @@ pub async fn bankpay_page(
             Ok(resp) => {
                 let amount_display = resp
                     .amount_minor
-                    .map(|m| flaps_core::format_minor(m, 2))
+                    .map(|m| auxbridge_core::format_minor(m, 2))
                     .unwrap_or_else(|| "—".to_string());
                 query_result = Some(QueryView {
                     esun_ref: req.esun_ref.clone(),
@@ -1072,7 +1072,7 @@ pub async fn bankpay_export_form(
     Form(form): Form<ExportForm>,
 ) -> Response {
     // 金額：小數字串 → 精確整數分（INV-01；禁浮點）。
-    let amount_minor = match flaps_core::parse_decimal_to_minor(form.amount.trim(), 2) {
+    let amount_minor = match auxbridge_core::parse_decimal_to_minor(form.amount.trim(), 2) {
         Ok(v) => v,
         Err(e) => {
             let data = page_data(&state, &session).await;

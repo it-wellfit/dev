@@ -7,21 +7,21 @@
 //! - GET never mutates state; all writes go through POST handlers that enforce
 //!   RBAC (`LEDGER_WRITE`) server-side.
 //! - Money is parsed with exact string arithmetic into i64 minor units
-//!   (INV-01, `flaps_core::money`), never through `f64`.
+//!   (INV-01, `auxbridge_core::money`), never through `f64`.
 //! - All rendered values pass through Askama auto-escaping (XSS defense,
 //!   THREAT_MODEL T-07).
 
 use askama::Template;
+use auxbridge_core::permission::PermissionManager;
+use auxbridge_core::{
+    format_minor, parse_decimal_to_minor, LedgerEngine, Transaction, TransactionItem,
+};
 use axum::extract::{Form, Path, Query, State};
 use axum::http::{header, StatusCode};
 use axum::response::{Html, IntoResponse, Redirect, Response};
 use axum::routing::{get, post};
 use axum::{Extension, Json, Router};
 use chrono::Datelike;
-use flaps_core::permission::PermissionManager;
-use flaps_core::{
-    format_minor, parse_decimal_to_minor, LedgerEngine, Transaction, TransactionItem,
-};
 use serde::Deserialize;
 use sqlx::SqlitePool;
 
@@ -305,7 +305,7 @@ pub(crate) async fn status_chips(state: &AppState) -> (Vec<StatusChip>, String) 
 /// Build the zero-JS monthly bar chart SVG from integer aggregates.
 /// Deterministic layout: 6 months, two bars each (debit/credit), value labels
 /// derived with `format_minor`. No external assets, no JavaScript.
-fn monthly_chart_svg(totals: &[flaps_core::ledger::engine::MonthlyTotal]) -> String {
+fn monthly_chart_svg(totals: &[auxbridge_core::ledger::engine::MonthlyTotal]) -> String {
     if totals.is_empty() {
         return String::new();
     }
@@ -478,6 +478,7 @@ pub fn router(state: AppState) -> Router {
             get(crate::pages::admin_sessions_page).post(crate::pages::admin_sessions_purge),
         )
         .route("/admin/system", get(crate::pages::admin_system_page))
+        .route("/admin/audit", get(crate::pages::audit_page))
         // ── API 資料管理平台（零 JS；目錄由 apihub registry 驅動）──
         .route("/admin/api/catalog", get(crate::apihub::apihub_catalog))
         .route("/admin/api/test", get(crate::apihub::apihub_test))
@@ -745,7 +746,7 @@ async fn health(State(state): State<AppState>) -> Response {
             "db": db_connected,
             "migrations_applied": migrations,
             "transactions": transactions,
-            "service": "flaps-server",
+            "service": "auxbridge-server",
             "version": env!("CARGO_PKG_VERSION"),
         })),
     )
@@ -849,7 +850,7 @@ async fn validate_and_post(
             "金額必須大於 0；請輸入正數金額。".to_string(),
         ));
     }
-    if amount_minor > flaps_core::ledger::engine::MAX_AMOUNT_MINOR {
+    if amount_minor > auxbridge_core::ledger::engine::MAX_AMOUNT_MINOR {
         return Err((
             StatusCode::BAD_REQUEST,
             "金額超出上限（最多 15 位整數＋2 位小數）；請拆分交易。".to_string(),
@@ -1408,14 +1409,14 @@ async fn report_parallel_page(
             .entry(ym)
             .or_insert(0) += debit;
     }
-    let mut series: Vec<flaps_core::parallel::ParallelSeries> = per_account
+    let mut series: Vec<auxbridge_core::parallel::ParallelSeries> = per_account
         .into_iter()
         .map(|(account, by_month)| {
             let values = axes
                 .iter()
                 .map(|ym| (ym.clone(), by_month.get(ym).copied().unwrap_or(0)))
                 .collect();
-            flaps_core::parallel::ParallelSeries {
+            auxbridge_core::parallel::ParallelSeries {
                 label: account,
                 values,
             }
@@ -1429,7 +1430,7 @@ async fn report_parallel_page(
     });
     series.truncate(top);
 
-    let chart_svg = flaps_core::parallel::render_parallel_coordinates(&series, 720, 260);
+    let chart_svg = auxbridge_core::parallel::render_parallel_coordinates(&series, 720, 260);
     let template = ParallelTemplate {
         acting_user: session.user_id.clone(),
         nav: nav.0.clone(),
@@ -1460,7 +1461,7 @@ pub struct AiSuggestionTemplate {
     pub acting_user: String,
     pub nav: crate::nav::NavModel,
     pub csrf_token: String,
-    pub suggestion: Option<flaps_core::ParsedSuggestion>,
+    pub suggestion: Option<auxbridge_core::ParsedSuggestion>,
     pub degrade_message: Option<String>,
 }
 
@@ -1548,7 +1549,7 @@ async fn ai_suggest(
     };
 
     // AIS-003: schema gate - malformed output is rejected before any use.
-    let parsed = match flaps_core::parse_ai_suggestion(&response_text) {
+    let parsed = match auxbridge_core::parse_ai_suggestion(&response_text) {
         Ok(p) => p,
         Err(msg) => {
             let template = AiSuggestionTemplate {
@@ -1617,7 +1618,7 @@ async fn drafts_adopt(
         )
             .into_response();
     }
-    let amount_minor = match flaps_core::parse_decimal_to_minor(&form.amount, 2) {
+    let amount_minor = match auxbridge_core::parse_decimal_to_minor(&form.amount, 2) {
         Ok(v) => v,
         Err(e) => return (StatusCode::BAD_REQUEST, format!("金額錯誤：{e}")).into_response(),
     };
@@ -1625,7 +1626,7 @@ async fn drafts_adopt(
         Ok(d) => d,
         Err(_) => return (StatusCode::BAD_REQUEST, "日期格式不正確。".to_string()).into_response(),
     };
-    let entry = flaps_core::DraftEntry {
+    let entry = auxbridge_core::DraftEntry {
         date: Some(date),
         amount_minor: Some(amount_minor),
         debit_account: Some(form.debit_account.trim().to_string()),
@@ -1704,7 +1705,7 @@ async fn parse_coverage_page(
     let coverage_rows: Vec<CoverageRow> = rows
         .iter()
         .map(|(id, json)| {
-            let is_complete = serde_json::from_str::<flaps_core::DraftEntry>(json)
+            let is_complete = serde_json::from_str::<auxbridge_core::DraftEntry>(json)
                 .map(|d| d.is_complete())
                 .unwrap_or(false);
             if is_complete {
@@ -2096,7 +2097,7 @@ fn analyze_draft(
     source: &str,
     created_by: &str,
     created_at: &str,
-    entry: &flaps_core::DraftEntry,
+    entry: &auxbridge_core::DraftEntry,
 ) -> SuggestionRow {
     let mut missing: Vec<&str> = Vec::new();
     if entry.date.is_none() {
@@ -2155,22 +2156,21 @@ async fn ai_decisions_page(
     .await
     .unwrap_or_default();
 
-    let suggestions: Vec<SuggestionRow> = rows
-        .iter()
-        .map(|(draft_id, source, created_by, created_at, json)| {
-            let entry = serde_json::from_str::<flaps_core::DraftEntry>(json).unwrap_or_else(|_| {
-                flaps_core::DraftEntry {
-                    date: None,
-                    amount_minor: None,
-                    debit_account: None,
-                    credit_account: None,
-                    currency: None,
-                    evidence: Vec::new(),
-                }
-            });
-            analyze_draft(draft_id, source, created_by, created_at, &entry)
-        })
-        .collect();
+    let suggestions: Vec<SuggestionRow> =
+        rows.iter()
+            .map(|(draft_id, source, created_by, created_at, json)| {
+                let entry = serde_json::from_str::<auxbridge_core::DraftEntry>(json)
+                    .unwrap_or_else(|_| auxbridge_core::DraftEntry {
+                        date: None,
+                        amount_minor: None,
+                        debit_account: None,
+                        credit_account: None,
+                        currency: None,
+                        evidence: Vec::new(),
+                    });
+                analyze_draft(draft_id, source, created_by, created_at, &entry)
+            })
+            .collect();
 
     render_or_500(AiDecisionsTemplate {
         acting_user: session.user_id.clone(),
@@ -2303,7 +2303,7 @@ async fn query_transactions_for_list(
     search: &str,
     limit: i64,
     offset: i64,
-) -> Vec<flaps_core::ledger::engine::TransactionSummary> {
+) -> Vec<auxbridge_core::ledger::engine::TransactionSummary> {
     if search.is_empty() {
         return state
             .engine
@@ -2312,7 +2312,7 @@ async fn query_transactions_for_list(
             .unwrap_or_default();
     }
     let pattern = format!("%{search}%");
-    sqlx::query_as::<_, flaps_core::ledger::engine::TransactionSummary>(
+    sqlx::query_as::<_, auxbridge_core::ledger::engine::TransactionSummary>(
         "SELECT t.transaction_id, t.transaction_code, t.transaction_date, t.description, \
          t.reference_number, t.status, t.source_type, t.created_by, t.created_at, t.updated_at, \
          COALESCE(SUM(CASE WHEN i.item_type = 'DEBIT' THEN i.amount_minor ELSE 0 END), 0) AS total_amount_minor, \
@@ -3102,8 +3102,8 @@ async fn transaction_detail_page(
         reference,
         source,
         items,
-        debit_total: flaps_core::money::format_minor_i128(debit_sum, 2),
-        credit_total: flaps_core::money::format_minor_i128(credit_sum, 2),
+        debit_total: auxbridge_core::money::format_minor_i128(debit_sum, 2),
+        credit_total: auxbridge_core::money::format_minor_i128(credit_sum, 2),
         balanced,
         back_href,
     })
@@ -3226,6 +3226,8 @@ pub struct ImportTemplate {
     pub csrf_token: String,
     pub notice: Option<String>,
     pub batch: Option<ImportBatchView>,
+    /// 最近匯入批次（含 EML 多附件產生的多 batch；10 筆 DESC）
+    pub recent_batches: Vec<ImportBatchView>,
 }
 
 async fn import_upload_page(
@@ -3255,12 +3257,59 @@ async fn import_upload_page(
         }
         String::from_utf8_lossy(&out).to_string()
     });
+    // 最近匯入批次（含 EML 多附件產生的多 batch——全部可見）。
+    let recent_batches_meta: Vec<(String, String, i64, i64, String)> = sqlx::query_as(
+        "SELECT batch_id, file_sha256, row_total, row_ok, status FROM import_batches ORDER BY created_at DESC LIMIT 10",
+    )
+    .fetch_all(&state.pool)
+    .await
+    .unwrap_or_default();
+    let mut recent_batches: Vec<ImportBatchView> = Vec::new();
+    for (bid, sha, total, ok, status) in recent_batches_meta {
+        let rows: Vec<(i64, String, Option<String>, String)> = sqlx::query_as(
+            "SELECT row_no, status, error_msg, raw_line FROM import_rows WHERE batch_id = ? ORDER BY row_no",
+        )
+        .bind(&bid)
+        .fetch_all(&state.pool)
+        .await
+        .unwrap_or_default();
+        recent_batches.push(ImportBatchView {
+            batch_id: bid,
+            sha256_short: sha.chars().take(12).collect(),
+            row_total: total,
+            row_ok: ok,
+            status: status.clone(),
+            status_display: if status == "draft" {
+                "待確認（未登帳）".to_string()
+            } else if status == "mapping" {
+                "待欄位映射".to_string()
+            } else {
+                "已確認登帳".to_string()
+            },
+            is_draft: status == "draft",
+            rows: rows
+                .into_iter()
+                .map(|(row_no, st, err, raw)| ImportBatchRowView {
+                    row_no,
+                    status: st.clone(),
+                    status_display: if st == "ok" {
+                        "合格".to_string()
+                    } else {
+                        "錯誤".to_string()
+                    },
+                    error_msg: err.unwrap_or_default(),
+                    raw_line: raw.chars().take(80).collect(),
+                })
+                .collect(),
+        });
+    }
     let template = ImportTemplate {
         acting_user: session.user_id.clone(),
         nav: nav.0.clone(),
         csrf_token: session.csrf_token.clone(),
         notice,
         batch,
+        recent_batches,
     };
     match template.render() {
         Ok(body) => Html(body).into_response(),
@@ -3299,6 +3348,8 @@ async fn load_batch_view(state: &AppState, batch_id: &str) -> Option<ImportBatch
         status: status.clone(),
         status_display: if status == "draft" {
             "待確認（未登帳）".to_string()
+        } else if status == "mapping" {
+            "待欄位映射".to_string()
         } else {
             "已確認登帳".to_string()
         },
@@ -3348,7 +3399,7 @@ pub(crate) fn validate_fields(
     if debit_account.eq_ignore_ascii_case(&credit_account) {
         return Err("借貸科目相同".to_string());
     }
-    let amount_minor = flaps_core::parse_decimal_to_minor(amount_raw.trim(), 2)
+    let amount_minor = auxbridge_core::parse_decimal_to_minor(amount_raw.trim(), 2)
         .map_err(|e| format!("金額錯誤：{e}"))?;
     if amount_minor <= 0 {
         return Err("金額必須大於 0".to_string());
@@ -4770,7 +4821,7 @@ async fn drafts_page(
     let drafts: Vec<DraftListView> = rows
         .into_iter()
         .map(|(draft_id, source, json)| {
-            let parsed: Result<flaps_core::DraftEntry, _> = serde_json::from_str(&json);
+            let parsed: Result<auxbridge_core::DraftEntry, _> = serde_json::from_str(&json);
             let completeness = match parsed {
                 Ok(d) if d.is_complete() => "完整（可登帳）".to_string(),
                 Ok(_) => "不完整（需人工補齊）".to_string(),
@@ -4838,7 +4889,7 @@ async fn drafts_parse(
     }
 
     let keywords = parser_keywords(&state).await;
-    let draft = flaps_core::parse_unstructured(&text, &keywords);
+    let draft = auxbridge_core::parse_unstructured(&text, &keywords);
     let draft_id = uuid::Uuid::new_v4().to_string();
 
     let insert = sqlx::query(
@@ -4890,9 +4941,9 @@ async fn wizard_page(
                 .fetch_optional(&state.pool)
                 .await
                 .unwrap_or(None);
-                match row
-                    .and_then(|(json,)| serde_json::from_str::<flaps_core::DraftEntry>(&json).ok())
-                {
+                match row.and_then(|(json,)| {
+                    serde_json::from_str::<auxbridge_core::DraftEntry>(&json).ok()
+                }) {
                     Some(d) => (
                         FormValues {
                             debit_account: d.debit_account.clone().unwrap_or_default(),
@@ -4923,7 +4974,7 @@ async fn wizard_page(
                         FormValues {
                             debit_account: d.debit_account.clone(),
                             credit_account: d.credit_account.clone(),
-                            amount: flaps_core::format_minor(d.amount_minor, 2),
+                            amount: auxbridge_core::format_minor(d.amount_minor, 2),
                             currency: d.currency.clone(),
                             description: d.description.clone(),
                             transaction_date: d.date.clone(),
@@ -5043,7 +5094,7 @@ async fn wizard_step2(
     }
 
     if form_error.is_none() {
-        match flaps_core::parse_decimal_to_minor(form.amount.trim(), 2) {
+        match auxbridge_core::parse_decimal_to_minor(form.amount.trim(), 2) {
             Ok(m) if m > 0 => amount_minor = Some(m),
             Ok(_) => form_error = Some("金額必須大於 0（規則 R-MONEY）。".to_string()),
             Err(e) => form_error = Some(format!("金額錯誤（規則 R-MONEY）：{e}")),
@@ -5923,7 +5974,10 @@ mod tests {
             .unwrap();
         let (status, body, _) = send(app, request).await;
         assert_eq!(status, StatusCode::OK);
-        assert!(body.contains("Flaps ERP 工作台"), "page title must render");
+        assert!(
+            body.contains("AuxBridge 整合工作台"),
+            "page title must render"
+        );
         assert!(!body.contains("<script"), "zero-JS invariant");
         assert!(
             body.contains("資料庫已連線"),
@@ -7401,12 +7455,12 @@ mod tests {
     #[test]
     fn ai_suggestion_schema_validation_rejects_malformed_output() {
         // AIS-003: malformed model output must be rejected by the schema gate.
-        assert!(flaps_core::parse_ai_suggestion("{ \"date\": \"not-a-date\" }").is_err());
-        assert!(flaps_core::parse_ai_suggestion(
+        assert!(auxbridge_core::parse_ai_suggestion("{ \"date\": \"not-a-date\" }").is_err());
+        assert!(auxbridge_core::parse_ai_suggestion(
             "{ \"date\": \"2026-11-04\", \"debit_account\": \"A\", \"credit_account\": \"B\", \"amount\": \"abc\", \"currency\": \"TWD\" }"
         )
         .is_err());
-        assert!(flaps_core::parse_ai_suggestion("not json at all").is_err());
+        assert!(auxbridge_core::parse_ai_suggestion("not json at all").is_err());
     }
 
     // ---------------------------------------------------------------------------
@@ -8420,7 +8474,7 @@ mod tests {
 
     #[test]
     fn transaction_builder_constructs_domain_objects() {
-        let built = flaps_core::ledger::transaction::Transaction::builder()
+        let built = auxbridge_core::ledger::transaction::Transaction::builder()
             .transaction_id("tx-b1")
             .transaction_code("TX-BUILDER")
             .transaction_date(chrono::NaiveDate::from_ymd_opt(2026, 11, 4).unwrap())
@@ -8433,7 +8487,7 @@ mod tests {
             .expect("builder must construct");
         assert_eq!(built.transaction_code, "TX-BUILDER");
 
-        let item = flaps_core::ledger::transaction::TransactionItem::builder()
+        let item = auxbridge_core::ledger::transaction::TransactionItem::builder()
             .item_id("it-b1")
             .transaction_id("tx-b1")
             .account_id("ACC-B")
@@ -8451,7 +8505,7 @@ mod tests {
     // 隔離聲明（第一性原理）：本測試 CPU 密集（狀態彙總 + 頁面組裝），
     // 背景 demo server 並存時 P95 預期超線（環境爭用，非產品效能）；
     // SLA 650ms（42 樣本，基線 ~400ms + 25% 餘裕）由單跑（停 server 後）證實穩定通过；
-    // 規格：cargo test 前停用 flaps-server 或改用分組執行（分組參數見 docs/PLAN_REGISTER.md）。
+    // 規格：cargo test 前停用 auxbridge-server 或改用分組執行（分組參數見 docs/PLAN_REGISTER.md）。
     // ------------------------------------------------------------------
     #[tokio::test]
     async fn stress_10000_transactions_p95_under_500ms() {

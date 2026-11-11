@@ -1,4 +1,4 @@
-# DEMO GUIDE — Flaps ERP 工作台展示操作指南
+# DEMO GUIDE — AuxBridge 整合工作台展示操作指南
 
 > 對象：展示者／評審。展示版本：`data\demo.db`（全部資料以 `[DEMO]` 標示）。
 > 重建展示資料：`powershell -File scripts\reset-demo.ps1`（可重複執行）。
@@ -10,9 +10,9 @@
 powershell -File scripts\seed-demo.ps1
 
 # 2) 以展示資料庫啟動伺服器
-$env:FLAPS_DB_URL = "sqlite://<專案根>/data/demo.db?mode=rwc"
-$env:FLAPS_PORT = "8090"
-target\debug\flaps-server.exe
+$env:AUXBRIDGE_DB_URL = "sqlite://<專案根>/data/demo.db?mode=rwc"
+$env:AUXBRIDGE_PORT = "8090"
+target\debug\auxbridge-server.exe
 
 # 3) 開瀏覽器（零 JavaScript，任何現代瀏覽器）
 http://127.0.0.1:8090
@@ -51,4 +51,4 @@ http://127.0.0.1:8090
 powershell -File scripts\reset-demo.ps1
 ```
 
-重置會刪除展示資料庫並重新種入相同的 [DEMO] 資料——**不會**影響 `data\flaps.db`（正式資料庫檔案獨立）。
+重置會刪除展示資料庫並重新種入相同的 [DEMO] 資料——**不會**影響 `data\auxbridge.db`（正式資料庫檔案獨立）。

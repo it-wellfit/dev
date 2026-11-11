@@ -1,4 +1,4 @@
-// E2E Tests for Flaps ERP - End-to-End User Workflow Testing
+// E2E Tests for AuxBridge - End-to-End User Workflow Testing
 use tokio::test;
 use std::process::Command;
 use serde_json::json;

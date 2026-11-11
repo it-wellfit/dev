@@ -1,4 +1,4 @@
-// Soak Tests for Flaps ERP - Long-Running Stability Testing
+// Soak Tests for AuxBridge - Long-Running Stability Testing
 use tokio::test;
 use std::time::{Duration, Instant};
 

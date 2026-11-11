@@ -237,7 +237,7 @@ const SEEDS: [SeedSpec; 20] = [
         claim_type: ClaimType::Fact,
         topics: &["flaps-erp", "slo"],
         title: "交易分頁頁面 P99 門檻 50ms",
-        body: "The Flaps ERP workbench sets an SLO of P99 < 50ms for the paginated /transactions page, measured in performance tests.",
+        body: "The AuxBridge workbench sets an SLO of P99 < 50ms for the paginated /transactions page, measured in performance tests.",
         path: ".kilo/plans/1793033512795-flaps-erp-workbench-completion.md",
         rev: ROOT_REV,
         quote: "| `/transactions`（分頁） | P99 < 50ms |",

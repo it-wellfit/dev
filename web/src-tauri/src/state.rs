@@ -1,5 +1,5 @@
 #![allow(dead_code)]
-// Application State for Flaps ERP
+// Application State for AuxBridge
 // INV-01 對齊（2026-11-09）：金額一律 i64 minor（整數分），禁用浮點；
 // 資料鏡射自 V2.8／domain 模型，供作者面工具使用（UI SSOT 為 platform 伺服器）。 Web
 // Tauri 2.0 State Management

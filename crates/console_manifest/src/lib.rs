@@ -106,7 +106,7 @@ impl PageFamily {
 /// 靜態控制台伺服根路徑（platform 以 `/console/*` 託管 KEM 生成物）。
 pub const STATIC_ROOT: &str = "/console";
 
-/// 導覽群組（§3.1；順序即渲染順序）。
+/// 導覽群組（§3.1；順序即渲染順序；`studio` 決定所屬工作室）。
 #[derive(Debug, Clone, Copy)]
 pub struct NavGroup {
     pub id: &'static str,
@@ -115,75 +115,117 @@ pub struct NavGroup {
     pub kind: NavKind,
     /// 群組內容的典型最低閘（advisory；實際可見性＝任一項目通過其頁面閘）。
     pub gate: Gate,
+    /// 所屬工作室 id（STUDIOS 封閉集合；""＝置頂首頁群組，不入工作室）。
+    pub studio: &'static str,
 }
 
-/// 導覽群組封閉集合（渲染順序＝宣告順序）。
+/// 工作室（Studio）：導覽 IA 第一層（使用者裁定：studio + section 兩層式；
+/// 對應產品五大工作室心智模型——業務/銀行支付/治理與管理/系統與知識）。
+#[derive(Debug, Clone, Copy)]
+pub struct Studio {
+    pub id: &'static str,
+    /// zh-Hant 顯示名（側欄區段標頭）。
+    pub label: &'static str,
+}
+
+/// 工作室封閉集合（渲染順序＝宣告順序；overview 為置頂首頁不入工作室）。
+pub const STUDIOS: &[Studio] = &[
+    Studio {
+        id: "biz",
+        label: "業務工作室",
+    },
+    Studio {
+        id: "bank",
+        label: "銀行支付",
+    },
+    Studio {
+        id: "gov",
+        label: "治理與管理",
+    },
+    Studio {
+        id: "ops",
+        label: "系統與知識",
+    },
+];
+
+/// 導覽群組封閉集合（渲染順序＝宣告順序；`studio` 決定所屬工作室）。
 pub const NAV_GROUPS: &[NavGroup] = &[
     NavGroup {
         id: "overview",
         label: "總覽",
         kind: NavKind::Flat,
         gate: Gate::All,
+        studio: "",
     },
     NavGroup {
         id: "ledger",
-        label: "帳務作業",
+        label: "📒 帳務作業",
         kind: NavKind::Menu,
         gate: Gate::Read,
+        studio: "biz",
     },
     NavGroup {
         id: "capture",
-        label: "匯入與草稿",
+        label: "📥 匯入與草稿",
         kind: NavKind::Menu,
         gate: Gate::Write,
+        studio: "biz",
     },
     NavGroup {
         id: "bankpay",
-        label: "銀行支付",
+        label: "🏦 銀行支付",
         kind: NavKind::Menu,
         gate: Gate::Read,
+        studio: "bank",
     },
     NavGroup {
         id: "reports",
-        label: "報表分析",
+        label: "📈 報表分析",
         kind: NavKind::Menu,
         gate: Gate::Read,
+        studio: "biz",
     },
     NavGroup {
         id: "query",
-        label: "檢索",
+        label: "🔍 檢索",
         kind: NavKind::Flat,
         gate: Gate::All,
+        studio: "biz",
     },
     NavGroup {
         id: "governance",
-        label: "治理稽核",
+        label: "🛡️ 治理稽核",
         kind: NavKind::Menu,
         gate: Gate::Manage,
+        studio: "gov",
     },
     NavGroup {
         id: "admin",
-        label: "管理",
+        label: "⚙️ 管理",
         kind: NavKind::Menu,
         gate: Gate::Manage,
+        studio: "gov",
     },
     NavGroup {
         id: "apihub",
-        label: "API 中樞",
+        label: "🔌 API 中樞",
         kind: NavKind::Menu,
         gate: Gate::Manage,
+        studio: "gov",
     },
     NavGroup {
         id: "system",
-        label: "系統",
+        label: "🖥️ 系統",
         kind: NavKind::Flat,
         gate: Gate::All,
+        studio: "ops",
     },
     NavGroup {
         id: "knowledge",
-        label: "知識治理",
+        label: "📚 知識治理",
         kind: NavKind::Flat,
         gate: Gate::All,
+        studio: "ops",
     },
 ];
 

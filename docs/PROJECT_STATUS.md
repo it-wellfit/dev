@@ -51,5 +51,5 @@ cargo test --locked --workspace --no-fail-fast
 cargo audit
 ```
 
-> 若 `target\debug\flaps-server.exe` 被執行中行程鎖定（如並行 session 的 dev server），以
+> 若 `target\debug\auxbridge-server.exe` 被執行中行程鎖定（如並行 session 的 dev server），以
 > `$env:CARGO_TARGET_DIR = "$env:LOCALAPPDATA\Temp\dev-target"` 隔離建置，勿殺他人的行程。

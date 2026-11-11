@@ -3,6 +3,40 @@
 本檔記錄根 workspace（`core/`、`platform/`、`web/`、`crates/flaps_bridge`）的實際變更。格式參考 Keep a Changelog。子專案（ekpi-platform、Wellfit、SyncMesh）各自有變更記錄。
 
 
+## [Unreleased] — 2026-11-11（交付缺口收口：桌面套件納入閘門、SBOM 新鮮度閘、unsafe 邊界、跨 repo 提交；ADR-0014）
+
+### Added
+- **SBOM 新鮮度閘**（`platform/tests/sbom_freshness.rs`，3 tests）：以 `cargo metadata --filter-platform x86_64-pc-windows-msvc` 的可達套件集（排除 dev-dependencies）與 `docs/release/sbom/*.cdx.json` 的 `metadata.component` ＋ `components[]` 比對；SBOM 含 timestamp／serialNumber 故不採位元組比對。實測：`cargo update` 後首跑即抓到漂移。
+- **unsafe 邊界閘**（`guards.rs::unsafe_code_is_absent_and_forbidden_at_crate_roots`）：掃描全工作區 Rust 原始碼不得出現 unsafe 語法，且每個 crate 根必須帶 `#![forbid(unsafe_code)]`。
+- **桌面套件弱點政策**（`web/src-tauri/.cargo/audit.toml`）：`cargo audit` 以 workspace 根為政策搜尋起點，獨立 workspace 不繼承根政策——新增本檔後，桌面圖之 RUSTSEC-2026-0459／2024-0370／2024-0429 才有書面處置（修前實測 `1 vulnerability found`）。
+- **更新鏈測試金鑰 round-trip**（`web/src-tauri/src/feed.rs` 7 個單元測試）：以 `minisign` 產生測試金鑰 → 簽章 → 組 feed → 以 `minisign-verify` 驗簽，含三負例（竄改簽章／竄改產物／版本不符）與「未綁定版本」負例；不需求任何實機產物，可在 CI 無條件執行。
+- **ADR-0014**（`docs/adr/ADR-0014-unsafe-boundary-and-supply-chain-policy.md`）：unsafe 邊界、真實 COM 通道歸屬、每個 workspace 之弱點政策、cargo-auditable／cargo-vet 決定、SBOM 產生與新鮮度機制。
+
+### Changed
+- **刪除未參與編譯之 COM 死碼**（`platform/src/com/{async_ipc,batch,bridge,pool}.rs`，6 處 unsafe 且無 `CoInitializeEx`）；8 個 crate 根補 `#![forbid(unsafe_code)]`（`core`／`platform`／`web`／`web/src-tauri` 之 lib/main 與既有 crates）。
+- **SBOM 全數重產**（7 份，`--all --spec-version 1.5`，以各 crate 目錄為 CWD）：`platform`／`auxbridge_core`／`kem`／`console_manifest`／`flaps_bridge`／`web`／`auxbridge-web`；刪除舊名 `flaps_core.cdx.json`／`flaps-erp-web.cdx.json`。`--manifest-path` 從 repo 根執行會產生錯誤範圍（實測 6 份全落到 `core/`）。
+- **更新鏈驗收強化**：`updater_artifact.rs` 改與產生器共用 `feed` 模組（單一實作來源）；負例三改走**實際驗證路徑**（`verify_signature_for_version`），不再只是字串比對；修正負例一之竄改位置（minisign 簽章文字第 1 行是**未簽章**的 untrusted comment，竄改不影響驗簽）。
+- **重新簽章產物**：原 `Flaps ERP_0.2.0_x64-setup.exe.sig`（01:47）與 11:53 重編之執行檔不符（驗收測試正確失敗）→ 以設定公鑰重產 `AuxBridge_0.2.0_x64-setup.exe`（5,233,244 bytes）＋`.sig`（440 bytes）＋`latest.json`，並清除舊名產物。
+- **依賴更新**：根與桌面 `cargo update`（libsqlite3-sys 0.30.1→0.37.0、wry 0.57.1→0.57.2、zip 9.5.0→9.5.1、uuid 1.29.0→1.29.2 等）；更新後五閘與桌面五閘重測全綠（SBOM 同步重產）。
+- **CI 修正**：桌面 audit 改以 `working-directory: web/src-tauri` 執行（政策檔命中）；SBOM 步驟改為逐 crate 以自身目錄為 CWD 產生（含 `Push-Location` 迴圈）。
+- **跨 repo 提交**：`Wellfit/Cargo.toml` 內部 path 依賴補 `version = "0.1.0"`（消除桌面套件 `wildcard for crate 'wellfit_bankpay'`），已提交並推送（`b5cf18e`）；Dev CI 之 Wellfit `ref` 同步為該 commit。
+
+### Verified（2026-11-11）
+- 根五閘：fmt EXIT=0／clippy `-D warnings` EXIT=0／`cargo test --locked` **30 suites、305 passed、0 failed**／`cargo audit` EXIT=0（463 相依、1458 公告）／`cargo deny check` 四層全 ok。
+- 桌面五閘：fmt EXIT=0／clippy `-D warnings` EXIT=0／`cargo test --locked` **9 passed**（7 單元＋2 整合）／`cargo audit --file Cargo.lock` EXIT=0（532 相依）／`cargo deny check` 四層全 ok。
+- Wellfit 三閘（以 `Knowledge/tools/dev-env/build.ps1`）：check／clippy `-D warnings`／test 全通過（459 passed、0 failed、9 ignored）。
+- unsafe 語法全工作區 0 處；8 個 crate 根皆帶 `#![forbid(unsafe_code)]`。
+
+## [Unreleased] — 2026-11-11（命名與邊界裁定：自建系統更名 AuxBridge／整合工作台，與原廠 FlapsErp 身份分離）
+
+### Changed
+- **身份分離**（使用者裁定，SSOT：`docs/standards/NAMING_AND_BOUNDARY_DECREE.md`）：原廠＝FlapsErp（輔翼ERP，僅可深度串接與 config 調整，禁改內容）；自建平台一律 **AuxBridge／整合工作台**。全庫掃描更名 78 檔 205 處、活躍面殘留 0：bin `auxbridge-server`（原 `flaps-server`）、crate `auxbridge_core`（原 `flaps_core`）、env `AUXBRIDGE_*`（原 `FLAPS_*`）、DB `auxbridge.db`／`demo-auxbridge.db`、UI 品牌「AuxBridge 整合工作台」（禁用「輔翼工作台」——輔翼為原廠中文名）、tauri `productName: AuxBridge`、updater `updates.auxbridge.internal`。
+- **防呆測試**（新增 `platform/tests/naming_guard.rs`，3 tests）：自建活躍面（templates/src/tests/web assets/tauri conf/Cargo.tomls）禁出現原廠標記（`Flaps ERP`、`輔翼工作台`、`flaps-server`、`flaps_core`、`FLAPS_` 等）；含正向控制（自建品牌必須實際渲染）與舊 bin 復活防呆。
+
+### 保留舊名（合法語境，見 decree §5）
+- `docs/research/FlapsErp*`（原廠文檔）、`web/legacy-1420.html`（歷史快照）、`.kilo/plans`、`knowledge/claims`（審計鏈）、`crates/flaps_bridge`（串接目標命名規則）。
+
+
 ## [Unreleased] — 2026-11-10（供應鏈硬化＋W10 端到端：cargo-deny 四層閘、SBOM、requireSignedVersion、latest.json 工具與簽章負向用例；addendum #26）
 
 ### Added

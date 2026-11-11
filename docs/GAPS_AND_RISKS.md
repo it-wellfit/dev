@@ -48,7 +48,7 @@
 | **SQLite WAL 膨脹** | 長時間讀寫未 checkpoint | 查詢延遲飆升 | 排程 `PRAGMA wal_checkpoint(TRUNCATE)` | 已知，Runbook |
 | **COM 循環引用洩漏** | 未正確 Drop | GDI/User 句柄洩漏 → OS Error 5 | RAII 封裝＋句柄計數測試 | 已知 |
 | **CP950 編碼損壞復發** | 工具以非 UTF-8 讀寫 | 原始碼/文件 mojibake（本週根因修復 3 檔） | `encoding-standard.md` 強制 UTF-8 無 BOM；PowerShell 用 `[System.IO.File]::WriteAllText`+UTF8NoBOM | ✅ 已防制 |
-| **建置鎖衝突** | 並行 session 的 flaps-server.exe 佔用 target | test/cargo 檔案鎖失敗 | `CARGO_TARGET_DIR` 隔離建置；禁止殺他人行程 | ✅ 已防制 |
+| **建置鎖衝突** | 並行 session 的 auxbridge-server.exe 佔用 target | test/cargo 檔案鎖失敗 | `CARGO_TARGET_DIR` 隔離建置；禁止殺他人行程 | ✅ 已防制 |
 | **p95 量測法誤判** | 冷啟動計入小樣本 p95 | 誤報 SLA 違規（本週 535ms 誤判） | 預熱趟＋≥21 樣本；SLA 只規範 warm 穩態 | ✅ 已修正 |
 | **依賴 CVE 殘餘（RUSTSEC-2026-0459）** | 開啟第三方提供的 .db＋-wal 檔對 | 頁快取未初始化記憶體洩漏（本地向量，6.8 medium） | 已文件化接受（audit.toml）：僅開啟 data\ 自建檔；重審觸發＝sqlx 放寬 libsqlite3-sys 範圍至 ≥0.39 | 🟡 已文件化（addendum #14） |
 | **並行線同檔衝突** | 兩 session 同改 api.rs/kem | 瞬時編譯錯誤 | board 分工宣告；門檻重跑前 `cargo check` 對齊 | 🟡 監控中 |

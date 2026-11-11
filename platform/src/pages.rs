@@ -213,7 +213,7 @@ fn denied_page(title: &str, detail: &str) -> Response {
         Html(format!(
             "<!DOCTYPE html><html lang=\"zh-Hant-TW\"><head><meta charset=\"UTF-8\">\
              <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\
-             <title>{title} — Flaps ERP</title>\
+             <title>{title} — AuxBridge</title>\
              <link rel=\"stylesheet\" href=\"/assets/design-system.css\"></head><body>\
              <a class=\"skip-link\" href=\"#main\">跳至主要內容</a>\
              <main id=\"main\" class=\"container\">\
@@ -598,7 +598,7 @@ pub async fn account_detail_page(
                 transaction_date,
                 description,
                 item_type,
-                amount_display: flaps_core::format_minor(amount_minor, 2),
+                amount_display: auxbridge_core::format_minor(amount_minor, 2),
                 currency,
             }
         },
@@ -613,8 +613,8 @@ pub async fn account_detail_page(
         account_type_label: crate::api::account_type_label(&a.account_type).to_string(),
         currency: a.currency,
         is_active: a.is_active,
-        debit_display: flaps_core::format_minor(debit_minor, 2),
-        credit_display: flaps_core::format_minor(credit_minor, 2),
+        debit_display: auxbridge_core::format_minor(debit_minor, 2),
+        credit_display: auxbridge_core::format_minor(credit_minor, 2),
         items,
     })
 }
@@ -694,7 +694,7 @@ fn to_batch_views(rows: Vec<BatchRowFull>) -> Vec<BatchView> {
             BatchView {
                 batch_id: r.batch_id,
                 esun_ref: r.esun_ref.unwrap_or_else(|| "—".to_string()),
-                amount_display: flaps_core::format_minor(r.amount_minor, 2),
+                amount_display: auxbridge_core::format_minor(r.amount_minor, 2),
                 currency: r.currency,
                 status: r.status,
                 status_label: status_label.to_string(),

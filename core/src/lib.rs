@@ -1,4 +1,5 @@
-// Core module for Flaps ERP
+#![forbid(unsafe_code)]
+// Core module for AuxBridge
 // This module provides the core accounting and business logic functionality
 
 pub mod config;

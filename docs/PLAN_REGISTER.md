@@ -365,9 +365,9 @@ This addendum records execution facts only; it does not approve product scope, c
 | 桌面套件授權與 path 依賴 | **完成**：`flaps-erp-web` 補 `license = "LicenseRef-Proprietary"` ＋ `publish = false`；`wellfit_bankpay`／`wellfit_core` path 依賴補 `version = "0.1.0"`；**跨 repo 修正** `Wellfit/Cargo.toml` 工作區內部 path 依賴補 version（消除 wildcard） | cargo-deny 0.20.2 原始錯誤：unlicensed `flaps-erp-web`、MPL-2.0 五 crate 未允許（cssparser／cssparser-macros／dtoa-short／option-ext／selectors）、`wildcard for crate 'wellfit_bankpay'`、proc-macro-error unmaintained、glib unsound——五項皆已收斂 |
 | 公告處置擴充 | **完成**：新增 **RUSTSEC-2024-0370**（proc-macro-error 未維護）與 **RUSTSEC-2024-0429**（glib unsound）書面處置於 `.cargo/audit.toml`（理由／緩解／複核觸發條件），`deny.toml` 同步忽略 | 兩者僅經 tauri → gtk（Linux 後端）進入 lockfile，**不編入本產品唯一之 Windows 交付物**；複核觸發＝新增 Linux 目標或上游釋出修補版 |
 | deny.toml 圖範圍與陷阱 | **改為 `all-features = true`**（兩 workspace 實測全 ok）；記錄 cargo-deny 0.20.2 操作陷阱：`cargo deny --config <k>=<v> check` 會以 CLI 覆寫**取代**本檔 ignore／allow 策略 | 實測對照：`--config graph.all-features=true` → 約 300 筆授權錯誤＋3 筆公告錯誤；改寫檔案後 → advisories／bans／licenses／sources 全 ok。變更圖範圍一律直接改 `deny.toml` |
-| CI 修正（原必敗） | **完成**：桌面 SBOM 步驟原為無條件執行，乾淨 checkout 缺 `Wellfit/`（獨立 repo、被根 `.gitignore` 排除）→ CI 必然失敗。現加入 it-wellfit/wellfit 之 `actions/checkout`（同 SHA 釘版、`ref` 釘 `ecac383f85f5f4b4eb511a892035335b376e3beb`）＋桌面六閘步驟（fmt／clippy／test 限 Windows 目標） | 2026-11-11 本機等價流程全綠；YAML 以 PyYAML 解析驗證（16 steps，隔離 venv，非 repo 工件） |
+| CI 修正（原必敗） | **完成**：桌面 SBOM 步驟原為無條件執行，乾淨 checkout 缺 `Wellfit/`（獨立 repo、被根 `.gitignore` 排除）→ CI 必然失敗。現加入 it-wellfit/wellfit 之 `actions/checkout`（同 SHA 釘版、`ref` 釘 `b5cf18e1dd43675f5a4fe0fa8dd396a3ef028fd7`）＋桌面六閘步驟（fmt／clippy／test 限 Windows 目標） | 2026-11-11 本機等價流程全綠；YAML 以 PyYAML 解析驗證（16 steps，隔離 venv，非 repo 工件） |
 | 實測數字更正（誠實） | **2026-11-10 的「五閘全綠／test 294 passed」為歷史量測值**。2026-11-11 複驗時根 workspace 因平行編輯中的 `platform/src/api.rs`（`break` in async fn ×3、format 字串、型別不符等 6 錯）暫時無法編譯，`cargo test --locked` 未完成。依既有實測分項合計為 **293**；未重測前不得宣稱 294 為現行值 | `cargo build -p platform --message-format=short` 輸出（2026-11-11 10:1x）；重測待該變更落地後執行，屆時校正文件數字 |
-| 未竟（誠實 BLOCKED/OPEN，本輪新增） | (5) **跨 repo 提交待辦**：`Wellfit/Cargo.toml` 之 version 修正須於 it-wellfit/wellfit 另行提交，之後 Dev CI 的 Wellfit `ref` 須同步更新；未提交前 CI 仍會因 wildcard 失敗。(6) 桌面 SBOM 已重新產出（含 SPDX 運算式）；根 6 份 SBOM 須待平行編輯收斂、lockfile 穩定後重新產出。(7) signed-artifact 驗證未納入 CI（需正式金鑰）；PR 閘建議以**測試金鑰**做 sign→feed→verify round-trip。(8) `cargo vet`／`cargo auditable` 仍未安裝 → 該層 UNKNOWN。(9) `platform/src/com/*` 6 處 COM `unsafe` 與 forbid 憲章衝突未解 | — |
+| 未竟（誠實 BLOCKED/OPEN，本輪新增） | (5) ~~**跨 repo 提交待辦**~~ **已完成（2026-11-11）**：`Wellfit/Cargo.toml` 之 version 修正已提交並推送至 it-wellfit/wellfit（commit `b5cf18e`），Dev CI 的 Wellfit `ref` 已同步更新。(6) 桌面 SBOM 已重新產出（含 SPDX 運算式）；根 6 份 SBOM 須待平行編輯收斂、lockfile 穩定後重新產出。(7) signed-artifact 驗證未納入 CI（需正式金鑰）；PR 閘建議以**測試金鑰**做 sign→feed→verify round-trip。(8) `cargo vet`／`cargo auditable` 仍未安裝 → 該層 UNKNOWN。(9) `platform/src/com/*` 6 處 COM `unsafe` 與 forbid 憲章衝突未解 | — |
 
 This addendum records execution facts only; it does not approve product scope, certification, or release.
 
@@ -444,6 +444,52 @@ This addendum records execution facts only; it does not approve product scope, c
 4. **教訓**：dev-target 併發建置殘留程序（flaps-server.exe）須在測試前清除——已納入操作程序
 
 This addendum records execution facts only; it does not approve product scope, certification, or release.
+## 2026-11-11 addendum #34 (品牌重命名：Flaps ERP → AuxBridge 輔翼平台——原廠/自建隔離)
+
+| Item | Disposition | Evidence |
+|---|---|---|
+| **根因（使用者裁決）** | 工作平台不得取名為 FlapsErp——避免與原廠混淆導致誤改原廠、保固失效、測試錯標 | 本節 |
+| **新品牌** | **AuxBridge 輔翼平台**（Auxiliary + Bridge = 輔翼橋接，明確區隔原廠） | tauri.conf.json productName |
+| 44 模板重命名 | "Flaps ERP 工作台" → "AuxBridge 輔翼工作台"；"Flaps ERP" → "AuxBridge" | 44/44 changed |
+| Rust 源碼 | api.rs/apihub.rs/pages.rs/db.rs/search.rs/sync.rs/bm25.rs 品牌與服務名重命名 | 各檔 changed |
+| binary 重命名 | `flaps-server.rs` → `auxbridge-server.rs`；env vars FLAPS_*→AUXBRIDGE_*；DB flaps.db→auxbridge.db | platform/src/bin/ |
+| Tauri 殼 | flaps-erp-web→auxbridge-web；identifier com.flaps→com.auxbridge；resources mapping 同步；updater feed 佔位域名同步 | tauri.conf.json/Cargo.toml/main.rs/security.rs/state.rs |
+| **保留不動** | `flaps_core` crate 名（內部共享庫非「系統」）；legacy-1420.html/css（原廠快照對照用）；Wellfit/ 目錄（原廠軟體） | 設計決策 |
+| **bm25 測試修復** | tokenize 測試斷言 "flaps"/"erp" → "auxbridge"（品牌重命名後之正確斷言） | bm25.rs L159 |
+| 插曲 | 本線外部執行檔方案遭使用者裁決撤回（Tesseract 不在本機）→ ocrs CJK POC 結論：Latin-only 確定出局（官方 README 原文實錄） | ocrs/README.md 2026-11-11 fetch |
+| 四關封印 | fmt 0／clippy all-targets 零警告／**173 測試 0 失敗**（128 lib＋16＋6＋4＋5＋4＋3＋2＋1×7＋0——含品牌重命名後全量迴歸） | 2026-11-11 日誌 |
+
+**衍生風險盤點（已防範）**：
+1. ~~檔案系統混淆~~→binary/安裝器已重命名
+2. ~~程序表混淆~~→程序名已重命名
+3. ~~測試錯標~~→測試描述已重命名
+4. ~~部署覆蓋原廠~~→NSIS 產品名已重命名
+5. ~~商標侵權~~→品牌已區隔
+6. ~~env var 混淆~~→AUXBRIDGE_* 已統一
+7. ~~DB 混淆~~→auxbridge.db 已重命名
+8. ⚠️ `flaps_core` crate 名暫保留（內部共享庫非「系統」；遷移需全樲重構，列為下切片）
+
+This addendum records execution facts only; it does not approve product scope, certification, or release.
+
+## 2026-11-11 addendum #30 (交付缺口收口：桌面套件閘門、SBOM 新鮮度、unsafe 邊界、跨 repo 提交；ADR-0014)
+
+承接 addendum #29 之「仍需採取的行動」，本輪將 P0／P1／P2 全部可動項執行完畢；無法以程式碼完成者（feed 主機、Authenticode、私鑰輪換）維持 BLOCKED／OPEN 並附理由。
+
+| Item | Disposition | Evidence |
+|---|---|---|
+| P0-3 根五閘重測 | **完成（PASS）**：平行編輯（`flaps_core`→`auxbridge_core`、`flaps-server`→`auxbridge-server` 更名）已於 18:50 收斂；首次重測因 lock 過期（`flaps_core` 殘留）而 `--locked` 失敗，經 `cargo update` 對齊後五閘全綠 | 2026-11-11 20:5x–21:xx：`cargo test --locked` **30 suites／305 passed／0 failed**；clippy `-D warnings` EXIT=0；audit EXIT=0（463 相依）；deny 四層全 ok |
+| P0-2 跨 repo 提交 | **完成**：`Wellfit/Cargo.toml` 7 個內部 path 依賴補 `version = "0.1.0"`，已提交 `b5cf18e` 並推送 origin/main；Dev CI `ref` 同步更新 | `git -C Wellfit push origin main` → `ecac383..b5cf18e`；Wellfit 三閘（check／clippy／test）通過：459 passed、0 failed、9 ignored |
+| P1 更新鏈驗收強度 | **完成**：新增 `web/src-tauri/src/feed.rs`（產生器與測試共用之單一實作）＋ 7 個單元測試（測試金鑰 sign→feed→verify round-trip、三負例、未綁定版本負例、非 HTTPS 端點拒絕）；負例三改走實際驗證路徑；`minisign = "0.10"` 為 dev-dependency（不進安裝包） | `cargo test --manifest-path web/src-tauri/Cargo.toml --locked` → 9 passed（7＋2）；CI 無需產物即可執行單元測試 |
+| P1 產物一致性（實測新發現） | **完成**：原 `.sig`（01:47）與 11:53 重編之執行檔不符 → 驗收測試正確失敗；以設定公鑰重產 `AuxBridge_0.2.0_x64-setup.exe`（5,233,244 bytes）＋`.sig`（440 bytes）＋`latest.json`，並刪除舊名產物 | 重產輸出 `AuxBridge_0.2.0_x64-setup.exe.sig`；`make_latest_json` 驗簽通過並輸出 `version=0.2.0` |
+| P1 SBOM 漂移 | **完成**：7 份 SBOM 以 `--all --spec-version 1.5` 重產（各 crate 目錄為 CWD）；新增 `platform/tests/sbom_freshness.rs`（元件版本比對，排除 dev；`cargo metadata --filter-platform`） | 2026-11-11 實測：套用 `cargo update` 後首跑抓到漂移（缺少 80+ 元件）→ 重產後 3 tests 全綠 |
+| P2 依賴健康 | **部分完成（受限於生態）**：`cargo update`（根＋桌面）套用，libsqlite3-sys 0.30.1→0.37.0、wry 0.57.1→0.57.2 等；`multiple-versions` 屬不同 major 需求（syn 2/3、thiserror 1/2、windows 0.58/0.62 等），維持 `warn` | `cargo update` 輸出 94 insertions/86 deletions（根 lock）；更新後五閘重測全綠 |
+| P2 依賴健康（未解，追蹤） | **OPEN**：`paddleocr_rs_onnx 0.2.8`（最新版）宣告 `image = "0.25"`（預設 features）→ 強制 AV1 編碼鏈 rav1e→paste 進入生產二進位，使平台端 `default-features = false` 宣告失效；無 feature 可關閉 | crates.io 實查：0.2.8 為 2026-10-22 最新版；替代評估（ocrs）另列 |
+| P2 治理：unsafe | **完成**：刪除 4 個未參與編譯之 COM 死碼檔（6 處 unsafe、無 `CoInitializeEx`）；8 個 crate 根補 `#![forbid(unsafe_code)]`；新增 guard 測試 | 全工作區 unsafe 語法 **0 處**（掃描 core/platform/crates/web/src-tauri 之 .rs）；guards 6 tests 全綠 |
+| P2 治理：cargo-vet／auditable | **決定（ADR-0014 D4）**：cargo-auditable 用於伺服器二進位發佈；cargo-vet 暫緩（對外散布前啟動） | `docs/adr/ADR-0014-unsafe-boundary-and-supply-chain-policy.md` |
+| P0-1 進版控 | **待使用者指令**：本輪未提交（工作區另含平行流之更名大改）；本表所列檔案均為可提交狀態 | `git status` |
+
+This addendum records execution facts only; it does not approve product scope, certification, or release.
+
 ## Consolidation rules
 
 1. Keep one current navigation register and one acceptance/evidence ledger per project. Detailed requirements belong in their project documents.
