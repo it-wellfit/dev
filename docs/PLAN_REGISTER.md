@@ -471,7 +471,7 @@ This addendum records execution facts only; it does not approve product scope, c
 
 This addendum records execution facts only; it does not approve product scope, certification, or release.
 
-## 2026-11-11 addendum #30 (交付缺口收口：桌面套件閘門、SBOM 新鮮度、unsafe 邊界、跨 repo 提交；ADR-0014)
+## 2026-11-11 addendum #35 (交付缺口收口：桌面套件閘門、SBOM 新鮮度、unsafe 邊界、跨 repo 提交；ADR-0014)
 
 承接 addendum #29 之「仍需採取的行動」，本輪將 P0／P1／P2 全部可動項執行完畢；無法以程式碼完成者（feed 主機、Authenticode、私鑰輪換）維持 BLOCKED／OPEN 並附理由。
 
@@ -483,7 +483,7 @@ This addendum records execution facts only; it does not approve product scope, c
 | P1 產物一致性（實測新發現） | **完成**：原 `.sig`（01:47）與 11:53 重編之執行檔不符 → 驗收測試正確失敗；以設定公鑰重產 `AuxBridge_0.2.0_x64-setup.exe`（5,233,244 bytes）＋`.sig`（440 bytes）＋`latest.json`，並刪除舊名產物 | 重產輸出 `AuxBridge_0.2.0_x64-setup.exe.sig`；`make_latest_json` 驗簽通過並輸出 `version=0.2.0` |
 | P1 SBOM 漂移 | **完成**：7 份 SBOM 以 `--all --spec-version 1.5` 重產（各 crate 目錄為 CWD）；新增 `platform/tests/sbom_freshness.rs`（元件版本比對，排除 dev；`cargo metadata --filter-platform`） | 2026-11-11 實測：套用 `cargo update` 後首跑抓到漂移（缺少 80+ 元件）→ 重產後 3 tests 全綠 |
 | P2 依賴健康 | **部分完成（受限於生態）**：`cargo update`（根＋桌面）套用，libsqlite3-sys 0.30.1→0.37.0、wry 0.57.1→0.57.2 等；`multiple-versions` 屬不同 major 需求（syn 2/3、thiserror 1/2、windows 0.58/0.62 等），維持 `warn` | `cargo update` 輸出 94 insertions/86 deletions（根 lock）；更新後五閘重測全綠 |
-| P2 依賴健康（未解，追蹤） | **OPEN**：`paddleocr_rs_onnx 0.2.8`（最新版）宣告 `image = "0.25"`（預設 features）→ 強制 AV1 編碼鏈 rav1e→paste 進入生產二進位，使平台端 `default-features = false` 宣告失效；無 feature 可關閉 | crates.io 實查：0.2.8 為 2026-10-22 最新版；替代評估（ocrs）另列 |
+| P2 依賴健康（未解，追蹤） | **OPEN（無安全替代路徑）**：`paddleocr_rs_onnx 0.2.8`（2026-10-22 最新版）宣告 `image = "0.25"`（預設 features）→ 強制 AV1 編碼鏈 rav1e→paste 進入生產二進位，使平台端 `default-features = false` 宣告失效；feature 聯集無法關閉。替代評估：**ocrs 不適用**（其 README 明示僅辨識拉丁字母、無 CJK；另 GPU 分歧與 early preview），故 CJK OCR 目前必須依賴 PaddleOCR，此依賴鏈屬「能力換取」之已接受風險；AV1 編碼器於 OCR 管線不被呼叫（文字偵測／辨識走 PNG/JPEG） | crates.io 實查：paddleocr_rs_onnx 0.2.8 為最新；ocrs README／ocrs-models README（2026-11-11 fetch）；addendum #28 D-OCR1 結論 |
 | P2 治理：unsafe | **完成**：刪除 4 個未參與編譯之 COM 死碼檔（6 處 unsafe、無 `CoInitializeEx`）；8 個 crate 根補 `#![forbid(unsafe_code)]`；新增 guard 測試 | 全工作區 unsafe 語法 **0 處**（掃描 core/platform/crates/web/src-tauri 之 .rs）；guards 6 tests 全綠 |
 | P2 治理：cargo-vet／auditable | **決定（ADR-0014 D4）**：cargo-auditable 用於伺服器二進位發佈；cargo-vet 暫緩（對外散布前啟動） | `docs/adr/ADR-0014-unsafe-boundary-and-supply-chain-policy.md` |
 | P0-1 進版控 | **待使用者指令**：本輪未提交（工作區另含平行流之更名大改）；本表所列檔案均為可提交狀態 | `git status` |
