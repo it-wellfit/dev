@@ -171,6 +171,13 @@ body {
   z-index: var(--z-sticky);
 }
 
+/* 其餘子元素（頁面子導覽、面板、footer、state-anchors 等）一律進主欄：
+   消除 auto-placement 落入 220px 側欄而被 sticky 側欄蓋住的缺陷
+   （2026-11-12 瀏覽器實證：bankpay 子導覽連結被側欄攔截點擊）。 */
+body > :not(.site-nav) {
+  grid-column: 2;
+}
+
 .site-nav .container {
   display: flex;
   flex-direction: column;
@@ -427,4 +434,18 @@ tbody tr { transition: background-color var(--transition-fast); }
 ::selection {
   background: var(--color-primary-muted);
   color: var(--color-text-primary);
+}
+
+/* ── 精緻化：SOTA 原生排版與控制（2026-11-12；零成本、零 JS） ──
+   text-wrap: balance/pretty 為 CSS Text 4 的孤行/寡行控制（Chromium 114+、
+   Safari 17.5+、Firefox 121+；不支援時安靜降級為一般換行）。
+   accent-color 讓核取/選填控制項繼承品牌色（免自繪控制項）。
+   scrollbar-gutter 保留側欄軌道寬度，避免無捲軸頁的 8px 位移。 */
+h1, h2, h3 { text-wrap: balance; }
+p, li { text-wrap: pretty; }
+input[type="checkbox"], input[type="radio"] { accent-color: var(--color-primary); }
+.site-nav .container { scrollbar-gutter: stable; }
+
+@media (prefers-reduced-motion: no-preference) {
+  html { scroll-behavior: smooth; }
 }

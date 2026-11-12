@@ -205,7 +205,7 @@ impl SyncProcessor {
                 // For example: AuxBridge -> External ERP system
                 // This would involve API calls or file transfers
 
-                tracing::info!(
+                crate::obs_info!(
                     "Syncing config {} to {} mode={}",
                     config_key,
                     task.target_system,
@@ -214,7 +214,7 @@ impl SyncProcessor {
             }
             None => {
                 // Sync all configurations from source
-                tracing::info!(
+                crate::obs_info!(
                     "Syncing all configurations to {} mode={}",
                     task.target_system,
                     task.mode as u8
@@ -231,7 +231,7 @@ impl SyncProcessor {
         task: &SyncTask,
     ) -> Result<(), Box<dyn std::error::Error>> {
         // Implementation for permission synchronization
-        tracing::info!(
+        crate::obs_info!(
             "Syncing permissions to {} mode={}",
             task.target_system,
             task.mode as u8
@@ -245,7 +245,7 @@ impl SyncProcessor {
         task: &SyncTask,
     ) -> Result<(), Box<dyn std::error::Error>> {
         // Implementation for transaction synchronization
-        tracing::info!(
+        crate::obs_info!(
             "Syncing transactions to {} mode={}",
             task.target_system,
             task.mode as u8
@@ -256,7 +256,7 @@ impl SyncProcessor {
     /// Sync audit log task
     async fn sync_audit_log_task(&self, task: &SyncTask) -> Result<(), Box<dyn std::error::Error>> {
         // Implementation for audit log synchronization
-        tracing::info!(
+        crate::obs_info!(
             "Syncing audit logs to {} mode={}",
             task.target_system,
             task.mode as u8

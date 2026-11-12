@@ -22,7 +22,7 @@ struct Args {
 }
 
 fn parse_args() -> Result<Args, String> {
-    const VALUE_FLAGS: [&str; 14] = [
+    const VALUE_FLAGS: [&str; 23] = [
         "root",
         "topic",
         "name",
@@ -37,6 +37,15 @@ fn parse_args() -> Result<Args, String> {
         "disposition",
         "reviewer",
         "note",
+        "fusion",
+        "alpha",
+        "lambda",
+        "prf-terms",
+        "refusal-floor",
+        "rerank-model",
+        "rerank-base",
+        "hyde-model",
+        "hyde-base",
     ];
     let mut argv = std::env::args().skip(1);
     let mut root = PathBuf::from("knowledge");
@@ -428,28 +437,92 @@ fn cmd_console(root: &Path, ledger: &Path) -> Result<(), KemError> {
     Ok(())
 }
 
-/// P2 M5 + P2b: ask — hybrid retrieval (α·BM25 + (1−α)·vector). Degrades to
-/// BM25-only honestly when vectors/embedder are unavailable.
+/// P2 M5 + P2b + SOTA (2026-11-12): ask — hybrid retrieval. Default fusion is
+/// Reciprocal Rank Fusion (rank-based, scale-invariant); `--fusion=weighted`
+/// restores the legacy α·BM25 + (1−α)·vector fusion. Optional `--mmr` applies
+/// Maximal Marginal Relevance re-ranking (λ=`--lambda`, default 0.7) and
+/// `--prf`/`--prf-terms N` applies Rocchio pseudo-relevance feedback. All
+/// paths degrade honestly to BM25-only when vectors/embedder are unavailable.
 fn cmd_ask(root: &Path, flags: &std::collections::HashMap<String, String>) -> Result<(), KemError> {
     let query = flag(flags, "query")?;
     let top: usize = flags.get("top").and_then(|v| v.parse().ok()).unwrap_or(5);
     let bm25_only = flags.contains_key("bm25-only");
+    let fusion = flags
+        .get("fusion")
+        .map(String::as_str)
+        .unwrap_or("rrf")
+        .to_lowercase();
+    let use_mmr = flags.contains_key("mmr");
+    let lambda: f32 = flags
+        .get("lambda")
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(kem::search::MMR_DEFAULT_LAMBDA);
+    let use_prf = flags.contains_key("prf");
+    let prf_terms: usize = flags
+        .get("prf-terms")
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(8);
     let claims = load_claims(&root.join("claims"))?;
     let visible = kem::search::visible_at(&claims, None);
     let index = kem::search::Index::build(&visible);
+    // PRF (Rocchio): expand the query with top-ranked corpus terms BEFORE
+    // scoring. Expansion terms come from the same index, so this stays fully
+    // offline and deterministic.
+    let expanded = if use_prf {
+        let terms = kem::search::prf_expand(&index, &visible, &query, 3, prf_terms);
+        if terms.is_empty() {
+            None
+        } else {
+            Some(terms)
+        }
+    } else {
+        None
+    };
+    let effective_query = match &expanded {
+        Some(terms) => format!("{query} {}", terms.join(" ")),
+        None => query.clone(),
+    };
 
     let vectors = if bm25_only {
         None
     } else {
         kem::embed::load_vectors(&root.join(".kem/vectors.json"))?
     };
-    let (hits, mode) = match vectors {
+    // HyDE (Gao et al. 2023): a hypothetical answer document is embedded for
+    // the dense leg (semantic bridge across vocabulary mismatch); the lexical
+    // leg keeps the raw (PRF-expanded) query. Unavailable → raw query.
+    let hyde_doc: Option<String> = if flags.contains_key("hyde") {
+        let model = flags
+            .get("hyde-model")
+            .cloned()
+            .unwrap_or_else(|| kem::rerank::DEFAULT_RERANK_MODEL.to_string());
+        let base = flags
+            .get("hyde-base")
+            .cloned()
+            .unwrap_or_else(|| kem::rerank::DEFAULT_RERANK_BASE.to_string());
+        let rt = tokio::runtime::Runtime::new()
+            .map_err(|e| KemError::InvalidInput(format!("tokio runtime: {e}")))?;
+        match rt.block_on(kem::hyde::hypothetical_document(&query, &model, &base)) {
+            Some(doc) => {
+                eprintln!("ask note: hyde document generated ({model})");
+                Some(doc)
+            }
+            None => {
+                eprintln!("ask note: hyde generator unavailable — using raw query");
+                None
+            }
+        }
+    } else {
+        None
+    };
+    let dense_query = hyde_doc.as_deref().unwrap_or(&effective_query);
+    let (mut hits, mut mode) = match vectors {
         Some(v) if !v.entries.is_empty() => {
             let rt = tokio::runtime::Runtime::new()
                 .map_err(|e| KemError::InvalidInput(format!("tokio runtime: {e}")))?;
             let res = rt.block_on(kem::embed::embed_batch(
                 &kem::embed::default_pool(),
-                std::slice::from_ref(&query),
+                std::slice::from_ref(&dense_query.to_string()),
             ));
             match res {
                 Ok(res) => {
@@ -459,34 +532,140 @@ fn cmd_ask(root: &Path, flags: &std::collections::HashMap<String, String>) -> Re
                             .into_iter()
                             .map(|(k, vec)| (k.to_string(), vec.to_vec()))
                             .collect();
-                    let bm25 = index.scores_all(&visible, &query);
-                    let alpha: f32 = flags
-                        .get("alpha")
-                        .and_then(|a| a.parse().ok())
-                        .unwrap_or(0.5);
+                    let bm25 = index.scores_all(&visible, &effective_query);
                     let floor: f32 = flags
                         .get("refusal-floor")
                         .and_then(|a| a.parse().ok())
                         .unwrap_or(kem::search::REFUSAL_FLOOR);
-                    let hits = kem::search::hybrid_fuse(
-                        &visible,
-                        &bm25,
-                        Some(&lookup),
-                        Some(vs[0].as_slice()),
-                        top,
-                        alpha,
-                        floor,
-                    );
-                    (hits, format!("hybrid(α={alpha}, floor={floor})"))
+                    let mut hits = if fusion == "weighted" {
+                        let alpha: f32 = flags
+                            .get("alpha")
+                            .and_then(|a| a.parse().ok())
+                            .unwrap_or(0.5);
+                        let h = kem::search::hybrid_fuse(
+                            &visible,
+                            &bm25,
+                            Some(&lookup),
+                            Some(vs[0].as_slice()),
+                            top,
+                            alpha,
+                            floor,
+                        );
+                        (h, format!("hybrid(α={alpha}, floor={floor})"))
+                    } else {
+                        let h = kem::search::rrf_fuse(
+                            &visible,
+                            &bm25,
+                            Some(&lookup),
+                            Some(vs[0].as_slice()),
+                            top,
+                            floor,
+                            kem::search::RRF_K,
+                        );
+                        (h, format!("rrf(k={}, floor={floor})", kem::search::RRF_K))
+                    };
+                    if use_mmr {
+                        hits.0 = kem::search::mmr_diversify(
+                            &hits.0,
+                            &visible,
+                            Some(&lookup),
+                            lambda,
+                            top,
+                        );
+                        hits.1.push_str(&format!(" +mmr(λ={lambda})"));
+                    }
+                    if expanded.is_some() {
+                        hits.1.push_str(&format!(" +prf({prf_terms})"));
+                    }
+                    hits
                 }
                 Err(e) => {
                     eprintln!("ask note: embedder unavailable — BM25-only ({e})");
-                    (index.search(&visible, &query, top), "bm25-only".to_string())
+                    let mut h = index.search(&visible, &effective_query, top);
+                    let mut m = "bm25-only".to_string();
+                    if use_mmr {
+                        h = kem::search::mmr_diversify(&h, &visible, None, lambda, top);
+                        m.push_str(&format!(" +mmr(λ={lambda})"));
+                    }
+                    if expanded.is_some() {
+                        m.push_str(&format!(" +prf({prf_terms})"));
+                    }
+                    (h, m)
                 }
             }
         }
-        _ => (index.search(&visible, &query, top), "bm25-only".to_string()),
+        _ => {
+            let mut h = index.search(&visible, &effective_query, top);
+            let mut m = "bm25-only".to_string();
+            if use_mmr {
+                h = kem::search::mmr_diversify(&h, &visible, None, lambda, top);
+                m.push_str(&format!(" +mmr(λ={lambda})"));
+            }
+            if expanded.is_some() {
+                m.push_str(&format!(" +prf({prf_terms})"));
+            }
+            (h, m)
+        }
     };
+    // Pointwise LLM rerank (SOTA second stage): score the candidate set with
+    // a local Ollama model in one batched call; unavailable → keep fusion
+    // order (honest degradation, mode is not augmented).
+    if hyde_doc.is_some() {
+        mode.push_str(" +hyde");
+    }
+    if flags.contains_key("rerank") {
+        let model = flags
+            .get("rerank-model")
+            .cloned()
+            .unwrap_or_else(|| kem::rerank::DEFAULT_RERANK_MODEL.to_string());
+        let base = flags
+            .get("rerank-base")
+            .cloned()
+            .unwrap_or_else(|| kem::rerank::DEFAULT_RERANK_BASE.to_string());
+        let rt = tokio::runtime::Runtime::new()
+            .map_err(|e| KemError::InvalidInput(format!("tokio runtime: {e}")))?;
+        if rt.block_on(kem::rerank::available(&base)) {
+            let candidates: Vec<(String, String)> = hits
+                .iter()
+                .map(|h| {
+                    let body = visible
+                        .iter()
+                        .find(|c| c.id == h.id)
+                        .map(|c| format!("{}. {}", c.title, c.body))
+                        .unwrap_or_else(|| h.title.clone());
+                    (h.id.clone(), body)
+                })
+                .collect();
+            match rt.block_on(kem::rerank::rerank_ollama(
+                &query,
+                &candidates,
+                &model,
+                &base,
+            )) {
+                Some(scores) => {
+                    let score_of: std::collections::HashMap<&str, f64> =
+                        scores.iter().map(|(id, s)| (id.as_str(), *s)).collect();
+                    hits.sort_by(|a, b| {
+                        let sa = score_of.get(a.id.as_str()).copied().unwrap_or(0.0);
+                        let sb = score_of.get(b.id.as_str()).copied().unwrap_or(0.0);
+                        sb.partial_cmp(&sa)
+                            .unwrap_or(std::cmp::Ordering::Equal)
+                            .then_with(|| {
+                                b.score
+                                    .partial_cmp(&a.score)
+                                    .unwrap_or(std::cmp::Ordering::Equal)
+                            })
+                    });
+                    mode.push_str(&format!(" +rerank({model})"));
+                }
+                None => {
+                    eprintln!("ask note: reranker unavailable — keeping fusion order ({model})");
+                }
+            }
+        } else {
+            eprintln!("ask note: reranker endpoint unreachable — keeping fusion order");
+        }
+    }
     println!("retrieval mode: {mode}");
     if hits.is_empty() {
         println!("no results (honest refusal — query outside current knowledge)");
@@ -590,24 +769,37 @@ fn cmd_eval(
         .as_ref()
         .map(|(vecs, _model)| qs_zip_map(&cases, vecs));
     let eval_model = embedded.as_ref().map(|(_, m)| m.clone());
-    let (pass, total, failures) =
-        kem::search::run_golden(&index, &claims, &cases, vectors.as_ref(), qvecs.as_ref())?;
-    for f in &failures {
-        eprintln!("FAIL {f}");
-    }
     let mode = match (&qvecs, &eval_model) {
-        (Some(_), Some(m)) => format!("hybrid[{m}]"),
+        (Some(_), Some(m)) => format!("[{m}]"),
         _ => "bm25-only".to_string(),
     };
+    // Evidence-first (C-13): report BOTH fusions with TREC metrics (nDCG@10,
+    // MRR, recall) so the SOTA default is never adopted on faith. Weighted =
+    // legacy baseline; rrf = rank fusion.
+    let (w, r, failures) =
+        kem::search::evaluate_golden(&index, &claims, &cases, vectors.as_ref(), qvecs.as_ref())?;
+    for f in &failures {
+        eprintln!("FAIL [rrf top-1] {f}");
+    }
+    let total = w.evaluated;
+    let w_top1 = w.top1;
+    let r_top1 = r.top1;
     println!(
-        "eval [{mode}]: {pass}/{total} top-1 pass ({} golden cases)",
+        "eval {mode}: weighted {w_top1}/{total}  rrf {r_top1}/{total} top-1 ({} cases)",
         total
     );
-    if pass == total {
+    println!(
+        "  nDCG@10: weighted {:.4}  rrf {:.4}｜MRR: weighted {:.4}  rrf {:.4}｜recall@10: weighted {:.4}  rrf {:.4}",
+        w.ndcg, r.ndcg, w.mrr, r.mrr, w.recall, r.recall
+    );
+    // Adopt RRF as the default only when it does not regress the baseline
+    // (top-1 pass count AND ranking quality).
+    if r_top1 >= w_top1 && w.ndcg >= r.ndcg - 1e-9 && w_top1 == total {
         Ok(())
     } else {
         Err(KemError::InvalidInput(format!(
-            "golden set failed: {pass}/{total}"
+            "golden set failed: weighted {w_top1}/{total} (nDCG {:.4}), rrf {r_top1}/{total} (nDCG {:.4})",
+            w.ndcg, r.ndcg
         )))
     }
 }

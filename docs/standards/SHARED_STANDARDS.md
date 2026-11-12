@@ -52,6 +52,16 @@
 - 新增依賴前必須執行 `cargo deny check` (若專案有 `deny.toml`) 或等效的安全審查。
 - 嚴禁引入未審查的 transitive 依賴導致供應鏈風險。
 - 生產建置不得包含僅用於開發的依賴 (dev-dependencies 不得洩漏至 release 建置)。
+- **精簡原則（2026-11-12 新增，見 ADR-0014）**：
+  - 嚴禁 `features = ["full"]`；依實際使用宣告功能（例如 tokio 僅 `rt-multi-thread`／`time` 等）。
+  - 未使用之依賴必須移除；以 `cargo machete`（逐成員）作為閘門，發現即失敗。
+  - TLS 一律 `rustls`（`reqwest` 以 `default-features = false, features = ["rustls-tls"]`），不得引入 `native-tls`／OpenSSL。
+  - 依賴變更後必須重產 SBOM（7 份）；否則 `sbom_freshness` 測試失敗。
+  - 移除依賴時同步檢查：`Cargo.lock`、SBOM、CI 之跨 repo checkout（例如不再需要時應移除）。
+
+### 2.3 工具鏈與版本
+- `rust-toolchain.toml` 固定 channel 與元件（rustfmt／clippy）。
+- 每個 crate 應宣告 `rust-version`（MSRV）；未宣告視為未定義支援範圍。
 
 ---
 
@@ -73,6 +83,12 @@
 - 測試必須具名，使用描述性名稱 (例如 `test_mtrix_row_rejects_invalid_column_count`)。
 - 禁止斷言恆真 (`assert!(true)`)，必須驗證具體期望值。
 - 合成測試永遠不得使目標驗收案例 (AT-*) 通過；`Implemented` 列不等於交付能力。
+- **效能測試規則（2026-11-12 新增）**：效能斷言屬「量測」而非「功能」，必須：
+  1. 在測試訊息中宣告量測條件（資料量、查詢數、樣本數、SLA 與來源）；
+  2. 不得與其他測試併行執行（`--test-threads=1` 或獨立 CI job），否則其结果受 CPU 競爭影響；
+  3. 於共享/CI 環境以「同一 run 內相對基線」或「中位數」判定，避免單次尖峰造成假失敗；
+  4. 失敗時必須輸出完整 timings 以便判別「真回歸」與「環境雜訊」。
+  參見 `platform/src/api.rs::tests::stress_10000_transactions_p95_under_500ms`（2026-11-12 實測：單獨跑 p95=556ms PASS；與全套併跑時 p95=1595ms FAIL → 屬環境雜訊）。
 
 ### 3.3 執行標準
 - 執行前必須 `cargo fmt -- --check` 與 `cargo clippy --all-targets -- -D warnings`。
@@ -148,9 +164,13 @@
 1. `cargo fmt -- --check`
 2. `cargo clippy --all-targets -- -D warnings`
 3. `cargo test --locked` (所有測試通過)
-4. 專案特定的 selftest / 契約驗證命令
-5. 文件連結檢查 (`scripts/check-docs` 或等效)
-6. 機密模式掃描 (`scripts/check-secrets` 或等效)
+4. 專案特定的 selftest / 契約驗證命令（`platform/tests/page_matrix.rs`、`naming_guard.rs`）
+5. 文件治理檢查（`platform/tests/docs_governance.rs`：十份必要文件存在、中介資料完整、相對連結可解析）
+6. 機密模式掃描（`platform/tests/secret_scan.rs`：私鑰／硬編碼憑證樣式；高訊號優先）
+7. 供應鏈三閘：`cargo audit`、`cargo deny check`、`cargo machete`（逐成員）
+
+> 註：舊版條文引用 `scripts/check-docs`／`scripts/check-secrets`，該兩支腳本並不存在；
+> 2026-11-12 起改以 Rust 測試實作（C-11：新工具一律 Rust），並由 `cargo test` 執行。
 
 ### 6.3 定義完成 (Definition of Done)
 工作單位完成時必須滿足所有適用條件：
@@ -245,14 +265,14 @@
 9. 規章條款總數 ≤ 20。
 10. 所有 public API 必須有文件註解。
 11. 貨幣/財務欄位使用整數類型，嚴禁浮點數。
-12. 依賴版本鎖定，Cargo.lock 提交版本控制。
-13. 新增依賴前必須安全審查。
+12. 依賴版本鎖定（Cargo.lock 提交）；每個 crate 宣告 `rust-version`；依賴變更後 SBOM 必須重產。
+13. 新增依賴前安全審查；禁 `features = ["full"]`（依實際使用宣告）；TLS 採 `rustls`；未使用依賴須移除（`cargo machete` 閘）。
 14. 測試必須可重複，驗證成功與失敗路徑。
 15. 每個 bug 修正先加回歸測試。
-16. 文件與代碼同一提交更新。
+16. 文件與代碼同一提交更新；十份必要文件（§4.1）須存在、中介資料完整、相對連結可解析（`docs_governance` 閘）。
 17. `main` 分支受保護，禁止直接推送。
 18. 提交必須關聯 GitHub Issue 編號。
-19. 機密絕不提交至版本控制。
+19. 機密絕不提交；以 `secret_scan` 閘執行高訊號掃描（私鑰／硬編碼憑證）。
 20. 備份必須包含所有分支與標籤，並定期還原演練。
 
 ---

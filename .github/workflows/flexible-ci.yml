@@ -96,12 +96,30 @@ jobs:
         run: |
           cargo install cargo-deny --locked
           cargo deny check
-      - name: Checkout Wellfit subproject (desktop app path dependencies)
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          repository: it-wellfit/wellfit
-          ref: b5cf18e1dd43675f5a4fe0fa8dd396a3ef028fd7
-          path: Wellfit
+      # 註：原先另以 actions/checkout 取 it-wellfit/wellfit 提供桌面套件 path 依賴；
+      # 2026-11-12 精簡後桌面套件已不再依賴 Wellfit crate（孤兒依賴移除），
+      # 故移除該 checkout（少一次跨 repo 流量，亦解除跨 repo 建置耦合）。
+      - name: Unused dependencies (cargo-machete, all workspace members)
+        run: |
+          cargo install cargo-machete --locked
+          # cargo-machete 不支援 --manifest-path（會報 Unrecognized argument），
+          # 必須以各成員目錄為 CWD 執行。
+          $members = @(
+            "core",
+            "platform",
+            "web",
+            "crates/console_manifest",
+            "crates/kem",
+            "crates/flaps_bridge",
+            "web/src-tauri"
+          )
+          foreach ($m in $members) {
+            Push-Location $m
+            cargo machete
+            $code = $LASTEXITCODE
+            Pop-Location
+            if ($code -ne 0) { exit $code }
+          }
       - name: Desktop app gates (fmt / clippy / test, Windows target only)
         if: matrix.os == 'windows-latest'
         run: |

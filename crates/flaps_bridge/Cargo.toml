@@ -2,25 +2,19 @@
 name = "flaps_bridge"
 version = "0.1.0"
 edition = "2021"
+rust-version = "1.99"
 description = "COM batching bridge for FlapsErp (FLAPSConsoleCOM) - T-102/T-301"
 license = "LicenseRef-Proprietary"
 publish = false
 
 [features]
 # EULA-gated: real COM transport requires vendor written policy confirmation (RSK-E1)
-# Disabled by default; enable with --features real-com after OQ-F1 written response
-real-com = ["windows"]
+# Disabled by default; enable with --features real-com after OQ-F1 written response.
+# 目前 real_com 模組為 placeholder（尚未呼叫 CoCreateInstance／IDispatch），故不引入
+# windows crate；真正接上 COM 時才在此加入 windows 依賴（避免未使用之重量級依賴進入圖）。
+real-com = []
 
 [dependencies]
 thiserror = "1.0"
-
-[dependencies.windows]
-package = "windows"
-version = "0.58"
-optional = true
-features = [
-  "Win32_Foundation",
-  "Win32_System_Com",
-]
 
 [dev-dependencies]

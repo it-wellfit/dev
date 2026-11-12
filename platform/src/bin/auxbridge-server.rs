@@ -12,6 +12,39 @@
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // 可觀測性：日誌初始化（原 tracing 無 subscriber → 日誌蒸發）。
+    platform::obs::init();
+
+    // 備份子命令（2026-11-12 規格補洞）：`--backup <db> <out.db>` 以 SQLite
+    // `VACUUM INTO` 產生**一致性快照**（Online Backup 語義：不需停機、含
+    // WAL 內容），供離線備份與災難復原演練（restore drill）。
+    let args: Vec<String> = std::env::args().collect();
+    if args.get(1).map(String::as_str) == Some("--backup") {
+        if args.len() != 4 {
+            eprintln!("用法：auxbridge-server --backup <來源.db> <目標快照.db>");
+            std::process::exit(2);
+        }
+        let src = &args[2];
+        let dst = &args[3];
+        // VACUUM INTO 要求目標檔不存在（否則 SQLite 報錯）；先清除殘留。
+        if std::path::Path::new(dst).exists() {
+            std::fs::remove_file(dst)?;
+        }
+        let src_url = format!("sqlite://{src}?mode=ro");
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect_with(platform::db::connect_options(&src_url)?)
+            .await?;
+        let dst_escaped = dst.replace('\'', "''");
+        sqlx::query(sqlx::AssertSqlSafe(format!("VACUUM INTO '{dst_escaped}'")))
+            .execute(&pool)
+            .await?;
+        pool.close().await;
+        platform::obs_info!("backup: snapshot written: {dst}");
+        println!("備份完成：{dst}");
+        return Ok(());
+    }
+
     let db_url = std::env::var("AUXBRIDGE_DB_URL")
         .unwrap_or_else(|_| "sqlite://data/auxbridge.db?mode=rwc".to_string());
 
@@ -29,7 +62,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let pool = sqlx::sqlite::SqlitePoolOptions::new()
         .max_connections(5)
-        .connect(&db_url)
+        .connect_with(platform::db::connect_options(&db_url)?)
         .await?;
 
     // Schema SSOT: apply versioned migrations before any domain access.
@@ -58,7 +91,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let listener = tokio::net::TcpListener::bind(&addr).await?;
 
     println!("AuxBridge server listening on http://{addr} (zero-JS UI)");
-    axum::serve(listener, app).await?;
+    // ConnectInfo：讓稽核取得真實對端 IP（2026-11-12 規格補洞：原僅能讀
+    // X-Forwarded-For，直連情境下 ip_address 恆為 NULL，無法溯源）。
+    axum::serve(
+        listener,
+        app.into_make_service_with_connect_info::<std::net::SocketAddr>(),
+    )
+    .await?;
 
     Ok(())
 }

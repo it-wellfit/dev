@@ -57,12 +57,12 @@
 
 | 層級 | 技術 | 選擇理由 |
 |------|------|----------|
-| **前端** | Rust (Maud) + CSS-first | 零 JS、語意 HTML、高效能 |
+| **前端** | Rust (Askama) + CSS-first | 零 JS、語意 HTML、高效能 |
 | **後端核心** | Rust (Axum) | 記憶體安全、高效能、並發 |
-| **搜尋引擎** | Tantivy (Rust) | 全文 + 語意搜尋、嵌入式 |
-| **資料庫** | SQLite (rusqlite) | 零配置、嵌入式、ACID |
-| **自動化** | PowerShell + Bun | 跨平台腳本、現代 runtime |
-| **MCP 工具** | Bun (bunx) + Rust (cargo) | 避免 Node.js、高效能 |
+| **搜尋引擎** | 自研倒排 BM25 ＋ bge-m3 向量 ＋ RRF/MMR/PRF/HyDE | 零索引引擎依賴、混合檢索、可拒答（KEM §4.6） |
+| **資料庫** | sqlx + SQLite | 零配置、嵌入式、ACID |
+| **自動化** | PowerShell + Rust | 跨平台腳本、Rust-first（C-11） |
+| **MCP 工具** | Rust (cargo) | 避免 Node.js、高效能 |
 
 ### 3.2 模組化架構
 

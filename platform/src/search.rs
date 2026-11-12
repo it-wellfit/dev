@@ -24,14 +24,20 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
-/// Hybrid weight: fused = α·norm(BM25) + (1−α)·norm(cosine). 0.5 mirrors the
-/// kem golden configuration.
+/// Hybrid weight for the legacy weighted fusion (kept as the test baseline;
+/// runtime default is RRF, see `rrf_fuse`). fused = α·norm(BM25) +
+/// (1−α)·norm(cosine). 0.5 mirrors the kem golden configuration.
+#[cfg(test)]
 pub const HYBRID_ALPHA: f32 = 0.5;
 
 /// Semantic refusal floor: a hit with ZERO lexical support whose raw cosine
 /// falls below this is weak semantic adjacency, not a result — dropped
 /// (calibrated in kem, 2026-11-09; mirrors `kem::search::REFUSAL_FLOOR`).
 pub const REFUSAL_FLOOR: f32 = 0.55;
+
+/// Standard RRF damping constant (Cormack et al. 2009, k=60) — shared with
+/// `kem::search::RRF_K` so both retrieval stacks use one fusion standard.
+pub const RRF_K: f64 = 60.0;
 
 /// doc_id → (content SHA-256, embedding)。
 type VectorMap = std::collections::HashMap<String, (String, Vec<f32>)>;
@@ -48,6 +54,13 @@ pub struct SearchEngine {
     /// Sorted doc_ids parallel to the BM25 index positions.
     order: Arc<RwLock<Vec<String>>>,
     embed_pool: Arc<Vec<kem::embed::EmbedEntry>>,
+    /// 上次從 DB 重建索引的時刻（2026-11-12：自愈索引——重啟後首查自動
+    /// 從 transactions 重建，無需人工 reindex；None = 從未重建）。
+    last_rebuilt: Arc<RwLock<Option<std::time::Instant>>>,
+    /// 嵌入斷路器（2026-11-12 SOTA 精實化）：embedder 不可達時停止嘗試
+    /// 至 `until`（60s 後再試一次）。為何必要：端點逾時 60s × 3 端點循序
+    /// → 離線/未設定情境下每次搜尋卡 180s；斷路器把失敗成本攤成一次性。
+    embed_disabled_until: Arc<RwLock<Option<std::time::Instant>>>,
 }
 
 #[derive(Debug, Clone)]
@@ -72,11 +85,95 @@ fn content_hash(content: &str) -> String {
     format!("{:x}", hasher.finalize())
 }
 
-/// Pure fusion over per-document BM25 and cosine scores — the platform
-/// mirror of `kem::search::hybrid_fuse` (α-normalization by corpus max,
-/// semantic refusal floor for zero-lexical hits, honest `via`).
-/// `ids` parallels `bm25_scores`; missing entries score 0. Returns
-/// `(position, score, via)` sorted by score descending.
+/// Rank fusion (RRF) over per-document BM25 and cosine rankings — the SOTA
+/// default (2026-11-12). Fuses **ranks**, not normalized scores:
+/// `score(d) = Σ_path 1/(k + rank_path(d))` with k=60. Scale-invariant, so no
+/// score calibration and no single path's score range can dominate. The
+/// semantic refusal floor and honest `via` provenance are preserved verbatim;
+/// stale vectors (content changed) count as missing, same as the weighted
+/// path. `ids` parallels `bm25_scores`; missing entries score 0.
+fn rrf_fuse(
+    ids: &[String],
+    bm25_scores: &[f64],
+    vectors: Option<&HashMap<String, (String, Vec<f32>)>>,
+    contents: &HashMap<String, String>,
+    query_vec: Option<&[f32]>,
+    refusal_floor: f32,
+) -> Vec<(usize, f64, &'static str)> {
+    // Lexical ranking: descending BM25, zero-score documents unranked.
+    let mut lexical: Vec<(usize, f64)> = bm25_scores
+        .iter()
+        .copied()
+        .enumerate()
+        .filter(|(_, s)| *s > 0.0)
+        .collect();
+    lexical.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+    let lexical_rank: std::collections::HashMap<usize, usize> = lexical
+        .iter()
+        .enumerate()
+        .map(|(rank, (pos, _))| (*pos, rank))
+        .collect();
+
+    // Dense ranking with freshness gate (stale vector = missing).
+    let mut dense: Vec<(usize, f32)> = Vec::new();
+    if let (Some(vectors), Some(qv)) = (vectors, query_vec) {
+        for (pos, id) in ids.iter().enumerate() {
+            if let Some((hash, vec)) = vectors.get(id) {
+                let fresh = contents.get(id).is_some_and(|c| content_hash(c) == *hash);
+                if fresh {
+                    dense.push((pos, kem::embed::cosine(qv, vec)));
+                }
+            }
+        }
+        dense.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+    }
+    let dense_rank: std::collections::HashMap<usize, usize> = dense
+        .iter()
+        .enumerate()
+        .map(|(rank, (pos, _))| (*pos, rank))
+        .collect();
+    let dense_cos: std::collections::HashMap<usize, f32> = dense.into_iter().collect();
+
+    let mut fused: Vec<(usize, f64, &'static str)> = ids
+        .iter()
+        .enumerate()
+        .filter_map(|(pos, _)| {
+            let lr = lexical_rank.get(&pos).copied();
+            let dr = dense_rank.get(&pos).copied();
+            let cos = dense_cos.get(&pos).copied().unwrap_or(0.0);
+            // Semantic refusal floor (same rule as the weighted path): zero
+            // lexical support + weak semantic adjacency => not a result.
+            if lr.is_none() && dr.is_some() && cos < refusal_floor {
+                return None;
+            }
+            let mut score = 0.0f64;
+            if let Some(r) = lr {
+                score += 1.0 / (RRF_K + r as f64);
+            }
+            if let Some(r) = dr {
+                score += 1.0 / (RRF_K + r as f64);
+            }
+            if score <= 0.0 {
+                return None;
+            }
+            let via = match (lr.is_some(), dr.is_some()) {
+                (true, true) => "hybrid",
+                (true, false) => "bm25",
+                (false, true) => "vector",
+                (false, false) => return None,
+            };
+            Some((pos, score, via))
+        })
+        .collect();
+    fused.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+    fused
+}
+
+/// Weighted fusion (α-normalization by corpus max, semantic refusal floor,
+/// honest `via`) — the legacy baseline, kept for A/B tests against
+/// [`rrf_fuse`]. `ids` parallels `bm25_scores`; missing entries score 0.
+/// Returns `(position, score, via)` sorted by score descending.
+#[cfg(test)]
 #[allow(clippy::too_many_arguments)]
 fn fuse(
     ids: &[String],
@@ -154,6 +251,97 @@ impl SearchEngine {
             bm25: Arc::new(RwLock::new(BM25Index::default())),
             order: Arc::new(RwLock::new(Vec::new())),
             embed_pool: Arc::new(pool),
+            last_rebuilt: Arc::new(RwLock::new(None)),
+            embed_disabled_until: Arc::new(RwLock::new(None)),
+        }
+    }
+
+    /// 嵌入呼叫（2 秒上限 + 斷路器）：逾時或失敗 → None（BM25-only 誠實降級）
+    /// 並停用嵌入 60 秒。離線/未設定端點情境下，搜尋延遲由 180s 降至 ≤2s。
+    async fn embed_with_breaker(&self, texts: &[String]) -> Option<kem::embed::EmbedResult> {
+        if let Some(until) = *self.embed_disabled_until.read().await {
+            if std::time::Instant::now() < until {
+                return None;
+            }
+        }
+        let pool = self.embed_pool.as_ref().clone();
+        let fut = kem::embed::embed_batch(&pool, texts);
+        match tokio::time::timeout(std::time::Duration::from_secs(2), fut).await {
+            Ok(Ok(result)) => Some(result),
+            _ => {
+                *self.embed_disabled_until.write().await =
+                    Some(std::time::Instant::now() + std::time::Duration::from_secs(60));
+                None
+            }
+        }
+    }
+
+    /// 索引是否過期（從未重建，或超過 `ttl` 未重建）。自愈重建的節流閘。
+    pub async fn is_stale(&self, ttl: std::time::Duration) -> bool {
+        match *self.last_rebuilt.read().await {
+            None => true,
+            Some(at) => at.elapsed() > ttl,
+        }
+    }
+
+    /// 標記索引已從 DB 重建（由呼叫端在填充完成後呼叫）。
+    pub async fn mark_rebuilt(&self) {
+        *self.last_rebuilt.write().await = Some(std::time::Instant::now());
+    }
+
+    /// 寫入後失效（2026-11-12）：下次搜尋立刻重建——關閉「新交易最多 60 秒
+    /// 搜不到」的一致性窗口（自愈 TTL 的補充，寫入路徑主動呼叫）。
+    pub async fn invalidate(&self) {
+        *self.last_rebuilt.write().await = None;
+    }
+
+    /// 批量寫入（2026-11-12 SOTA 精實化）：一次 BM25 重建（消除逐檔 rebuild
+    /// 的 O(n²)）＋一次批次嵌入（消除逐檔 60s 網路等待）。供 DB 重建路徑
+    /// 使用；單檔寫入仍走 `add_document`。
+    pub async fn add_documents_bulk(&self, docs: Vec<(String, String, HashMap<String, String>)>) {
+        if docs.is_empty() {
+            self.mark_rebuilt().await;
+            return;
+        }
+        {
+            let mut map = self.documents.write().await;
+            for (id, content, metadata) in docs {
+                map.insert(
+                    id.clone(),
+                    SearchDocument {
+                        doc_id: id,
+                        content,
+                        metadata,
+                    },
+                );
+            }
+        }
+        self.rebuild_bm25().await;
+        // 單次批次嵌入：整批一起送（2s 上限＋斷路器）；失敗 → 全批 BM25-only。
+        let contents: Vec<String> = {
+            let map = self.documents.read().await;
+            map.values().map(|d| d.content.clone()).collect()
+        };
+        if contents.is_empty() {
+            return;
+        }
+        if let Some(result) = self.embed_with_breaker(&contents).await {
+            let ids: Vec<String> = {
+                let map = self.documents.read().await;
+                map.keys().cloned().collect()
+            };
+            let mut vectors = self.vectors.write().await;
+            for (id, vec) in ids.into_iter().zip(result.vecs.iter()) {
+                if let Some(content) = self
+                    .documents
+                    .read()
+                    .await
+                    .get(&id)
+                    .map(|d| d.content.clone())
+                {
+                    vectors.insert(id, (content_hash(&content), vec.clone()));
+                }
+            }
         }
     }
 
@@ -191,9 +379,12 @@ impl SearchEngine {
         self.rebuild_bm25().await;
 
         // Vector leg, best-effort: embedder unreachable → the document stays
-        // BM25-only (honest degradation, never a fabricated vector).
-        let pool = self.embed_pool.as_ref().clone();
-        if let Ok(result) = kem::embed::embed_batch(&pool, std::slice::from_ref(&content)).await {
+        // BM25-only (honest degradation, never a fabricated vector). 2s cap +
+        // breaker keeps offline rebuilds from stalling on 60s endpoint timeouts.
+        if let Some(result) = self
+            .embed_with_breaker(std::slice::from_ref(&content))
+            .await
+        {
             if let Some(vec) = result.vecs.first() {
                 let mut vectors = self.vectors.write().await;
                 vectors.insert(doc_id, (content_hash(&content), vec.clone()));
@@ -202,7 +393,8 @@ impl SearchEngine {
     }
 
     /// Ranked search: BM25 over all documents, fused with cosine against the
-    /// embedded query when the embedder is reachable.
+    /// embedded query when the embedder is reachable. Fusion is RRF (rank
+    /// fusion, k=60) by default; unreachable embedder → BM25-only.
     pub async fn search_ranked(&self, query: &str) -> Vec<RankedHit> {
         let docs = self.documents.read().await;
         if docs.is_empty() {
@@ -219,24 +411,23 @@ impl SearchEngine {
             .map(|(pos, _)| bm25.score_at(pos, &terms))
             .collect();
 
-        // Query embedding, best-effort: unreachable embedder → BM25-only.
-        let pool = self.embed_pool.as_ref().clone();
-        let query_vec: Option<Vec<f32>> = kem::embed::embed_batch(&pool, &[query.to_string()])
+        // Query embedding, best-effort: unreachable embedder → BM25-only
+        // (2s cap + breaker; offline searches stay fast instead of 180s).
+        let query_vec: Option<Vec<f32>> = self
+            .embed_with_breaker(&[query.to_string()])
             .await
-            .ok()
             .and_then(|r| r.vecs.first().cloned());
 
         let contents: HashMap<String, String> = docs
             .iter()
             .map(|(id, d)| (id.clone(), d.content.clone()))
             .collect();
-        let fused = fuse(
+        let fused = rrf_fuse(
             &order,
             &bm25_scores,
             Some(&vectors),
             &contents,
             query_vec.as_deref(),
-            HYBRID_ALPHA,
             REFUSAL_FLOOR,
         );
         fused
@@ -457,6 +648,8 @@ mod tests {
         assert!(hits.is_empty(), "stale vector must not produce hybrid hits");
     }
 
+    // ── RRF default fusion (2026-11-12) ──────────────────────────────────
+
     #[tokio::test]
     async fn delete_rebuilds_index_and_document_count() {
         let engine = engine();
@@ -473,5 +666,70 @@ mod tests {
         assert_eq!(hits.len(), 1);
         assert_eq!(hits[0].document.doc_id, "d2", "deleted doc must vanish");
         assert!(engine.get_document("d1").await.is_none());
+    }
+
+    #[test]
+    fn rrf_fuse_preserves_refusal_floor() {
+        let ids = vec!["d1".to_string()];
+        let contents: HashMap<String, String> = [("d1".to_string(), "unrelated body".to_string())]
+            .into_iter()
+            .collect();
+        let mut vectors = HashMap::new();
+        vectors.insert("d1".to_string(), ("h".to_string(), vec![0.9f32, 0.1]));
+        let qv = [0.3f32, 0.95]; // cosine ~0.28 < floor
+        let hits = rrf_fuse(
+            &ids,
+            &[0.0],
+            Some(&vectors),
+            &contents,
+            Some(&qv),
+            REFUSAL_FLOOR,
+        );
+        assert!(
+            hits.is_empty(),
+            "weak vector-only hit must be refused under RRF"
+        );
+    }
+
+    #[test]
+    fn rrf_fuse_is_scale_invariant_where_weighted_is_not() {
+        // Same ordering, wildly different BM25 scale: RRF depends only on
+        // ranks, so both inputs must produce identical rankings.
+        let ids: Vec<String> = (0..3).map(|i| format!("d{i}")).collect();
+        let contents: HashMap<String, String> = ids
+            .iter()
+            .map(|id| (id.clone(), format!("body {id}")))
+            .collect();
+        let small = [1.0f64, 0.5, 0.1];
+        let huge = [100_000.0f64, 50_000.0, 10_000.0];
+        let a = rrf_fuse(&ids, &small, None, &contents, None, REFUSAL_FLOOR);
+        let b = rrf_fuse(&ids, &huge, None, &contents, None, REFUSAL_FLOOR);
+        let order =
+            |h: &[(usize, f64, &'static str)]| h.iter().map(|(p, _, _)| *p).collect::<Vec<_>>();
+        assert_eq!(order(&a), order(&b), "RRF must be scale-invariant");
+        assert_eq!(order(&a), vec![0, 1, 2]);
+        // Top RRF score is exactly 1/(k+0) with one ranking path.
+        assert!((a[0].1 - 1.0 / (RRF_K + 0.0)).abs() < 1e-12);
+    }
+
+    #[test]
+    fn search_ranked_uses_rrf_by_default() {
+        // Engine-level proof: ranked hits carry RRF-scale scores, not
+        // weighted-normalized ones (max ≤ 1.0 for weighted; RRF top-1 = 1/60).
+        let rt = tokio::runtime::Runtime::new().expect("runtime");
+        rt.block_on(async {
+            let engine = engine();
+            engine
+                .add_document("d1".into(), "alpha beta gamma".into(), HashMap::new())
+                .await;
+            let hits = engine.search_ranked("alpha beta").await;
+            assert_eq!(hits.len(), 1);
+            let expected = 1.0 / (RRF_K + 0.0);
+            assert!(
+                (hits[0].score - expected).abs() < 1e-9,
+                "search_ranked must fuse with RRF: got {}",
+                hits[0].score
+            );
+        });
     }
 }

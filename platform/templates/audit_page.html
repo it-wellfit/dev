@@ -56,6 +56,13 @@
 
         <section class="panel" aria-labelledby="audit-title">
             <h2 id="audit-title">稽核紀錄</h2>
+            {% if db_error %}
+            <div class="error-state" role="alert" data-state-error>
+                <strong>稽核紀錄暫時無法讀取</strong>
+                <p>問題：資料庫查詢失敗；可能原因：資料庫忙碌或暫時不可用；處理方式：請稍後重試，若持續發生請聯絡系統管理員。</p>
+                <p><a class="btn btn-secondary" href="/audit">重試</a></p>
+            </div>
+            {% else %}
             <div class="table-wrap">
                 <table>
                     <caption>稽核紀錄（共 {{ total }} 筆）</caption>
@@ -109,6 +116,7 @@
                 {% endif %}
             </nav>
             <p class="section-note">稽核軌跡僅追加不可改寫；您的角色：{{ role_code }}</p>
+            {% endif %}
         </section>
     </main>
 

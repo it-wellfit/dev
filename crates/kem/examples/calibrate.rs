@@ -2,8 +2,9 @@
 //! Cosine calibration probe: refusal queries vs false-hit claim bodies.
 //! Prints the raw-cosine matrix used to set REFUSAL_FLOOR.
 
-#[tokio::main]
-async fn main() {
+fn main() {
+    let rt = tokio::runtime::Runtime::new().expect("tokio runtime");
+    rt.block_on(async {
     let queries = [
         "kubernetes autoscaling cluster",
         "blockchain consensus mechanism",
@@ -41,5 +42,6 @@ async fn main() {
             }
         }
         Err(e) => println!("embed failed: {e}"),
-    }
+        }
+    });
 }

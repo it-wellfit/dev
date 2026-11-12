@@ -2,9 +2,9 @@
   "bomFormat": "CycloneDX",
   "specVersion": "1.5",
   "version": 1,
-  "serialNumber": "urn:uuid:549a452b-cb31-4009-9e7a-13187c11bcd4",
+  "serialNumber": "urn:uuid:1f4b1882-1f48-48f1-8a1c-087bb86da519",
   "metadata": {
-    "timestamp": "2026-11-11T13:24:11.601132400Z",
+    "timestamp": "2026-11-12T10:56:00.617241300Z",
     "tools": [
       {
         "vendor": "CycloneDX",
@@ -42,130 +42,6 @@
     ]
   },
   "components": [
-    {
-      "type": "library",
-      "bom-ref": "registry+https://github.com/rust-lang/crates.io-index#cfg-if@1.0.5",
-      "author": "Alex Crichton <alex@alexcrichton.com>",
-      "name": "cfg-if",
-      "version": "1.0.5",
-      "description": "A macro to ergonomically define an item depending on a large number of #[cfg] parameters. Structured like an if-else chain, the first matching branch is the item that gets emitted. ",
-      "scope": "required",
-      "hashes": [
-        {
-          "alg": "SHA-256",
-          "content": "4e7648175b45a9a48536d676f68d918270699102aa8dab5496df06904c914600"
-        }
-      ],
-      "licenses": [
-        {
-          "expression": "MIT OR Apache-2.0"
-        }
-      ],
-      "purl": "pkg:cargo/cfg-if@1.0.5",
-      "externalReferences": [
-        {
-          "type": "vcs",
-          "url": "https://github.com/rust-lang/cfg-if"
-        }
-      ]
-    },
-    {
-      "type": "library",
-      "bom-ref": "registry+https://github.com/rust-lang/crates.io-index#getrandom@0.4.3",
-      "author": "The Rand Project Developers",
-      "name": "getrandom",
-      "version": "0.4.3",
-      "description": "A small cross-platform library for retrieving random data from system source",
-      "scope": "required",
-      "hashes": [
-        {
-          "alg": "SHA-256",
-          "content": "300e883d756b2e4ec94e02791f39b04b522276138852cfc41d9fb7e904106099"
-        }
-      ],
-      "licenses": [
-        {
-          "expression": "MIT OR Apache-2.0"
-        }
-      ],
-      "purl": "pkg:cargo/getrandom@0.4.3",
-      "externalReferences": [
-        {
-          "type": "documentation",
-          "url": "https://docs.rs/getrandom"
-        },
-        {
-          "type": "vcs",
-          "url": "https://github.com/rust-random/getrandom"
-        }
-      ]
-    },
-    {
-      "type": "library",
-      "bom-ref": "registry+https://github.com/rust-lang/crates.io-index#itoa@1.0.19",
-      "author": "David Tolnay <dtolnay@gmail.com>",
-      "name": "itoa",
-      "version": "1.0.19",
-      "description": "Fast integer primitive to string conversion",
-      "scope": "required",
-      "hashes": [
-        {
-          "alg": "SHA-256",
-          "content": "3bd1574e617a9a6c1f8f8181bd7e841e1f20e4277607ef28945765188d6284d4"
-        }
-      ],
-      "licenses": [
-        {
-          "expression": "MIT OR Apache-2.0"
-        }
-      ],
-      "purl": "pkg:cargo/itoa@1.0.19",
-      "externalReferences": [
-        {
-          "type": "documentation",
-          "url": "https://docs.rs/itoa"
-        },
-        {
-          "type": "vcs",
-          "url": "https://github.com/dtolnay/itoa"
-        }
-      ]
-    },
-    {
-      "type": "library",
-      "bom-ref": "registry+https://github.com/rust-lang/crates.io-index#memchr@2.8.3",
-      "author": "Andrew Gallant <jamslam@gmail.com>, bluss",
-      "name": "memchr",
-      "version": "2.8.3",
-      "description": "Provides extremely fast (uses SIMD on x86_64, aarch64 and wasm32) routines for 1, 2 or 3 byte search and single substring search. ",
-      "scope": "required",
-      "hashes": [
-        {
-          "alg": "SHA-256",
-          "content": "cf8baf1c55e62ffcace7a9f06f4bd9cd3f0c4beb022d3b367256b91b87513d98"
-        }
-      ],
-      "licenses": [
-        {
-          "expression": "Unlicense OR MIT"
-        }
-      ],
-      "purl": "pkg:cargo/memchr@2.8.3",
-      "externalReferences": [
-        {
-          "type": "documentation",
-          "url": "https://docs.rs/memchr/"
-        },
-        {
-          "type": "website",
-          "url": "https://github.com/BurntSushi/memchr"
-        },
-        {
-          "type": "vcs",
-          "url": "https://github.com/BurntSushi/memchr"
-        }
-      ]
-    },
     {
       "type": "library",
       "bom-ref": "registry+https://github.com/rust-lang/crates.io-index#proc-macro2@1.0.107",
@@ -225,41 +101,6 @@
         {
           "type": "vcs",
           "url": "https://github.com/dtolnay/quote"
-        }
-      ]
-    },
-    {
-      "type": "library",
-      "bom-ref": "registry+https://github.com/rust-lang/crates.io-index#rand_core@0.10.1",
-      "author": "The Rand Project Developers",
-      "name": "rand_core",
-      "version": "0.10.1",
-      "description": "Core random number generation traits and tools for implementation.",
-      "scope": "required",
-      "hashes": [
-        {
-          "alg": "SHA-256",
-          "content": "63b8176103e19a2643978565ca18b50549f6101881c443590420e4dc998a3c69"
-        }
-      ],
-      "licenses": [
-        {
-          "expression": "MIT OR Apache-2.0"
-        }
-      ],
-      "purl": "pkg:cargo/rand_core@0.10.1",
-      "externalReferences": [
-        {
-          "type": "documentation",
-          "url": "https://docs.rs/rand_core"
-        },
-        {
-          "type": "website",
-          "url": "https://rust-random.github.io/book"
-        },
-        {
-          "type": "vcs",
-          "url": "https://github.com/rust-random/rand_core"
         }
       ]
     },
@@ -370,36 +211,6 @@
     },
     {
       "type": "library",
-      "bom-ref": "registry+https://github.com/rust-lang/crates.io-index#serde_json@1.0.154",
-      "name": "serde_json",
-      "version": "1.0.154",
-      "description": "A JSON serialization file format",
-      "scope": "required",
-      "hashes": [
-        {
-          "alg": "SHA-256",
-          "content": "e7e9cc8b1b85264074fbcc02a88680c4096b1e47df8f739dceb03bf482f04bd6"
-        }
-      ],
-      "licenses": [
-        {
-          "expression": "MIT OR Apache-2.0"
-        }
-      ],
-      "purl": "pkg:cargo/serde_json@1.0.154",
-      "externalReferences": [
-        {
-          "type": "documentation",
-          "url": "https://docs.rs/serde_json"
-        },
-        {
-          "type": "vcs",
-          "url": "https://github.com/serde-rs/json"
-        }
-      ]
-    },
-    {
-      "type": "library",
       "bom-ref": "registry+https://github.com/rust-lang/crates.io-index#syn@3.0.10",
       "author": "David Tolnay <dtolnay@gmail.com>",
       "name": "syn",
@@ -459,93 +270,14 @@
           "url": "https://github.com/dtolnay/unicode-ident"
         }
       ]
-    },
-    {
-      "type": "library",
-      "bom-ref": "registry+https://github.com/rust-lang/crates.io-index#uuid@1.29.2",
-      "name": "uuid",
-      "version": "1.29.2",
-      "description": "A library to generate and parse UUIDs.",
-      "scope": "required",
-      "hashes": [
-        {
-          "alg": "SHA-256",
-          "content": "bed99139f7dac9b5cfe5f17be4d66dc7079a34dee1d74bcc77217119240e267c"
-        }
-      ],
-      "licenses": [
-        {
-          "expression": "Apache-2.0 OR MIT"
-        }
-      ],
-      "purl": "pkg:cargo/uuid@1.29.2",
-      "externalReferences": [
-        {
-          "type": "documentation",
-          "url": "https://docs.rs/uuid"
-        },
-        {
-          "type": "vcs",
-          "url": "https://github.com/uuid-rs/uuid"
-        }
-      ]
-    },
-    {
-      "type": "library",
-      "bom-ref": "registry+https://github.com/rust-lang/crates.io-index#zmij@1.0.23",
-      "author": "David Tolnay <dtolnay@gmail.com>",
-      "name": "zmij",
-      "version": "1.0.23",
-      "description": "A double-to-string conversion algorithm based on Schubfach and xjb",
-      "scope": "required",
-      "hashes": [
-        {
-          "alg": "SHA-256",
-          "content": "29666d0abbfad1e3dc4dcf6144730dd3a3ab225bbbdac83319345b1b44ccfc1b"
-        }
-      ],
-      "licenses": [
-        {
-          "expression": "MIT"
-        }
-      ],
-      "purl": "pkg:cargo/zmij@1.0.23",
-      "externalReferences": [
-        {
-          "type": "documentation",
-          "url": "https://docs.rs/zmij"
-        },
-        {
-          "type": "vcs",
-          "url": "https://github.com/dtolnay/zmij"
-        }
-      ]
     }
   ],
   "dependencies": [
     {
       "ref": "path+file:///C:/Users/stephanie.huang/Desktop/%E6%96%B0%E4%BA%BA%E8%A8%93%E7%B7%B4/Projects/2026/Dev/web#0.0.1",
       "dependsOn": [
-        "registry+https://github.com/rust-lang/crates.io-index#serde@1.0.229",
-        "registry+https://github.com/rust-lang/crates.io-index#serde_json@1.0.154",
-        "registry+https://github.com/rust-lang/crates.io-index#uuid@1.29.2"
+        "registry+https://github.com/rust-lang/crates.io-index#serde@1.0.229"
       ]
-    },
-    {
-      "ref": "registry+https://github.com/rust-lang/crates.io-index#cfg-if@1.0.5"
-    },
-    {
-      "ref": "registry+https://github.com/rust-lang/crates.io-index#getrandom@0.4.3",
-      "dependsOn": [
-        "registry+https://github.com/rust-lang/crates.io-index#cfg-if@1.0.5",
-        "registry+https://github.com/rust-lang/crates.io-index#rand_core@0.10.1"
-      ]
-    },
-    {
-      "ref": "registry+https://github.com/rust-lang/crates.io-index#itoa@1.0.19"
-    },
-    {
-      "ref": "registry+https://github.com/rust-lang/crates.io-index#memchr@2.8.3"
     },
     {
       "ref": "registry+https://github.com/rust-lang/crates.io-index#proc-macro2@1.0.107",
@@ -558,9 +290,6 @@
       "dependsOn": [
         "registry+https://github.com/rust-lang/crates.io-index#proc-macro2@1.0.107"
       ]
-    },
-    {
-      "ref": "registry+https://github.com/rust-lang/crates.io-index#rand_core@0.10.1"
     },
     {
       "ref": "registry+https://github.com/rust-lang/crates.io-index#serde@1.0.229",
@@ -581,15 +310,6 @@
       ]
     },
     {
-      "ref": "registry+https://github.com/rust-lang/crates.io-index#serde_json@1.0.154",
-      "dependsOn": [
-        "registry+https://github.com/rust-lang/crates.io-index#itoa@1.0.19",
-        "registry+https://github.com/rust-lang/crates.io-index#memchr@2.8.3",
-        "registry+https://github.com/rust-lang/crates.io-index#serde_core@1.0.229",
-        "registry+https://github.com/rust-lang/crates.io-index#zmij@1.0.23"
-      ]
-    },
-    {
       "ref": "registry+https://github.com/rust-lang/crates.io-index#syn@3.0.10",
       "dependsOn": [
         "registry+https://github.com/rust-lang/crates.io-index#proc-macro2@1.0.107",
@@ -599,16 +319,6 @@
     },
     {
       "ref": "registry+https://github.com/rust-lang/crates.io-index#unicode-ident@1.0.27"
-    },
-    {
-      "ref": "registry+https://github.com/rust-lang/crates.io-index#uuid@1.29.2",
-      "dependsOn": [
-        "registry+https://github.com/rust-lang/crates.io-index#getrandom@0.4.3",
-        "registry+https://github.com/rust-lang/crates.io-index#serde_core@1.0.229"
-      ]
-    },
-    {
-      "ref": "registry+https://github.com/rust-lang/crates.io-index#zmij@1.0.23"
     }
   ]
 }

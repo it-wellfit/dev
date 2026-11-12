@@ -20,7 +20,62 @@ use tauri::Manager;
 #[allow(dead_code)] // redundant by design: URL enforced via tauri.conf.json window.url; kept as documented single bind point
 const PLATFORM_URL: &str = "http://127.0.0.1:8090/";
 
+/// 日誌位置：`%LOCALAPPDATA%\AuxBridge\logs\auxbridge-web.log`（Windows）或缺省 temp 目錄。
+/// 為何寫檔：release 使用 `windows_subsystem = "windows"`，無主控台，stderr 事件會消失；
+/// 原先前只有 `tracing::info!` 而無 subscriber（事件全被丟棄），本函式修正此缺陷。
+fn log_file_path() -> std::path::PathBuf {
+    let base = std::env::var_os("LOCALAPPDATA")
+        .map(std::path::PathBuf::from)
+        .or_else(|| std::env::var_os("HOME").map(std::path::PathBuf::from))
+        .unwrap_or_else(std::env::temp_dir);
+    base.join("AuxBridge")
+        .join("logs")
+        .join("auxbridge-web.log")
+}
+
+/// 初始化 tracing：檔案寫入、預設 `info`、可用 `AUXBRIDGE_LOG` 覆寫（env-filter 語法）。
+fn init_tracing() {
+    use std::sync::Mutex;
+    use tracing_subscriber::EnvFilter;
+
+    let level = std::env::var("AUXBRIDGE_LOG").unwrap_or_else(|_| "info".to_string());
+    let filter = EnvFilter::try_new(&level).unwrap_or_else(|_| EnvFilter::new("info"));
+    let path = log_file_path();
+    let file = std::fs::create_dir_all(path.parent().unwrap_or(&path)).and_then(|_| {
+        std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&path)
+    });
+    match file {
+        Ok(file) => {
+            let writer = Mutex::new(file);
+            tracing_subscriber::fmt()
+                .with_env_filter(filter)
+                .with_ansi(false)
+                .with_target(true)
+                .with_writer(writer)
+                .init();
+            tracing::info!("日誌檔：{}", path.display());
+        }
+        // 無法寫檔時不中斷啟動（例如唯讀環境）：事件仍被 subscriber 接住並丟棄，
+        // 但不會讓桌面殼啟動失敗。
+        Err(err) => {
+            tracing_subscriber::fmt()
+                .with_env_filter(filter)
+                .with_ansi(false)
+                .with_writer(std::io::stderr)
+                .init();
+            eprintln!(
+                "無法開啟日誌檔 {}（{err}），改輸出至 stderr",
+                path.display()
+            );
+        }
+    }
+}
+
 fn main() {
+    init_tracing();
     tauri::Builder::default()
         // W10（計畫 1793033568961）：自動更新鏈——minisign 簽章驗證由
         // tauri.conf.json plugins.updater.pubkey 鎖定（不可停用）；

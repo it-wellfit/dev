@@ -65,7 +65,7 @@
 1. **採用 A 的管線設計**作為藍圖（生命週期最完整、審計性最強）。
 2. **裁決層可插拔**：預設＝確定性規則（程式碼擁有所有門檻，pi-jev-wiki 哲學）→ 第二層＝本地 LLM（qwen3.5:4b）＋自一致性投票 → 第三層＝自研蒸餾決策模型。**付費 AI（含 JEV）全面排除**——零成本是硬性約束，非加權項（2026-11-07 使用者裁定）；JEV 僅作為模式來源。這正是 `FREE_AI_ROUTING.md` §3.2 fallback 鏈的知識版。
 3. **補上 A 缺少的兩項**：雙時間軸（取自 B/Graphiti）與兩軌治理（取自 eli.ai/Wikidata）。
-4. **檢索**：BM25（自研倒排，零新依賴）＋向量（OVH bge-m3 免 key 首選→Ollama 備援）混合融和（α=0.5，語義拒答地板 0.55 證據校準）；PPR 多跳列為 Phase 5 選配（GraphRAG 社群摘要索引成本不合本地優先）。
+4. **檢索**：BM25（自研倒排，零新依賴）＋向量（OVH bge-m3 免 key 首選→Ollama 備援）混合融和；**預設 fusion＝RRF 秩融和（k=60，Cormack et al. 2009）**，`--fusion=weighted` 保留 α=0.5 加權基線（兩者金標 20/20 實證，2026-11-12）；**MMR 多樣性重排（λ=0.7，Carbonell & Goldstein 1998）**與 **PRF 偽相關回饋擴充（Rocchio 1971）**為選配旗標（§4.6 正式規格）；語義拒答地板 0.55 證據校準且對所有 fusion 一致；多跳 PPR（Personalized PageRank）列為 Phase 5 選配（GraphRAG 社群摘要索引成本不合本地優先）。
 
 ---
 
@@ -83,7 +83,7 @@
 | 6. 成本 | 每主張裁決 token/呼叫數有預算 | 每主張 ≤ 1 次本地 LLM 呼叫（規則層 0 次） |
 | 7. 本地優先 | 無金鑰可完整運作 | 斷網 smoke test 全綠 |
 | 8. 代理可整合 | MCP 工具面；永不注入 context | 工具清單 ≥ 8 個；TOC 以 skill 形式暴露 |
-| 9. 技術棧契合 | Rust 實作；SQLite/tantivy；四關全綠 | cargo fmt/clippy/test/audit EXIT=0 |
+| 9. 技術棧契合 | Rust 實作；SQLite＋自研倒排 BM25（零額外索引引擎）；四關全綠 | cargo fmt/clippy/test/audit EXIT=0 |
 | 10. 可攜性 | 純 Markdown＋git；衍生物可丟棄重建 | 刪除 `.kem/` 目錄後 rebuild 全部索引 |
 
 ### 3.2 判斷準則的操作化（引 THINKING_OPERATING_SYSTEM §4）
@@ -102,7 +102,7 @@
 ├─────────────────────────────────────────────────────────────┤
 │ L4 演進層   sync 重驗證｜時間衰減＋再確認｜取代/退役│lint    │
 ├─────────────────────────────────────────────────────────────┤
-│ L3 檢索層   BM25(tantivy)＋向量(Ollama embed)＋圖遍歷(選配)  │
+│ L3 檢索層   自研 BM25＋向量(bge-m3)＋RRF/MMR/PRF/HyDE   │
 ├─────────────────────────────────────────────────────────────┤
 │ L2 儲存層   wiki/*.md（SSOT）＋ .kem/ 衍生索引（可丟棄）     │
 ├─────────────────────────────────────────────────────────────┤
@@ -150,9 +150,11 @@ knowledge/
 │   └── topics/ gotcha-*/glossary-*/concept-*.md
 └── .kem/                              # 衍生狀態（gitignore；可隨時重建）
     ├── ledger.jsonl                   # 裁決決策帳本（append-only）
-    ├── index.db                       # tantivy/SQLite 派生索引
-    └── review-queue.jsonl
+    ├── vectors.json                   # 向量索引（body-sha 陳舊防護）
+    └── review-queue.jsonl             # 審查佇列
 ```
+
+> BM25 倒排索引為**記憶體內建**（每次 `Index::build`，確定性、零持久化衍生狀態）；`vectors.json` 為唯一持久化之檢索衍生。
 
 ### 4.3 裁決層（可插拔三級）
 
@@ -177,7 +179,7 @@ knowledge/
 | 低延遲（~111ms） | T1 規則（微秒級，零 LLM）；T2 本地推理（秒級） | T1 更快；T2 較慢但完全離線 |
 | 現成開源決策模型 | **Kev 開源決策模型**（Decision4Rec 實證：訓練後 0.8B 開源模型在 11/15 情境勝商用 Jev、其餘不劣 `[FACT:DOC]` arXiv 2610.26035）；**Jev 1.13 Free 已出現於 OpenCode Zen keyless 目錄**（2026-11-07 查證，預設停用需 opt-in，採用前依 FREE_AI_ROUTING §8 冒煙驗證） | 存在；P5 評估下載/自訓 |
 
-**自研元件（kem crate, Rust）**: `JudgmentEngine` trait 統一介面 → 實作 T1 `RuleEngine`（零呼叫）＋ T2 `OllamaScorer`（typed prompts＋投票）＋ T3 `DistilledClassifier`（帳本訓練）。**免費依賴清單**: Ollama、qwen3.5:4b、tantivy（BM25）、SQLite、serde——全部開源本地。`[PROP]`
+**自研元件（kem crate, Rust）**: `JudgmentEngine` trait 統一介面 → 實作 T1 `RuleEngine`（零呼叫）＋ T2 `OllamaScorer`（typed prompts＋投票）＋ T3 `DistilledClassifier`（帳本訓練）。**免費依賴清單**: Ollama、qwen3.5:4b、SQLite、serde——全部開源本地（BM25 為自研倒排，零索引引擎）。`[PROP]`
 
 ### 4.3.2 自一致性投票（SCS）持續改進方案
 
@@ -267,6 +269,85 @@ draft → pending_review → published ──→ superseded ──┐
 - 衰減率按主張類別配置：架構決策慢衰、暫時性 bug 快衰 `[FACT:DOC]` chancery 模式
 - 衰減只**降權**，永不刪除；最低衰減到「需再確認才可引用」
 
+### 4.6 檢索管線（2026-11-12 正式規格；實作 `crates/kem/src/search.rs`）
+
+管線階序（不可調換——過濾永遠先於排序 `[FACT:DOC]` turntakingreview）：
+
+```
+查詢 → [PRF 擴充（選配）] → 生命週期/雙時間軸過濾（visible_at）
+     → BM25 倒排評分（K1=1.5, B=0.75）
+     → [向量評分（選配：bge-m3 → Ollama 備援）]
+     → fusion（預設 RRF；--fusion=weighted 為 α 加權基線）
+     → [MMR 多樣性重排（選配）]
+     → 拒答地板（REFUSAL_FLOOR=0.55，對所有 fusion 一致）
+     → via 溯源標記（bm25 | hybrid | vector）→ top-k
+```
+
+**Fusion 模式**（`--fusion`，預設 `rrf`）：
+
+| 模式 | 公式 | 特性 |
+|------|------|------|
+| `rrf`（預設） | `score(d) = Σ_path 1/(k + rank_path(d))`，k=60 | 秩為基、尺度不變；無需分數校準；單一路徑分數域無法支配結果（Cormack et al., SIGIR 2009） |
+| `weighted`（基線） | `α·norm(BM25) + (1−α)·norm(cosine)`，α=0.5 | 相依分數尺度；α 需調校 |
+
+**MMR**（`--mmr`，λ=`--lambda`，預設 0.7）：貪婪重排 `argmax λ·rel(d) − (1−λ)·max sim(d, S)`；相似度優先 dense cosine，無向量時退回詞彙 Jaccard（離線確定性）。目的：上下文視窗內主題覆蓋最大化、近重複最小化（更少 prompt token、同等證據）。
+
+**PRF**（`--prf`，詞數 `--prf-terms`，預設 8）：Rocchio 偽相關回饋——取 BM25 top-3 文件的 idf×tf 權重詞彙擴充查詢；不回顯查詢詞；全離線確定性。
+
+**Pointwise LLM 重排**（`--rerank`，SOTA 第二階段，2026-11-12）：fusion/MMR 產生候選集後，以本地 Ollama（`--rerank-model`，預設 qwen3.5:4b）在**單一批次呼叫**中對每個候選評分 0-10（pointwise 對小模型比 listwise 排序可靠；T2 警告適用於結構化排序，非逐項評分）；Ollama 不可達或解析失敗 → 保持 fusion 原序（誠實降級，mode 不加 `+rerank`）。實測：`bm25-only +rerank(qwen3.5:4b)`，LLM 同意 BM25 正確序時原序不變（不退化）。
+
+**HyDE**（`--hyde`，Gao et al. 2023）：LLM 生成假設性答案文件（2-4 句，溫度 0）→ 嵌入作 dense 腿查詢（語義橋接跨詞彙失配）；lexical 腿保留原始（PRF 擴充）查詢；Ollama 不可達 → 用原始查詢（mode 不加 `+hyde`）。實測：`rrf(k=60) +hyde +rerank` 全鏈，claim-001 正確 top-1。
+
+**誠信規則**（對所有模式不變）：
+
+1. **拒答地板**：零詞彙支持且 raw cosine < 0.55 之命中一律丟棄（語義鄰近 ≠ 知識）。
+2. **誠實降級**：embedder/向量不可用 → BM25-only，`via=bm25` 標記；output mode 字串如實記錄（`rrf(k=60, floor=0.55) +mmr(λ=0.7) +prf(8)`）。
+3. **過濾先行**：生命週期/時間軸過濾永遠發生於任何評分之前。
+4. **via 溯源**：每命中帶檢索路徑 provenance（`bm25`/`hybrid`/`vector`），不得偽造。
+
+**評估指標**（`evaluate_golden`，TREC 標準）：
+
+| 指標 | 定義 | 用途 |
+|------|------|------|
+| top-1 | 相關文件是否排名第一（拒答案例：空結果） | 基本正確性 |
+| nDCG@10 | 二元相關性 `1/log2(rank+1)` 於 top-10 之平均 | 排序形狀（位置折扣） |
+| MRR | 首個相關文件排名倒數之平均 | 首命中速度 |
+| recall@10 | 相關文件在 top-10 之比例 | 覆蓋率 |
+
+`kem eval` 對 weighted 與 rrf 兩種 fusion 全列以上指標（不退化才可採用 RRF 為預設）。
+
+**效能實證**（`cargo run --release -p kem --example perf`，20 claims×5 queries×200 iterations，本機 release）：
+
+| 階段 | 延遲 | 相對成本 |
+|------|------|----------|
+| BM25+RRF（基準） | 7.8 µs/query | — |
+| +MMR | 8.7 µs/query | +10.6% |
+| +PRF | 39.3 µs/query | +402%（idf×tf 排序為主成本） |
+| +rerank／+hyde | 網路呼叫（Ollama 100–2000ms） | opt-in 才觸發 |
+
+結論：RRF/MMR 之 CPU 成本可忽略（<11%）；PRF 之 39µs 對互動式 ask（Ollama 秒級）仍屬可忽略；rerank/HyDE 之網路延遲使其僅適合 opt-in。此為「品質/延遲」trade-off 之實測依據，非假設。
+
+**CLI 介面**（`kem ask`）：
+
+| 旗標 | 值 | 預設 | 語義 |
+|------|----|------|------|
+| `--query` | 文字 | （必填） | 查詢字串 |
+| `--top` | N | 5 | 結果數 |
+| `--fusion` | `rrf`\|`weighted` | `rrf` | fusion 模式 |
+| `--alpha` | f32 | 0.5 | weighted 模式 BM25 權重 |
+| `--mmr` | （布林） | off | 啟用 MMR |
+| `--lambda` | f32 | 0.7 | MMR 相關性權重 |
+| `--prf` | （布林） | off | 啟用 PRF 擴充 |
+| `--prf-terms` | N | 8 | PRF 擴充詞數 |
+| `--bm25-only` | （布林） | off | 跳過向量（離線） |
+| `--refusal-floor` | f32 | 0.55 | 拒答地板覆寫（校準用） |
+| `--rerank` | （布林） | off | 啟用 pointwise LLM 重排（Ollama） |
+| `--rerank-model` | 模型名 | qwen3.5:4b | 重排模型 |
+| `--rerank-base` | URL | http://127.0.0.1:11434 | Ollama 端點 |
+| `--hyde` | （布林） | off | 啟用 HyDE（假設性文件嵌入） |
+| `--hyde-model` | 模型名 | qwen3.5:4b | HyDE 生成模型 |
+| `--hyde-base` | URL | http://127.0.0.1:11434 | Ollama 端點 |
+
 ---
 
 ## 5. 功能模組（8 個，對應工具面）
@@ -306,10 +387,10 @@ draft → pending_review → published ──→ superseded ──┐
 |------|------|----------|----------------|
 | **P0 契約**（1 天） | schema v1 冻結；raw/ 佈局；ledger 格式；`kem` crate 骨架 | schema 驗證測試綠（20 筆種子全過，對標 `--declared-rules-schema` 模式） | L1→L2 |
 | **P1 擷取歸檔**（3 天） | M1–M4：capture→原子化→T1 規則裁決→歸檔 | 10 份真實文件走完全程；每主張 5 分鐘可溯證 | L2 |
-| **P2 檢索**（3 天） | M5：tantivy BM25＋Ollama 向量＋MCP `kem_ask` | 金標查詢集 §8-V1 全綠；斷網 smoke 全綠 | L3 |
+| **P2 檢索**（3 天） | M5：自研倒排 BM25（零新依賴，§2 結論 4）＋Ollama/OVH 向量＋MCP `kem_ask` | 金標查詢集 §8-V1 全綠；斷網 smoke 全綠 | L3 |
 | **P3 演進**（4 天） | M6：sync 對 commit 重驗證；衰減＋再確認；取代流程；T2＋SCS k=5 上線 | §8-V2/V3/V4 全綠（演化/雙時間軸/退役傳播）＋SCS-G1 | L3 |
 | **P4 治理**（3 天） | M7–M8：審查佇列、lint、doctor、status；併入 check.ps1 | 四關 EXIT=0；lint 對種子缺陷集 100% 命中 | L4 |
-| **P5 遠期**（帳本量驅動） | T3 自研蒸餾決策模型（帳本→訓練→本地推理）；SCS G2–G4 階梯；PPR 多跳；跨專案多 wiki 目錄 | 複核量 ≥ 500 筆後 14 天試點：SCS-G2/G3/G4 逐級達標（證據基線 99.2% → 千題解析度上限 99.9%）；V4/V11/V12 全綠 | L5 |
+| **P5 遠期**（帳本量驅動） | T3 自研蒸餾決策模型（帳本→訓練→本地推理）；SCS G2–G4 階梯；多跳 PPR（Personalized PageRank；PRF 偽相關回饋已於 2026-11-12 落地，兩者不同）；跨專案多 wiki 目錄 | 複核量 ≥ 500 筆後 14 天試點：SCS-G2/G3/G4 逐級達標（證據基線 99.2% → 千題解析度上限 99.9%）；V4/V11/V12 全綠 | L5 |
 
 **路線圖風險控制**: 每階段結束跑四關＋證據寫入 session manifest；不綠不前進（flaps 計畫 §6 慣例）。
 
@@ -319,7 +400,7 @@ draft → pending_review → published ──→ superseded ──┐
 
 | # | 驗證 | 方法 | 通過門檻 |
 |---|------|------|----------|
-| V1 | 檢索品質 | 金標查詢集 20 查詢（含 4 個權限/邊界案例），對標工作區 search_eval.json 模式 `[FACT:DOC]` ekpi CLI contract | top-1 ≥ 20/20；錯誤期望必敗（fail-closed）；缺資料源必拒 |
+| V1 | 檢索品質 | 金標查詢集 20 查詢（含 4 個權限/邊界案例），對標工作區 search_eval.json 模式 `[FACT:DOC]` ekpi CLI contract | top-1 ≥ 20/20；**`kem eval` 同時報告 weighted 與 rrf 兩種 fusion，rrf 不得退化（rrf_pass ≥ weighted_pass）**；**TREC 指標（nDCG@10／MRR／recall@10）雙 fusion 全列**；錯誤期望必敗（fail-closed）；缺資料源必拒 |
 | V2 | 演化正確性 | 取代測試：新主張否證舊主張 → 舊者 status=superseded＋連結＋降級可檢索 | 狀態機轉移 100% 符合 §4.4 |
 | V3 | 雙時間軸 | 查詢「日期 X 時的信念」→ 回應 valid_from≤X<valid_to 的主張版本 | 點時查詢 3 組情境全對 |
 | V4 | 退役傳播 | retire 一主張 → 檢查索引/向量/TOC/log 四處衍生物 | 衍生物零殘留；重建路徑可用 |
@@ -331,6 +412,7 @@ draft → pending_review → published ──→ superseded ──┐
 | V10 | 可攜性 | 刪除 `.kem/` → rebuild → V1–V8 重跑全綠 | 衍生物完全可再生 |
 | V11 | SCS 一致率 | §4.3.2 G1–G4 階梯，每級 `kem eval --scs` 成對回報 (agreement, automation) | 逐級達標；禁止宣稱超出評測解析度的數字 |
 | V12 | 多維收斂（北極星） | 每迭代週期產出：覆蓋缺口清單（§4.3.3 機制 1）＋各維缺陷計數與半衰期（機制 2）＋成對指標（機制 3），存 `artifacts/convergence/` | 每週期缺陷半衰期 ≤ 2；收口時開放 P0/P1 缺陷 = 0；缺口清單遞減 |
+| V13 | 重排/多樣性/HyDE 驗證（2026-11-12） | `kem ask --mmr --rerank --hyde`：mode 字串須含 `+mmr(λ=...)`／`+rerank(...)`／`+hyde`；Ollama 不可達時 mode 不加對應標記且序不變（誠實降級）；MMR 於近重複候選時 top-k 不含雙胞胎 | 標記與降級行為如實；單元測試 lock |
 
 **失敗模式與緩解**（研究來源的已知坑）:
 
@@ -340,8 +422,8 @@ draft → pending_review → published ──→ superseded ──┐
 | 靜默覆寫歷史 | eli.ai/Moonpool | 取代不刪除＋帳本 append-only |
 | 衍生物殘留（索引比源新/舊） | Inferama「retirement must propagate」 | V4＋每衍生物帶 freshness stamp |
 | 小型本地模型結構化輸出不可靠 | Graphiti README 警告 `[FACT:DOC]` | T2 僅作評分不作文法輸出；門檻映射在 Rust 端；0.30–0.70 入人工佇列 |
-| 檢索層越權（繞過生命週期過濾） | turntakingreview「filter before ranking」 | 檢索前強制 status/validity 過濾（SQL/tantivy filter，非 prompt 層） |
-| OSS 依賴棄坑/供應鏈 | SHARED_STANDARDS §2.2 | 依賴最小化（tantivy+serde+reqwest 級別）；deny.toml；鎖定 |
+| 檢索層越權（繞過生命週期過濾） | turntakingreview「filter before ranking」 | 檢索前強制 status/validity 過濾（visible_at 於評分前，非 prompt 層） |
+| OSS 依賴棄坑/供應鏈 | SHARED_STANDARDS §2.2 | 依賴最小化（自研倒排＋serde＋reqwest 級別，零索引引擎）；deny.toml；鎖定 |
 
 ---
 
@@ -390,6 +472,10 @@ draft → pending_review → published ──→ superseded ──┐
 | 語義拒答地板 | ✅ 校準 | `REFUSAL_FLOOR=0.55`：examples/calibrate.rs 實測 4 拒答查詢最大餘弦 0.4872 → 地板分離兩群體；eval 16/20→**20/20** 且正向案例存活；`--refusal-floor` 可調 |
 | **E2E 生命週期冒煙** | ✅ 完成（隔離暫存庫） | seed(20)→capture→ingest（T1 攔截捏造引證＋BOM 容忍＋批次內重複攔截）→ask→eval→sync→supersede（降級可檢索實證）→review defer→lint→doctor→儀表板；缺陷 #6（BOM）、#7（id default）修復＋測試鎖定 |
 | **降級鏈實測** | ✅ | OVH 429 限流→Ollama 不可達→**BM25-only＋via=bm25 如實標記**，中文查詢經主題詞仍命中（KEM §8.2 R4/R5 live 證明） |
+| **SOTA 檢索升級（RRF/MMR/PRF）** | ✅ 完成（2026-11-12） | `rrf_fuse`（Cormack 2009，k=60）＋`mmr_diversify`（Carbonell 1998，λ 可調）＋`prf_expand`（Rocchio）＋`evaluate_golden` 雙 fusion 評估；`kem eval` → **weighted 20/20 ＋ rrf 20/20**（不退化，§8 V1 新 criteria）；單元測試 66 passed（RRF 融合/拒答、MMR 去重、PRF 不回顯、黃金不退化、TREC 公式）；PRF 實測 BM25 分數 4.28→19.13 召回提升；規格 §4.6 正式化 |
+| **TREC 評估指標** | ✅ 完成（2026-11-12） | `evaluate_golden` 產出 nDCG@10／MRR／recall@10（雙 fusion）；`kem eval` 實測 **nDCG 1.0000／MRR 1.0000／recall 1.0000**（20 案例全 rank-1）；單元測試鎖定 rank-3 案例公式（nDCG=0.5、MRR=1/3） |
+| **Pointwise LLM 重排** | ✅ 完成（2026-11-12） | `crates/kem/src/rerank.rs`：Ollama 批次 pointwise 評分（JSON schema 驗證、think:false）；`kem ask --rerank` 接線；Ollama 不可達→誠實降級；單元測試 5 個（解析/缺索引/鉗制/垃圾）；live 實測 `+rerank(qwen3.5:4b)` 套用且不退化 |
+| **HyDE（假設性文件嵌入）** | ✅ 完成（2026-11-12） | `crates/kem/src/hyde.rs`：Ollama 生成假設性答案（溫度 0）→ dense 腿查詢；lexical 腿保留原始查詢；不可達→原始查詢（誠實降級）；`kem ask --hyde` 接線；live 實測 `rrf(k=60) +hyde +rerank` 全鏈 claim-001 正確 top-1；單元測試 1（空回應降級） |
 | P5 遠期 | ⏳ | 帳本量驅動（≥500 筆複核後啟動蒸餾） |
 
 **已知限制**（`[LIMIT]`）: platform stress 測試在此機器 p95 超標（TOS §2.2 案例分析：需獨立 perf job＋時間預算，主閘門維持快速測試）；T2 信心未校準（帳本回饋後校準）；Ollama 備援嵌入品質不保證（qwen3.5:4b 為 chat 模型，其 /api/embeddings 非專職嵌入——bge-m3 不可用時向量增益降級，誠實標記）；ledger append 為全檔讀取 O(n²)（現行 82 條無虞，>10K 條需索引頭）。

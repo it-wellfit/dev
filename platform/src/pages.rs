@@ -36,6 +36,22 @@ pub struct AuditView {
 /// Legacy alias kept for compatibility with template code written against it.
 pub type AuditViewLegacy = AuditView;
 
+/// D-1（§15 P1）：稽核時間以 Asia/Taipei（UTC+08:00）伺服器端格式化。
+/// SQLite CURRENT_TIMESTAMP 為 UTC；直接渲染會對 zh-Hant 使用者呈現
+/// 8 小時時差。解析失敗時原樣保留（fail-open 顯示；底層資料不變）。
+pub fn format_taipei_time(raw: &str) -> String {
+    match chrono::NaiveDateTime::parse_from_str(raw.trim(), "%Y-%m-%d %H:%M:%S") {
+        Ok(dt) => {
+            let taipei = chrono::FixedOffset::east_opt(8 * 3600).expect("fixed offset +08:00");
+            dt.and_utc()
+                .with_timezone(&taipei)
+                .format("%Y-%m-%d %H:%M:%S")
+                .to_string()
+        }
+        Err(_) => raw.to_string(),
+    }
+}
+
 fn to_views(rows: Vec<AuditRow>) -> Vec<AuditView> {
     rows.into_iter()
         .map(
@@ -43,7 +59,7 @@ fn to_views(rows: Vec<AuditRow>) -> Vec<AuditView> {
                 let (event_label, event_class) = crate::api::audit_event_display(&event_type);
                 AuditView {
                     log_id,
-                    time,
+                    time: format_taipei_time(&time),
                     user_id,
                     act_name: username.unwrap_or_else(|| "unknown".to_string()),
                     event_label,
@@ -64,20 +80,38 @@ async fn write_event(
     performed_by: &str,
     request_payload: serde_json::Value,
 ) {
+    write_event_ctx(pool, event_type, performed_by, request_payload, None, None).await;
+}
+
+/// 帶請求脈絡的稽核寫入（2026-11-12 規格補洞）：認證事件（登入/登出）與
+/// 高風險操作需可溯源。`ip`/`user_agent` 為 None 時寫入 NULL（歷史事件與
+/// 無 header 情境；不捏造脈絡）。
+pub(crate) async fn write_event_ctx(
+    pool: &SqlitePool,
+    event_type: &str,
+    performed_by: &str,
+    request_payload: serde_json::Value,
+    ip: Option<&str>,
+    user_agent: Option<&str>,
+) {
     let event_data = serde_json::json!({ "request": request_payload, "response": null });
     let _ = sqlx::query(
-        "INSERT INTO audit_log (log_id, transaction_id, event_type, event_data, performed_by) \
-         VALUES (?, NULL, ?, ?, ?)",
+        "INSERT INTO audit_log \
+             (log_id, transaction_id, event_type, event_data, performed_by, ip_address, user_agent) \
+         VALUES (?, NULL, ?, ?, ?, ?, ?)",
     )
     .bind(Uuid::new_v4().to_string())
     .bind(event_type)
     .bind(event_data.to_string())
     .bind(performed_by)
+    .bind(ip)
+    .bind(user_agent)
     .execute(pool)
     .await;
 }
 
 /// 篩選後的稽核列（動態 WHERE 全參數化；已轉為模板檢視）。
+/// 錯誤向上傳播（§15 C-2）：呼叫端據以渲染**錯誤態**（empty≠error 八態互異）。
 async fn audit_rows_page(
     pool: &SqlitePool,
     user: Option<&str>,
@@ -86,7 +120,7 @@ async fn audit_rows_page(
     end: Option<&str>,
     limit: i64,
     offset: i64,
-) -> Vec<AuditView> {
+) -> Result<Vec<AuditView>, sqlx::Error> {
     let mut sql = "SELECT al.log_id, al.performed_by, u.username, al.event_type, COALESCE(al.transaction_id, ''), COALESCE(al.event_data, ''), al.performed_at FROM audit_log al LEFT JOIN users u ON al.performed_by = u.user_id WHERE 1=1".to_string();
     let mut params: Vec<String> = vec![];
     if let Some(u) = user.filter(|s| !s.is_empty()) {
@@ -112,17 +146,17 @@ async fn audit_rows_page(
     for p in &params {
         qb = qb.bind(p);
     }
-    to_views(qb.fetch_all(pool).await.unwrap_or_default())
+    Ok(to_views(qb.fetch_all(pool).await?))
 }
 
-/// 同條件的總數（分頁計算）。
+/// 同條件的總數（分頁計算）。錯誤向上傳播（§15 C-2）。
 async fn audit_total(
     pool: &SqlitePool,
     user: Option<&str>,
     action: Option<&str>,
     start: Option<&str>,
     end: Option<&str>,
-) -> i64 {
+) -> Result<i64, sqlx::Error> {
     let mut sql = "SELECT COUNT(*) FROM audit_log al WHERE 1=1".to_string();
     let mut params: Vec<String> = vec![];
     if let Some(u) = user.filter(|s| !s.is_empty()) {
@@ -141,14 +175,11 @@ async fn audit_total(
         sql.push_str(" AND al.performed_at <= ?");
         params.push(format!("{e} 23:59:59"));
     }
-    let total: i64 = {
-        let mut qb = sqlx::query_scalar::<_, i64>(sqlx::AssertSqlSafe(sql.as_str()));
-        for p in &params {
-            qb = qb.bind(p);
-        }
-        qb.fetch_one(pool).await.unwrap_or(0)
-    };
-    total
+    let mut qb = sqlx::query_scalar::<_, i64>(sqlx::AssertSqlSafe(sql.as_str()));
+    for p in &params {
+        qb = qb.bind(p);
+    }
+    qb.fetch_one(pool).await
 }
 
 fn render<T: Template>(t: T) -> Response {
@@ -186,6 +217,8 @@ pub struct AuditPageTemplate {
     pub nav: crate::nav::NavModel,
     pub csrf_token: String,
     pub role_code: String,
+    /// §15 C-2：DB 故障時渲染**錯誤態**（與空態互異；八態 error 語彙）。
+    pub db_error: bool,
     pub rows: Vec<AuditView>,
     pub total: i64,
     pub page: i64,
@@ -207,7 +240,7 @@ pub struct AuditPageQuery {
 
 /// 403 denied 頁（資料八態 Denied 語彙；治理頁閘門共用）。
 /// title/detail 皆為程式端常數，不含使用者輸入（無 XSS 面）。
-fn denied_page(title: &str, detail: &str) -> Response {
+pub(crate) fn denied_page(title: &str, detail: &str) -> Response {
     (
         StatusCode::FORBIDDEN,
         Html(format!(
@@ -251,7 +284,8 @@ pub async fn audit_page(
         .unwrap_or(1)
         .max(1);
     let limit = 25i64;
-    let total = audit_total(
+    // §15 C-2：查詢錯誤向上傳播——db_error 驅動錯誤態渲染（不吞噬為空態）。
+    let total_res = audit_total(
         &state.pool,
         q.user.as_deref(),
         q.action.as_deref(),
@@ -259,9 +293,11 @@ pub async fn audit_page(
         q.end.as_deref(),
     )
     .await;
+    let db_error = total_res.is_err();
+    let total = total_res.unwrap_or(0);
     let total_pages = ((total + limit - 1) / limit).max(1);
     let page = page.min(total_pages);
-    let rows = audit_rows_page(
+    let rows_res = audit_rows_page(
         &state.pool,
         q.user.as_deref(),
         q.action.as_deref(),
@@ -271,12 +307,15 @@ pub async fn audit_page(
         (page - 1) * limit,
     )
     .await;
+    let db_error = db_error || rows_res.is_err();
+    let rows = rows_res.unwrap_or_default();
     let role_code = primary_role(&state.pool, &session.user_id).await;
     render(AuditPageTemplate {
         acting_user: session.user_id.clone(),
         nav: nav.0.clone(),
         csrf_token: session.csrf_token.clone(),
         role_code,
+        db_error,
         rows,
         total,
         page,
@@ -298,6 +337,8 @@ pub struct MyDecisionsTemplate {
     pub acting_user: String,
     pub nav: crate::nav::NavModel,
     pub role_code: String,
+    /// §15 C-2：DB 故障時渲染**錯誤態**（與空態互異；八態 error 語彙）。
+    pub db_error: bool,
     pub rows: Vec<AuditView>,
     pub total: i64,
     pub page: i64,
@@ -328,10 +369,13 @@ pub async fn my_decisions(
         .unwrap_or(1)
         .max(1);
     let limit = 25i64;
-    let total = audit_total(&state.pool, Some(&session.user_id), None, None, None).await;
+    // §15 C-2：查詢錯誤向上傳播——db_error 驅動錯誤態渲染（不吞噬為空態）。
+    let total_res = audit_total(&state.pool, Some(&session.user_id), None, None, None).await;
+    let db_error = total_res.is_err();
+    let total = total_res.unwrap_or(0);
     let total_pages = ((total + limit - 1) / limit).max(1);
     let page = page.min(total_pages);
-    let rows = audit_rows_page(
+    let rows_res = audit_rows_page(
         &state.pool,
         Some(&session.user_id),
         None,
@@ -341,11 +385,14 @@ pub async fn my_decisions(
         (page - 1) * limit,
     )
     .await;
+    let db_error = db_error || rows_res.is_err();
+    let rows = rows_res.unwrap_or_default();
     let role_code = primary_role(&state.pool, &session.user_id).await;
     render(MyDecisionsTemplate {
         acting_user: session.user_id.clone(),
         nav: nav.0.clone(),
         role_code,
+        db_error,
         rows,
         total,
         page,
@@ -763,6 +810,7 @@ pub async fn bankpay_batch_detail(
     .map(|b| to_batch_views(vec![b]).remove(0));
     let audits = audit_rows_page(&state.pool, None, Some("BANKPAY"), None, None, 200, 0)
         .await
+        .unwrap_or_default()
         .into_iter()
         .filter(|a| a.resource == batch_id)
         .collect();
@@ -820,7 +868,9 @@ pub async fn import_history_page(
     Extension(session): Extension<Session>,
     nav: Extension<crate::nav::NavModel>,
 ) -> Response {
-    let rows = audit_rows_page(&state.pool, None, Some("IMPORT"), None, None, 100, 0).await;
+    let rows = audit_rows_page(&state.pool, None, Some("IMPORT"), None, None, 100, 0)
+        .await
+        .unwrap_or_default();
     render(ImportHistoryTemplate {
         acting_user: session.user_id.clone(),
         nav: nav.0.clone(),
@@ -1106,12 +1156,52 @@ impl AdminRolesTemplate {
     }
 }
 
+/// 伺服器端權限閘（2026-11-12 規格補洞，P0 安全）。
+///
+/// 為何必要：原本只有部分管理頁（/admin/users、/audit）在 handler 內查權限，
+/// 其餘（/admin/roles、/admin/sessions、/admin/system、/new、/import、
+/// /drafts、/ai-decisions）僅依賴**導覽不渲染**來隱藏入口——但直接輸入 URL
+/// 仍可取得 200 與資料（實證：store 讀到 /admin/system、/admin/roles）。
+/// 「隱藏」不等於「保護」；每個受閘頁面必須在 handler 再驗一次（Defense in
+/// Depth）。回傳 `Some(403)` 表示拒絕；`None` 表示放行。
+pub(crate) async fn require_perm(
+    state: &AppState,
+    user_id: &str,
+    permission: &str,
+    title: &str,
+) -> Option<Response> {
+    if state
+        .permissions
+        .has_permission_db(user_id, permission)
+        .await
+    {
+        None
+    } else {
+        Some(denied_page(
+            title,
+            &format!(
+                "此頁面需要 {permission} 權限。請向系統管理員申請權限，或改用您可存取的頁面。"
+            ),
+        ))
+    }
+}
+
 /// GET /admin/roles — 角色權限矩陣（ROLE_MANAGE）。
 pub async fn admin_roles_page(
     State(state): State<AppState>,
     Extension(session): Extension<Session>,
     nav: Extension<crate::nav::NavModel>,
 ) -> Response {
+    if let Some(denied) = require_perm(
+        &state,
+        &session.user_id,
+        "ROLE_MANAGE",
+        "無權檢視角色權限矩陣",
+    )
+    .await
+    {
+        return denied;
+    }
     let roles: Vec<RoleRow> =
         sqlx::query_as("SELECT role_id, role_name, role_code FROM roles ORDER BY role_code")
             .fetch_all(&state.pool)
@@ -1167,6 +1257,11 @@ pub async fn admin_sessions_page(
     nav: Extension<crate::nav::NavModel>,
     Query(q): Query<HashMap<String, String>>,
 ) -> Response {
+    if let Some(denied) =
+        require_perm(&state, &session.user_id, "ROLE_MANAGE", "無權檢視工作階段").await
+    {
+        return denied;
+    }
     let sessions: Vec<SessionRow> = sqlx::query_as(
         "SELECT u.username, s.created_at, s.expires_at FROM sessions s \
          JOIN users u ON s.user_id = u.user_id WHERE s.expires_at > datetime('now') \
@@ -1233,6 +1328,11 @@ pub async fn admin_system_page(
     Extension(session): Extension<Session>,
     nav: Extension<crate::nav::NavModel>,
 ) -> Response {
+    if let Some(denied) =
+        require_perm(&state, &session.user_id, "ROLE_MANAGE", "無權檢視系統資訊").await
+    {
+        return denied;
+    }
     let count = |sql: &'static str| {
         let pool = &state.pool;
         async move {

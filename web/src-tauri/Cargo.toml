@@ -5,6 +5,7 @@ default-run = "auxbridge-web"
 name = "auxbridge-web"
 version = "0.2.0"
 edition = "2021"
+rust-version = "1.99"
 description = "AuxBridge - Enterprise Auxiliary Platform"
 license = "LicenseRef-Proprietary"
 publish = false
@@ -17,14 +18,9 @@ tauri = { version = "2.0", features = [] }
 tauri-plugin-updater = "2.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-tokio = { version = "1.0", features = ["full"] }
-wellfit_bankpay = { path = "../../Wellfit/crates/wellfit_bankpay", version = "0.1.0" }
-wellfit_core = { path = "../../Wellfit/crates/wellfit_core", version = "0.1.0" }
-uuid = { version = "1.0", features = ["v4"] }
 chrono = { version = "0.4", features = ["serde"] }
-thiserror = "1.0"
 tracing = "0.1"
-tracing-subscriber = "0.3"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 base64 = "0.22"
 # 更新鏈簽章驗證（W10）：產出 latest.json 與驗收測試皆以 minisign 實際驗簽，
 # 語意對齊 tauri-plugin-updater 2.14.x（PublicKey::decode / Signature::decode / verify）。

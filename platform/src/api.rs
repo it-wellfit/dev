@@ -89,16 +89,73 @@ impl AppState {
         let engine = LedgerEngine::with_pool(pool.clone()).await?;
         // BankPay 設定以 erp_config 為持久層 SSOT，啟動時載入。
         let bankpay_config = crate::bankpay::load_config(&pool).await;
-        Ok(Self {
+        let state = Self {
             pool,
             engine,
             permissions,
             rate_limiter: std::sync::Arc::new(auth::LoginRateLimiter::new()),
             search: crate::search::SearchEngine::new(),
             bankpay_config: std::sync::Arc::new(tokio::sync::Mutex::new(bankpay_config)),
-        })
+        };
+        // 自愈搜尋索引（2026-11-12）：啟動即從 DB 填充——重啟後 /search 立即
+        // 可用，無需人工 reindex；嵌入腿為 best-effort（無 embedder → BM25-only）。
+        state.ensure_search_fresh().await;
+        Ok(state)
+    }
+
+    /// 自愈搜尋索引：索引過期（從未重建或超過 TTL）時從 transactions 重建。
+    ///
+    /// 這是 BM25+向量混合搜尋的資料來源接線（2026-11-12 修復：引擎與 UI 早
+    /// 已就位但從未餵資料，/search 恆空）。重建成本 O(n)、受 60s TTL 節流；
+    /// 文件內容＝交易碼＋描述＋日期＋狀態＋金額（可搜尋面）。
+    pub(crate) async fn ensure_search_fresh(&self) {
+        const TTL: std::time::Duration = std::time::Duration::from_secs(60);
+        // 雙重新鮮度判準：TTL 未過期 **且** 文件數與 DB 交易數一致才跳過。
+        // 計數對帳讓「繞過 HTTP 路徑的寫入」（直接 SQL、資料匯入腳本、示範
+        // 資料灌入）也能自愈——不只依賴 handler 主動 invalidate。
+        let db_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM transactions")
+            .fetch_one(&self.pool)
+            .await
+            .unwrap_or(-1);
+        let engine_count = self.search.document_count().await as i64;
+        if !self.search.is_stale(TTL).await && db_count == engine_count {
+            return;
+        }
+        let rows: Vec<SearchRebuildRow> = sqlx::query_as(
+            "SELECT t.transaction_id, t.transaction_code, \
+                    CAST(t.transaction_date AS TEXT), t.description, t.reference_number, t.status, \
+                    CAST(COALESCE(SUM(i.amount_minor), 0) AS INTEGER) \
+             FROM transactions t \
+             LEFT JOIN transaction_items i ON i.transaction_id = t.transaction_id \
+             GROUP BY t.transaction_id \
+             ORDER BY t.transaction_date DESC, t.transaction_code",
+        )
+        .fetch_all(&self.pool)
+        .await
+        .unwrap_or_default();
+        let mut docs: Vec<(String, String, std::collections::HashMap<String, String>)> =
+            Vec::with_capacity(rows.len());
+        for (id, code, date, description, reference, status, amount_minor) in rows {
+            let mut metadata = std::collections::HashMap::new();
+            metadata.insert("code".to_string(), code.clone());
+            metadata.insert("date".to_string(), date.clone());
+            metadata.insert("status".to_string(), status.clone());
+            metadata.insert("amount_minor".to_string(), amount_minor.to_string());
+            let content = format!(
+                "{code} {description} {date} {status} NT${amount_minor} {reference}",
+                reference = reference.unwrap_or_default(),
+            );
+            docs.push((id, content, metadata));
+        }
+        // 批量寫入：一次 BM25 重建 + 一次批次嵌入（避免 O(n²) 與逐檔網路等待）。
+        self.search.add_documents_bulk(docs).await;
     }
 }
+
+/// One row of the search-rebuild projection (transactions + item totals).
+/// Type alias keeps the query signature readable and satisfies clippy's
+/// `type_complexity` lint.
+type SearchRebuildRow = (String, String, String, String, Option<String>, String, i64);
 
 /// Render model for a transaction row joined with its item totals.
 #[derive(Debug, Clone)]
@@ -389,7 +446,11 @@ pub fn router(state: AppState) -> Router {
         // 桌面版（Tauri）UI 對照：純靜態設計文件，無任何資料，公開供比對。
         .route("/tauri-preview", get(tauri_preview))
         .route("/assets/legacy-1420.css", get(legacy_1420_css))
-        .route("/assets/fonts/:file", get(serve_font));
+        .route("/assets/fonts/:file", get(serve_font))
+        // 公開路由 body 上限（2026-11-12 規格補洞）：登入表單僅需數百 bytes；
+        // 未設限時任意大小 POST 可被用來消耗記憶體（DefaultBodyLimit 僅掛在
+        // protected 群組）。64KiB 為寬裕且安全之上界。
+        .route_layer(axum::extract::DefaultBodyLimit::max(64 * 1024));
 
     let protected = Router::new()
         .route("/", get(index))
@@ -538,6 +599,49 @@ pub fn router(state: AppState) -> Router {
         .with_state(state)
 }
 
+/// 密碼政策（NIST SP 800-63B 對齊；2026-11-12 規格補洞）。
+///
+/// 為何是這幾條：NIST 已證明「強制大小寫＋符號＋定期更換」反而誘導可預測
+/// 的變形（Password1!）→ 降低實際熵。SOTA 做法＝**更長**＋**阻擋常見弱密
+/// 碼**＋**不得等於帳號**，不設組成規則。門檻 ≥12（單因素情境 NIST 建議
+/// 15；本產品為企業內部帳務系統、多因素未上路前取 12 作為務實下界）。
+fn validate_password_strength(password: &str, username: &str) -> Result<(), &'static str> {
+    /// 常見弱密碼阻擋清單（大小寫不敏感比對；零依賴內建表）。
+    const BLOCKLIST: &[&str] = &[
+        "123456789012",
+        "12345678",
+        "123456789",
+        "1234567890",
+        "password",
+        "password1",
+        "password123",
+        "admin123",
+        "administrator",
+        "p@ssw0rd",
+        "qwerty123",
+        "iloveyou",
+        "welcome1",
+        "letmein1",
+        "abc123456",
+        "taiwan123",
+        "flaps123",
+        "auxbridge1",
+    ];
+    let trimmed = password.trim();
+    if trimmed.chars().count() < 12 {
+        return Err("密碼長度不足（至少 12 字元）；建議以詞組或密碼產生器建立更長的密碼。");
+    }
+    let lower = trimmed.to_lowercase();
+    if BLOCKLIST.contains(&lower.as_str()) {
+        return Err("此密碼過於常見（已列入弱密碼阻擋清單）；請改用其他密碼。");
+    }
+    let uname = username.trim().to_lowercase();
+    if !uname.is_empty() && lower == uname {
+        return Err("密碼不得與帳號名稱相同；請改用其他密碼。");
+    }
+    Ok(())
+}
+
 /// Query string for list pages: `?page=N` (M1). Parsed fail-closed.
 #[derive(Deserialize)]
 pub struct PageQuery {
@@ -578,11 +682,32 @@ const DESIGN_SYSTEM_CSS: &str = include_str!("../../web/assets/design-system.css
 /// 獨立檔案附加於基礎樣式之後（cascade 覆蓋；刪除即回滾）。
 const UI_V2_CSS: &str = include_str!("../../web/assets/ui-v2.css");
 
-async fn design_system_css() -> impl IntoResponse {
+async fn design_system_css(headers: axum::http::HeaderMap) -> Response {
+    // ETag 條件請求（2026-11-12）：70KB CSS 重訪回 304（零 body）。ETag 為
+    // 建置期內容雜湊（OnceLock 一次），Cache-Control: no-cache 確保改版必重新
+    // 驗證（內容變→雜湊變→ETag 變→200）。
+    use std::hash::{Hash, Hasher};
+    static ETAG: std::sync::OnceLock<String> = std::sync::OnceLock::new();
+    let etag = ETAG.get_or_init(|| {
+        let mut hasher = std::collections::hash_map::DefaultHasher::new();
+        format!("{}\n\n{}", DESIGN_SYSTEM_CSS, UI_V2_CSS).hash(&mut hasher);
+        format!("\"{:016x}\"", hasher.finish())
+    });
+    let inm = headers
+        .get(header::IF_NONE_MATCH)
+        .and_then(|v| v.to_str().ok());
+    if inm == Some(etag.as_str()) {
+        return StatusCode::NOT_MODIFIED.into_response();
+    }
     (
-        [(header::CONTENT_TYPE, "text/css; charset=utf-8")],
+        [
+            (header::CONTENT_TYPE, "text/css; charset=utf-8"),
+            (header::CACHE_CONTROL, "no-cache"),
+            (header::ETAG, etag.as_str()),
+        ],
         format!("{}\n\n{}", DESIGN_SYSTEM_CSS, UI_V2_CSS),
     )
+        .into_response()
 }
 
 /// 字體檔案（CSP `font-src 'self'`：自架 woff2，白名單限定兩個檔名）。
@@ -785,7 +910,11 @@ async fn create_transaction(
 
     match validate_and_post(&state, &form, &session).await {
         // Redirect::to uses 303 See Other — the correct PRG verb after POST.
-        Ok(()) => Redirect::to("/#transactions").into_response(),
+        Ok(()) => {
+            // 寫入後搜尋索引失效（下次查詢即重建）：新交易立即可被搜尋。
+            state.search.invalidate().await;
+            Redirect::to("/#transactions").into_response()
+        }
         Err((status, message)) => {
             let html = build_index(&state, &session, &nav, Some(message), saved_form, 1).await;
             match html {
@@ -1137,11 +1266,8 @@ async fn admin_create_user_validated(
         ));
     }
 
-    if form.password.len() < 8 {
-        return Err((
-            StatusCode::BAD_REQUEST,
-            "密碼長度不足（至少 8 字元）；請設定更長的密碼。".to_string(),
-        ));
+    if let Err(msg) = validate_password_strength(&form.password, &username) {
+        return Err((StatusCode::BAD_REQUEST, msg.to_string()));
     }
 
     // Role must exist in the seeded roles table (whitelist by construction).
@@ -1292,20 +1418,21 @@ async fn admin_reset_password(
         )
             .into_response();
     }
-    if form.new_password.len() < 8 {
-        return (
-            StatusCode::BAD_REQUEST,
-            "新密碼長度不足（至少 8 字元）；請設定更長的密碼。".to_string(),
-        )
-            .into_response();
-    }
-    let (exists,): (i64,) = sqlx::query_as("SELECT COUNT(*) FROM users WHERE user_id = ?")
-        .bind(&form.user_id)
-        .fetch_one(&state.pool)
-        .await
-        .unwrap_or((0,));
+    let (exists, existing_username): (i64, Option<String>) =
+        sqlx::query_as("SELECT COUNT(*), MAX(username) FROM users WHERE user_id = ?")
+            .bind(&form.user_id)
+            .fetch_one(&state.pool)
+            .await
+            .unwrap_or((0, None));
     if exists == 0 {
         return (StatusCode::BAD_REQUEST, "帳號不存在。".to_string()).into_response();
+    }
+    // 密碼政策（NIST 對齊）：≥12 字元、弱密碼阻擋、不得與帳號相同。
+    if let Err(msg) = validate_password_strength(
+        &form.new_password,
+        existing_username.as_deref().unwrap_or(""),
+    ) {
+        return (StatusCode::BAD_REQUEST, msg.to_string()).into_response();
     }
 
     let hash = match auth::hash_password(&form.new_password) {
@@ -2150,6 +2277,13 @@ async fn ai_decisions_page(
     session: Extension<Session>,
     nav: Extension<crate::nav::NavModel>,
 ) -> Response {
+    // 伺服器端權限閘（2026-11-12 P0 安全）：僅導覽隱藏不足，
+    // 直接輸入 URL 必須同樣被拒（Defense in Depth）。
+    if let Some(denied) =
+        crate::pages::require_perm(&state, &session.user_id, "LEDGER_WRITE", "無權使用此功能").await
+    {
+        return denied;
+    }
     let rows: Vec<(String, String, String, String, String)> = sqlx::query_as(
         "SELECT draft_id, source, created_by, created_at, draft_json FROM drafts \
          ORDER BY created_at DESC LIMIT 50",
@@ -3238,6 +3372,13 @@ async fn import_upload_page(
     nav: Extension<crate::nav::NavModel>,
     axum::extract::Query(query): axum::extract::Query<std::collections::HashMap<String, String>>,
 ) -> Response {
+    // 伺服器端權限閘（2026-11-12 P0 安全）：僅導覽隱藏不足，
+    // 直接輸入 URL 必須同樣被拒（Defense in Depth）。
+    if let Some(denied) =
+        crate::pages::require_perm(&state, &session.user_id, "LEDGER_WRITE", "無權使用此功能").await
+    {
+        return denied;
+    }
     let batch = match query.get("batch") {
         Some(id) => load_batch_view(&state, id).await,
         None => None,
@@ -4722,6 +4863,10 @@ async fn import_confirm(
             failed.join("；")
         )
     };
+    // 寫入後搜尋索引失效（下次查詢即重建）：新匯入交易立即可被搜尋。
+    if posted > 0 {
+        state.search.invalidate().await;
+    }
     Redirect::to(&format!(
         "/import?batch={}&notice={}",
         form.batch_id,
@@ -4812,6 +4957,13 @@ async fn drafts_page(
     session: Extension<Session>,
     nav: Extension<crate::nav::NavModel>,
 ) -> Response {
+    // 伺服器端權限閘（2026-11-12 P0 安全）：僅導覽隱藏不足，
+    // 直接輸入 URL 必須同樣被拒（Defense in Depth）。
+    if let Some(denied) =
+        crate::pages::require_perm(&state, &session.user_id, "LEDGER_WRITE", "無權使用此功能").await
+    {
+        return denied;
+    }
     let rows: Vec<(String, String, String)> = sqlx::query_as(
         "SELECT draft_id, source, draft_json FROM drafts WHERE created_by = ? ORDER BY created_at DESC LIMIT 10",
     )
@@ -4930,6 +5082,13 @@ async fn wizard_page(
     nav: Extension<crate::nav::NavModel>,
     axum::extract::Query(query): axum::extract::Query<WizardQuery>,
 ) -> Response {
+    // 伺服器端權限閘（2026-11-12 P0 安全）：僅導覽隱藏不足，
+    // 直接輸入 URL 必須同樣被拒（Defense in Depth）。
+    if let Some(denied) =
+        crate::pages::require_perm(&state, &session.user_id, "LEDGER_WRITE", "無權使用此功能").await
+    {
+        return denied;
+    }
     let step = query.step.as_deref().unwrap_or("1");
     match step {
         "2" => {
@@ -6228,6 +6387,309 @@ mod tests {
 
     // /api/modules/health 由 cross_module_api 提供（與 /api/status 同源
     // probe_modules，SSOT）。此處驗證聚合形狀、session 保護與探測面最小化。
+    // 搜尋：SOTA 混合搜尋（BM25+向量）的資料來源接線驗證（2026-11-12）。
+    // 直接以 SQL 灌入（繞過 handler）證明計數對帳自愈亦生效。
+    #[tokio::test]
+    async fn search_finds_seeded_transactions_after_out_of_band_insert() {
+        let (app, pool, cookie, _csrf) = seeded_app_with_admin().await;
+        seed_transactions(&pool, 5, "POSTED").await;
+        let (status, body, _) = send(
+            app,
+            Request::builder()
+                .uri("/search?q=seed+row")
+                .header(header::COOKIE, cookie)
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK);
+        assert!(
+            body.contains("TX-SEED-0"),
+            "search must return indexed transactions (out-of-band insert must self-heal)"
+        );
+    }
+
+    // ETag 條件請求：70KB CSS 重訪回 304 且無 body（2026-11-12）。
+    #[tokio::test]
+    async fn design_system_css_revalidates_with_etag() {
+        let (app, _pool) = test_app().await;
+        let response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/assets/design-system.css")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .expect("css response");
+        assert_eq!(response.status(), StatusCode::OK);
+        let etag = response
+            .headers()
+            .get(header::ETAG)
+            .expect("ETag header")
+            .to_str()
+            .unwrap()
+            .to_string();
+        let response2 = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/assets/design-system.css")
+                    .header(header::IF_NONE_MATCH, etag)
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .expect("revalidated response");
+        assert_eq!(
+            response2.status(),
+            StatusCode::NOT_MODIFIED,
+            "unchanged CSS must revalidate to 304"
+        );
+        let body = axum::body::to_bytes(response2.into_body(), 1024)
+            .await
+            .expect("body");
+        assert!(body.is_empty(), "304 must carry no body");
+    }
+
+    // 密碼政策（NIST SP 800-63B 對齊；2026-11-12 規格補洞）。
+    // 全 manifest 頁面契約（2026-11-12）：每頁必須 200、品牌存在、零 <script>、
+    // 有導覽（靜態頁除外）、且不得含模板/伺服器錯誤痕跡。這條測試讓「新增頁面
+    // 忘記套殼」或「模板被改壞」在建置期就被抓到，而非靠人工點閱。
+    #[tokio::test]
+    async fn all_manifest_pages_render_under_contract() {
+        let (app, _pool, cookie, _csrf) = seeded_app_with_admin().await;
+        let mut checked = 0usize;
+        for page in console_manifest::PAGES.iter() {
+            if page.method != console_manifest::Method::Get || page.path.contains(':') {
+                continue; // POST-only 與模板路徑（:id/:batch_id）不在此契約內
+            }
+            let (status, body, _) = send(
+                app.clone(),
+                Request::builder()
+                    .uri(page.path)
+                    .header(header::COOKIE, cookie.clone())
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await;
+            assert!(
+                status == StatusCode::OK
+                    || (page.path == "/login" && status == StatusCode::SEE_OTHER),
+                "頁面 {} 應回 200（已登入時 /login 依設計 303；實作 {status}）",
+                page.path
+            );
+            assert!(
+                body.contains("AuxBridge")
+                    || page.path == "/login"
+                    || page.path == "/tauri-preview"
+                    || page.path.starts_with("/console"),
+                "頁面 {} 缺品牌",
+                page.path
+            );
+            assert!(
+                !body.to_lowercase().contains("<script"),
+                "頁面 {} 破壞零 JS 不變量",
+                page.path
+            );
+            assert!(
+                !body.contains("頁面渲染失敗") && !body.contains("error[E-"),
+                "頁面 {} 含錯誤痕跡",
+                page.path
+            );
+            let static_shell = page.path == "/tauri-preview"
+                || page.path == "/login"
+                || page.path.starts_with("/console");
+            if !static_shell {
+                assert!(body.contains("site-nav"), "頁面 {} 缺導覽", page.path);
+            }
+            checked += 1;
+        }
+        assert!(
+            checked >= 30,
+            "manifest GET 頁面應有 30+ 頁（實測 {checked}）"
+        );
+    }
+
+    // 內部連結完整性（2026-11-12）：從每頁抽出 href，逐一 GET，不得 404/500。
+    // 為何需要：導覽/頁尾/麵包屑任一處打錯字，使用者即遇死連結——這類缺陷
+    // 無法由單頁測試發現，必須由「全站連結圖」驗證。
+    #[tokio::test]
+    async fn internal_links_all_resolve() {
+        let (app, _pool, cookie, _csrf) = seeded_app_with_admin().await;
+        let mut pages: Vec<String> = console_manifest::PAGES
+            .iter()
+            .filter(|p| p.method == console_manifest::Method::Get && !p.path.contains(':'))
+            .map(|p| p.path.to_string())
+            .collect();
+        pages.sort();
+        pages.dedup();
+        let mut links: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
+        for path in &pages {
+            let (_, body, _) = send(
+                app.clone(),
+                Request::builder()
+                    .uri(path.as_str())
+                    .header(header::COOKIE, cookie.clone())
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await;
+            let bytes = body.as_bytes();
+            let _ = bytes;
+            for part in body.split("href=\"/").skip(1) {
+                let href = part.split('"').next().unwrap_or("");
+                if !href.is_empty() && !href.contains(':') {
+                    links.insert(format!("/{href}"));
+                }
+            }
+        }
+        let mut dead: Vec<String> = Vec::new();
+        for href in &links {
+            let (status, _, _) = send(
+                app.clone(),
+                Request::builder()
+                    .uri(href.as_str())
+                    .header(header::COOKIE, cookie.clone())
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await;
+            if !matches!(status, StatusCode::OK | StatusCode::SEE_OTHER) {
+                dead.push(format!("{href} -> {status}"));
+            }
+        }
+        assert!(
+            links.len() >= 20,
+            "應抽到 20+ 內部連結（實測 {}）",
+            links.len()
+        );
+        assert!(dead.is_empty(), "死連結：{dead:?}");
+    }
+
+    // 角色矩陣回歸（2026-11-12 P0 安全）：無權限角色直接輸入 URL 必須被拒。
+    // 背景：原本僅 /admin/users 與 /audit 在 handler 查權限，其餘管理頁與
+    // 寫入頁只靠「導覽不渲染」隱藏 → store 可讀 /admin/system、/admin/roles。
+    #[tokio::test]
+    async fn rbac_matrix_server_side_gates() {
+        // store：無 ROLE_MANAGE、無 LEDGER_WRITE
+        let (app, pool, cookie, _csrf) = seeded_app_with_role("store", "STORE").await;
+        for path in [
+            "/admin/roles",
+            "/admin/sessions",
+            "/admin/system",
+            "/new",
+            "/import",
+            "/drafts",
+            "/ai-decisions",
+        ] {
+            let (status, body, _) = send(
+                app.clone(),
+                Request::builder()
+                    .uri(path)
+                    .header(header::COOKIE, cookie.clone())
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await;
+            assert_eq!(
+                status,
+                StatusCode::FORBIDDEN,
+                "store 存取 {path} 應 403（實作 {status}）"
+            );
+            assert!(body.contains("需要"), "403 頁應說明所需權限：{path}");
+        }
+        // store 仍可存取其職能頁（不得過度封鎖）
+        for path in ["/", "/transactions", "/reports/trial-balance", "/bankpay"] {
+            let (status, _, _) = send(
+                app.clone(),
+                Request::builder()
+                    .uri(path)
+                    .header(header::COOKIE, cookie.clone())
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await;
+            assert_eq!(
+                status,
+                StatusCode::OK,
+                "store 應可存取 {path}（實作 {status}）"
+            );
+        }
+        // admin 全通行（特權不得被誤擋）
+        let (admin_cookie, _) = login(&app, &pool, "admin", TEST_ADMIN_PASSWORD).await;
+        for path in ["/admin/roles", "/admin/system", "/new", "/import"] {
+            let (status, _, _) = send(
+                app.clone(),
+                Request::builder()
+                    .uri(path)
+                    .header(header::COOKIE, admin_cookie.clone())
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await;
+            assert_eq!(
+                status,
+                StatusCode::OK,
+                "admin 應可存取 {path}（實作 {status}）"
+            );
+        }
+        let _ = pool;
+    }
+
+    // 搜尋查詢長度上限（2026-11-12 規格補洞）：過長輸入被截斷而非放大成本。
+    #[tokio::test]
+    async fn search_caps_overlong_query_without_error() {
+        let (app, _pool, cookie, _csrf) = seeded_app_with_admin().await;
+        let long = "x".repeat(5000);
+        let (status, _body, _) = send(
+            app,
+            Request::builder()
+                .uri(format!("/search?q={long}"))
+                .header(header::COOKIE, cookie)
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await;
+        assert_eq!(
+            status,
+            StatusCode::OK,
+            "overlong query must be capped, not error"
+        );
+    }
+
+    // HSTS（2026-11-12 規格補洞）：HTTPS 部署時強制瀏覽器只走 TLS。
+    #[tokio::test]
+    async fn security_headers_include_hsts() {
+        let (app, _pool) = test_app().await;
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/login")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .expect("login response");
+        let hsts = response
+            .headers()
+            .get(axum::http::header::STRICT_TRANSPORT_SECURITY)
+            .expect("HSTS header must be present on every response");
+        assert!(hsts.to_str().unwrap().contains("max-age=31536000"));
+    }
+
+    // 密碼政策（NIST 對齊）：≥12 字元、弱密碼阻擋、不得與帳號相同。
+    #[test]
+    fn password_policy_rejects_short_blocklisted_and_username_equal() {
+        assert!(validate_password_strength("short1", "alice").is_err());
+        assert!(validate_password_strength("correct horse battery staple", "alice").is_ok());
+        assert!(validate_password_strength("Password123!", "alice").is_ok());
+        assert!(validate_password_strength("password123", "alice").is_err());
+        assert!(validate_password_strength("12345678", "alice").is_err());
+        assert!(validate_password_strength("Alice-Wonderland", "alice-wonderland").is_err());
+    }
+
     #[tokio::test]
     async fn modules_health_reports_core_modules() {
         let (app, _pool, cookie, _csrf) = seeded_app_with_admin().await;
@@ -7212,6 +7674,70 @@ mod tests {
         let (cookie, csrf) = try_login(&app, &pool, "admin", TEST_ADMIN_PASSWORD)
             .await
             .expect("admin login");
+        (app, pool, cookie, csrf)
+    }
+
+    /// 以指定角色建立可登入的使用者（RBAC 矩陣測試用，2026-11-12 P0 安全）。
+    async fn seeded_app_with_role(
+        username: &str,
+        role_code: &str,
+    ) -> (Router, SqlitePool, String, String) {
+        let (app, pool, _admin_cookie, _csrf) = seeded_app_with_admin().await;
+        let role_id = format!("role-{role_code}");
+        let _ = sqlx::query(
+            "INSERT OR IGNORE INTO roles (role_id, role_name, role_code, is_system) \
+             VALUES (?, ?, ?, 1)",
+        )
+        .bind(&role_id)
+        .bind(format!("{role_code} Role"))
+        .bind(role_code)
+        .execute(&pool)
+        .await;
+        // 最小權限：STORE 僅 LEDGER_READ + REPORT_VIEW（無 WRITE/MANAGE）
+        let perms: &[&str] = match role_code {
+            "STORE" => &["perm-ledger-read", "perm-report-view"],
+            _ => &[],
+        };
+        for perm in perms {
+            let _ = sqlx::query(
+                "INSERT OR IGNORE INTO permissions \
+                 (permission_id, permission_code, permission_name, permission_type) \
+                 VALUES (?, ?, ?, 'GENERAL')",
+            )
+            .bind(format!("{perm}-{role_code}"))
+            .bind(*perm)
+            .bind(*perm)
+            .execute(&pool)
+            .await;
+            let _ = sqlx::query(
+                "INSERT OR IGNORE INTO role_permissions (role_id, permission_id) VALUES (?, ?)",
+            )
+            .bind(&role_id)
+            .bind(format!("{perm}-{role_code}"))
+            .execute(&pool)
+            .await;
+        }
+        let hash = auth::hash_password(TEST_ADMIN_PASSWORD).expect("hash");
+        let user_id = format!("user-{role_code}");
+        sqlx::query(
+            "INSERT OR IGNORE INTO users (user_id, username, password_hash, is_active) \
+             VALUES (?, ?, ?, 1)",
+        )
+        .bind(&user_id)
+        .bind(username)
+        .bind(&hash)
+        .execute(&pool)
+        .await
+        .expect("seed role user");
+        sqlx::query("INSERT OR IGNORE INTO user_roles (user_id, role_id) VALUES (?, ?)")
+            .bind(&user_id)
+            .bind(&role_id)
+            .execute(&pool)
+            .await
+            .expect("assign role");
+        let (cookie, csrf) = try_login(&app, &pool, username, TEST_ADMIN_PASSWORD)
+            .await
+            .expect("role user login");
         (app, pool, cookie, csrf)
     }
 

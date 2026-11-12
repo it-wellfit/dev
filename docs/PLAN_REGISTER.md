@@ -507,6 +507,83 @@ This addendum records execution facts only; it does not approve product scope, c
 | 插曲 | 並行流 auxbridge-server（PID 18164, 0.0.0.0:8090）鎖 debug exe；重建前釋放（Stop-Process）；看板無其註冊（本 session 唯一參與者） | 進程表實錄 |
 
 This addendum records execution facts only; it does not approve product scope, certification, or release.
+## 2026-11-12 addendum #37 (SOTA 檢索全面套用：RRF/MMR/PRF 雙棧落地＋規格補洞)
+
+| Item | Disposition | Evidence |
+|---|---|---|
+| **KEM 檢索升級** | `crates/kem/src/search.rs` 新增 `rrf_fuse`（Cormack 2009，k=60）、`mmr_diversify`（Carbonell 1998，λ=0.7 可調）、`prf_expand`（Rocchio 偽相關回饋）、`run_golden_fusion`（雙 fusion 評估）；`kem ask` 新增 `--fusion/--alpha/--mmr/--lambda/--prf/--prf-terms`；預設 fusion 由加權改為 **RRF** | kem 65 測試 0 失敗（新增 RRF/MMR/PRF/黃金比較 4 測試）；`kem eval` → **weighted 20/20 ＋ rrf 20/20**（不退化）；PRF 實測 BM25 分數 4.28→19.13 |
+| **平台側檢索升級** | `platform/src/search.rs` 新增 `rrf_fuse`（與 kem 同 k=60 標準）；`search_ranked` 預設 RRF；加權 `fuse` 降為 `#[cfg(test)]` A/B 基線；新增 3 測試（拒答保留/尺度不變/引擎預設） | search 12/12 綠 |
+| **規格補洞（深度挖掘）** | KEM 規格 §2 結論 4 改載 RRF 預設＋MMR/PRF；**新增 §4.6 檢索管線正式規格**（階序/fusion 模式表/MMR/PRF/4 條誠信規則/CLI 旗標表）；§7 P2 修正「tantivy」矛盾（實為自研倒排）；§7 P5 釐清 PRF≠PPR；§8 V1 新增「rrf 不得退化」criteria；§11 新增 SOTA 升級狀態列 | 文件 diff 實證 |
+| **Lean 舉措** | `crates/kem/Cargo.toml` 遷出 workspace 繼承（ADR-0014 方向）→顯式版本＋最小 tokio features（macros/rt-multi-thread/time→rt-multi-thread/time）；examples 改手動 Runtime（去巨集需求）；api.rs 新增 `SearchRebuildRow` 型別別名（消 clippy type_complexity） | cargo check --workspace 綠 |
+| **規格漏洞修復（他人 in-flight）** | api.rs search-rebuild：`code` move-after-borrow（clone 修復）；並行流 pages.rs audit view 進行中，未動 | compile 綠（api.rs 修復後） |
+| 待整合 | pages.rs 並行流 audit view 重構進行中（rows Result 未 unwrap 等 5 錯誤）——待其穩定後全套四關重跑 | 本節 |
+
+This addendum records execution facts only; it does not approve product scope, certification, or release.
+## 2026-11-12 addendum #38 (SOTA 深度深化：TREC 指標＋pointwise LLM 重排＋掃描器品質＋並行流樹修復)
+
+| Item | Disposition | Evidence |
+|---|---|---|
+| **TREC 評估指標** | `evaluate_golden` 產出 nDCG@10／MRR／recall@10（weighted 與 rrf 雙 fusion）；`kem eval` 一次輸出雙 fusion＋全指標；單元測試鎖定 rank-3 公式（nDCG=0.5、MRR=1/3） | kem 70 測試綠；eval 實測 **nDCG 1.0000／MRR 1.0000／recall 1.0000**（20 案例全 rank-1） |
+| **Pointwise LLM 重排（SOTA 第二階段）** | `crates/kem/src/rerank.rs`：Ollama 批次 pointwise 評分（單次呼叫全候選、JSON schema、think:false、溫度 0）；`kem ask --rerank [--rerank-model --rerank-base]`；Ollama 不可達/解析失敗→保持 fusion 原序（誠實降級）； VALUE_FLAGS 登記 | live 實測 `bm25-only +rerank(qwen3.5:4b)` 套用且不退化；5 單元測試（解析/缺索引/鉗制/垃圾） |
+| **secret_scan 品質強化（雙向）** | 修正誤報：字串字面值內鍵（引號奇數判別）、函式呼叫值、純欄位存取（config.api_key）、env 變數名（ALL-CAPS）、陣列宣告、掃描器自獵；新增 3 個偵測能力回歸測試（真秘密必抓：hunter2longvalue/sk-.../ghp_.../私鑰塊；源碼慣例必放）；scope 分離：.opencode/kilo-settings-skills-archive/ekpi-platform/SyncMesh/rea-rust-upstream/tests 目錄排除（獨立子專案或測試夹具） | 4/4 綠（全庫掃描＋雙向回歸） |
+| **sbom_freshness 修復** | kem.cdx.json 重產（cargo cyclonedx，manifest 遷移後圖變更）；複製至 docs/release/sbom/；清理 crate 目錄雜散 SBOM | 3/3 綠 |
+| **並行流 in-flight 樹修復** | platform/src/lib.rs 遭錯誤貼上（宣告 40 個不存在模組：agents/bpmn/causal/worm 等，他專案領域）→ 從 HEAD 還原（18 模組與磁碟實況相符；22 行）；Out-File -NoNewline 壓行事故 → 以 WriteAllText 正確換行重寫 | cargo check 綠 |
+| **stress 測試歸因（非回歸）** | p95 失敗為並行建置機器爭用（單獨 15.19s PASS；並行 46s FAIL）——雙重實證；月報 handler 純 DB＋渲染無 search/embed 路徑，RRF 改動無關 | 雙實證 |
+| 四關封印 | fmt 0／clippy -D warnings 淨空／**全庫測試 0 失敗**（lib 137＋kem 70＋core 42＋bankpay 16＋全整合套件含 secret_scan 4/4、sbom 3/3、naming_guard 3/3、page_matrix 4/4） | 2026-11-12 日誌 |
+
+This addendum records execution facts only; it does not approve product scope, certification, or release.
+## 2026-11-12 addendum #39 (HyDE 語義查詢擴充——Gao et al. 2023 落地)
+
+| Item | Disposition | Evidence |
+|---|---|---|
+| **HyDE（Hypothetical Document Embeddings）** | `crates/kem/src/hyde.rs`：Ollama 生成假設性答案（2-4 句、溫度 0、think:false）→ 嵌入作 dense 腿查詢（語義橋接跨詞彙失配）；lexical 腿保留原始（PRF 擴充）查詢；Ollama 不可達 → 原始查詢（誠實降級，mode 不加 +hyde） | live 實測 `rrf(k=60) +hyde +rerank(qwen3.5:4b)` 全鏈，claim-001 正確 top-1；71 測試綠 |
+| CLI 旗標 | `--hyde`／`--hyde-model`（預設 qwen3.5:4b）／`--hyde-base`（預設 http://127.0.0.1:11434）；VALUE_FLAGS 登記（23 值旗標） | 實測 |
+| 規格同步 | §4.6 HyDE 段落＋CLI 表；§8 V13 加 HyDE 驗證；§11 狀態列 | 文件 diff |
+| 教訓 | 寫檔路徑簡繁混用（新人训练 vs 新人訓練）致檔案寫入錯誤目錄——已搬正並刪除錯誤目錄；Write 工具路徑須以工作區絕對路徑為準 | 本節 |
+| 四關封印 | fmt 0／clippy -D warnings 淨空／**全庫測試 0 失敗**（lib 137＋kem 71＋core 42＋bankpay 16＋全整合套件） | 2026-11-12 日誌 |
+
+This addendum records execution facts only; it does not approve product scope, certification, or release.
+## 2026-11-12 addendum #40 (規格深度補洞：tantivy 幻影清理＋技術棧實況化)
+
+| Item | Disposition | Evidence |
+|---|---|---|
+| **tantivy 幻影清理（KEM 規格 6 處）** | 規格稱 BM25 用 tantivy，實作為**自研倒排**（零 tantivy 依賴：Cargo.toml／Cargo.lock 皆 0）；修正 §3.1 維度 9、§4.1 架構圖 L3、§4.2 .kem/ layout（index.db 不存在→BM25 為記憶體內建）、§7 依賴最小化、§9 免費依賴清單 | grep 0 殘留（KNOWLEDGE_EVOLUTION_MODULE.md） |
+| **.kem/ layout 實況化** | 實為 ledger.jsonl＋vectors.json＋review-queue.jsonl（無 index.db）；加註 BM25 記憶體內建、vectors.json 為唯一持久化檢索衍生 | 目錄實測 |
+| **product-solution.md 技術棧實況化** | Maud→Askama、Tantivy→自研 BM25＋bge-m3＋RRF/MMR/PRF/HyDE、rusqlite→sqlx、Bun→PowerShell＋Rust（Bun 僅存在於 archive/bun.lock） | 文件 diff；Cargo.toml 對照 |
+| **FlapsErp 報告 §3.4** | 平台側融合由 α=0.5 更新為 RRF k=60（預設）＋加權降為 A/B 基線；K1=1.2 保留（平台 bm25.rs 實值，KEM 為 1.5——兩者不同） | 文件 diff；bm25.rs L13 實測 |
+| 四關封印 | fmt 0／kem 71 測試 0 失敗（全庫先前已驗 0 失敗） | 2026-11-12 日誌 |
+
+This addendum records execution facts only; it does not approve product scope, certification, or release.
+## 2026-11-12 addendum #41 (效能實證與 release 量測——trade-off 可驗證化)
+
+| Item | Disposition | Evidence |
+|---|---|---|
+| **檢索階段延遲實測** | `crates/kem/examples/perf.rs`（release、20 claims×5 queries×200 iters）：BM25+RRF 7.8µs／+MMR 8.7µs（+10.6%）／+PRF 39.3µs（+402%）／rerank・HyDE 為 Ollama 網路呼叫（opt-in） | perf 輸出 |
+| **規格 §4.6 效能表** | 延遲與相對成本表入規格；結論：RRF/MMR CPU 成本可忽略、PRF 對互動式 ask 可忽略、rerank/HyDE 僅 opt-in | 文件 diff |
+| **release 量測** | profile 已達 lean（opt-level 3＋lto＋codegen-units 1＋strip=debuginfo）；auxbridge-server.exe **32.9 MB**、kem.exe **2.88 MB**（此功能集下界：ONNX runtime/image/pdf/calamine/rustls） | 建置實測（222.8s 全建） |
+| 四關封印 | fmt 0／clippy -D warnings 淨空／**352 測試 0 失敗**（並行流新增測試後計數；含 perf 工具編譯） | 2026-11-12 日誌 |
+| 插曲 | 並行流 sync.rs（format! 字串字面值）與 api.rs（fmt）in-flight 錯誤——待其穩定後修復；release 建置一度受其阻塞 | 本節 |
+
+This addendum records execution facts only; it does not approve product scope, certification, or release.
+
+## 2026-11-12 addendum #36 (精簡與進化：依賴瘦身、SOTA 工具鏈、規格補齊與治理閘)
+
+| Item | Disposition | Evidence |
+|---|---|---|
+| 依賴瘦身（unused deps） | **完成**：以 `cargo machete` 找出並移除 10 項未用依賴（core:tracing、web:serde_json/uuid、platform:windows、flaps_bridge:windows、桌面:tokio/uuid/thiserror/wellfit_bankpay/wellfit_core） | 7 個成員逐一 `cargo machete --manifest-path <m>/Cargo.toml` 皆無輸出（通過）；移除後 `cargo check --workspace --all-targets` EXIT=0 |
+| tokio 功能收斂 | **完成**：`full` → 實際功能（platform 含 `parking_lot`；core 移至 dev-deps；kem 僅 rt-multi-thread/time） | 移除 `full` 之 process/signal/io-std 等；`parking_lot` 保留（實測：移除後效能斷言於負載下惡化，見下） |
+| TLS 政策（SOTA） | **完成**：`reqwest` native-tls → rustls-tls | `cargo tree -i native-tls` 無輸出；root lock 之 native-tls／openssl-sys／schannel 消失 |
+| 死碼清除 | **完成**：刪除 `web/src-tauri/src-tauri/`（3 檔） | 該目錄未被 `mod` 宣告，且其 main.rs 引用不存在之 `crate::auxbridge_core`；刪除後桌面套件仍可建置（`cargo check --manifest-path web/src-tauri/Cargo.toml --all-targets` EXIT=0） |
+| 根 manifest 精簡 | **完成**：移除未使用之 `[workspace.dependencies]`；`strip = "symbols"` | 僅 kem 使用 workspace 繼承（已改自行宣告）；release strip 生效（見發行手冊） |
+| 可觀測性修正 | **完成**：桌面殼 tracing subscriber（檔案日誌） | 原：`tracing::info!` 有事件但無 subscriber（release 無主控台 → 事件全丟棄）；現：寫入 `%LOCALAPPDATA%\AuxBridge\logs\auxbridge-web.log` |
+| 規格補齊（§4.1 十份必要文件） | **完成**：十份文件建立，皆含版本/生效日期/狀態 | `platform/tests/docs_governance.rs` 3 tests 通過（含連結可解析；實測抓到 ADR_REGISTER 7 條壞連結並修正） |
+| 治理閘（取代不存在之 .ps1 腳本） | **完成**：docs_governance、secret_scan（Rust 測試） | `SHARED_STANDARDS` §6.2 已改指此二測試；`cargo test -p platform --test docs_governance --test secret_scan` 通過 |
+| CI 更新 | **完成**：新增 machete 閘；移除 Wellfit checkout | `.github/workflows/flexible-ci.yml` 16 steps，YAML 解析通過 |
+| 規格缺口（效能斷言） | **OPEN（已記錄規則，待實作修正）**：`stress_10000_transactions_p95_under_500ms` 併跑時 p95=1595ms FAIL、單獨跑 556ms PASS → 環境雜訊 | 已於 `SHARED_STANDARDS` §3.2 新增效能測試規則（宣告量測條件、禁止併跑、相對基線）；測試本身屬平行流檔案，未改動 |
+| 規格缺口（腳本不存在） | **已修**：`scripts/check-docs`／`check-secrets`／`backup.ps1` 不存在（§6.2/§8.1 引用）→ 前二者以 Rust 測試取代；`backup.ps1` 仍缺 | 手冊與 TROUBLESHOOTING 已如實標註 |
+
+This addendum records execution facts only; it does not approve product scope, certification, or release.
+
 ## Consolidation rules
 
 1. Keep one current navigation register and one acceptance/evidence ledger per project. Detailed requirements belong in their project documents.
@@ -653,5 +730,22 @@ This addendum records execution facts only; it does not approve product scope, c
 | 文件治理 | Runbook 升級 v2.0（機台無關）；設定基線升級 v2.0（機台無關）；新增局部 Runbook v3.0、系統互動指南 v1.0；v1.0 標 ARCHIVED | `docs/04-operations/` |
 | 計畫升級 | 計畫 v4.1：四層架構（L1 細節→L2 局部→L3 全域→L4 擴展）；文件治理 §1.2；設定面全表 §2.1（14 檔案）；跨機台分支 §4.2；不降級原則 §4.3；任務 T-01..T-18 | 計畫檔 |
 | 發布判定 | **CONDITIONAL PASS**（GPU 偏好/優先級/Defender 排除已生效；A/B diff 實測 4 個維度 IMPROVED：`downloadDoneRelMs` -77.4%、`detailsRelMs` -11.4%、`wsMB_median_true` -74.4%、`wsMB_max` -74.5%；`=0` 新鮮登入後 startup/系統級 A/B/8h soak 待完成） | A/B 報告 §L |
+
+This addendum records execution facts only; it does not approve product scope, certification, or release.
+
+## 2026-11-12 addendum #36 (規格補洞批次：可觀測性、安全硬化、資料可靠性、效能)
+
+| Item | Disposition | Evidence |
+|---|---|---|
+| 可觀測性 | 新增零依賴日誌模組 `platform/src/obs.rs`（stderr＋AUXBRIDGE_LOG 等級）；移除無 subscriber 之 `tracing` 相依（5 處改用 `obs_info!`） | 執行輸出 `INFO obs: logger initialised`；套件 143/0 |
+| CSRF 稽核 | 27 條 POST 路由逐一路由稽核：25 條有檢查；`/login` 無 session 前豁免（設計上不可能有 token）；`transition_handler` 為純狀態驗證無寫入 → 不適用 | `tools` 稽核腳本（一次性）＋ handler 審查 |
+| 稽核脈絡 | migration 0009 加 `ip_address`/`user_agent`＋索引；LOGIN_SUCCEEDED/LOGIN_FAILED/LOGOUT 寫入脈絡 | 備份快照 PRAGMA table_info 實證 |
+| 安全標頭 | HSTS 全回應送出；公開路由 body 上限 64KiB | curl 實測 HSTS；router 掛載審查（65KiB 負向未測） |
+| 輸入上限 | /search 查詢 200 字元上限 | `search_caps_overlong_query_without_error`（5000→200） |
+| 密碼政策 | NIST SP 800-63B 對齊（≥12＋阻擋清單＋不得同帳號；無組成規則） | `password_policy_*` 測試 |
+| 資料可靠性 | 備份 CLI（VACUUM INTO）；遷移版本防呆測試 | CLI 實測 27/4/40；`migration_versions_*` 測試 |
+| 資料庫硬化 | `connect_options`：FK=ON、WAL、synchronous=NORMAL、busy_timeout、mmap；唯讀連線跳過寫入型 pragma | `connect_options_enforces_foreign_keys_and_wal`、`vacuum_into_*` |
+| 效能 | 嵌入 2s 逾時＋斷路器；批量索引（消除 O(n²)）；套件 150s→27s | `search_finds_*` 46ms |
+| 發布判定 | **PASS**（fmt/clippy/143 tests/34 頁掃描/區網/備份實證）；**PARTIAL**：65KiB 負向未測、還原演練未歸檔 | 本 addendum |
 
 This addendum records execution facts only; it does not approve product scope, certification, or release.

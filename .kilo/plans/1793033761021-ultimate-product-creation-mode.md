@@ -247,6 +247,38 @@ Zero-JS（script=0）｜金額禁浮點（i64/i128 minor）｜GET 讀/POST 寫+C
 | 11-10 18:47 | 並行線改 guards.rs 觸發 clippy lint | 機械式等義修復（split 陣列型樣） |
 | 11-10 20:03-20:33 | 並行線模組化（lib.rs 重寫、ingest.rs 新增、PageFamily.path_template、kem 迭代） | 等待靜默；我方樹先行驗證（287 passed），不競賽 |
 | 11-11 02:31-09:40 | 並行線 api.rs EML 匯入（ImportFormat::Eml） | 對帳：我方 8 處 REVIEW_BULK_SUMMARY 引用完好；靜默後編譯重試成功 |
+| 11-12 13:15-13:27 | 並行線 api.rs/pages.rs 同時編輯＋audit_log 加 ip/user_agent（migration 0009） | 檔名無衝突（我 0008／彼 0009）；PIN 測試改放獨立整合檔避開碰撞區 |
+
+## 17. P0 批次完成紀錄＋free SOTA 深化（2026-11-12）
+
+### 已落地（§16 T-P0.1~T-P0.5＋SOTA 增強）
+
+| 項目 | 內容 | 證據 |
+|---|---|---|
+| T-P0.1 索引 | `migrations/0008_audit_log_indexes.sql`（performed_by, performed_at DESC） | EXPLAIN QUERY PLAN 適應度測試 `self_query_is_covered_by_performed_by_index` 綠 |
+| T-P0.2 錯誤態 | audit_total/audit_rows_page 錯誤向上傳播；/audit＋/my-decisions 渲染錯誤態（文案三要素＋重試連結，empty≠error 互異）；bankpay/import 兩呼叫端保留原行為 | 故障注入（DROP TABLE）PIN ×2 綠＋回歸 PIN 綠 |
+| T-P0.3 併發 PIN | 雙重認領：admin 成功→clerk-b 後到 NOT_PENDING，不雙寫；兩列 summary 如實記錄 ok=1/fail=1（R-3 部分失敗語義） | `double_claim_fails_cleanly_and_audits_partial_outcome` 綠 |
+| T-P0.4 種子流程 | `docs/ops/pending-review-seed.md`（受控 SQL＋SHA-256＋還原指令＋禁生產警告） | 檔案＋雜湊 E5672A75… |
+| D-1 時區 | `format_taipei_time`（UTC→+08:00 伺服器端格式化，fail-open 保留原文）——/audit＋/my-decisions | `audit_time_rendered_in_taipei_offset` 綠（跨午夜案例） |
+| D-2 SR 誠實解 | .bulk-hint 常駐可及樹（WCAG 4.1.3）：`:has()` 僅色彩/字重強調，不做 display 切換 | CSS＋模板修訂；PIN（bulk-hint 常在）仍綠 |
+| B-5.2 AA 閘門 | **真實違規抓到並修復**：badge base 色 on muted 實測 3.00:1（<4.5）→ 導入 `-strong`（700 級）文字 Token（淺色 700、深色沿用亮色）；badge 文字改用之；**深色 rgba 複合背景數值化計算** | `tests/design_a11y.rs` 3/3 綠（淺 4 對＋深色複合 4 對＋正文）；docs 快照同步（守門 `css_design_tokens_are_in_sync` 綠） |
+| Q7 性質測試 | proptest 1.12（鎖內既有版本；dev-dep 不增鎖外套件）：INV-01 金額四性質——i64/i128 往返恆等、文法 fail-closed 閘、單調性 | `tests/money_props.rs` 4/4 綠（各 256 隨機案例） |
+| D-5 邊界 | fail-open 邊界實證：未來時鐘/90 天停留 → elapsed=unknown 且裁決照常成功 | `bulk_summary_elapsed_fails_open_on_implausible_timestamps` 綠 |
+
+### 四關狀態（2026-11-12，隔離 target 目錄）
+
+| 關 | 結果 |
+|---|---|
+| fmt | 0 |
+| clippy（全 workspace） | 0 |
+| audit | 0 |
+| test | **333 passed**；餘 2 項失敗**均為並行線所有**：①`stress_10000`（其新校準計時測試，api.rs:8901 其編輯區；雙峰計時 7→1195ms 為建置負載抖動，非演算法退化）②`root_sboms_match_resolved_graph`（其新增 reqwest 系正式依賴使 SBOM 過期，需 cargo-cyclonedx 重生成；**我方 proptest 為 dev-dep，SBOM 測試設計上排除 dev-deps**） |
+
+### 工程教訓（C-10 紀錄）
+
+- `Copy-Item` 保留來源 mtime → `include_str!` 重編譯追蹤失效（stale 嵌入）→ 同步嵌入快照須用新 mtime 寫入或 clean 重編。
+- PowerShell 管線 `Select-Object -First N` 會提前終止上游 cargo（EXIT=-1 假象）——計時/收尾輸出改用 `-Last` 或 Out-File。
+- 時間敏感測試在並行建置負載下不可信；確定性證據須隔離 target 目錄。
 
 ## 14. B-2 研究紀錄（2026-11-11，PHASE 2 定點研究）＋B-5.1 落地
 
@@ -271,3 +303,87 @@ Zero-JS（script=0）｜金額禁浮點（i64/i128 minor）｜GET 讀/POST 寫+C
 ### 開放決策（新增）
 
 - **Q9（單向門）**：是否實作「撤銷裁決」（POSTED→PENDING_REVIEW 反向轉移＋真實反轉契約：逐列檢查他人後續變更、部分不可逆、全程審計）。依 R-4 需 ADR＋產品擁有者裁量；未裁前，B-5.1 的確認文案已誠實聲明「撤銷須另發反向裁決」。
+
+### D-7（2026-11-12，Q10 已答：上游管線分階段）
+
+| 欄位 | 內容 |
+|---|---|
+| 需求 | 待覆核佇列無生產上游（§13 誠實發現）；M-1/M-2 真人基線被阻 |
+| 選擇 | **(c)+(a) 分階段**（使用者確認建議案）：短期 (c) 以 DB 種子運維流程解鎖真人基線；產品路線 (a)「匯入→PENDING_REVIEW」列入下一 PHASE 切片（含報表語義 ADR＋IMP-003 複審，單向門） |
+| 排除 | (b) 送審動作（與 Q9 同級引擎變更，不重疊開工）；「維持現狀」（產品價值缺口留存） |
+| 連動 | (a) 落地前，M-2 ground truth 以種子流＋雙人複核抽樣試行；報表「待覆核不計入」語義聲明於 (a) ADR 一併裁定 |
+
+## 16. P0 修復批次任務序列（implementation-ready；每步過 §5 約束）
+
+1. **T-P0.1 索引**：`platform/migrations/0008_audit_log_indexes.sql` 新增 `idx_audit_log_performed_by (performed_by, performed_at DESC)`；EXPLAIN QUERY PLAN 斷言 /my-decisions 查詢走索引（適應度測試）。
+2. **T-P0.2 錯誤態**：`audit_total`/`audit_rows_page` 回傳 Result 語義（或呼叫端偵測）；/audit 與 /my-decisions 於 DB 故障渲染**錯誤態**（文案與空態互異：「紀錄暫時無法讀取＋重試連結」，八態 error 語彙）；新增 `db_error` 欄位至兩模板。
+3. **T-P0.3 PIN**：故障注入測試（損毀連線/查詢失敗）→ 斷言錯誤態文案出現、空態文案不出現；一般路徑回歸斷言空態不變。
+4. **T-P0.4 種子運維流程**：`docs/ops/pending-review-seed.md`（或 scripts/）——種子 N 筆 PENDING_REVIEW 的受控 SQL（附 SHA-256 與還原指令），供 M-1/M-2 真人基線與 demo 使用；標注「僅測試/演示環境，禁生產」。
+5. **T-P0.5 驗證**：四關 EXIT=0＋適應度不回退＋新增 PIN 全綠；addendum 記錄。
+6. **P1 批（併入後續 PR）**：A-1 聚合語義（ok_count>0 過濾＋P50/P95/樣本≥10）＋A-2 併發 PIN＋A-4 保留政策文件＋D-1 時區 helper（Asia/Taipei 伺服器端格式化）＋D-2 SR 限制聲明＋E-1 固化。
+7. **下一切片登記**：(a) 匯入→PENDING_REVIEW（單向門 ADR：報表語義＋IMP-003 複審）；Q9 撤銷（ADR）；B-8 PDF/範本；B-5.3＋B-6。
+
+## 15. 關鍵維度查證矩陣（2026-11-12，整體→局部→細節；程式碼查證）
+
+> 方法：對已完成切片逐維度唯讀查證（程式碼/遷移/模板實證），標記 ✓已具備／缺口（分級）／需裁量／架構限制。缺口依風險分 P0（阻礙正確性或驗收）／P1（體驗與韌性）。
+
+### A. 正確性與資料完整（整體）
+
+| # | 維度 | 查證結果 | 狀態 |
+|---|---|---|---|
+| A-1 | 批量冪等（重放） | 逐列 WHERE status='PENDING_REVIEW' 防雙寫 ✓；**但重放會再寫一列 REVIEW_BULK_SUMMARY（全列 NOT_PENDING）**——重放污染 M-1 統計 | 缺口 P1：M-1 聚合規則須排除 ok_count=0 的 summary 列（量測語義修訂，非程式碼） |
+| A-2 | 併發競態（兩覆核者同批） | SQLite 單寫者＋WHERE 防護→後到者得 STATE_CHANGED，結果安全；**唯無 PIN 測試文件化此行為** | 缺口 P1：補併發 PIN（兩 session 依序裁同一列，斷言恰一成功） |
+| A-3 | 審計 at-rest 防篡改 | export 時點 SHA-256 digest（G3.1 GP-04）✓；audit_log 本身無鏈雜湊——單機 SQLite 可被直接改檔 | 架構限制：VS-07（STPA）已標注證據=CP 哈希鏈；升級至鏈式 audit 屬上位工程（本切片外） |
+| A-4 | 資料保留政策 | audit_log 無保留/封存策略；NFR 日誌 30/90 天**不適用**（合規軌跡） | 缺口 P1：定義 audit_log 保留政策（建議：永久保留＋封存匯出；容量隨 sync 線治理） |
+| A-5 | 匯入冪等（IMP-003） | import_confirm 有雙重確認防護 ✓ | ✓ |
+
+### B. 安全與隱私（局部）
+
+| # | 維度 | 查證結果 | 狀態 |
+|---|---|---|---|
+| B-1 | 認證頁快取 | `security_headers` middleware 對**每個**回應加 no-store（OWASP Slice 11）→ /my-decisions 自動涵蓋；既有測試遍歷認證頁斷言 | ✓（可選強化：迭代清單加 /my-decisions） |
+| B-2 | /my-decisions 範圍參數 | 查詢結構僅 page；user 範圍伺服器端綁定；PIN 已證參數無效 | ✓ |
+| B-3 | CSRF | GET 唯讀頁無需 ✓；批量 POST 已有 ✓ | ✓ |
+| B-4 | 輸入上限 | tx_ids 超長輸入：axum Form 預設上限兜底；BULK_REVIEW_CAP=100 逐列上限 ✓ | ✓（可選：顯式長度上限錯誤訊息） |
+| B-5 | 稽核頁 SR/快取 | 同 B-1 | ✓ |
+
+### C. 效能與韌性（局部）
+
+| # | 維度 | 查證結果 | 狀態 |
+|---|---|---|---|
+| C-1 | audit_log 索引 | 既有 idx(performed_at DESC)、idx(event_type, performed_at)、idx(transaction_id)；**無 performed_by 索引**→ /my-decisions `WHERE performed_by=?` 全表掃描，隨軌跡增長退化（違 p95 適應度 O(log n + k) 精神） | **缺口 P0**：migration 0008 加 `idx_audit_log_performed_by (performed_by, performed_at DESC)`＋EXPLAIN QUERY PLAN 適應度斷言 |
+| C-2 | 錯誤態吞噬 | audit_total/audit_rows_page `unwrap_or_default()`→DB 故障渲染為「尚無紀錄」（empty≠error 八態混淆，違 G1.1 文案互異原則；/audit 與 /my-decisions 同病） | **缺口 P0**：查詢失敗改渲染 error 態（「紀錄暫時無法讀取＋重試連結」），文案與空態互異；補故障注入 PIN |
+| C-3 | 批量大小 | CAP=100＋Little's Law 批次參數（上位 §0.5 實測 2s/300k）✓ | ✓ |
+
+### D. 體驗與無障礙（細節）
+
+| # | 維度 | 查證結果 | 狀態 |
+|---|---|---|---|
+| D-1 | 時區顯示 | audit_page/my_decisions 直接渲染 `performed_at`（**UTC**）——zh-Hant 使用者見 8 小時時差 | **缺口 P1**：伺服器端格式化為 Asia/Taipei（+08:00，附註「時間為系統時間」）；渲染層統一 helper |
+| D-2 | SR 動態提示（WCAG 4.1.3） | .bulk-hint 由 display:none→block：部分螢幕閱讀器不播報純 CSS 顯示 | 缺口 P1（誠實限制）：提示文案同步置於 summary 靜態可達處；或接受降級並記錄 |
+| D-3 | :has() 相容性 | Chrome 105+/Safari 15.4+/Firefox 121+；不支援→提示不顯示（功能不損） | ✓ 漸進增強語義正確；文件化即可 |
+| D-4 | 八態文案互異 | C-2 修復後 /my-decisions 具空態＋錯誤態互異 | 依賴 C-2 |
+
+### E. 量測與驗證（細節）
+
+| # | 維度 | 查證結果 | 狀態 |
+|---|---|---|---|
+| E-1 | M-1 聚合規則 | 單事件值已有；**基線聚合規則未定義**（n、outlier、百分位） | 缺口 P1：定義「基線＝近 30 日 REVIEW_BULK_SUMMARY（ok_count>0）的 elapsed_ms P50/P95，樣本≥10；outlier（>24h）已於寫入端排除」 |
+| E-2 | M-2 ground truth | 二次複核抽樣協議未定（抽樣率、第二複核者、不一致裁決權） | 缺口 P1（依賴上游管線裁量，見 Q10） |
+| E-3 | 適應度回歸 | 四關＋既有適應度全綠（297 passed）✓ | ✓ |
+
+### 缺口修復批次（建議）
+
+- **P0 批（正確性）**：C-1 索引 migration＋C-2 錯誤態——一次 PR，含 PIN/適應度斷言，四關驗證。
+- **P1 批（韌性/細節）**：A-1 聚合語義＋A-2 併發 PIN＋A-4 保留政策（文件）＋D-1 時區 helper＋D-2 SR 限制聲明＋E-1 聚合規則固化。
+- **需裁量**：Q9 撤銷（ADR）＋**Q10 上游管線**（匯入→PENDING_REVIEW？）——Q10 決定 M-2 ground truth 與真人基線可行性。
+
+### Q10（新，與 Q9 分立）：匯入確認後的交易狀態
+
+| 選項 | 效果 | 代價 |
+|---|---|---|
+| (a) import_confirm 改建 PENDING_REVIEW | 批量覆核有真實上游；M-1/M-2 真人基線可行 | **波及面**：試算表/報表/總額以 POSTED 計數的查詢需明確「待覆核不計入」語義；IMP-003 語義複審；單向門 |
+| (b) 新增「送審」動作（POSTED→PENDING_REVIEW） | 不動匯入語義；覆核者可主動送審 | 狀態機新增邊＝與 Q9 同級的引擎變更 |
+| (c) 維持現狀，基線改 DB 種子運維流程 | 零風險、立即可行 | 佇列仍無真實資料流（產品價值缺口留存） |
+
+**建議**：短期 (c) 解鎖基線；產品路線採 (a)（含報表語義聲明）列入下一 PHASE 切片。

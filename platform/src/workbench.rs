@@ -44,10 +44,16 @@ pub async fn search_page(
     Query(query): Query<HashMap<String, String>>,
 ) -> Response {
     let q = query.get("q").cloned().unwrap_or_default();
+    // 查詢長度上限（2026-11-12 規格補洞）：與交易清單一致（200 字元），
+    // 避免過長輸入造成 tokenize/評分成本放大（零 JS 表單仍可送出大 payload）。
+    const MAX_SEARCH_QUERY: usize = 200;
+    let q: String = q.chars().take(MAX_SEARCH_QUERY).collect();
     let trimmed = q.trim().to_string();
     let has_q = !trimmed.is_empty();
     let mut results: Vec<SearchResultRow> = Vec::new();
     if has_q {
+        // 自愈索引：TTL 過期（或重啟後首次）先從 DB 重建再查（見 AppState）。
+        state.ensure_search_fresh().await;
         let docs = state.search.search(&trimmed).await;
         results = docs
             .into_iter()

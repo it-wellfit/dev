@@ -17,7 +17,7 @@ use argon2::password_hash::{
 };
 use argon2::Argon2;
 use askama::Template;
-use axum::extract::{Form, Request, State};
+use axum::extract::{ConnectInfo, Form, Request, State};
 use axum::http::{header, HeaderMap, StatusCode};
 use axum::middleware::Next;
 use axum::response::{Html, IntoResponse, Redirect, Response};
@@ -276,6 +276,13 @@ pub async fn security_headers(mut response: axum::response::Response) -> axum::r
         REFERRER_POLICY,
         axum::http::HeaderValue::from_static("no-referrer"),
     );
+    // HSTS（2026-11-12 規格補洞）：cookie_secure 啟用（HTTPS 部署）時強制
+    // 瀏覽器未來只走 HTTPS。於 http:// 部署時瀏覽器會忽略此標頭（無害），
+    // 故可無條件送出；max-age 一年、includeSubDomains。
+    headers.insert(
+        axum::http::header::STRICT_TRANSPORT_SECURITY,
+        axum::http::HeaderValue::from_static("max-age=31536000; includeSubDomains"),
+    );
     headers.insert(
         CACHE_CONTROL,
         axum::http::HeaderValue::from_static("no-store"),
@@ -399,7 +406,12 @@ async fn primary_role_code(pool: &SqlitePool, user_id: &str) -> Option<String> {
 }
 
 /// POST /login — rate-limit check, authenticate, create a session (303 PRG).
-pub async fn post_login(State(state): State<AppState>, Form(form): Form<LoginForm>) -> Response {
+pub async fn post_login(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    peer: Option<ConnectInfo<std::net::SocketAddr>>,
+    Form(form): Form<LoginForm>,
+) -> Response {
     // P1-7: consecutive-failure lockout per username (checked BEFORE any
     // credential work, so a locked account costs nothing to probe).
     if let RateDecision::Locked { remaining_secs } = state.rate_limiter.check(&form.username) {
@@ -417,6 +429,17 @@ pub async fn post_login(State(state): State<AppState>, Form(form): Form<LoginFor
             // Slice 11: housekeeping at the auth boundary - expired session
             // rows are purged whenever a new session is created.
             let _ = purge_expired_sessions(&state.pool).await;
+            // 稽核：登入成功必可溯源（2026-11-12 規格補洞）。
+            let (ip, ua) = request_context_with_peer(&headers, peer.map(|p| p.0));
+            crate::pages::write_event_ctx(
+                &state.pool,
+                "LOGIN_SUCCEEDED",
+                &user_id,
+                serde_json::json!({ "username": form.username }),
+                ip.as_deref(),
+                ua.as_deref(),
+            )
+            .await;
             let secure = security_flag(&state, "cookie_secure").await;
             match create_session(&state.pool, &user_id).await {
                 Ok((session_id, _)) => {
@@ -452,9 +475,45 @@ pub async fn post_login(State(state): State<AppState>, Form(form): Form<LoginFor
                 MAX_LOGIN_ATTEMPTS,
                 Duration::from_secs(LOGIN_LOCKOUT_SECS),
             );
+            // 稽核：登入失敗（含嘗試帳號）必可溯源——暴力破解調查的基本資料。
+            let (ip, ua) = request_context_with_peer(&headers, peer.map(|c| c.0));
+            crate::pages::write_event_ctx(
+                &state.pool,
+                "LOGIN_FAILED",
+                "unknown",
+                serde_json::json!({ "attempted_username": form.username }),
+                ip.as_deref(),
+                ua.as_deref(),
+            )
+            .await;
             login_page(Some(LOGIN_FAILURE_MSG.to_string()), &form.username)
         }
     }
+}
+
+/// 從請求標頭擷取稽核脈絡（2026-11-12 規格補洞）。
+///
+/// 反向代理情境用 `X-Forwarded-For` 第一跳；無則 None（誠實標示未知，
+/// 不猜測、不捏造）。User-Agent 逾 512 字元截斷（避免巨大 header 膨脹稽核表）。
+/// 帶對端位址的稽核脈絡（2026-11-12 規格補洞）：優先序
+/// `X-Forwarded-For`（反向代理）→ `ConnectInfo` 對端 IP → None（不捏造）。
+/// User-Agent 逾 512 字元截斷（避免巨大 header 膨脹稽核表）。
+fn request_context_with_peer(
+    headers: &HeaderMap,
+    peer: Option<std::net::SocketAddr>,
+) -> (Option<String>, Option<String>) {
+    let forwarded = headers
+        .get("x-forwarded-for")
+        .and_then(|v| v.to_str().ok())
+        .and_then(|v| v.split(',').next())
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty());
+    let ip = forwarded.or_else(|| peer.map(|p| p.ip().to_string()));
+    let ua = headers
+        .get(header::USER_AGENT)
+        .and_then(|v| v.to_str().ok())
+        .map(|s| s.chars().take(512).collect::<String>());
+    (ip, ua)
 }
 
 #[derive(Debug, Deserialize)]
@@ -466,11 +525,23 @@ pub struct LogoutForm {
 pub async fn post_logout(
     State(state): State<AppState>,
     headers: HeaderMap,
+    peer: Option<ConnectInfo<std::net::SocketAddr>>,
     Form(form): Form<LogoutForm>,
 ) -> Response {
     if let Some(session) = current_session(&state, &headers).await {
         if session.csrf_token == form.csrf_token {
             let _ = delete_session(&state.pool, &session.session_id).await;
+            // 稽核：登出（工作階段撤銷）可溯源（2026-11-12 規格補洞）。
+            let (ip, ua) = request_context_with_peer(&headers, peer.map(|p| p.0));
+            crate::pages::write_event_ctx(
+                &state.pool,
+                "LOGOUT",
+                &session.user_id,
+                serde_json::json!({ "session_id": session.session_id }),
+                ip.as_deref(),
+                ua.as_deref(),
+            )
+            .await;
         }
     }
     let mut response = Redirect::to("/login").into_response();
@@ -624,11 +695,23 @@ mod tests {
 
         // Burn MAX_LOGIN_ATTEMPTS with wrong passwords.
         for _ in 0..MAX_LOGIN_ATTEMPTS {
-            post_login(State(state.clone()), Form(form("wrong"))).await;
+            post_login(
+                State(state.clone()),
+                HeaderMap::new(),
+                None,
+                Form(form("wrong")),
+            )
+            .await;
         }
 
         // Even the CORRECT password is now rejected with a lockout message.
-        let response = post_login(State(state.clone()), Form(form("correct-horse"))).await;
+        let response = post_login(
+            State(state.clone()),
+            HeaderMap::new(),
+            None,
+            Form(form("correct-horse")),
+        )
+        .await;
         let body = axum::body::to_bytes(response.into_body(), 1_048_576)
             .await
             .expect("body");

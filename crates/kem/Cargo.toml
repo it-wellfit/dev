@@ -2,19 +2,28 @@
 name = "kem"
 version = "0.1.0"
 edition = "2021"
+rust-version = "1.99"
 description = "Knowledge Evolution Module: immutable capture, atomic claims, rule vetting, hash-chained ledger, BM25 retrieval, evolution and governance"
 license = "LicenseRef-Proprietary"
 publish = false
 
 [dependencies]
 console_manifest = { path = "../console_manifest", version = "0.1.0" }
-serde = { workspace = true }
-serde_json = { workspace = true }
-thiserror = { workspace = true }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "2.0"
 chrono = { version = "0.4", features = ["serde"] }
 sha2 = "0.10"
-tokio = { workspace = true }
-reqwest = { workspace = true }
+# Async runtime: only the multi-thread runtime + timers are used (embed pool,
+# request timeouts). Features are declared explicitly — no workspace
+# inheritance, no "full" (ADR-0014 lean policy).
+tokio = { version = "1.0", features = ["rt-multi-thread", "time"] }
+# 嵌入向量 HTTP 用戶端：TLS 採 rustls（不引入 native-tls/OpenSSL/schannel）。
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
 
 [dev-dependencies]
 tempfile = "3"
+
+# Rust Analyzer configuration
+[package.metadata.rust-analyzer]
+all_features = true

@@ -2,6 +2,7 @@
 name = "auxbridge_core"
 version = "0.0.1"
 edition = "2021"
+rust-version = "1.99"
 license = "LicenseRef-Proprietary"
 publish = false
 
@@ -11,10 +12,6 @@ crate-type = ["lib"]
 
 [dependencies]
 # Core dependencies
-tokio = { version = "1.0", features = ["full"] }
-tracing = "0.1"
-
-# Database
 sqlx = { version = "0.9", features = ["runtime-tokio", "macros", "sqlite", "chrono"] }
 
 # Serialization
@@ -28,6 +25,8 @@ chrono = { version = "0.4", features = ["serde"] }
 uuid = { version = "1.0", features = ["serde", "v4"] }
 
 [dev-dependencies]
+# 僅測試需要 async runtime（`#[tokio::test]`）；lib 本體不含 async。
+tokio = { version = "1.0", features = ["macros", "rt"] }
 # Testing
 tokio-test = "0.4"
 # Property-based testing (PBT): money arithmetic invariants

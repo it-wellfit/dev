@@ -3,6 +3,51 @@
 本檔記錄根 workspace（`core/`、`platform/`、`web/`、`crates/flaps_bridge`）的實際變更。格式參考 Keep a Changelog。子專案（ekpi-platform、Wellfit、SyncMesh）各自有變更記錄。
 
 
+## [Unreleased] — 2026-11-12（精簡與進化：依賴瘦身、SOTA 工具鏈、規格補齊）
+
+### Added
+- **十份必要文件**（`SHARED_STANDARDS` §4.1）：`PROJECT_CHARTER`／`ARCHITECTURE`／`API_SPEC`／`DEVELOPMENT_GUIDE`／`QUALITY_STANDARDS`／`OPERATIONS_RUNBOOK`／`SECURITY`／`ADR_REGISTER`／`TRACEABILITY`／`TROUBLESHOOTING`（皆含版本／生效日期／狀態中介資料；內容連結既有 SSOT，不重複條文）。
+- **兩道治理閘（Rust 測試）**：`platform/tests/docs_governance.rs`（必要文件存在、中介資料完整、相對連結可解析；實測抓到並修正 `ADR_REGISTER` 之 7 條壞連結）與 `platform/tests/secret_scan.rs`（高訊號機密掃描：私鑰／硬編碼憑證樣式，附允許清單）。取代 `SHARED_STANDARDS` §6.2 原本引用但不存在之 `scripts/check-docs`／`check-secrets`。
+- **桌面殼可觀測性**：新增 tracing subscriber，日誌寫入 `%LOCALAPPDATA%\AuxBridge\logs\auxbridge-web.log`（`AUXBRIDGE_LOG` 控制等級）；修正「只有 `tracing::info!` 而無 subscriber → 事件全丟棄」之缺陷（release 為 `windows_subsystem = "windows"`，無主控台）。
+- 各 crate 宣告 `rust-version = "1.99"`（MSRV；`SHARED_STANDARDS` §2.3）。
+
+### Changed
+- **依賴瘦身**（`cargo machete` 逐 crate 驗證）：移除未使用依賴 `core:tracing`／`web:serde_json,uuid`／`platform:windows`／`flaps_bridge:windows`（`real-com` 改為無依賴；其 `real_com` 模組原為 placeholder）／桌面 `tokio,uuid,thiserror,wellfit_bankpay,wellfit_core`。
+- `tokio` 由 `features = ["full"]` 收斂為實際使用功能（platform：`macros/rt-multi-thread/fs/net/sync/time/io-util/parking_lot`；core 移至 dev-dependencies；kem：`rt-multi-thread/time`）。
+- TLS 政策：`reqwest` 由 `native-tls` 改 `rustls-tls`（`default-features = false`），移除 native-tls／openssl／schannel。
+- `thiserror` 1→2（platform、kem）以消除 1.x／2.x 並存。
+- 刪除未參與編譯之死碼 `web/src-tauri/src-tauri/`（3 檔；其 `main.rs` 引用不存在之模組）。
+- 根 `Cargo.toml` 移除未使用之 `[workspace.dependencies]`（僅 kem 曾使用，已改為自行宣告）；release 加入 `strip = "symbols"`。
+- CI：新增 **cargo-machete** 閘（逐成員）；**移除 it-wellfit/wellfit checkout**（桌面已不依賴 Wellfit crate，少一次跨 repo 流量）。
+- 標準更新：`SHARED_STANDARDS` §2.2（精簡原則）、§2.3（toolchain/MSRV）、§3.2（效能測試規則）、§6.2（基線改指 Rust 測試）、§10（條款 12/13/16/19 合併更新，維持 ≤20 條）。
+
+### Verified（2026-11-12 實測）
+- 相依數：root lock **463 → 456**；桌面 lock **532 → 496**（−36）。
+- SBOM：web 18,723 → **9,916**；auxbridge-web 410,631 → **362,030**；platform 476,981 → **468,304**；kem 185,443 → **170,921**。
+- `native-tls`／`openssl`／`schannel` 已不在 root 依賴圖（`cargo tree -i native-tls` 無輸出）。
+- 測試：**36 suites／360 passed／0 failed**（排除環境敏感之效能斷言）；效能斷言單獨執行 p95=556ms PASS、併跑時 p95=1595ms FAIL → 屬環境雜訊（見 `SHARED_STANDARDS` §3.2）。
+- fmt／clippy `-D warnings`／audit／deny 全綠。
+
+## [Unreleased] — 2026-11-12（規格補洞批次：可觀測性、安全硬化、資料可靠性、效能）
+
+### Added
+- **零依賴日誌模組** `platform/src/obs.rs`：原 `tracing` facade 無任何 subscriber → 5 處 `info!` 全數蒸發（有 facade 沒 sink 的反例）。改為 std＋chrono 的 stderr 日誌（RFC3339 時間戳、`AUXBRIDGE_LOG` 控制等級、寫入失敗不反噬主流程），並移除未使用的 `tracing` 相依（淨精實）。
+- **備份子命令** `auxbridge-server --backup <來源.db> <快照.db>`：以 SQLite `VACUUM INTO` 產生一致性快照（免停機、含 WAL 內容），補上 Dev 根工作區原本完全缺失的備份能力；實證快照含 27 交易／4 使用者／40 稽核列。
+- **稽核請求脈絡**（migration `0009_audit_request_context.sql`）：`audit_log` 加 `ip_address`/`user_agent` ＋索引；認證事件（`LOGIN_SUCCEEDED`/`LOGIN_FAILED`/`LOGOUT`）寫入來源脈絡——原本認證事件完全不進稽核，安全調查無從溯源。
+- **HSTS**：所有回應帶 `Strict-Transport-Security: max-age=31536000; includeSubDomains`（http 部署時瀏覽器忽略，無害）。
+- **遷移版本防呆測試** `migration_versions_are_unique_and_sequential`：並行工作線曾各新增 `0008_*.sql` 導致 sqlx UNIQUE 崩潰（全部測試失敗）——改為建置期攔下。
+- **需求追蹤矩陣** `docs/standards/REQUIREMENTS_TRACEABILITY.md`（需求 ID → 設計 → 實作 → 測試 → 證據 → 判定；未測項標 NOT TESTED）。
+
+### Changed
+- **SQLite 連線選項 SSOT** `db::connect_options`：`foreign_keys=ON`（sqlx 預設關閉 → FK 靜默失效）、WAL、`synchronous=NORMAL`、`busy_timeout=5s`、`mmap_size=256MiB`；唯讀連線（`mode=ro`）與 `:memory:` 跳過需寫入的 pragma（實證：`mode=ro` 套用 WAL 會 "attempt to write a readonly database"）。
+- **搜尋查詢長度上限** 200 字元（與交易清單一致）；**公開路由 body 上限** 64KiB（原僅 protected 群組有 `DefaultBodyLimit`）。
+- **密碼政策 NIST SP 800-63B 對齊**：≥12 字元＋18 條弱密碼阻擋清單＋不得等於帳號；**不設組成規則**（NIST 實證組成規則誘導可預測變形、反降熵）。
+- **搜尋效能**：嵌入呼叫 2s 逾時＋斷路器（失敗後 60s 不再嘗試）；批量索引（一次 BM25 重建，消除逐檔 O(n²)）。測試套件 150s → 27s；搜尋 46ms。
+
+### 驗證（2026-11-12）
+- `cargo fmt --check` PASS｜`cargo clippy --all-targets -D warnings` PASS｜`cargo test --locked -p platform --lib` **143 passed / 0 failed**
+- 34/34 頁掃描 200（含 `/search`）｜未登入 `/api/audit` → 401｜區網 200｜HSTS 實測｜備份 CLI 實測
+
 ## [Unreleased] — 2026-11-11（交付缺口收口：桌面套件納入閘門、SBOM 新鮮度閘、unsafe 邊界、跨 repo 提交；ADR-0014）
 
 ### Added

@@ -1,4 +1,31 @@
 use sqlx::SqlitePool;
+use std::str::FromStr;
+use std::time::Duration;
+
+/// 連線選項 SSOT（2026-11-12 SOTA 精實化）：所有 SQLite 連線（bin、測試、
+/// 未來工具）統一經此建構，PRAGMA 一次到位。
+///
+/// 為何需要：sqlx 預設**不開** `foreign_keys`（FK 約束靜默失效——重複帳戶
+/// 類缺陷的溫床），且 `busy_timeout` 預設 0（並發寫入立即 SQLITE_BUSY）。
+/// 併租 WAL + synchronous=NORMAL（WAL 下安全且寫入更快）+ 256MiB mmap。
+/// 記憶體庫不套 WAL/synchronous（SQLite 對 :memory: 不支援 WAL）。
+pub fn connect_options(db_url: &str) -> Result<sqlx::sqlite::SqliteConnectOptions, sqlx::Error> {
+    use sqlx::sqlite::{SqliteConnectOptions, SqliteJournalMode, SqliteSynchronous};
+    let mut opts = SqliteConnectOptions::from_str(db_url)?
+        .foreign_keys(true)
+        .busy_timeout(Duration::from_secs(5));
+    // 唯讀連線（備份/快照檢視、稽核工具）不得套用需寫入的 pragma：
+    // journal_mode/synchronous 會要求寫入 DB 檔（實證：mode=ro 下
+    // "attempt to write a readonly database"）。記憶體庫亦不支援 WAL。
+    let needs_write = !db_url.contains(":memory:") && !db_url.contains("mode=ro");
+    if needs_write {
+        opts = opts
+            .journal_mode(SqliteJournalMode::Wal)
+            .synchronous(SqliteSynchronous::Normal)
+            .pragma("mmap_size", 268_435_456i64.to_string());
+    }
+    Ok(opts)
+}
 
 /// Database manager for AuxBridge platform
 pub struct DatabaseManager {
@@ -37,6 +64,144 @@ mod tests {
             .connect("sqlite::memory:")
             .await
             .expect("in-memory SQLite pool")
+    }
+
+    // 遷移版本防呆（2026-11-12 規格補洞）：版本號唯一且從 1 連續。
+    // 為何需要：並行工作線各自新增 `0008_*.sql` 導致 sqlx 以
+    // "UNIQUE constraint failed: _sqlx_migrations.version" 炸掉全部測試
+    // （實證 2026-11-12）——建置期即攔下，不必等執行期。
+    #[test]
+    fn migration_versions_are_unique_and_sequential() {
+        let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("migrations");
+        let mut versions: Vec<u32> = Vec::new();
+        for entry in std::fs::read_dir(&dir).expect("migrations dir readable") {
+            let path = entry.expect("dir entry").path();
+            let Some(name) = path.file_name().and_then(|n| n.to_str()) else {
+                continue;
+            };
+            if !name.ends_with(".sql") {
+                continue;
+            }
+            let prefix: String = name.chars().take_while(|c| c.is_ascii_digit()).collect();
+            assert!(
+                !prefix.is_empty(),
+                "migration file must start with a numeric version: {name}"
+            );
+            let version: u32 = prefix
+                .parse()
+                .unwrap_or_else(|_| panic!("bad migration version in {name}"));
+            assert!(
+                !versions.contains(&version),
+                "duplicate migration version {version} ({name}) — sqlx would fail with a UNIQUE constraint"
+            );
+            versions.push(version);
+        }
+        versions.sort_unstable();
+        assert!(!versions.is_empty(), "no migrations found");
+        for (index, version) in versions.iter().enumerate() {
+            assert_eq!(
+                *version,
+                (index + 1) as u32,
+                "migration versions must be sequential from 1 (gap or duplicate)"
+            );
+        }
+    }
+
+    // 備份一致性（2026-11-12 規格補洞）：VACUUM INTO 產生可用快照，
+    // 且含來源資料（災難復原演練的機制驗證）。
+    #[tokio::test]
+    async fn vacuum_into_produces_consistent_snapshot() {
+        let dir = std::env::temp_dir().join(format!("auxbridge-vac-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&dir).expect("temp dir");
+        let src_path = dir.join("src.db");
+        let snap_path = dir.join("snap.db");
+        let src_url = format!("sqlite://{}?mode=rwc", src_path.display());
+        let pool = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect_with(super::connect_options(&src_url).expect("opts"))
+            .await
+            .expect("src pool");
+        DatabaseManager::new(pool.clone())
+            .initialize()
+            .await
+            .expect("migrations");
+        sqlx::query(
+            "INSERT INTO transactions (transaction_id, transaction_code, transaction_date, \
+             description, status) VALUES ('t1', 'TX-1', '2026-11-01', 'snapshot me', 'POSTED')",
+        )
+        .execute(&pool)
+        .await
+        .expect("insert");
+        let escaped = snap_path.display().to_string().replace('\'', "''");
+        sqlx::query(sqlx::AssertSqlSafe(format!("VACUUM INTO '{escaped}'")))
+            .execute(&pool)
+            .await
+            .expect("vacuum into");
+        pool.close().await;
+
+        let snap_url = format!("sqlite://{}?mode=ro", snap_path.display());
+        let snap = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect_with(super::connect_options(&snap_url).expect("opts"))
+            .await
+            .expect("snapshot pool");
+        let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM transactions")
+            .fetch_one(&snap)
+            .await
+            .expect("count");
+        assert_eq!(count, 1, "snapshot must carry source rows");
+        snap.close().await;
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    // PRAGMA 硬化（2026-11-12 SOTA 精實化）：foreign_keys 必須為 ON（sqlx
+    // 預設關閉 → FK 約束靜默失效）、檔案庫必須 WAL；FK 違規必須真的被拒。
+    #[tokio::test]
+    async fn connect_options_enforces_foreign_keys_and_wal() {
+        let dir = std::env::temp_dir().join(format!("auxbridge-fk-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&dir).expect("temp dir");
+        let db_path = dir.join("fk.db");
+        let url = format!("sqlite://{}?mode=rwc", db_path.display());
+        let opts = super::connect_options(&url).expect("connect options");
+        let pool = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect_with(opts)
+            .await
+            .expect("file pool");
+
+        let fk: i64 = sqlx::query_scalar("PRAGMA foreign_keys")
+            .fetch_one(&pool)
+            .await
+            .expect("pragma read");
+        assert_eq!(fk, 1, "foreign_keys must be ON");
+        let jm: String = sqlx::query_scalar("PRAGMA journal_mode")
+            .fetch_one(&pool)
+            .await
+            .expect("journal mode");
+        assert_eq!(jm.to_lowercase(), "wal", "file DBs must use WAL");
+
+        DatabaseManager::new(pool.clone())
+            .initialize()
+            .await
+            .expect("migrations");
+        sqlx::query(
+            "INSERT INTO transactions (transaction_id, transaction_code, transaction_date, \
+             description, status) VALUES ('t1', 'TX-1', '2026-11-01', 'x', 'POSTED')",
+        )
+        .execute(&pool)
+        .await
+        .expect("parent row");
+        let bad = sqlx::query(
+            "INSERT INTO transaction_items (item_id, transaction_id, account_id, item_type, \
+             amount_minor) VALUES ('i1', 't1', 'NO-SUCH-ACCOUNT', 'DEBIT', 100)",
+        )
+        .execute(&pool)
+        .await;
+        assert!(
+            bad.is_err(),
+            "FK must reject an item referencing a nonexistent account"
+        );
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[tokio::test]

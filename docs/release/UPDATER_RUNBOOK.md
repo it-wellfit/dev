@@ -84,6 +84,9 @@ endpoint（tauri.conf）：`https://updates.auxbridge.internal/erp/latest.json`�
 | 桌面套件弱點 | `cargo audit --file Cargo.lock`（工作目錄 `web/src-tauri`） | `web/src-tauri/.cargo/audit.toml`（獨立 workspace 不繼承根政策） |
 | 桌面套件政策 | `cargo deny check`（工作目錄 `web/src-tauri`） | `deny.toml`（自上層目錄自動載入，同一份政策 SSOT） |
 | unsafe 邊界 | `cargo test -p platform --test guards`（`unsafe_code_is_absent_and_forbidden_at_crate_roots`） | `docs/adr/ADR-0014`（crate 根 forbid ＋ 全區掃描） |
+| 未用依賴 | 以各成員目錄為 CWD 執行 `cargo machete`（逐成員；`cargo machete` 不支援 `--manifest-path`；CI 亦執行） | `SHARED_STANDARDS` §2.2 精簡原則 |
+| 文件治理 | `cargo test -p platform --test docs_governance` | `SHARED_STANDARDS` §4.1／§6.2（十份必要文件、中介資料、連結） |
+| 機密掃描 | `cargo test -p platform --test secret_scan` | `SHARED_STANDARDS` §7.1（高訊號模式＋允許清單） |
 
 其他硬化（2026-11-10）：
 - CI（`.github/workflows/flexible-ci.yml`）第三方 action 一律 **commit SHA 釘版**（actions/checkout v4、actions/cache v4、actions/upload-artifact v4、dtolnay/rust-toolchain master）；工具安裝一律 `cargo install <tool> --locked`。
@@ -100,7 +103,12 @@ endpoint（tauri.conf）：`https://updates.auxbridge.internal/erp/latest.json`�
 - 授權白名單新增 **MPL-2.0**（僅 Tauri css 解析鏈：cssparser／cssparser-macros／dtoa-short／option-ext／selectors；未修改、未獨立散布）。
 - 共用單一政策檔於兩個 workspace 會產生**非失敗**之裝飾性警告（`advisory-not-encountered`／`license-not-encountered`），屬預期行為，不影響閘門結果。
 
-其他硬化（2026-11-11 第二輪，ADR-0014）：
+其他硬化（2026-11-12 精簡與進化）：
+- **依賴瘦身**：移除 10 項未用依賴（core:tracing、web:serde_json/uuid、platform:windows、flaps_bridge:windows、桌面:tokio/uuid/thiserror/wellfit_*.）；`tokio` 由 `full` 收斂；`reqwest` 改 rustls-tls；`thiserror` 1→2。root lock 463→456、桌面 532→496。
+- **SBOM 重產規則**：任何依賴變更（含 `cargo update`、功能調整）後，7 份 SBOM 必須重產，否則 `cargo test -p platform --test sbom_freshness` 失敗。產生方式：各 crate 目錄為 CWD 執行 `cargo cyclonedx --format json --spec-version 1.5 --all --override-filename <crate>.cdx`（`--manifest-path` 自 repo 根會產生錯誤範圍；該工具亦會在每個成員目錄留下同名檔，需清理）。
+- **CI 變更**：新增 cargo-machete 閘；**移除 it-wellfit/wellfit checkout**（桌面套件已不再依賴 Wellfit crate）。
+- **release 設定**：`strip = "symbols"`（縮小安裝包）；`rust-version = 1.99` 已宣告於各 crate。
+- **文件治理**：十份必要文件與兩道 Rust 治理閘（docs_governance／secret_scan）已就位，取代原本不存在之 `scripts/check-docs`／`check-secrets`。
 - **unsafe 全數移除**：刪除未參與編譯之 COM 死碼 `platform/src/com/{async_ipc,batch,bridge,pool}.rs`（6 處 unsafe，且無 `CoInitializeEx`，若接上即未定義行為）；8 個 crate 根全部補 `#![forbid(unsafe_code)]`；新增 guard 測試掃描全區 unsafe 語法（實測 0 處）。真實 COM 通道留在 `flaps_bridge`（`real-com` feature，crate 根已 forbid）。
 - **每個 workspace 自有弱點政策**：`cargo audit` 以 workspace 根為政策搜尋起點，故新增 `web/src-tauri/.cargo/audit.toml`（三則處置：RUSTSEC-2026-0459／2024-0370／2024-0429，含桌面特有暴露評估）。
 - **SBOM 產生方式統一**：`--manifest-path` 從 repo 根執行會產生錯誤範圍（實測 6 份全部落到 `core/`），必須以 crate 目錄為 CWD；檔名隨 crate（`auxbridge_core`／`auxbridge-web`），舊名 `flaps_core`／`flaps-erp-web` 已刪除。

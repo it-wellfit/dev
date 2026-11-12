@@ -9,31 +9,8 @@ members = [
     "crates/kem",
 ]
 
-
-[workspace.dependencies]
-# Core dependencies
-axum = "0.7"
-tokio = { version = "1.0", features = ["full"] }
-
-# Database
-sqlx = { version = "0.9", features = ["runtime-tokio", "macros", "sqlite"] }
-
-# Web framework
-
-# AI clients
-reqwest = { version = "0.12", features = ["json", "native-tls"] }
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-thiserror = "1.0"
-
-# Windows COM support
-windows = { package = "windows", version = "0.58", features = ["Win32_Foundation", "Win32_System_Com"] }
-
-
-
-# State management
-web-sys = "0.3"
-
+# 說明：各成員自行宣告依賴（不使用 workspace 繼承），故不設 [workspace.dependencies]；
+# 版本政策與授權由 deny.toml／.cargo/audit.toml 統一治理（見 ADR-0014）。
 
 [profile.release]
 opt-level = 3
@@ -41,6 +18,8 @@ codegen-units = 1
 lto = true
 panic = "abort"
 split-debuginfo = "info"
+# 2026-11-12 精實化：移除符號表（保留行號資訊供 panic 定位）——安裝包更小。
+strip = "debuginfo"
 
 
 

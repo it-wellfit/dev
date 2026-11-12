@@ -11,6 +11,7 @@ pub mod cross_module_api;
 pub mod db;
 pub mod ingest;
 pub mod nav;
+pub mod obs;
 pub mod ocr;
 pub mod pages;
 pub mod search;

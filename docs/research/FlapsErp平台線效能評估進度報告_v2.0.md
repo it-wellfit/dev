@@ -82,9 +82,9 @@
 | 指標 | 值 | 說明 |
 | :--- | :--- | :--- |
 | 詞法排序 | BM25（K1=1.2、B=0.75、Robertson IDF）——稀有詞勝常見詞、詞頻有序（5 測試） | `platform/src/bm25.rs` |
-| 混合融合 | α·norm(BM25)+(1−α)·norm(cosine)，α=0.5、拒絕地板 0.55（kem 校準）；via 溯源 "hybrid"/"bm25" | `search.rs::fuse` 6 測試 |
+| 混合融合 | **預設 RRF 秩融和（k=60，Cormack 2009，與 kem 同標準）**；`fuse` 加權 α=0.5 降為 A/B 測試基線（#[cfg(test)]）；拒絕地板 0.55（kem 校準）；via 溯源 "hybrid"/"bm25"/"vector" | `search.rs::rrf_fuse`（12 測試） |
 | 降級語義 | embedder 不可達→BM25-only（確定性）；向量失鮮（sha256 失配）→視同缺失 | 誠實降級，永不捏造 |
-| 依賴成本 | `platform → kem` 路徑依賴＝**零新增外部 crate**（Tantivy 教訓） | 兩 Cargo.toml 對照 |
+| 依賴成本 | `platform → kem` 路徑依賴＝**零新增外部 crate**（Tantivy 教訓）；tokio features 顯式最小化（ADR-0014） | 兩 Cargo.toml 對照 |
 
 ---
 
