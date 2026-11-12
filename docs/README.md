@@ -142,10 +142,12 @@
 | :--- | :--- |
 | [`security/THREAT_MODEL.md`](security/THREAT_MODEL.md) | 威脅模型 |
 | [`04-operations/troubleshooting-runbook.md`](04-operations/troubleshooting-runbook.md) | SRE 急救手冊 |
-| [`04-operations/FlapsErp最佳設定基線_v1.0.md`](04-operations/FlapsErp最佳設定基線_v1.0.md) | FlapsErp 最佳設定基線（SSOT；7 鍵/宿主/衛生/工作台） |
-| [`04-operations/FlapsErp設定變更runbook_v1.0.md`](04-operations/FlapsErp設定變更runbook_v1.0.md) | IT 變更/驗證/回滾 runbook |
-| [`04-operations/FlapsErp效能優化操作手冊_v1.0.md`](04-operations/FlapsErp效能優化操作手冊_v1.0.md) | 效能優化操作手冊（config §3.2 已更正） |
-| [`research/FlapsErp設定AB實測報告_v1.0.md`](research/FlapsErp設定AB實測報告_v1.0.md) | 設定 A/B 實測報告（NOT VERIFIED；唯讀證據） |
+| [`04-operations/FlapsErp設定變更runbook_v2.0.md`](04-operations/FlapsErp設定變更runbook_v2.0.md) | FlapsErp 設定變更 runbook（機台無關；Phase 0 偵測→分支→套用→量測→回滾） |
+| [`04-operations/FlapsErp最佳設定基線_v2.0.md`](04-operations/FlapsErp最佳設定基線_v2.0.md) | FlapsErp 最佳設定基線（機台無關；config 7 鍵/宿主/衛生/工作台） |
+| [`04-operations/FlapsErp局部設定最佳化Runbook_v3.0.md`](04-operations/FlapsErp局部設定最佳化Runbook_v3.0.md) | FlapsErp 局部設定最佳化（安裝目錄 14 檔案/目錄微調） |
+| [`04-operations/FlapsErp系統互動精密調校指南_v1.0.md`](04-operations/FlapsErp系統互動精密調校指南_v1.0.md) | FlapsErp 與共存軟體的 12 個互動對精密調校 |
+| [`04-operations/FlapsErp效能優化操作手冊_v1.0.md`](04-operations/FlapsErp效能優化操作手冊_v1.0.md) | 效能優化操作手冊（config §3.2 已更正；平台線 §2.2 標自建） |
+| [`research/FlapsErp設定AB實測報告_v1.0.md`](research/FlapsErp設定AB實測報告_v1.0.md) | 設定 A/B 實測報告（NOT VERIFIED；GPU 偏好+優先級已生效） |
 | [`03-reference/domain-glossary.md`](03-reference/domain-glossary.md) | 領域術語字典（SSOT） |
 
 ---

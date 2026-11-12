@@ -638,3 +638,20 @@ This addendum records execution facts only; it does not approve product scope, c
 | 發布判定 | **PASS** | — |
 
 This addendum records execution facts only; it does not approve product scope, certification, or release.
+
+## 2026-11-12 addendum #36 (FlapsErp 產品優化與系統最佳化：GPU 偏好/優先級已生效＋9 程序量測＋文件治理)
+
+| Item | Disposition | Evidence |
+|---|---|---|
+| GPU 高效能偏好 | ✅ 已設定（HKCU `UserGpuPreferences` `GpuPreference=2;`）；Chromium 合成走獨顯 | 登錄檔實測 |
+| 程序優先級 AboveNormal | ✅ 已設定（全部 8–9 FlapsErp 行程統一 AboveNormal）；重啟後需重設 | `Get-Process FlapsErp` 確認 |
+| 8 行程量測 | 8 行程；total 5,913 MB；COM 0.1874/0.2454/0.311 ms；free 4.87 GB；CPU 11.4%；contended=False | `20261112-112150` |
+| 9 行程量測 | 9 行程；total 7,756.8 MB；COM 0.1870/0.2325/0.2793 ms；free 4.2 GB；CPU 8.9%；contended=False | `20261112-114836` |
+| `app` probe 修正 | 多 session 誤配修正（`moduleToMenu` > 300 s → UNKNOWN）；`moduleToMenu=3,805,923` 假值已壓制 | `20261112-100506`（修正後 15.674 s） |
+| MTRIX fixture 重跑 | exit 0（首跑 1985 ms；5 檔/25 列/37 修復）→ exit 1（冪等重跑 22 ms）；非 FlapsErp 效能 | `20261112-115108` |
+| Defender 排除 | ✅ **已生效**（4 路徑＋1 程序；`Start-Process -Verb RunAs` 提權）；`downloadDoneRelMs` **-77.4%**；`detailsRelMs` **-11.4%**；host CPU **-82%** | `120848`/`120946`/`defender-exclusions.txt` |
+| 文件治理 | Runbook 升級 v2.0（機台無關）；設定基線升級 v2.0（機台無關）；新增局部 Runbook v3.0、系統互動指南 v1.0；v1.0 標 ARCHIVED | `docs/04-operations/` |
+| 計畫升級 | 計畫 v4.1：四層架構（L1 細節→L2 局部→L3 全域→L4 擴展）；文件治理 §1.2；設定面全表 §2.1（14 檔案）；跨機台分支 §4.2；不降級原則 §4.3；任務 T-01..T-18 | 計畫檔 |
+| 發布判定 | **CONDITIONAL PASS**（GPU 偏好/優先級/Defender 排除已生效並實測確認改善；`=0` 新鮮登入後 startup/系統級 A/B/8h soak 待完成） | A/B 報告 §L |
+
+This addendum records execution facts only; it does not approve product scope, certification, or release.
