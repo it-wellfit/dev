@@ -159,12 +159,12 @@
 | 2026-11-12 09:17 full（CONTENDED） | 30 link；free 3.1 GB；disk 0；COM P95 0.3988/P99 0.478 | 無效（cargo build 併發） |
 | 2026-11-12 09:25 full（CONTENDED） | 30 個 link；free 5 MB；diskQueue 17；COM P99 5.58 ms | 無效（cargo build 併發） |
 | 自建 Wellfit A/B diff | 工具可輸出差異；環境指標標 INFO | ✔（工具） |
-| **Defender 排除（4 路徑＋1 程序）** | ✅ **已生效**；`downloadDoneRelMs` **-77.4%**（1,427→322 ms）；`detailsRelMs` **-11.4%**（1,267→1,122 ms）；host CPU **-82%**（14→2.5%） | `120848` vs `101327`；`defender-exclusions.txt` |
+| **Defender 排除（4 路徑＋1 程序）** | ✅ **已生效**；`downloadDoneRelMs` **-77.4%**（1,427→322 ms）；`detailsRelMs` **-11.4%**（1,267→1,122 ms）；`wsMB_median_true` **-74.4%**（18→4.6 MB）；`wsMB_max` **-74.5%**（89→22.7 MB）；host free **6.7 GB** | `120848`/`123402`/`123543` diff；`defender-exclusions-verified.txt` |
 | GPU 高效能偏好 | ✅ 已設定（HKCU `GpuPreference=2;`；永久） | ✔（系統層） |
 | 程序優先級 AboveNormal | ✅ 已設定（全部行程統一；重啟後需重設） | ✔（系統層） |
 | 2026-11-12 11:21 full（8 行程；GPU+優先級生效） | free 4.87 GB；CPU 11.4%；COM 0.1874/0.2454/0.311；total 5,913 | ✔（非 CONTENDED） |
 | 2026-11-12 11:48 full（9 行程；GPU+優先級生效） | free 4.2 GB；CPU 8.9%；COM 0.1870/0.2325/0.2793；total 7,756.8 | ✔（非 CONTENDED） |
-| 2026-11-12 12:08 full（10 行程；**Defender 排除已生效**） | free 4.2 GB；CPU **2.5%**；`downloadDoneRelMs` **322 ms**；`detailsRelMs` **1,122 ms**；total 9,683.6 | ✔（**Defender 排除後**） |
+| 2026-11-12 12:08 full（10 行程；**Defender 排除已生效**） | total **732 MB**（-74.4%）；median 7/true 4.6；max 22.7；free 6.7 GB；CPU 15.1%；`downloadDoneRelMs` **322 ms**；`detailsRelMs` **1,122 ms** | ✔（**Defender 排除後；4 維度 IMPROVED**） |
 | 自建 Wellfit MTRIX fixture 重跑 | exit 0（首跑 1985ms）→ exit 1（冪等重跑 22ms） | ✔（fixture；非 FlapsErp） |
 | 自建 Wellfit 生產批次 | 未執行 | UNKNOWN |
 | 8h soak | 未執行 | UNKNOWN |
@@ -199,7 +199,7 @@
 - IT 變更所有者/測試機；其他 HTTPS 端點盤點；批次主機（另機/同機）；8h soak；`FORCE_DEVICE_SACLE_FACTOR` 正確鍵行為；AP 轉 HTTPS（原廠）。
 
 ## L. 發布判定
-**CONDITIONAL PASS**。GPU 高效能偏好與程序優先級已設定並生效；Defender 排除（4 路徑＋1 程序）已套用並實測確認 `downloadDoneRelMs` **-77.4%**、`detailsRelMs` **-11.4%**、host CPU **-82%**——這是**實測證明的真實效能改善**。尚未完成：`=0` 新鮮登入後 startup（app 在 login 頁；代理無法登入）、系統級 A/B（其他程式併發退步 ≤ 10%）、8h soak。解除條件：使用者登入後完成 fresh `=0`/`=1` 各 5 次＋系統級 A/B＋8h soak 通過。
+**CONDITIONAL PASS**。GPU 高效能偏好、程序優先級、Defender 排除（4 路徑＋1 程序）**已套用並生效**。Defender 排除後實測 **4 個維度同時改善**：`downloadDoneRelMs` **-77.4%**、`detailsRelMs` **-11.4%**、`wsMB_median_true` **-74.4%**、`wsMB_max` **-74.5%**、host free RAM **+0.3 GB**。尚未完成：`=0` 新鮮登入後 startup（app 在 login 頁）、系統級 A/B（其他程式併發退步 ≤ 10%）、8h soak。解除條件：使用者登入後完成 fresh `=0`/`=1` 各 5 次＋系統級 A/B＋8h soak 通過。
 
 ---
 
