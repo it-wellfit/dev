@@ -253,6 +253,7 @@ WHERE transaction_date < '2025-01-01';
    ```
 
 > **[強制規則]** 所有編輯必須使用 UTF-8 無 BOM；PowerShell 寫檔禁用 `>` 重導向；config 變更由 IT 變更管制執行（備份＋SHA256＋回滾），代理不得寫入 `C:\SYSTEM_PROGRAM_DIRECTORY`。
+> **位元組層校正**：先檢查原始位元組／換行／BOM／最後換行；只替換指定鍵；變更前後 diff／hex compare。`ReadAllLines`＋`WriteAllText` 會統一 CRLF 並補尾換行，若原檔格式不同即非逐位元保留。
 > 完整備份（`config.ini`／`processed.ini`／`*.version.txt`／`Module\*.ver`／`AP\*.json`）與還原命令見 `FlapsErp設定變更runbook_v1.0.md` §2.2／§7。
 
 #### 3.2.2 可調整項目（實機 7 鍵）

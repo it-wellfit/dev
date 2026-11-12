@@ -30,8 +30,10 @@
 ## [Unreleased] — 2026-11-11（命名與邊界裁定：自建系統更名 AuxBridge／整合工作台，與原廠 FlapsErp 身份分離）
 
 ### Changed
-- **身份分離**（使用者裁定，SSOT：`docs/standards/NAMING_AND_BOUNDARY_DECREE.md`）：原廠＝FlapsErp（輔翼ERP，僅可深度串接與 config 調整，禁改內容）；自建平台一律 **AuxBridge／整合工作台**。全庫掃描更名 78 檔 205 處、活躍面殘留 0：bin `auxbridge-server`（原 `flaps-server`）、crate `auxbridge_core`（原 `flaps_core`）、env `AUXBRIDGE_*`（原 `FLAPS_*`）、DB `auxbridge.db`／`demo-auxbridge.db`、UI 品牌「AuxBridge 整合工作台」（禁用「輔翼工作台」——輔翼為原廠中文名）、tauri `productName: AuxBridge`、updater `updates.auxbridge.internal`。
-- **防呆測試**（新增 `platform/tests/naming_guard.rs`，3 tests）：自建活躍面（templates/src/tests/web assets/tauri conf/Cargo.tomls）禁出現原廠標記（`Flaps ERP`、`輔翼工作台`、`flaps-server`、`flaps_core`、`FLAPS_` 等）；含正向控制（自建品牌必須實際渲染）與舊 bin 復活防呆。
+- **身份分離**（使用者裁定，SSOT：`docs/standards/NAMING_AND_BOUNDARY_DECREE.md`）：原廠＝FlapsErp（輔翼ERP，僅可深度串接與 config 調整，禁改內容）；自建平台一律 **AuxBridge／整合工作台**。全庫掃描更名 78 檔 205 處、活躍面殘留 0：bin `auxbridge-server`（原 `flaps-server`）、crate `auxbridge_core`（原 `flaps_core`）、env `AUXBRIDGE_*`（原 `FLAPS_*`）、cookie `auxbridge_session`（原 `flaps_session`，13 處）、DB `auxbridge.db`／`demo-auxbridge.db`、UI 品牌「AuxBridge 整合工作台」（禁用「輔翼工作台」——輔翼為原廠中文名）、tauri `productName: AuxBridge`、updater `updates.auxbridge.internal`。
+- **防呆測試**（新增 `platform/tests/naming_guard.rs`，3 tests）：自建活躍面（templates/src/tests/web assets/tauri conf/Cargo.tomls）禁出現原廠標記（`Flaps ERP`、`輔翼工作台`、`flaps-server`、`flaps_core`、`flaps_session`、`FLAPS_` 等）；含正向控制（自建品牌必須實際渲染）與舊 bin 復活防呆。
+- **`/api/modules/health` 收斂**（並行重疊裁定）：採 `cross_module_api` 實作（與 `/api/status` 同源 `probe_modules` SSOT，涵蓋 search/sync/com/ai/db）；`api.rs` 重複註冊移除；session 保護與「不洩漏端點/憑證」負向測試補入（overall=degraded 為 bankpay Mock 模式誠實標示，非缺陷）。
+- **demo 啟動器根治**：`auxbridge-demo-start.cmd` 移至根目錄以 `%~dp0` 定位（零中文寫死）、ASCII+**CRLF**（cmd 批次對 LF-only 與 UTF-8 中文路徑皆會靜默失效——set 全不生效的根因，C-09 延伸教訓）；`AUXBRIDGE_BIND=0.0.0.0` 實證 `0.0.0.0:8090` 監聽＋區網 200。
 
 ### 保留舊名（合法語境，見 decree §5）
 - `docs/research/FlapsErp*`（原廠文檔）、`web/legacy-1420.html`（歷史快照）、`.kilo/plans`、`knowledge/claims`（審計鏈）、`crates/flaps_bridge`（串接目標命名規則）。

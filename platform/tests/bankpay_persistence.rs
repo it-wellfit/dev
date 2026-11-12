@@ -53,7 +53,7 @@ async fn login(app: &axum::Router, pool: &sqlx::SqlitePool) -> (String, String) 
     assert_eq!(status, StatusCode::SEE_OTHER, "login must PRG (303)");
     let cookie = cookie.expect("login must set a session cookie");
     let session_id = cookie
-        .strip_prefix("flaps_session=")
+        .strip_prefix("auxbridge_session=")
         .expect("session cookie shape");
     let (csrf,): (String,) = sqlx::query_as("SELECT csrf_token FROM sessions WHERE session_id = ?")
         .bind(session_id)
@@ -166,7 +166,7 @@ async fn dashboard_pagination_and_bankpay_config_survive_restart() {
         "catalog must list registry endpoints"
     );
     assert!(
-        catalog_body.contains("在測試台檢視即時回應"),
+        catalog_body.contains("在測試台檢視"),
         "catalog must link to the test bench"
     );
 

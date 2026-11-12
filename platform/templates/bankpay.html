@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>銀行支付 — AuxBridge 整合工作台</title>
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%230b5cab'/%3E%3Ctext x='8' y='12' font-size='10' text-anchor='middle' fill='white'%3EF%3C/text%3E%3C/svg%3E">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%232563eb'/%3E%3Ctext x='8' y='12' font-size='10' text-anchor='middle' fill='white'%3EA%3C/text%3E%3C/svg%3E">
     <link rel="stylesheet" href="/assets/design-system.css">
 </head>
 <body>
@@ -50,6 +50,18 @@
             <a class="btn btn-secondary status-detail-toggle" href="/#status-panel">詳情（工作台）</a>
         </div>
     </div>
+
+    {# ── 區段子導覽（sticky；零 JS，:target 驅動高亮） ── #}
+    <nav class="bankpay-subnav" aria-label="BankPay 區段導覽">
+        <div class="container bankpay-subnav-inner">
+            <a href="#mode-title">就緒檢查</a>
+            <a href="#export-title">匯出付款</a>
+            <a href="#import-title">匯入回應檔</a>
+            <a href="#query-title">查詢狀態</a>
+            <a href="#batches">批次清單</a>
+            <a href="#config">連線設定</a>
+        </div>
+    </nav>
 
     <main id="main" class="container">
 

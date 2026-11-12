@@ -37,11 +37,10 @@
                         <label for="file">檔案 <span aria-hidden="true">*</span></label>
                         <input class="input" type="file" id="file" name="file" accept=".csv,.tsv,.xlsx,.docx,.pdf,.eml,.png,.jpg,.jpeg,text/csv,text/tab-separated-values,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/pdf,image/png,image/jpeg" required>
                         <p class="hint">
-                            上限 2MB／5,000 列。支援格式：CSV/TSV、Excel .xlsx（第一張工作表）、PDF 文字層、圖片 OCR（Tesseract，需管理員設定引擎；掃描式文件適用）。
+                            上限 2MB／5,000 列。支援格式：CSV/TSV、Excel .xlsx（第一張工作表）、Word .docx（表格）、PDF 文字層、EML 郵件（逐附件批次）、圖片 OCR（內建 PP-OCRv4 ONNX 引擎；需部署 det/rec/keys 三模型檔，路徑由管理員於連線設定指定；掃描式文件適用）。
                             分隔欄位：TAB、2+ 空白或 |；日期欄文字格式 YYYY-MM-DD。
                             欄位：date, debit_account, credit_account, amount, currency, description。
                             金額最多兩位小數；借貸科目須不同；日期不可為未來；日期欄請使用文字格式 YYYY-MM-DD。
-                            金額最多兩位小數；借貸科目須不同；日期不可為未來。
                         </p>
                     </div>
                 </fieldset>

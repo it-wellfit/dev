@@ -328,7 +328,7 @@ pub fn esun_endpoints() -> Vec<EsunEndpointView> {
             contract_ref: "§47",
             mapping: "/api/bankpay/export",
             mode: "模擬對應",
-            mode_class: "badge-warning",
+            mode_class: "badge-mock",
         },
         E {
             path: "/payment/retrieveTwdPaymentInstructionResult",
@@ -337,7 +337,7 @@ pub fn esun_endpoints() -> Vec<EsunEndpointView> {
             contract_ref: "§118",
             mapping: "/api/bankpay/query",
             mode: "模擬對應",
-            mode_class: "badge-warning",
+            mode_class: "badge-mock",
         },
         E {
             path: "/account/retrieveStatements",
@@ -346,7 +346,7 @@ pub fn esun_endpoints() -> Vec<EsunEndpointView> {
             contract_ref: "§145",
             mapping: "/api/bankpay/import",
             mode: "模擬對應",
-            mode_class: "badge-warning",
+            mode_class: "badge-mock",
         },
         E {
             path: "/payment/validateFxPaymentInstruction",
@@ -493,7 +493,7 @@ fn curl_for(spec: &ApiEndpointSpec) -> String {
     );
     if spec.method == "POST" {
         command.push_str(" \\\n  -H \"Content-Type: application/json\"");
-        command.push_str(" \\\n  -H \"Cookie: flaps_session=<登入後 Cookie 值>\"");
+        command.push_str(" \\\n  -H \"Cookie: auxbridge_session=<登入後 Cookie 值>\"");
         if spec.auth.contains("X-CSRF-Token") {
             command.push_str(" \\\n  -H \"X-CSRF-Token: <頁面表單權杖>\"");
         }

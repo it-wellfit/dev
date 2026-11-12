@@ -187,7 +187,12 @@ async fn bankpay_api_requires_session() {
     }
     let (status, body, _) = send(
         app.clone(),
-        post_json("/api/bankpay/export", "flaps_session=forged", None, "{}"),
+        post_json(
+            "/api/bankpay/export",
+            "auxbridge_session=forged",
+            None,
+            "{}",
+        ),
     )
     .await;
     assert_eq!(status, StatusCode::UNAUTHORIZED, "export must 401");

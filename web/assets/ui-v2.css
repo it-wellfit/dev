@@ -422,3 +422,9 @@ body:not(:has(.site-nav)) { display: block; }
 
 /* ── 精緻化：表格列 hover（掃描輔助） ── */
 tbody tr { transition: background-color var(--transition-fast); }
+
+/* ── 精緻化：文字選取高亮（品牌一致性；品牌 alpha 疊層規則） ── */
+::selection {
+  background: var(--color-primary-muted);
+  color: var(--color-text-primary);
+}

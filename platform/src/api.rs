@@ -513,6 +513,8 @@ pub fn router(state: AppState) -> Router {
         .route("/api/bankpay/transition", post(transition_handler))
         // ── System Status API ──
         .route("/api/status", get(crate::status::status_handler))
+        // /api/modules/health 由 cross_module_api 提供（與 /api/status 同源
+        // probe_modules，SSOT 不重複——2026-11-12 並行收斂裁定）。
         .route_layer(axum::extract::DefaultBodyLimit::max(IMPORT_MAX_BYTES))
         .route_layer(axum::middleware::from_fn_with_state(
             state.clone(),
@@ -6224,6 +6226,45 @@ mod tests {
         );
     }
 
+    // /api/modules/health 由 cross_module_api 提供（與 /api/status 同源
+    // probe_modules，SSOT）。此處驗證聚合形狀、session 保護與探測面最小化。
+    #[tokio::test]
+    async fn modules_health_reports_core_modules() {
+        let (app, _pool, cookie, _csrf) = seeded_app_with_admin().await;
+        let (status, body, _) = send(
+            app,
+            Request::builder()
+                .uri("/api/modules/health")
+                .header(header::COOKIE, cookie)
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK);
+        assert!(body.contains("\"overall\""), "overall must report");
+        assert!(body.contains("\"db\""), "db module must report");
+        assert!(body.contains("\"search\""), "search module must report");
+        assert!(body.contains("\"sync\""), "sync module must report");
+        assert!(
+            !body.contains("esun_url") && !body.contains("client_cert"),
+            "module health must never leak endpoint or credential fields"
+        );
+    }
+
+    #[tokio::test]
+    async fn modules_health_requires_session() {
+        let (app, _pool, _cookie, _csrf) = seeded_app_with_admin().await;
+        let (status, _, _) = send(
+            app,
+            Request::builder()
+                .uri("/api/modules/health")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await;
+        assert_eq!(status, StatusCode::UNAUTHORIZED, "probe needs a session");
+    }
+
     #[tokio::test]
     async fn health_degrades_to_503_when_db_unreachable() {
         let (app, pool) = test_app().await;
@@ -7143,7 +7184,9 @@ mod tests {
             .find_map(|v| v.to_str().ok())
             .map(|v| v.split(';').next().unwrap_or("").to_string())
             .expect("session cookie");
-        let session_id = cookie.strip_prefix("flaps_session=").expect("cookie shape");
+        let session_id = cookie
+            .strip_prefix("auxbridge_session=")
+            .expect("cookie shape");
         let (csrf,): (String,) =
             sqlx::query_as("SELECT csrf_token FROM sessions WHERE session_id = ?")
                 .bind(session_id)

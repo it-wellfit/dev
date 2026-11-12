@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>API 服務目錄 — AuxBridge 整合工作台</title>
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%23005fcc'/%3E%3Ctext x='8' y='12' font-size='10' font-family='sans-serif' fill='white' text-anchor='middle' font-weight='bold'%3EF%3C/text%3E%3C/svg%3E">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%232563eb'/%3E%3Ctext x='8' y='12' font-size='10' font-family='sans-serif' fill='white' text-anchor='middle' font-weight='bold'%3EA%3C/text%3E%3C/svg%3E">
     <link rel="stylesheet" href="/assets/design-system.css">
 </head>
 <body>
@@ -36,41 +36,27 @@
     <main id="main" class="container">
         <section class="panel" aria-labelledby="catalog-title">
             <h2 id="catalog-title">平台端點</h2>
-            <div class="table-wrap">
-                <table>
-                    <caption>平台公開／受保護端點</caption>
-                    <thead>
-                        <tr>
-                            <th scope="col">方法</th>
-                            <th scope="col">路徑</th>
-                            <th scope="col">說明</th>
-                            <th scope="col">認證</th>
-                            <th scope="col">上線</th>
-                            <th scope="col">參數</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% if endpoints.is_empty() %}
-                        <tr>
-                            <td colspan="6">
-                                <p class="empty-state"><strong>尚無端點</strong>註冊表為空，請聯絡系統管理員。</p>
-                            </td>
-                        </tr>
-                        {% else %}
-                        {% for e in endpoints %}
-                        <tr>
-                            <td><span class="badge {{ e.method_class }}">{{ e.method }}</span></td>
-                            <td>{{ e.path }}</td>
-                            <td>{{ e.description }}</td>
-                            <td>{{ e.auth }}</td>
-                            <td>{% if e.live %}<a class="btn btn-secondary" href="/admin/api/test?endpoint={{ e.path }}">在測試台檢視即時回應</a>{% else %}<span class="badge badge-neutral">未上線</span>{% endif %}</td>
-                            <td>{% if e.params.is_empty() %}—{% else %}{% for p in e.params %}{{ p.name }}（{{ p.description }}）{% if !loop.last %}；{% endif %}{% endfor %}{% endif %}</td>
-                        </tr>
-                        {% endfor %}
-                        {% endif %}
-                    </tbody>
-                </table>
-            </div>
+            {% if endpoints.is_empty() %}
+            <p class="empty-state"><strong>尚無端點</strong>註冊表為空，請聯絡系統管理員。</p>
+            {% else %}
+            <ul class="api-card-list" role="list">
+                {% for e in endpoints %}
+                <li class="api-card">
+                    <div class="api-card-body">
+                        <p class="api-card-head">
+                            <span class="badge {{ e.method_class }}">{{ e.method }}</span>
+                            <span class="endpoint">{{ e.path }}</span>
+                        </p>
+                        <p class="desc">{{ e.description }}</p>
+                        <p class="desc">認證：{{ e.auth }}{% if !e.params.is_empty() %} ｜ 參數：{% for p in e.params %}{{ p.name }}（{{ p.description }}）{% if !loop.last %}；{% endif %}{% endfor %}{% endif %}</p>
+                    </div>
+                    <div class="status-text">
+                        {% if e.live %}<a class="btn btn-secondary" href="/admin/api/test?endpoint={{ e.path }}">在測試台檢視</a>{% else %}<span class="badge badge-neutral">未上線</span>{% endif %}
+                    </div>
+                </li>
+                {% endfor %}
+            </ul>
+            {% endif %}
         </section>
 
         <section class="panel" aria-labelledby="esun-title">

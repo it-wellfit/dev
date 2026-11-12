@@ -20,6 +20,7 @@ const BANNED: &[&str] = &[
     "輔翼工作台",             // 原廠中文名「輔翼」污染自建品牌
     "flaps-server",           // 舊 bin 名
     "flaps_core",             // 舊 crate 名（已更名 auxbridge_core）
+    "flaps_session",          // 舊 cookie 名（已更名 auxbridge_session）
     "FLAPS_",                 // 舊 env 前綴（已統一 AUXBRIDGE_）
     "demo-flaps.db",          // 舊 demo DB 名
     "updates.flaps.internal", // 舊 updater endpoint

@@ -769,6 +769,20 @@ select.input {
 .api-card .endpoint { font-family: var(--font-family-mono, monospace); font-size: var(--font-size-xs); color: var(--color-primary-400); margin: var(--space-1) 0; overflow-wrap: anywhere; }
 .api-card .desc { font-size: var(--font-size-xs); color: var(--color-text-tertiary); }
 .api-card .status-text { font-size: var(--font-size-xs); color: var(--color-success); text-align: right; }
+
+.api-card-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: var(--space-4);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.api-card-body { min-width: 0; }
+.api-card-head { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; margin: 0 0 var(--space-1); }
+.api-card-head .endpoint { font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0; }
+.api-card .desc { margin: 0 0 var(--space-1); }
 .health-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -814,20 +828,38 @@ select.input {
 
 .bankpay-subnav a:hover { background: var(--color-surface-raised); color: var(--color-text-primary); }
 .bankpay-subnav a[aria-current="true"] { background: var(--color-primary-subtle, rgba(59, 130, 246, 0.1)); color: var(--color-primary); font-weight: var(--font-weight-medium); }
- color: var(--color-error); font-weight: var(--font-weight-bold); }
- font-size: var(--font-size-xs); color: var(--color-text-tertiary); margin-top: var(--space-1); text-align: right; }
 
+.bankpay-subnav-inner {
+  display: flex;
+  gap: var(--space-1);
+  align-items: center;
+  min-width: max-content;
+}
+
+/* 零 JS 高亮：:target 命中時以 :has() 點亮對應子導覽連結 */
+body:has(#mode-title:target) .bankpay-subnav a[href="#mode-title"],
+body:has(#export-title:target) .bankpay-subnav a[href="#export-title"],
+body:has(#import-title:target) .bankpay-subnav a[href="#import-title"],
+body:has(#query-title:target) .bankpay-subnav a[href="#query-title"],
+body:has(#batches:target) .bankpay-subnav a[href="#batches"],
+body:has(#config:target) .bankpay-subnav a[href="#config"] {
+  background: var(--color-primary-subtle, rgba(59, 130, 246, 0.1));
+  color: var(--color-primary);
+  font-weight: var(--font-weight-medium);
+}
+
+/* sticky 子導覽不遮擋錨點目標 */
+main :is(#mode-title, #export-title, #import-title, #query-title, #batches, #config) {
+  scroll-margin-top: 4rem;
+}
+
+.badge-mock {
   background: rgba(251, 191, 36, 0.15);
   color: #fbbf24;
   border: 1px solid rgba(251, 191, 36, 0.3);
 }
 
-.badge-ok {
-  background: rgba(74, 222, 128, 0.15);
-  color: #4ade80;
-  border: 1px solid rgba(74, 222, 128, 0.3);
-}
-
+.badge {
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);

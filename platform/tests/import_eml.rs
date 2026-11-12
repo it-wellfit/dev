@@ -57,7 +57,9 @@ async fn eml_csv_attachment_imported() {
     .expect("seed admin");
     let cookie = login(&app).await;
 
-    let session_id = cookie.strip_prefix("flaps_session=").expect("cookie shape");
+    let session_id = cookie
+        .strip_prefix("auxbridge_session=")
+        .expect("cookie shape");
     let (csrf,): (String,) = sqlx::query_as("SELECT csrf_token FROM sessions WHERE session_id = ?")
         .bind(session_id)
         .fetch_one(&pool)

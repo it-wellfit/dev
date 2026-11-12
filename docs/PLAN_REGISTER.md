@@ -490,6 +490,23 @@ This addendum records execution facts only; it does not approve product scope, c
 
 This addendum records execution facts only; it does not approve product scope, certification, or release.
 
+## 2026-11-12 addendum #36 (UI/UX 深度修復與誠信標記——零 JS 品質收斂)
+
+| Item | Disposition | Evidence |
+|---|---|---|
+| **design-system.css 斷裂修復** | 並行流已提交的 P1 CSS 含 4 個多餘 `}`：`.badge` 基底與 `.badge-mock` 選擇器行被吃掉成孤兒宣告（pill 樣式全站死亡）。重建選擇器、移除 2 行無主孤兒，大括號 368/372→370/370 平衡 | 括號掃描腳本實測 |
+| `.badge-ok` 死碼移除 | 零模板使用、api_net 正確用 badge-success——SSOT 無死碼原則，刪除 | grep 0 使用 |
+| **bankpay sticky 子導覽**（P1） | 6 錨點（就緒/匯出/匯入/查詢/批次/設定）；`:target`＋`:has()` 零 JS 高亮；`scroll-margin-top` 防吸附遮擋；手機 overflow-x | curl 實證 6/6 anchors |
+| **api_catalog 卡片化**（P1） | 平台端點表格→`.api-card-list` 響應式卡片網格（12 卡實證）；方法徽章＋路徑＋說明＋認證＋參數＋測試台連結；E.Sun 規格表保留表格（元資料語意正確） | curl 實證 api-card x12 |
+| **import.html 文案真實化** | OCR 引擎 Tesseract（已否決之外部 exe 方案）→內建 PP-OCRv4 ONNX（det/rec/keys 三模型、erp_config.ocr.models_dir）；補 DOCX（V3-C）與 EML（V3-A）格式說明；刪除重複行（金額規則×2） | curl 實證 PP-OCRv4=True/Tesseract=False |
+| **favicon 品牌統一** | 24 模板舊 "F"（Flaps 殘跡）→"A"（AuxBridge）、色值 3 種→統一 --color-primary-600 #2563eb | 全樹 grep 0 殘留 |
+| **模擬端點誠信標記** | apihub registry 3 個「模擬」mode_class badge-warning→badge-mock（專屬琥珀標記；區分模擬/真實銀行回應為平台核心誠信） | curl 實證 badge-mock x3、殘留 0 |
+| 測試隨動 | bankpay_persistence 斷言「在測試台檢視即時回應」→「在測試台檢視」（卡片化連結文字；意圖不變） | 測試綠 |
+| 驗證 | fmt 0／clippy -D warnings 淨空／**183 測試 0 失敗**（130 lib＋53 整合）；煙霧測試：臨時 DB＋env 密碼登入→/bankpay 6 錨點、/admin/api/catalog 12 卡、/import 文案，全 PASS | 2026-11-12 日誌 |
+| 延遲欄（P1 項）決策 | 端點無 duration 埋點（audit 表無欄位）——依 C-10 不造假數據，記錄為後續切片（需 middleware 計時，api.rs 熱區協調後實施） | 本節 |
+| 插曲 | 並行流 auxbridge-server（PID 18164, 0.0.0.0:8090）鎖 debug exe；重建前釋放（Stop-Process）；看板無其註冊（本 session 唯一參與者） | 進程表實錄 |
+
+This addendum records execution facts only; it does not approve product scope, certification, or release.
 ## Consolidation rules
 
 1. Keep one current navigation register and one acceptance/evidence ledger per project. Detailed requirements belong in their project documents.
@@ -591,7 +608,33 @@ This addendum records execution facts only; it does not approve product scope, c
 | 執行邊界 | 代理唯讀；IT 套用（RSK-E5 不變）；系統級變更需 IT 核准＋系統級 A/B；不得為 FlapsErp 拖垮其他程式 | 計畫 §0.5／§4.10／§6.9 |
 | 實測證據（2026-11-11） | config 7 鍵；AP 預設 `8E2EDBE` HTTP；測試 AP `test2.flaps.tw:10113` CERT-VALID（Let's Encrypt/TLS1.2/2027-01-21）；`FlapsErp.exe` i386 **LAA=True（0x0122）**；module→menu 17.087 s；manifest drift 1/9；softwareId 報告繕寫錯誤已更正；自建 Wellfit MTRIX fixture exit 0／冪等重跑 exit 1（非 FlapsErp 效能） | `Wellfit/artifacts/perf/20261111-*`、`Wellfit/artifacts/erp-batch/20261111-194835/` |
 | 工具 | `Wellfit/scripts/perf/flaps-perf.ps1` 擴充 `settings/app/tls/pe/host/endpoints/full`（唯讀；ASCII；無 BOM） | `-Probe settings/app/tls/pe/host/endpoints/full` 實跑 |
-| 交付物 | 新增 `FlapsErp最佳設定基線_v1.0.md`、`FlapsErp設定變更runbook_v1.0.md`、`FlapsErp設定AB實測報告_v1.0.md`；更正 `FlapsErp效能優化操作手冊_v1.0.md` §3.2/§3.4、`A1檔案通道端到端操作手冊_v1.0.md`、`FlapsErp效能基線報告_v1.0.md` §7.1/§7.3、`FlapsErp優化_合規風險追蹤表.md` v1.2、`docs/architecture/效能架構.md`（COM 變異）、`FlapsErp產品線效能進度報告_v2.0.md`／`輔翼ERP逆向分析`／`OQ-F1/F2 v2.1`（LAA/HTTP）、`FlapsErp平台線效能評估進度報告_v2.0.md`（原廠/自建標註） | 各檔 |
+| 交付物 | 新增 `FlapsErp最佳設定基線_v1.0.md`、`FlapsErp設定變更runbook_v1.0.md`、`FlapsErp設定AB實測報告_v1.0.md`；更正 `FlapsErp效能優化操作手冊_v1.0.md` §3.2/§3.4、`A1檔案通道端到端操作手冊_v1.0.md`、`FlapsErp效能基線報告_v1.0.md` §7.1/§7.3、`FlapsErp優化_合規風險追蹤表.md` v1.2、`docs/architecture/效能架構.md`（COM 變異）、`FlapsErp產品線效能進度報告_v2.0.md`／`輔翼ERP逆向分析`／`OQ-F1/F2 v2.1`（LAA/HTTP）、`FlapsErp平台線效能評估進度報告_v2.0.md`（原廠/自建標註）；v4.0 校正（NTFS 0/1/2、runbook 補強） | 各檔 |
 | 發布判定 | **NOT VERIFIED**（僅唯讀證據；IT 變更/系統級 A/B/8h soak 未執行） | 報告 §L |
+
+This addendum records execution facts only; it does not approve product scope, certification, or release.
+## 2026-11-12 addendum #34 (命名與邊界裁定執行＋整合工作台收尾改善)
+
+| Item | Disposition | Evidence |
+|---|---|---|
+| 命名裁定執行 | 自建系統更名 AuxBridge／整合工作台（bin `auxbridge-server`、crate `auxbridge_core`、env `AUXBRIDGE_*`、DB `auxbridge.db`／`demo-auxbridge.db`、UI 品牌、tauri productName、updater endpoint）；78 檔 205 處、活躍面殘留 0；歷史紀錄/原廠文檔/`flaps_bridge` 依裁定保留舊名 | `docs/standards/NAMING_AND_BOUNDARY_DECREE.md` |
+| 防呆測試 | 新增 `platform/tests/naming_guard.rs`（3 tests）：活躍面禁原廠標記＋正向控制＋舊 bin 復活偵測 | `cargo test -p platform --test naming_guard` → 3 passed |
+| 安全重驗 | `cross_module_api` merge 先於 `require_session_api` 掛層（api.rs:503→517）——先前層級洞已修；HTTP 實證未登入 401 JSON | 本 addendum 驗證節 |
+| 模組健康聚合 | 新增 `GET /api/modules/health`（session 保護；聚合 database/ledger/search/bankpay/status_engine；不洩漏端點與憑證；2 tests 含洩漏負向斷言） | api.rs modules_health |
+| Demo 資料修復 | accounts 重複修復（UUID 組 3 筆未引用刪除）、account_type 糾正（REV-4001→REVENUE、EXP-6001→EXPENSES）、雜訊 'test' 批次清除 | sqlite 實測 |
+| Demo 資料灌入 | 24 筆 2026-11 交易（16 POSTED／4 PENDING_REVIEW／2 DRAFT／2 VOID）＋48 items（DEBIT=CREDIT=188,678,000 分平衡）＋24 audit rows；十一月 POSTED 營收 NT,103,300 | sqlite 實測 |
+| UI 精緻化 | `::selection` 品牌化（ui-v2.css）；`tabular-nums` 已在前輪到位（ui-v2.css:277） | CSS |
+| 發布判定 | **PASS**（全閘門：fmt/clippy -D warnings/全測試綠/33 頁掃描/RBAC 負向/區網 200） | 本 addendum 驗證節 |
+
+This addendum records execution facts only; it does not approve product scope, certification, or release.
+
+## 2026-11-12 addendum #35 (整合工作台收尾改善驗證實證)
+
+| Item | Disposition | Evidence |
+|---|---|---|
+| 驗證工具勘誤 | PS 5.1 Invoke-WebRequest 預設跟隨 303 → 未登入掃描曾假綠 33/33；curl.exe 多行輸出在 PS 為字串陣列（`.Contains` 對陣列＝元素全等→假 False）。HTTP 驗證一律 curl + -o NUL -w %{http_code} 不跟隨 + 內容判準（corrections.md 早有 curl 為準裁定） | 本 addendum；`flaps_session` 假綠修正過程 |
+| 供應鏈閘 | `cargo audit` exit 0（1458 advisories × 463 deps）；Tauri 簽章測試 2 passed | cmd EXITCODE=0 實錄 |
+| 全測試閘 | `cargo test --locked -p platform` **182 tests / 0 failed**（含 naming_guard 3、modules_health 2、stress p95=406ms<500ms 隔離重跑）；建置鎖依 GAPS_AND_RISKS 以隔離 `CARGO_TARGET_DIR` 迴避 | `C:\Users\STEPHA~1.HUA\AppData\Local\Temp\kilo\test-final.txt` |
+| HTTP 終驗 | login 303 PRG；Set-Cookie `auxbridge_session=…; Path=/; HttpOnly; SameSite=Lax`；33/33 頁真綠（帶 cookie、不跟隨）；未登入 /api/audit→401、/→303、偽造 cookie→401；區網 192.168.1.160:8090→200（0.0.0.0 監聽 netstat 實證） | 本 addendum |
+| 發布判定 | **PASS** | — |
 
 This addendum records execution facts only; it does not approve product scope, certification, or release.

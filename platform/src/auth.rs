@@ -31,7 +31,7 @@ use crate::api::AppState;
 
 /// Session lifetime: 24 hours (fixed; re-login renews).
 pub const SESSION_TTL_HOURS: i64 = 24;
-pub const SESSION_COOKIE: &str = "flaps_session";
+pub const SESSION_COOKIE: &str = "auxbridge_session";
 
 /// Errors surfaced to the login form (deliberately generic — never reveal
 /// whether the username or the password was wrong).
@@ -520,7 +520,7 @@ pub async fn require_session_api(
         }
         None => (
             axum::http::StatusCode::UNAUTHORIZED,
-            "未授權：請先登入（缺少有效 flaps_session Cookie）。處理方式：先以 /login 取得 session 後重試。",
+            "未授權：請先登入（缺少有效 auxbridge_session Cookie）。處理方式：先以 /login 取得 session 後重試。",
         )
             .into_response(),
     }

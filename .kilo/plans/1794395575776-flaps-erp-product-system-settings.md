@@ -4,7 +4,7 @@
 > 範圍：FlapsErp v0.0.4 桌面產品（`C:\SYSTEM_PROGRAM_DIRECTORY\FlapsErp`）＋ Windows 宿主＋與 FlapsErp 直接相接的 Wellfit 批次排程。
 > 事實標記：✔ 2026-11-11 唯讀觀測｜△ 依證據推導，待實機驗證｜⚠ 需原廠／IT 確認。
 > 治理：C-13 Evidence-Driven；發布判定五級（PASS／CONDITIONAL PASS／BLOCKED／REJECTED／NOT VERIFIED）。
-> **執行邊界（使用者已裁定）**：代理只做唯讀量測、設定規格、文件與驗收；任何寫入 `C:\SYSTEM_PROGRAM_DIRECTORY` 或 OS 設定的變更，由 IT 於變更管制（備份＋SHA256＋回滾）下執行，紅線 RSK-E5 不變。
+> **執行邊界（使用者 2026-11-12 更新）**：代理可套用 `config.ini`（備份＋SHA256＋回滾；使用者明示授權）；OS／二進位仍由 IT；不得關閉 AV／UAC／WDAC；不得拖垮其他程式。
 
 ---
 
@@ -83,6 +83,15 @@
 
 **規則**：不得把 Wellfit/自建工具的效能或設定當成 FlapsErp 原廠效能；不得把 FlapsErp 原廠設定寫到 Wellfit；不得把自建平台的 DB 當 FlapsErp 資料；`FlapsErpData` 僅唯讀。
 
+### 0.7 平台邊界（Windows / Linux / macOS）
+| 元件 | 平台 | 說明 |
+|---|---|---|
+| FlapsErp | **Windows only** | COM/ActiveX/DLL；無 macOS/Linux 版本；本計畫的 Windows 設定僅適用 Windows |
+| Wellfit 批次 | Windows / Linux | Rust 可跨平台；**優先 Linux 批次主機**（native binary；無 Docker）；若同 Windows 主機，套用 §4.5.2 |
+| `flaps-perf.ps1` | Windows only | PowerShell；Linux 不適用；Wellfit Linux 用 `wellfit` CLI＋`/usr/bin/time` 或 Rust harness |
+| Rust 平台 | 跨平台 | 非本計畫 |
+| 量測/證據 | 平台特定 | Windows 用 `.ps1`/artifacts；Linux 用 shell/Rust harness；**不得混用** |
+
 ---
 
 ## 1. 目標與非目標
@@ -147,6 +156,8 @@
 | CDP 9222 | NOT-FOUND | — | 同上 ✔ |
 | config 快照 | 10 檔＋SHA256 manifest | — | `SHA256_MANIFEST.txt` ✔ |
 
+> 2026-11-12 09:17 全量（app 執行中）：8 行程；RAM median 67.2（true 62.4）；max 84；host free 3.1 GB；CPU 45%；COM 0.2332/0.3988/0.478 ms；hygiene 8 行程／flapserp 已註冊／windmill 未安裝。
+
 ### 2.5 已發現的文件事實錯誤（必須更正）
 1. `docs/04-operations/FlapsErp效能優化操作手冊_v1.0.md` §3.2 指向 `Dev\platform\config.ini`（**錯誤路徑**；實機在 `C:\SYSTEM_PROGRAM_DIRECTORY\.conf\config.ini`）。
 2. 同節「可調整項目」寫 `ORG/PERM/ACT/STORE/POS/INV`——**實機無這些鍵**，屬虛構；實際只有 §2.1 的 7 鍵。
@@ -191,7 +202,7 @@
 |---|---|---|
 | OS | Windows 11 Home build 26300（64-bit） | 家用版；AppLocker/WDAC 可能不可用 |
 | CPU | AMD Ryzen 7 4800HS（8C/16T）；load 7–73%（取樣；受其他程式/本工具影響） | 筆電；高效能計畫會犧牲電池/熱 |
-| RAM | 15.79 GB total；3.4–5.0 GB free（取樣；會隨其他程式變動） | 16 GB 已足；但同時跑 Code/ChatGPT/Chrome/Outlook 只剩約 3.4–5.0 GB |
+| RAM | 15.79 GB total；4.0–7.2 GB free（非 CONTENDED 取樣；會隨其他程式變動） | 16 GB 已足；但同時跑 Code/ChatGPT/Chrome/Outlook 只剩約 4.0–7.2 GB |
 | 磁碟佇列 | 0–1（取樣） | 目前無明顯 I/O 瓶頸 |
 | 溫度 | UNKNOWN（無 ACPI 熱區/權限） | 筆電熱降頻風險需監控 |
 | 前 20 行程（代表值） | Code 991/623/233/149 MB；Memory Compression 796；kilo 744；MsMpEng 308；ChatGPT 287/189/178；explorer 273；msedgewebview2 253/206；chrome 215/172/170/143；powershell 163；msedge 132；OUTLOOK 129 | 其他程式已佔大量 RAM；FlapsErp 11 行程會再擠 |
@@ -204,7 +215,7 @@
 
 | ID | 決策 | 理由 |
 |---|---|---|
-| D-01 | 代理唯讀；IT 套用 | 紅線 RSK-E5；變更需備份／SHA256／回滾 |
+| D-01 | 代理可套用 `config.ini`（使用者 2026-11-12 明示授權）；OS/二進位仍由 IT | 備份／SHA256／回滾；不得關閉 AV/UAC/WDAC；不得拖垮其他程式 |
 | D-02 | 產品設定以 **7 個既有鍵**為準；不新增未證實的鍵 | 原廠只認既有鍵；新增鍵無效且製造假設定 |
 | D-03 | 7 鍵中只 A/B `DISABLE_HARDWARE_ACCELERATION`；`FORCE_DEVICE_SACLE_FACTOR` 僅在 UI 裁切時評估 | 只有這兩個與效能／渲染直接相關 |
 | D-04 | `IGNORE_CERT_ERR` 維持 1，直到「HTTPS＋憑證可信或內部 CA 已安裝」；HTTP AP 下無作用 | 直接改 0 可能破壞測試 AP；真正修正需 HTTPS |
@@ -282,7 +293,7 @@ KEEP_MACHINE_ID_MIGRATED=1
 | 記憶體 | 分頁檔 | C | **system-managed**（本機） | 固定大小可能限制其他程式 | IT |
 | 儲存 | 磁碟 | S | SSD／NVMe；可用 ≥15%（T-00 確認） | 全機 I/O 受益 | IT |
 | 儲存 | Defrag／Trim | S | SSD Defrag 關；定期 ReTrim | 全機受益 | IT |
-| 儲存 | NTFS Last Access | C | **不做**（本機） | 影響備份/完整性工具 | IT |
+| 儲存 | NTFS Last Access | C | **不做**（本機；0=user-enabled、1=user-disabled、2=system-enabled/default、3=system-disabled） | 影響備份/完整性工具 | IT |
 | 安全 | Defender 排除 | S | 最小排除 `FlapsErp`／`Module`／`FlapsErpData` | 安全面下降；不影響效能 | IT（核准） |
 | 安全 | WDAC／AppLocker | S | 確認允許；不改政策 | 安全/政策 | IT |
 | 安全 | UAC | S | 保持預設 | 不可關閉 | IT |
@@ -319,7 +330,7 @@ KEEP_MACHINE_ID_MIGRATED=1
 #### 4.5.1 既有工具（自建；不要重造）
 | 工具 | 用途 | 注意 |
 |---|---|---|
-| `Wellfit/scripts/perf/flaps-perf.ps1` | baseline／com／cdp 探測 | 唯讀；輸出 artifacts |
+| `Wellfit/scripts/perf/flaps-perf.ps1` | baseline／com／cdp／app／settings／tls／pe／host／endpoints／hygiene／diff 探測 | 唯讀；輸出 artifacts |
 | `Wellfit/scripts/erp-batch/run-mtrix-pipeline.ps1` | MTRIX 流程／冪等驗證（fixture） | 只寫 `OutRoot`（預設 artifacts）；**不寫原廠目錄**；生產批次另用 `wellfit.exe mtrix --dir <唯讀 delivered> --report/--db <artifacts>` |
 | `Wellfit/scripts/bench.ps1` | MTRIX 每檔耗時（target <5 s/檔） | 需先建 `wellfit.exe` |
 | `Wellfit/scripts/benchmark_synthetic_ingestion.ps1` | Shopee／Reports 合成容量 | **合成資料，非生產 SLA** |
@@ -400,7 +411,7 @@ powercfg /setactive SCHEME_CURRENT
 # 2) 快速啟動（完整開機；需管理員）
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Power" /v HiberbootEnabled /t REG_DWORD /d 0 /f
 
-# 3) NTFS last access（減少背景 I/O）
+# 3) NTFS last access（0=user-enabled,1=user-disabled,2=system-enabled/default,3=system-disabled；本機不套用）
 fsutil behavior set disablelastaccess 1
 
 # 4) Defender 最小排除（不關閉 AV）
@@ -453,18 +464,18 @@ New-NetFirewallRule -DisplayName "FlapsErp AP HTTP" -Direction Outbound -RemoteA
 | T-00 | 宿主與環境盤點（唯讀） | 代理 | `Get-ComputerInfo`；`Win32_Processor`；`Win32_PhysicalMemory`；`Get-PhysicalDisk`／`Get-Volume`；`Win32_VideoController`；`Get-NetAdapter`／`Get-NetAdapterPowerManagement`；`Get-MpPreference`；`Get-AppLockerPolicy -Effective`；`Get-ExecutionPolicy -List`；`powercfg /list`、`/a`、`HiberbootEnabled`；`Get-TimeZone`；`w32tm /query /status`；`Get-ScheduledTask`；`Get-Process FlapsErp`；`Get-Command windmill`；`reg query HKCR\flapserp\shell\open\command` | `Wellfit\artifacts\perf\<ts>\system-baseline.json`（host probe；AppLocker/ExecutionPolicy/MpPreference 由 IT 另附）；標出缺口（HDD／RAM／AV 排除／Fast Startup／flapserp 未註冊等）；不寫入原廠目錄 |
 | T-00b | 全系統基線（唯讀） | 代理 | 前 20 名 CPU/RAM 行程；`Get-Counter` CPU/可用 RAM/磁碟佇列/延遲；`MSAcpi_ThermalZoneTemperature`；`Get-Service` Search/Update/Backup/Defender；`Get-ScheduledTask`；`Get-MpComputerStatus`；`Get-NetAdapterStatistics` | `Wellfit\artifacts\perf\<ts>\system-baseline.json`；標出其他程式/背景服務/熱/佇列；不寫入原廠目錄 |
 | T-01 | 凍結唯讀基線 | 代理 | `flaps-perf.ps1 -Probe all`；`Get-FileHash` 比對 manifest；保存最新 app log 摘要 | timestamped artifact；7 鍵與 manifest 一致或列差異（含 softwareId） |
-| T-02 | 擴充 `flaps-perf.ps1`（既有 .ps1；唯讀） | 代理 | `baseline` 加 `Get-CimInstance Win32_Process` 命令列角色標註（`--type=gpu-process`／`renderer`／`utility`）；新增 `-Probe app`（參數 `-LogDir` 預設 `C:\SYSTEM_PROGRAM_DIRECTORY\logs`）：解析最新 `application-WELLFIT-*.log`（依 LastWriteTime、FileShare.ReadWrite），輸出 `module_load→menu_ready_ms`、`menu→first_tab_ms`（無 ready 標記則 UNKNOWN）、`report_task`、視窗／螢幕；新增 `-Probe settings`（參數 `-ConfigPath`、`-ApDir`、`-Manifest`）：7 鍵、AP ID／scheme／host／port（其餘遮罩）、Module `.ver`、manifest hash 比對；`all` 保持 baseline+com+cdp（向後相容），新增 `full` 含 app+settings+tls+pe+host+endpoints | 未執行時 `APP-NOT-RUNNING`；不寫入 `C:\SYSTEM_PROGRAM_DIRECTORY`；`.ps1` 無 BOM、ASCII 字面量 |
+| T-02 | 擴充 `flaps-perf.ps1`（既有 .ps1；唯讀） | 代理 | `baseline` 加 `Get-CimInstance Win32_Process` 命令列角色標註（`--type=gpu-process`／`renderer`／`utility`）；新增 `-Probe app`（參數 `-LogDir` 預設 `C:\SYSTEM_PROGRAM_DIRECTORY\logs`）：解析最新 `application-WELLFIT-*.log`（依 LastWriteTime、FileShare.ReadWrite），輸出 `module_load→menu_ready_ms`、`menu→first_tab_ms`（無 ready 標記則 UNKNOWN）、`report_task`、視窗／螢幕；新增 `-Probe settings`（參數 `-ConfigPath`、`-ApDir`、`-Manifest`）：7 鍵、AP ID／scheme／host／port（其餘遮罩）、Module `.ver`、manifest hash 比對；`all` 保持 baseline+com+cdp（向後相容），新增 `full` 含 app+settings+tls+pe+host+endpoints+hygiene；新增 `hygiene`（程序/角色/processed.ini/Module `.ver`/flapserp/windmill/Defender/ExecutionPolicy/AppLocker）與 `diff`（兩 artifacts 比較；環境指標 INFO；true median）；baseline/com/host 輸出 `contended`（`link`/`cargo`/`rustc`、free<1 GB、diskQueue>5） | 未執行時 `APP-NOT-RUNNING`；不寫入 `C:\SYSTEM_PROGRAM_DIRECTORY`；`.ps1` 無 BOM、ASCII 字面量 |
 | T-03 | TLS／二進位唯讀探測 | 代理 | `SslStream` 檢查 `test2.flaps.tw:10113`（主體／發行者／到期／鏈／主機名／TLS 版本／撤銷狀態；探測用 callback 僅在 probe 內接受）；讀 `FlapsErp.exe` PE `IMAGE_FILE_LARGE_ADDRESS_AWARE`；唯讀掃 `app.asar`／log／AP JSON 的 `https://` 端點清單（決定 `IGNORE_CERT_ERR` 影響面） | JSON：`CERT-VALID`／`CERT-UNTRUSTED`／`CERT-EXPIRED`／`UNREACHABLE`；LAA `SET`／`NOT-SET`；HTTPS 端點清單 |
 | T-04 | Tier 0 宿主套用＋前後量測 | IT 套用；代理量測 | 電源計畫／睡眠／休眠／快速啟動／USB／顯示器；AV 排除；NTFS last access；時間／時區；搜尋排除；config.ini 先備份、`Format-Hex` 檢查 BOM、**逐行替換不得重排**、保留 CRLF、`[IO.File]::WriteAllText` UTF-8 no BOM、記 SHA256 | `powercfg /getactivescheme`、`powercfg /a`、`Get-MpPreference`、`fsutil behavior query disablelastaccess`、`MSAcpi_ThermalZoneTemperature`、`Get-TimeZone` 前後輸出；config hash；T-01 重跑對照；無熱降頻 |
 | T-05 | 硬體加速／DPI A/B | 代理量測；IT 套用 | Arm A `DISABLE_HARDWARE_ACCELERATION=0` vs Arm B `=1`；每臂 **5 次**重啟；比較 RAM median／max、GPU 程序 RAM、app log 時間、主觀凍結；DPI 0 vs 1（若裁切） | 每臂 5 筆 `perf-result.json`＋app log；判定表；任一指標惡化 >10% 保留原值 |
 | T-06 | OS 進階（分頁檔／網路／視覺） | IT | 分頁檔（預設 system-managed；實測抖動才固定；`Win32_PageFileSetting` 或 GUI）；NIC 省電（桌機/RPA 站）；視覺效果（非必要不做）；`Optimize-Volume -ReTrim`；溫度/降頻檢查 | `Get-CimInstance Win32_PageFileUsage`、`Get-NetAdapterPowerManagement`、`MSAcpi_ThermalZoneTemperature` 前後輸出；無熱降頻 |
 | T-07 | AP／網路／TLS | IT | 預設 AP 不變；防火牆白名單（`New-NetFirewallRule ... -RemoteAddress 210.64.124.59 -RemotePort 10578 -Action Allow`）；測試 AP 生產不可達（必要時 Block 規則）；必要時安裝 CA；`IGNORE_CERT_ERR` 決策 | `Test-NetConnection 210.64.124.59 -Port 10578` 成功；測試 AP 生產不可達；憑證證據 |
 | T-08 | 排程／監控／告警 | IT／代理 | 註冊每日／每週／每月；app log 門檻；`FAIL`／`DRIFT` 告警；temp 大小監控；系統 CPU/RAM/磁碟佇列；其他程式守門 | `Get-ScheduledTask`；手動 run 成功；artifact＋alert；系統指標；其他程式無退步 |
-| T-09 | 文件更正 | 代理 | 修正 §2.5 七項（含 A1 手冊紅線路徑）；軟體邊界標註（原廠 FlapsErp vs 自建 Wellfit）；LAA/HTTP/COM 更正；`PLAN_REGISTER.md` addendum #33；`docs/README.md` 索引 | 路徑／鍵與實機一致；無懸空引用；A1 手冊不再寫入 `C:\SYSTEM_PROGRAM_DIRECTORY` |
+| T-09 | 文件更正 | 代理 | 修正 §2.5 七項（含 A1 手冊紅線路徑）；軟體邊界標註（原廠 FlapsErp vs 自建 Wellfit）；LAA/HTTP/COM 更正；v4.0 校正（NTFS 0/1/2、runbook 補強）；`PLAN_REGISTER.md` addendum #33；`docs/README.md` 索引 | 路徑／鍵與實機一致；無懸空引用；A1 手冊不再寫入 `C:\SYSTEM_PROGRAM_DIRECTORY` |
 | T-10 | 最佳設定基線文件 | 代理 | 新增 `docs/04-operations/FlapsErp最佳設定基線_v1.0.md`（產品／AP／宿主／衛生／工作台／監控／驗收／回滾／變更紀錄） | 與 T-00..T-16 證據一致；未量測標 UNKNOWN |
-| T-11 | A/B 報告與發布判定 | 代理 | 彙整 T-00..T-07、T-13、T-15；A–L；五級判定 | 報告含命令、exit code、日期、環境；預期 **CONDITIONAL PASS**（8h soak 前） |
+| T-11 | A/B 報告與發布判定 | 代理 | 彙整 T-00..T-07、T-13、T-15；以 `-Probe diff` 產出差異（contended 樣本不列入）；A–L；五級判定 | 報告含命令、exit code、日期、環境；預期 **CONDITIONAL PASS**（8h soak 前） |
 | T-12 | 8h soak（生產必要） | IT／代理 | 連續 8h；每小時循環：0–10 min 開/關 10 tabs（FAS/HRS/INV/POS）、10–20 min 匯出 5 報表、20–60 min idle；同時跑瀏覽器 10 tabs／Excel／Outlook（併發）；每 5 min RAM；每 10 min 檢查 app log | RAM 增長 <50 MB；無崩潰；Event Log 無錯誤；其他程式無 >10% 退步 |
-| T-13 | 分頁／程序衛生 | IT／使用者 | 單一實例檢查腳本（重複啟動先提示，不自動 kill，除 IT 腳本）；關閉多餘 readonly tabs；單一主視窗；下載資料夾 SSD；以 T-02 角色清單為對照（基線 11 行程）；比對 `.conf\processed.ini`／`.ver` 啟動前後是否變動（若每次變動→DLL 重註冊） | 行程數／游離 RAM 下降；UI 凍結 -50%（△）；DLL 不重複註冊 |
+| T-13 | 分頁／程序衛生 | IT／使用者 | 單一實例檢查腳本（重複啟動先提示，不自動 kill，除 IT 腳本）；關閉多餘 readonly tabs；單一主視窗；下載資料夾 SSD；以 `-Probe hygiene` 與 T-02 角色清單為對照（基線 11 行程）；比對 `.conf\processed.ini`／`.ver` 啟動前後是否變動（若每次變動→DLL 重註冊） | 行程數／游離 RAM 下降；UI 凍結 -50%（△）；DLL 不重複註冊 |
 | T-14 | 夜間重啟（條件式） | IT | 若 T-12 顯示洩漏，才排程每日收工後重啟；排 02:00 或批次後，先確認無夜間使用者 | 8h RAM 增長 <50 MB；不影響夜間批次 |
 | T-15 | A1／自建 Wellfit／報表外移 | 開發／IT | 先修 A1 手冊路徑（T-09）；先以 `run-mtrix-pipeline.ps1`（fixture）驗證流程；生產批次用 `wellfit.exe mtrix --dir <唯讀 delivered> --report/--db <artifacts>`（不寫原廠目錄）；`bench.ps1` 取每檔基線；`benchmark_synthetic_ingestion.ps1` 取合成容量（標明非生產 SLA）；`flapserp://` 深層連結；報表匯出→Wellfit 解析；`reconcile` 未實作，以 ledger＋report 對帳 | 批次工時 -80%（△）；報表 ≤60 s／10k 列（△）；client RAM 不爆；合成與真實數據分開標記 |
 | T-16 | 備份／更新演練 | IT | ledger 用 `daily-backup.ps1`（7 天）；config 每週備份 `config.ini`／`processed.ini`／`*.version.txt`／`Module\*.ver`／`AP\*.json` 至 `Wellfit\artifacts\config-backup\<date>\`（含授權檔，僅 IT）＋SHA256；更新後重跑基線＋`.ver` 比對 | 還原演練成功（`restore.ps1`＋config manifest）；更新後無漂移 |
@@ -475,7 +486,7 @@ New-NetFirewallRule -DisplayName "FlapsErp AP HTTP" -Direction Outbound -RemoteA
 
 1. 同一台機器、同一使用者、同一 AP、同一時段；關閉其他應用程式；量測期間不跑 `cargo build`。
 2. 每臂開始前重啟 FlapsErp，等待 app log `menu.prepareColorMask`。**冷啟動（重開機後）與暖啟動（僅重啟 app）分開記錄，不得混算。**
-3. **每臂 5 次**（app log 變異大；COM 取樣變異大，P95 0.21–0.32、P99 0.24–0.45 ms）；取中位數，記錄 min／max。
+3. **每臂 5 次**（app log 變異大；COM 取樣變異大，P95 0.21–0.40、P99 0.24–0.48 ms）；取中位數，記錄 min／max。
 4. 指標：
    - app log：`module_load→menu_ready`、`menu.finishDownloadRequires`、`menu.prepareDetails`、可辨識 tab／report 事件。
    - 記憶體：`flaps-perf.ps1 -Probe baseline`（11 行程 median／max／總量；含 `--type` 角色：gpu／renderer／utility）。
@@ -492,6 +503,7 @@ New-NetFirewallRule -DisplayName "FlapsErp AP HTTP" -Direction Outbound -RemoteA
     - 負載：FlapsErp 登入＋10 tabs＋5 報表匯出；瀏覽器 10 tabs；Excel 10 MB 開/存；Outlook 收發；1 GB 檔案複製。
     - 指標：每個程式回應時間、系統 CPU／RAM／磁碟佇列／GPU／溫度。
     - 判定：任一程式退步 >10% 或溫度降頻 → 回滾。
+11. **CONTENDED 樣本**：`baseline.contended`／`com.contended`／`host.contended` 任一為 true（`link`/`cargo`/`rustc`、free<1 GB、diskQueue>5）→ 樣本無效；先結束建置或等離峰；不得用於 A/B。
 
 ---
 
@@ -560,7 +572,7 @@ New-NetFirewallRule -DisplayName "FlapsErp AP HTTP" -Direction Outbound -RemoteA
 6. `docs/research/FlapsErp效能基線報告_v1.0.md`（補 AP HTTP、screen、softwareId）。
 7. `docs/research/FlapsErp優化_合規風險追蹤表.md`（RSK-E2 更新；新增 HTTP AP）。
 8. `docs/PLAN_REGISTER.md` addendum #33；`docs/README.md` 索引。
-9. 證據 artifacts：`Wellfit/artifacts/perf/<ts>/`（含 `system-baseline.json`）、`artifacts/erp-batch/<ts>/`。
+9. 證據 artifacts：`Wellfit/artifacts/perf/<ts>/`（含 `system-baseline.json`、`endpoints.json`、`hygiene.json`、`diff.json`）、`artifacts/erp-batch/<ts>/`。
 
 ---
 

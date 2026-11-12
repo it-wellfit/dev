@@ -2,9 +2,10 @@
 
 > 文件編號：OPS-2026-1111-001｜版本：v1.0｜日期：2026-11-11｜狀態：Active
 > 範圍：FlapsErp v0.0.4 桌面產品（`C:\SYSTEM_PROGRAM_DIRECTORY\FlapsErp`）＋共用 Windows 宿主＋與 FlapsErp 直接相接的 Wellfit 批次。
-> 紅線：**不得寫入 `C:\SYSTEM_PROGRAM_DIRECTORY` 的原廠元件**（config.ini 由 IT 變更管制）；不得關閉 AV／UAC／WDAC；不得以 FlapsErp 效能為由拖垮其他程式。
+> 紅線：**不得寫入 `C:\SYSTEM_PROGRAM_DIRECTORY` 的原廠元件**（config.ini 由 IT 或使用者授權的代理，備份＋SHA256＋回滾）；不得關閉 AV／UAC／WDAC；不得以 FlapsErp 效能為由拖垮其他程式。
 > 事實標記：✔ 2026-11-11 唯讀實測｜△ 待實機驗證｜⚠ 需 IT／原廠確認。
 > **軟體邊界**：FlapsErp（原廠）｜Wellfit（自建）｜Windows 宿主（微軟/IT）。本文件 §1–§3 為原廠 FlapsErp／Windows；§5 工作台為自建 Wellfit；`FlapsErpData` 僅唯讀。
+> **平台**：FlapsErp 僅 Windows；Wellfit 批次可 Linux；本文件 Windows 設定僅適用 Windows。
 
 ---
 
@@ -27,7 +28,7 @@ KEEP_MACHINE_ID_MIGRATED=1
 |---|---|---|---|
 | `IGNORE_CERT_ERR` | 1 | 1（條件式→0） | 預設 AP 為 HTTP，此鍵對生產無作用；測試 AP TLS 已實測 CERT-VALID；其他 HTTPS 端點盤點後才可 0 |
 | `KEEP_MACHINE_ID` | 1 | 1 | 授權綁定 |
-| `DISABLE_HARDWARE_ACCELERATION` | 0 | 0（A/B 後定案） | 關閉 GPU 可能把渲染推回 CPU，影響其他程式；需系統級 CPU A/B |
+| `DISABLE_HARDWARE_ACCELERATION` | 0 | 0（`=1` 未採用；登入後 startup 31.473 s vs `=0` 舊 session 15.674 s；A/B 未完成） | 關閉 GPU 可能把渲染推回 CPU；本機 `=1` 未證實有效 |
 | `DEBUG_FASTREPORT` | 0 | 0 | 報表除錯用 |
 | `FORCE_DEVICE_SACLE_FACTOR` | 0 | 0 | 原廠拼字鍵；UI 裁切才評估 |
 | `LANG` | zh_TW | zh_TW | 語言 |
@@ -52,7 +53,7 @@ KEEP_MACHINE_ID_MIGRATED=1
 ## 3. Windows 宿主設定（微軟/IT；系統級；先做 FlapsErp-only）
 
 > Scope：`F`=FlapsErp-only；`S`=system-wide；`C`=conditional。任何 `S`/`C` 變更需 IT 核准＋系統級 A/B（§6.4），不得降低其他程式效能。
-> **本機實測（2026-11-11）**：Windows 11 Home、Ryzen 7 4800HS 8C/16T、15.79 GB RAM（3.4–5.0 GB free，取樣）、CPU 7–73%（取樣；受其他程式/本工具影響）、磁碟佇列 0–1（取樣）、溫度 UNKNOWN；同時跑 Code/ChatGPT/Chrome/Outlook。因此本機預設：Balanced 電源、system-managed 分頁檔、保留快速啟動/USB/NIC/GPU/視覺/搜尋；只做 FlapsErp-only＋AV 排除（IT 核准）＋AP 白名單。
+> **本機實測（2026-11-11）**：Windows 11 Home、Ryzen 7 4800HS 8C/16T、15.79 GB RAM（4.0–7.2 GB free，非 CONTENDED 取樣）、CPU 7–73%（取樣；受其他程式/本工具影響）、磁碟佇列 0–1（取樣）、溫度 UNKNOWN；同時跑 Code/ChatGPT/Chrome/Outlook。因此本機預設：Balanced 電源、system-managed 分頁檔、保留快速啟動/USB/NIC/GPU/視覺/搜尋；只做 FlapsErp-only＋AV 排除（IT 核准）＋AP 白名單。
 
 | 類別 | 設定 | Scope | 目標 | 對其他程式的影響 |
 |---|---|---|---|---|
@@ -65,8 +66,8 @@ KEEP_MACHINE_ID_MIGRATED=1
 | 記憶體 | 分頁檔 | C | 預設 system-managed；實測抖動才固定 | 固定大小可能限制其他程式 |
 | 儲存 | 磁碟 | S | SSD/NVMe；可用 ≥15% | 全機 I/O 受益 |
 | 儲存 | Defrag/Trim | S | SSD Defrag 關；定期 ReTrim | 全機受益 |
-| 儲存 | NTFS Last Access | C | 預設；僅 I/O 壓力實測時關 | 影響備份/完整性工具 |
-| 安全 | Defender 排除 | S | 最小排除 `FlapsErp`/`Module`/`FlapsErpData` | 安全面下降；不影響效能 |
+| 儲存 | NTFS Last Access | C | 預設；僅 I/O 壓力實測時關（0=user-enabled、1=user-disabled、2=system-enabled/default、3=system-disabled） | 影響備份/完整性工具 |
+| 安全 | Defender 排除 | S | 最小排除 `FlapsErp`/`Module`/`FlapsErpData`；先量測、IT 資安核准、核准人/期限、定期複查 | 安全面下降；不影響效能 |
 | 安全 | WDAC/AppLocker | S | 確認允許；不改政策 | 安全/政策 |
 | 安全 | UAC | S | 保持預設 | 不可關閉 |
 | 安全 | PowerShell 執行原則 | S | `Restricted`/`AllSigned` | 不可 Unrestricted |
@@ -108,6 +109,9 @@ KEEP_MACHINE_ID_MIGRATED=1
 | 項目 | 頻率 | 工具 |
 |---|---|---|
 | `flaps-perf.ps1 -Probe all` | 每日 09:00/14:00/18:00 | 既有腳本 |
+| `flaps-perf.ps1 -Probe hygiene` | 每日/變更後 | 既有腳本 |
+| `flaps-perf.ps1 -Probe diff -BaselineDir <before> -CurrentDir <after>` | 每次 A/B | 既有腳本 |
+| `contended` 檢查 | 每次取樣/批次 | `baseline`/`com`/`host` 的 `contended=True` → 樣本無效；先結束 `link`/`cargo`/`rustc` |
 | `-Probe app`（menu/tab） | 每日 | 既有腳本 |
 | `-Probe com` | 每週 | 既有腳本 |
 | `-Probe cdp` | 每月/更新後 | 既有腳本 |
@@ -152,7 +156,7 @@ KEEP_MACHINE_ID_MIGRATED=1
 
 ## 10. 證據與未決
 
-- 實測命令：`powershell -ExecutionPolicy Bypass -File "Wellfit\scripts\perf\flaps-perf.ps1" -Probe settings`（另 `app`／`tls`／`pe`／`host`／`endpoints`／`full`）。
-- Artifacts：`Wellfit/artifacts/perf/<ts>/perf-result.json`、`perf-summary.md`、`system-baseline.json`、`endpoints.json`。
+- 實測命令：`powershell -ExecutionPolicy Bypass -File "Wellfit\scripts\perf\flaps-perf.ps1" -Probe settings`（另 `app`／`tls`／`pe`／`host`／`endpoints`／`hygiene`／`diff`／`full`）。
+- Artifacts：`Wellfit/artifacts/perf/<ts>/perf-result.json`、`perf-summary.md`、`system-baseline.json`、`endpoints.json`、`hygiene.json`、`diff.json`。
 - 未決：IT 變更所有者/測試機；其他 HTTPS 端點盤點；批次主機（另機/同機）；8h soak；`FORCE_DEVICE_SACLE_FACTOR` 正確鍵行為。
 - 本基線僅規劃/記錄；任何寫入 `C:\SYSTEM_PROGRAM_DIRECTORY` 由 IT 變更管制執行；UNKNOWN ≠ PASS ≠ FAIL。
