@@ -848,3 +848,23 @@ This addendum records execution facts only; it does not approve product scope, c
 | 發布判定 | **PASS**（fmt/clippy/143 tests/34 頁掃描/區網/備份實證）；**PARTIAL**：65KiB 負向未測、還原演練未歸檔 | 本 addendum |
 
 This addendum records execution facts only; it does not approve product scope, certification, or release.
+
+## 2026-11-13 addendum #47 (PHASE-G4 深度稽核修復 G4.1–G4.11：測試/角色/單位/契約/旗標/響應式)
+
+| Item | Disposition | Evidence |
+|---|---|---|
+| G4.1 RAG-S3 整合測試 | 新增 `platform/tests/search_api.rs` 4 例（排序/CJK/未知詞空陣列/via 誠實） | 4 passed（2026-11-13） |
+| G4.2 VIEWER 角色 | `core/src/permission.rs::initialize_default` seed `role-viewer`（唯讀 REPORT_VIEW）；`viewer_landing_leads_with_reports`＋`seeded_roles_include_viewer` | 2 passed；DEMO_GUIDE/DEMO_DATA 已註記 |
+| G4.3 Decimal4 單位契約 | `MoneyCents`(10²)/`Decimal4`(10⁴) 加 `SCALE`＋`TryFrom`（lossy 拒絕、overflow 拒絕） | udm 14 passed（+5） |
+| G4.4 API 目錄一致性 | `apihub.rs` Tantivy→BM25＋RRF；`api_catalog_consistency.rs` 目錄↔路由註冊檢查 | 2 passed |
+| G4.5 G1.4 逐名核 | 回填 S.2.1：`bulk_review_reports_mixed_outcomes_and_audits_each_row`（含 `SELF_ADJUDICATION_FORBIDDEN` row-level，非 403）等 4 名 | 計畫 §S.2.1 更新 |
+| G4.6 A11Y | `docs/standards/A11Y_CHECKLIST.md`＋`platform/tests/a11y_static.rs`（lang/viewport/landmark/h1/label/img） | 5 passed |
+| G4.7 效能基線 | `platform/tests/perf_baseline.rs`；`docs/04-operations/PERF_BASELINE_v1.0.md` | BM25-only p50 2.86ms／p95 4.18ms；TTFB p50 5.30ms／p95 6.89ms；向量腿 UNKNOWN（無 embedder） |
+| G4.8 OPS-SLA runbook | `docs/04-operations/OPS_SLA_RUNBOOK_v1.0.md`（SLO/SLI、備份還原、P1/P2）＋README §2.8 登錄 | 文件 |
+| G4.9 旗標 | `platform/src/flags.rs`（`AUXBRIDGE_FLAG_*`，預設 on）；`search_hybrid`→BM25-only、`search_rrf`→加權融合、`ccm_chain_verify`→M3 null＋note | flags 2＋search 2＋ccm 1 passed |
+| G4.10 響應式 | `design-system.css` 360px 斷點＋`@container page (max-width:480px)`；`responsive_css.rs` | 3 passed；瀏覽器矩陣待人工 |
+| G4.11 API 契約 | JSON 錯誤信封（`api_error.rs`）＋`X-Request-Id` middleware＋`/api/search` 30/min 限流（`ratelimit.rs`，429＋Retry-After）＋`Idempotency-Key`（migration 0011＋`idempotency.rs`，replay 不重播副作用） | `api_contract.rs` 6 passed |
+| 四關 | fmt EXIT=0／clippy -D warnings 淨（root＋hub）／`cargo test --workspace --no-fail-fast` 全綠／`cargo audit` 0 vulnerabilities | 2026-11-13 實測 |
+| 未竟 | `/api/v1` 版本化（需 ADR）；瀏覽器響應式矩陣（人工）；向量腿效能基線（需 embedder）； CCM M2 登入事件（既有 GAP） | 本 addendum |
+
+This addendum records execution facts only; it does not approve product scope, certification, or release.

@@ -595,11 +595,21 @@ pub async fn require_session_api(
             request.extensions_mut().insert(session);
             next.run(request).await
         }
-        None => (
-            axum::http::StatusCode::UNAUTHORIZED,
-            "未授權：請先登入（缺少有效 auxbridge_session Cookie）。處理方式：先以 /login 取得 session 後重試。",
-        )
-            .into_response(),
+        None => {
+            let request_id = request
+                .extensions()
+                .get::<crate::api_error::RequestId>()
+                .map(|r| r.0.clone())
+                .unwrap_or_else(|| crate::api_error::request_id_from_headers(request.headers()));
+            crate::api_error::api_error(
+                axum::http::StatusCode::UNAUTHORIZED,
+                "UNAUTHENTICATED",
+                "未授權：請先登入（缺少有效 auxbridge_session Cookie）。",
+                "問題：未登入；可能原因：工作階段過期或 Cookie 被阻擋；處理方式：先以 /login 取得 session 後重試。",
+                false,
+                &request_id,
+            )
+        }
     }
 }
 

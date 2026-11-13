@@ -22,12 +22,12 @@ use crate::bm25::{BM25Index, tokenize};
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use tokio::sync::RwLock;
 
-/// Hybrid weight for the legacy weighted fusion (kept as the test baseline;
-/// runtime default is RRF, see `rrf_fuse`). fused = α·norm(BM25) +
+/// Hybrid weight for the legacy weighted fusion (kept as the `search_rrf=off`
+/// fallback and the A/B baseline). fused = α·norm(BM25) +
 /// (1−α)·norm(cosine). 0.5 mirrors the kem golden configuration.
-#[cfg(test)]
 pub const HYBRID_ALPHA: f32 = 0.5;
 
 /// Semantic refusal floor: a hit with ZERO lexical support whose raw cosine
@@ -61,6 +61,11 @@ pub struct SearchEngine {
     /// 至 `until`（60s 後再試一次）。為何必要：端點逾時 60s × 3 端點循序
     /// → 離線/未設定情境下每次搜尋卡 180s；斷路器把失敗成本攤成一次性。
     embed_disabled_until: Arc<RwLock<Option<std::time::Instant>>>,
+    /// G4.9 (D3-04) flags: hybrid retrieval (vector leg) and RRF fusion.
+    /// Defaults are ON (FLAG); `search_hybrid=off` → BM25-only, `search_rrf=off`
+    /// → weighted α-fusion.
+    hybrid: Arc<AtomicBool>,
+    rrf: Arc<AtomicBool>,
 }
 
 #[derive(Debug, Clone)]
@@ -170,10 +175,10 @@ fn rrf_fuse(
 }
 
 /// Weighted fusion (α-normalization by corpus max, semantic refusal floor,
-/// honest `via`) — the legacy baseline, kept for A/B tests against
-/// [`rrf_fuse`]. `ids` parallels `bm25_scores`; missing entries score 0.
-/// Returns `(position, score, via)` sorted by score descending.
-#[cfg(test)]
+/// honest `via`) — the legacy baseline, used when `search_rrf=off` and kept
+/// for A/B tests against [`rrf_fuse`]. `ids` parallels `bm25_scores`;
+/// missing entries score 0. Returns `(position, score, via)` sorted by score
+/// descending.
 #[allow(clippy::too_many_arguments)]
 fn fuse(
     ids: &[String],
@@ -253,7 +258,27 @@ impl SearchEngine {
             embed_pool: Arc::new(pool),
             last_rebuilt: Arc::new(RwLock::new(None)),
             embed_disabled_until: Arc::new(RwLock::new(None)),
+            hybrid: Arc::new(AtomicBool::new(true)),
+            rrf: Arc::new(AtomicBool::new(true)),
         }
+    }
+
+    /// G4.9: toggle the vector leg (false → deterministic BM25-only).
+    pub fn set_hybrid(&self, on: bool) {
+        self.hybrid.store(on, Ordering::Relaxed);
+    }
+
+    /// G4.9: toggle RRF fusion (false → weighted α-fusion).
+    pub fn set_rrf(&self, on: bool) {
+        self.rrf.store(on, Ordering::Relaxed);
+    }
+
+    /// Current flag values (for diagnostics/tests).
+    pub fn flags(&self) -> (bool, bool) {
+        (
+            self.hybrid.load(Ordering::Relaxed),
+            self.rrf.load(Ordering::Relaxed),
+        )
     }
 
     /// 嵌入呼叫（2 秒上限 + 斷路器）：逾時或失敗 → None（BM25-only 誠實降級）
@@ -412,23 +437,40 @@ impl SearchEngine {
 
         // Query embedding, best-effort: unreachable embedder → BM25-only
         // (2s cap + breaker; offline searches stay fast instead of 180s).
-        let query_vec: Option<Vec<f32>> = self
-            .embed_with_breaker(&[query.to_string()])
-            .await
-            .and_then(|r| r.vecs.first().cloned());
+        // G4.9: `search_hybrid=off` skips the vector leg entirely.
+        let query_vec: Option<Vec<f32>> = if self.hybrid.load(Ordering::Relaxed) {
+            self.embed_with_breaker(&[query.to_string()])
+                .await
+                .and_then(|r| r.vecs.first().cloned())
+        } else {
+            None
+        };
 
         let contents: HashMap<String, String> = docs
             .iter()
             .map(|(id, d)| (id.clone(), d.content.clone()))
             .collect();
-        let fused = rrf_fuse(
-            &order,
-            &bm25_scores,
-            Some(&vectors),
-            &contents,
-            query_vec.as_deref(),
-            REFUSAL_FLOOR,
-        );
+        // G4.9: `search_rrf=off` falls back to the weighted α-fusion.
+        let fused = if self.rrf.load(Ordering::Relaxed) {
+            rrf_fuse(
+                &order,
+                &bm25_scores,
+                Some(&vectors),
+                &contents,
+                query_vec.as_deref(),
+                REFUSAL_FLOOR,
+            )
+        } else {
+            fuse(
+                &order,
+                &bm25_scores,
+                Some(&vectors),
+                &contents,
+                query_vec.as_deref(),
+                HYBRID_ALPHA,
+                REFUSAL_FLOOR,
+            )
+        };
         fused
             .into_iter()
             .filter_map(|(pos, score, via)| {
@@ -730,5 +772,47 @@ mod tests {
                 hits[0].score
             );
         });
+    }
+
+    /// G4.9 (D3-04): `search_hybrid=off` → deterministic BM25-only, even when a
+    /// fresh vector exists (the vector leg is skipped entirely).
+    #[tokio::test]
+    async fn hybrid_flag_off_forces_bm25_even_with_vectors() {
+        let engine = engine();
+        engine
+            .add_document("d1".into(), "alpha beta".into(), HashMap::new())
+            .await;
+        let hash = content_hash("alpha beta");
+        engine
+            .vectors
+            .write()
+            .await
+            .insert("d1".to_string(), (hash, vec![1.0, 0.0]));
+        engine.set_hybrid(false);
+        let hits = engine.search_ranked("alpha").await;
+        assert_eq!(hits.len(), 1);
+        assert_eq!(hits[0].via, "bm25", "hybrid=off must skip the vector leg");
+    }
+
+    /// G4.9 (D3-04): `search_rrf=off` → weighted α-fusion (top score normalized
+    /// to 1.0), while still ranking correctly.
+    #[tokio::test]
+    async fn rrf_flag_off_uses_weighted_fusion() {
+        let engine = engine();
+        engine
+            .add_document("d1".into(), "alpha alpha".into(), HashMap::new())
+            .await;
+        engine
+            .add_document("d2".into(), "beta".into(), HashMap::new())
+            .await;
+        engine.set_rrf(false);
+        let hits = engine.search_ranked("alpha").await;
+        assert_eq!(hits.len(), 1);
+        assert_eq!(hits[0].document.doc_id, "d1");
+        assert!(
+            (hits[0].score - 1.0).abs() < 1e-9,
+            "weighted fusion normalizes the top score to 1.0, got {}",
+            hits[0].score
+        );
     }
 }

@@ -3,6 +3,28 @@
 本檔記錄根 workspace（`core/`、`platform/`、`web/`、`crates/flaps_bridge`）的實際變更。格式參考 Keep a Changelog。子專案（ekpi-platform、Wellfit、SyncMesh）各自有變更記錄。
 
 
+## [Unreleased] — 2026-11-13（PHASE-G4 深度稽核修復：測試/角色/單位/API 契約/旗標/響應式）
+
+### Added
+- **G4.1 RAG-S3 整合測試**：`platform/tests/search_api.rs`（排序/CJK/未知詞空陣列/`via` 誠實 provenance）4 例——補上「路由已接線但無端到端測試」缺口。
+- **G4.2 VIEWER 角色**：`core/src/permission.rs::initialize_default` 新增 `role-viewer`（唯讀 REPORT_VIEW）；landing 測試 `viewer_landing_leads_with_reports`＋seed 測試 `seeded_roles_include_viewer`；DEMO 文件註記。
+- **G4.3 單位契約**：`MoneyCents`（10²）與 `Decimal4`（10⁴）新增 `SCALE`／`scale()`／`TryFrom`（lossy 與 overflow 皆回 `UnitConversionError`，禁止直接互轉）；udm 5 新測試。
+- **G4.4 API 目錄一致性**：`apihub.rs` 之「Tantivy」敘述改為「BM25＋RRF」；`api_catalog_consistency.rs` 驗證目錄每筆都有 `.route(...)` 註冊。
+- **G4.6 A11Y**：`docs/standards/A11Y_CHECKLIST.md`（10 項）＋`platform/tests/a11y_static.rs`（lang/viewport/landmark/h1/label↔control/img alt）。
+- **G4.7 效能基線**：`platform/tests/perf_baseline.rs`＋`docs/04-operations/PERF_BASELINE_v1.0.md`（BM25-only p95 4.18 ms、TTFB p95 6.89 ms；向量腿 UNKNOWN）。
+- **G4.8 OPS-SLA runbook**：`docs/04-operations/OPS_SLA_RUNBOOK_v1.0.md`（SLO/SLI、備份還原、P1/P2 事件管理）；docs/README §2.8 登錄。
+- **G4.9 旗標**：`platform/src/flags.rs`（`AUXBRIDGE_FLAG_*`，預設 on）；`search_hybrid`→BM25-only、`search_rrf`→加權 α 融合、`ccm_chain_verify`→M3 null＋note（不以 0 冒充綠燈）。
+- **G4.10 響應式**：`design-system.css` 新增 360px 斷點與 `@container page (max-width:480px)`；`responsive_css.rs` 機械檢查。
+- **G4.11 API 契約**：`platform/src/api_error.rs`（JSON 錯誤信封 `{code,message,hint,retryable,request_id}`＋`X-Request-Id` middleware）；`platform/src/ratelimit.rs`（`/api/search` 30/min/session，429＋`Retry-After`）；`platform/src/idempotency.rs`＋migration `0011_idempotency.sql`（`Idempotency-Key` 重播，replay 不重播副作用）；`api_contract.rs` 6 例。
+
+### Changed
+- `/api/search` 之 401/404 改為 JSON 錯誤信封（原 `&str`/純文字）；`search_query` 增加 session 限流；`search_get` 404 改信封。
+- `api.rs` 路由層順序：request-id（最外）→ session → idempotency → body limit。
+
+### Verified — 2026-11-13 實測
+- `cargo fmt -- --check` EXIT=0；`cargo clippy --all-targets -- -D warnings` 淨空（root＋platform-hub）；`cargo test --locked --workspace --no-fail-fast` 全綠；`cargo audit` 0 vulnerabilities。
+- 新增測試：search_api 4、api_catalog_consistency 2、a11y_static 5、responsive_css 3、api_contract 6、flags 2、search flag 2、ccm flag 1、udm +5、perf_baseline 1。
+
 ## [Unreleased] — 2026-11-13（匯入範本與實務閉環：CSV/TSV/XLSX 範本下載＋端點）
 
 ### Added

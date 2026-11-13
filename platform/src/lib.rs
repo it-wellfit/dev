@@ -1,6 +1,7 @@
 #![forbid(unsafe_code)]
 
 pub mod api;
+pub mod api_error;
 pub mod apihub;
 pub mod auth;
 pub mod bankpay;
@@ -10,11 +11,14 @@ pub mod controls;
 pub mod cross_module_api;
 pub mod db;
 pub mod design_lab;
+pub mod flags;
+pub mod idempotency;
 pub mod ingest;
 pub mod nav;
 pub mod obs;
 pub mod ocr;
 pub mod pages;
+pub mod ratelimit;
 pub mod search;
 pub mod status;
 pub mod sync;

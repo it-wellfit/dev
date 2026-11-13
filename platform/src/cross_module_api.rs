@@ -5,10 +5,10 @@
 //! with the platform's core services.
 
 use axum::{
-    Router,
+    Extension, Router,
     extract::{Path, Query, State},
-    http::StatusCode,
-    response::{IntoResponse, Json},
+    http::{StatusCode, header},
+    response::{IntoResponse, Json, Response},
     routing::{get, post},
 };
 use serde::{Deserialize, Serialize};
@@ -16,6 +16,7 @@ use serde_json::json;
 use std::collections::HashMap;
 
 use crate::api::AppState;
+use crate::auth::Session;
 
 // ═════════════════════════════════════════════════════════════════════════════
 // Audit Trail API (Governance & Audit Studio)
@@ -268,8 +269,28 @@ pub struct SearchResult {
 
 pub async fn search_query(
     State(state): State<AppState>,
+    Extension(session): Extension<Session>,
+    Extension(request_id): Extension<crate::api_error::RequestId>,
     Query(query): Query<SearchQuery>,
-) -> Json<Vec<SearchResult>> {
+) -> Response {
+    // G4.11 (D4-03): 30 queries / 60s per session; 429 + Retry-After.
+    if let crate::ratelimit::Decision::RetryAfter(secs) =
+        state.search_limiter.check(&session.session_id)
+    {
+        let mut response = crate::api_error::api_error(
+            StatusCode::TOO_MANY_REQUESTS,
+            "RATE_LIMITED",
+            "查詢過於頻繁。",
+            "問題：超過每分鐘 30 次查詢；可能原因：自動化輪詢或重試風暴；處理方式：降低頻率或於 Retry-After 後重試。",
+            true,
+            &request_id.0,
+        );
+        if let Ok(value) = secs.to_string().parse() {
+            response.headers_mut().insert(header::RETRY_AFTER, value);
+        }
+        return response;
+    }
+
     let results = state
         .search
         .search_ranked(&query.q)
@@ -282,7 +303,7 @@ pub async fn search_query(
             via: hit.via,
         })
         .collect::<Vec<_>>();
-    Json(results)
+    Json(results).into_response()
 }
 
 #[derive(Deserialize)]
@@ -304,18 +325,27 @@ pub async fn search_index(
 
 pub async fn search_get(
     State(state): State<AppState>,
+    Extension(request_id): Extension<crate::api_error::RequestId>,
     Path(doc_id): Path<String>,
-) -> Result<Json<SearchResult>, (StatusCode, String)> {
+) -> Response {
     match state.search.get_document(&doc_id).await {
-        Some(doc) => Ok(Json(SearchResult {
+        Some(doc) => Json(SearchResult {
             doc_id: doc.doc_id,
             content: doc.content,
             // Direct fetch is not a ranking path: neutral score, explicit
             // provenance (never a fake fused score).
             score: 1.0,
             via: "direct".to_string(),
-        })),
-        None => Err((StatusCode::NOT_FOUND, "document not found".to_string())),
+        })
+        .into_response(),
+        None => crate::api_error::api_error(
+            StatusCode::NOT_FOUND,
+            "NOT_FOUND",
+            "找不到文件。",
+            "問題：文件不存在或已被刪除；可能原因：doc_id 錯誤或索引已重建；處理方式：重新索引後再查。",
+            false,
+            &request_id.0,
+        ),
     }
 }
 

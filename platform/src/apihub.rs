@@ -208,7 +208,7 @@ pub fn registry() -> &'static [ApiEndpointSpec] {
         ApiEndpointSpec {
             method: "GET",
             path: "/api/search",
-            description: "全文檢索（Tantivy；q 為綁定參數）。",
+            description: "全文檢索（BM25＋RRF 混合；q 為綁定參數；embedder 不可達時 BM25-only 誠實降級）。",
             auth: "session",
             params: &[ApiParam {
                 name: "q",

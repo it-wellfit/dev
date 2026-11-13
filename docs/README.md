@@ -147,6 +147,8 @@
 | [`04-operations/FlapsErp局部設定最佳化Runbook_v3.0.md`](04-operations/FlapsErp局部設定最佳化Runbook_v3.0.md) | FlapsErp 局部設定最佳化（安裝目錄 14 檔案/目錄微調） |
 | [`04-operations/FlapsErp系統互動精密調校指南_v1.0.md`](04-operations/FlapsErp系統互動精密調校指南_v1.0.md) | FlapsErp 與共存軟體的 12 個互動對精密調校 |
 | [`04-operations/FlapsErp效能優化操作手冊_v1.0.md`](04-operations/FlapsErp效能優化操作手冊_v1.0.md) | 效能優化操作手冊（config §3.2 已更正；平台線 §2.2 標自建） |
+| [`04-operations/OPS_SLA_RUNBOOK_v1.0.md`](04-operations/OPS_SLA_RUNBOOK_v1.0.md) | OPS-SLA 營運手冊（SLO/SLI、備份還原、P1/P2 事件管理） |
+| [`04-operations/PERF_BASELINE_v1.0.md`](04-operations/PERF_BASELINE_v1.0.md) | 效能基線（`/api/search` BM25-only 與工作台 TTFB；2026-11-13 實測） |
 | [`research/FlapsErp設定AB實測報告_v1.0.md`](research/FlapsErp設定AB實測報告_v1.0.md) | 設定 A/B 實測報告（NOT VERIFIED；GPU 偏好+優先級已生效） |
 | [`03-reference/domain-glossary.md`](03-reference/domain-glossary.md) | 領域術語字典（SSOT） |
 
