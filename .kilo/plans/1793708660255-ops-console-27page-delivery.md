@@ -564,7 +564,7 @@ REQ-UX-03 八態與元件全狀態
 | manifest 計數 | 動態 43→53（體驗室）→55（並行整合兩頁）；測試修訂註記依 C-01 |
 | 並行整合（密碼重設） | `/forgot-password`、`/reset-password` 補登 Public；`/admin/users/issue_reset` 入 `NON_PAGE_ROUTES`（27→28）；`web_crawl` pre-auth skip（共用版型缺口列 E-1）；`public_gate_only_for_login` 白名單化（3 頁，附理由） |
 | 聚焦套件 | design_lab 2/2；page_matrix 4/4；web_crawl 6/6；password_reset 2/2；console_manifest lib 16/16 |
-| 四關 | fmt EXIT=0；clippy（workspace・all-targets・-D warnings）EXIT=0；audit EXIT=0；全庫 `cargo test --locked` 結果與 commit hash 見 `docs/PLAN_REGISTER.md` addendum #43 與 `.kilo/sessions/20261113-design-lab/tests/20261113-e3-acceptance.log` |
+| 四關 | fmt EXIT=0；clippy（workspace・all-targets・-D warnings）EXIT=0；audit EXIT=0；全庫 `cargo test --locked` 結果與 commit hash 見 `docs/PLAN_REGISTER.md` addendum #43 與 `.kilo/sessions/20261113-design-lab/tests/20261113-e3-acceptance.log`；commit=4b47c3f |
 | 未完（下一步） | E-1 體驗稽核文件（含已發現缺口：pre-auth 頁共用版型對齊）、E-2 `EXPERIENCE_SPEC`＋REQ/DEC 登錄、E-4 精修 backlog、E-5 全端一致性、E-7 R0–R9、E-8 封版；C/B/A 軸依 §11 續行 |
 
 ---
