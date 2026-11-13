@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+{% import "partials/studio_nav.html" as studio_nav %}
+{% import "partials/lab_nav.html" as lab_nav %}
+<html lang="zh-Hant-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>體驗室 · 覆蓋矩陣 — AuxBridge 整合工作台</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%232563eb'/%3E%3Ctext x='8' y='12' font-size='10' font-family='sans-serif' fill='white' text-anchor='middle' font-weight='bold'%3EA%3C/text%3E%3C/svg%3E">
+    <link rel="stylesheet" href="/assets/design-system.css">
+</head>
+<body>
+    <a class="skip-link" href="#main">跳至主要內容</a>
+
+    <header class="app-header">
+        <div class="container">
+            <div>
+                <h1>體驗室 · 覆蓋矩陣</h1>
+                <p class="app-subtitle">表面×契約、角色×任務×情境；P0 全測＋pairwise 抽樣（不承諾假完備）</p>
+            </div>
+            <p class="app-subtitle">
+                使用者：<strong>{{ acting_user }}</strong>
+                ｜
+                <a class="btn btn-secondary" href="/">返回工作台</a>
+            </p>
+        </div>
+    </header>
+    {{ studio_nav::site_nav(nav) }}
+    {{ lab_nav::lab_nav(active) }}
+
+    <main id="main" class="container">
+        <section class="panel" aria-labelledby="mx-surface">
+            <h2 id="mx-surface">表面 × 契約（期望基線 v1）</h2>
+            <p class="section-note">
+                圖例：● 符合　◐ 部分（待補證據或缺口）　— 不適用（理由見「表面」頁）。
+                <strong>E-1 稽核</strong>逐格補證據與缺口 ID；本表不得留空。
+            </p>
+            <div class="table-wrap">
+                <table>
+                    <caption>表面（列）× 體驗契約（欄）</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col">表面</th>
+                            <th scope="col">EC-1</th><th scope="col">EC-2</th><th scope="col">EC-3</th><th scope="col">EC-4</th><th scope="col">EC-5</th>
+                            <th scope="col">EC-6</th><th scope="col">EC-7</th><th scope="col">EC-8</th><th scope="col">EC-9</th><th scope="col">EC-10</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>S1 Web 工作台</td><td>●</td><td>●</td><td>●</td><td>●</td><td>●</td><td>●</td><td>●</td><td>●</td><td>●</td><td>●</td></tr>
+                        <tr><td>S2 桌面殼</td><td>●</td><td>●</td><td>●</td><td>◐</td><td>●</td><td>●</td><td>◐</td><td>●</td><td>◐</td><td>●</td></tr>
+                        <tr><td>S3 KEM 控制台</td><td>●</td><td>●</td><td>◐</td><td>—</td><td>●</td><td>●</td><td>◐</td><td>●</td><td>●</td><td>◐</td></tr>
+                        <tr><td>S4 列印</td><td>◐</td><td>●</td><td>◐</td><td>—</td><td>●</td><td>●</td><td>—</td><td>●</td><td>●</td><td>—</td></tr>
+                        <tr><td>S5 匯出</td><td>—</td><td>◐</td><td>—</td><td>—</td><td>●</td><td>—</td><td>—</td><td>◐</td><td>◐</td><td>●</td></tr>
+                        <tr><td>S6 文件體系</td><td>●</td><td>●</td><td>◐</td><td>—</td><td>●</td><td>◐</td><td>—</td><td>◐</td><td>●</td><td>—</td></tr>
+                        <tr><td>S7 API／DX</td><td>◐</td><td>◐</td><td>●</td><td>●</td><td>●</td><td>—</td><td>—</td><td>—</td><td>●</td><td>●</td></tr>
+                        <tr><td>S8 通知／警報</td><td>◐</td><td>◐</td><td>◐</td><td>—</td><td>●</td><td>◐</td><td>—</td><td>◐</td><td>—</td><td>●</td></tr>
+                        <tr><td>S9 工具組 CLI</td><td>◐</td><td>◐</td><td>◐</td><td>◐</td><td>●</td><td>—</td><td>—</td><td>◐</td><td>◐</td><td>●</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="panel" aria-labelledby="mx-role">
+            <h2 id="mx-role">角色 × 任務（關鍵路徑）</h2>
+            <div class="table-wrap">
+                <table>
+                    <caption>角色、代表任務與主要狀態</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col">角色</th>
+                            <th scope="col">代表任務</th>
+                            <th scope="col">關鍵頁</th>
+                            <th scope="col">主要狀態</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>V 訪客</td><td>登入、遇錯回得去</td><td>/login、404</td><td>錯誤、無權限</td></tr>
+                        <tr><td>C 經辦</td><td>匯入→登帳→查詢→對帳→付款</td><td>/import、/new、/transactions、/bankpay</td><td>空、零結果、載入、錯誤</td></tr>
+                        <tr><td>R 覆核</td><td>批量裁決、例外處置</td><td>/transactions（待覆核）、/my-decisions</td><td>衝突、確認、無權限</td></tr>
+                        <tr><td>M 主管</td><td>KPI 判讀、異常調度</td><td>/、報表頁</td><td>過期、部分</td></tr>
+                        <tr><td>A 管理員</td><td>帳號、角色、會話、系統</td><td>/admin/*</td><td>無權限、錯誤</td></tr>
+                        <tr><td>T 技術</td><td>API、日誌、設定、體驗室</td><td>/admin/api/*、/design</td><td>資訊密度、可複製值</td></tr>
+                        <tr><td>U 稽核</td><td>唯讀軌跡、證據匯出</td><td>/audit、/my-decisions、匯出</td><td>無權限、過期</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="panel" aria-labelledby="mx-scenario">
+            <h2 id="mx-scenario">情境維度與覆蓋規則</h2>
+            <div class="table-wrap">
+                <table>
+                    <caption>情境維度（組合空間）</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col">維度</th>
+                            <th scope="col">取值</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>角色</td><td>V／C／R／M／A／T／U</td></tr>
+                        <tr><td>任務</td><td>每角色 5–8 個高頻任務</td></tr>
+                        <tr><td>狀態</td><td>empty／zero／loading／partial／stale／denied／error／conflict</td></tr>
+                        <tr><td>裝置</td><td>desktop／laptop／tablet／phone</td></tr>
+                        <tr><td>網路</td><td>LAN／WAN 高延遲／離線（殼）</td></tr>
+                        <tr><td>資料量</td><td>0／20／2k／100k</td></tr>
+                        <tr><td>併發</td><td>1／10／50</td></tr>
+                        <tr><td>輸入</td><td>滑鼠／鍵盤／觸控</td></tr>
+                        <tr><td>輔助</td><td>預設／reduced-motion／200%／高對比／螢幕閱讀器</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <p class="section-note">
+                覆蓋規則：① 關鍵路徑全測（每角色×任務×八態×主要裝置）；② 其餘 pairwise 抽樣
+                （每對維度值至少一次）；③ 禁止留空——未覆蓋標 UNKNOWN 並註明解鎖條件。
+                組合空間是級數，本計畫承諾「可驗證子集＋擴展律」，不承諾全枚舉。
+            </p>
+        </section>
+    </main>
+
+    <footer class="site-footer">
+        <div class="container">
+            <p>AuxBridge 整合工作台 · 體驗室 · 矩陣文件：docs/design/EXPERIENCE_SURFACE_MATRIX.md 與 EXPERIENCE_SCENARIO_MATRIX.md</p>
+            <p>計畫 1793708660255 v2.2 · 零 JavaScript · WCAG 2.2 AA 方向</p>
+        </div>
+    </footer>
+</body>
+</html>

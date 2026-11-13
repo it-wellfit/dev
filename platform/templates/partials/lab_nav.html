@@ -1,0 +1,18 @@
+{# 體驗室子導覽（計畫 1793708660255 v2.2 §8；零 JS：全連結 + aria-current） #}
+{% macro lab_nav(active) %}
+<nav class="container" aria-label="體驗室分區">
+    <p class="section-note">
+        體驗室分區：
+        {% if active == "overview" %}<a class="btn btn-primary btn-sm" href="/design" aria-current="page">總覽</a>{% else %}<a class="btn btn-ghost btn-sm" href="/design">總覽</a>{% endif %}
+        {% if active == "contracts" %}<a class="btn btn-primary btn-sm" href="/design/contracts" aria-current="page">契約</a>{% else %}<a class="btn btn-ghost btn-sm" href="/design/contracts">契約</a>{% endif %}
+        {% if active == "components" %}<a class="btn btn-primary btn-sm" href="/design/components" aria-current="page">元件</a>{% else %}<a class="btn btn-ghost btn-sm" href="/design/components">元件</a>{% endif %}
+        {% if active == "states" %}<a class="btn btn-primary btn-sm" href="/design/states" aria-current="page">狀態</a>{% else %}<a class="btn btn-ghost btn-sm" href="/design/states">狀態</a>{% endif %}
+        {% if active == "content" %}<a class="btn btn-primary btn-sm" href="/design/content" aria-current="page">內容</a>{% else %}<a class="btn btn-ghost btn-sm" href="/design/content">內容</a>{% endif %}
+        {% if active == "blueprints" %}<a class="btn btn-primary btn-sm" href="/design/blueprints" aria-current="page">藍圖</a>{% else %}<a class="btn btn-ghost btn-sm" href="/design/blueprints">藍圖</a>{% endif %}
+        {% if active == "surfaces" %}<a class="btn btn-primary btn-sm" href="/design/surfaces" aria-current="page">表面</a>{% else %}<a class="btn btn-ghost btn-sm" href="/design/surfaces">表面</a>{% endif %}
+        {% if active == "matrices" %}<a class="btn btn-primary btn-sm" href="/design/matrices" aria-current="page">矩陣</a>{% else %}<a class="btn btn-ghost btn-sm" href="/design/matrices">矩陣</a>{% endif %}
+        {% if active == "tokens" %}<a class="btn btn-primary btn-sm" href="/design/tokens" aria-current="page">Token</a>{% else %}<a class="btn btn-ghost btn-sm" href="/design/tokens">Token</a>{% endif %}
+        {% if active == "decisions" %}<a class="btn btn-primary btn-sm" href="/design/decisions" aria-current="page">決策</a>{% else %}<a class="btn btn-ghost btn-sm" href="/design/decisions">決策</a>{% endif %}
+    </p>
+</nav>
+{% endmacro %}

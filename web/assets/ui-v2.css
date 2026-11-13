@@ -246,10 +246,17 @@ body > :not(.site-nav) {
 
 .app-header .container { max-width: none; }
 
-/* 狀態列：明確置於頂欄下方（col2 列2）——不與 main 碰撞 */
+/* 狀態列：明確置於頂欄下方（col2 列2）——不與 main 碰撞。
+   2026-11-13 根因修復（重疊缺陷）：design-system.css:1661 給了它
+   `position: sticky; top: 0; z-index: 40`（舊設計），與同樣 sticky 的
+   .app-header（列1）相遇時——捲動任一距離，兩元素先後吸附 top:0，
+   z-index 40 的狀態列壓過頂欄（實證：截圖中晶片列疊在品牌標題上）。
+   修復：狀態列改靜態定位（隨內容捲動），吸頂職責只留給頂欄一個元素；
+   grid-row: 2 維持不變（文件流位置正確，僅取消吸附）。 */
 .status-bar {
   grid-column: 2;
   grid-row: 2;
+  position: static;
 }
 
 /* 主區：填滿右欄（列3，狀態列之下） */

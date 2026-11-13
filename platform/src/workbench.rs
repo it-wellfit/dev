@@ -65,7 +65,7 @@ pub async fn search_page(
             .collect();
     }
     render_or_500(SearchTemplate {
-        acting_user: session.user_id.clone(),
+        acting_user: session.username.clone(),
         nav: nav.0.clone(),
         q,
         has_q,

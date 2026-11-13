@@ -237,16 +237,44 @@ pub const WF_REVIEW_DECIDE: &str = "review.decide";
 pub const WF_BANKPAY: &str = "bankpay.operate";
 pub const WF_REPORTS: &str = "reports.read";
 pub const WF_GOVERN: &str = "gov.audit";
+/// 體驗室／設計系統工作流（計畫 1793708660255 v2.2 §8）。
+pub const WF_DESIGN: &str = "design.lab";
 
 /// 全量登記（§3.2 動態 41 筆＋§3.3 靜態固定 23 筆）。
 /// 順序＝導覽渲染順序（同群組內宣告序）。
 pub const PAGES: &[PageSpec] = &[
-    // ── Public（1）──
+    // ── Public（3）──
     PageSpec {
         id: "auth.login",
         path: "/login",
         method: Method::Get,
         title: "登入",
+        nav_group: None,
+        nav_href: None,
+        renderer: Renderer::Dynamic,
+        tier: Tier::Operator,
+        gate: Gate::Public,
+        workflows: &[WF_AUTH],
+    },
+    // 密碼重設（並行線整合收斂 2026-11-13）：pre-auth 獨立版型頁；
+    // 共用版型對齊（skip-link／app-header）列入體驗稽核 E-1 缺口。
+    PageSpec {
+        id: "auth.forgot-password",
+        path: "/forgot-password",
+        method: Method::Get,
+        title: "忘記密碼",
+        nav_group: None,
+        nav_href: None,
+        renderer: Renderer::Dynamic,
+        tier: Tier::Operator,
+        gate: Gate::Public,
+        workflows: &[WF_AUTH],
+    },
+    PageSpec {
+        id: "auth.reset-password",
+        path: "/reset-password",
+        method: Method::Get,
+        title: "設定新密碼",
         nav_group: None,
         nav_href: None,
         renderer: Renderer::Dynamic,
@@ -575,6 +603,128 @@ pub const PAGES: &[PageSpec] = &[
         tier: Tier::Technical,
         gate: Gate::All,
         workflows: &[WF_AUTH],
+    },
+    // ── 體驗室（計畫 1793708660255 v2.2 §8；Technical／Manage；
+    //    入口於「系統」群組，導覽僅管理者可見——受眾分層 IA）──
+    PageSpec {
+        id: "design.lab",
+        path: "/design",
+        method: Method::Get,
+        title: "體驗室",
+        nav_group: Some("system"),
+        nav_href: None,
+        renderer: Renderer::Dynamic,
+        tier: Tier::Technical,
+        gate: Gate::Manage,
+        workflows: &[WF_DESIGN],
+    },
+    PageSpec {
+        id: "design.contracts",
+        path: "/design/contracts",
+        method: Method::Get,
+        title: "體驗室 · 契約",
+        nav_group: None,
+        nav_href: None,
+        renderer: Renderer::Dynamic,
+        tier: Tier::Technical,
+        gate: Gate::Manage,
+        workflows: &[WF_DESIGN],
+    },
+    PageSpec {
+        id: "design.components",
+        path: "/design/components",
+        method: Method::Get,
+        title: "體驗室 · 元件",
+        nav_group: None,
+        nav_href: None,
+        renderer: Renderer::Dynamic,
+        tier: Tier::Technical,
+        gate: Gate::Manage,
+        workflows: &[WF_DESIGN],
+    },
+    PageSpec {
+        id: "design.states",
+        path: "/design/states",
+        method: Method::Get,
+        title: "體驗室 · 狀態",
+        nav_group: None,
+        nav_href: None,
+        renderer: Renderer::Dynamic,
+        tier: Tier::Technical,
+        gate: Gate::Manage,
+        workflows: &[WF_DESIGN],
+    },
+    PageSpec {
+        id: "design.content",
+        path: "/design/content",
+        method: Method::Get,
+        title: "體驗室 · 內容",
+        nav_group: None,
+        nav_href: None,
+        renderer: Renderer::Dynamic,
+        tier: Tier::Technical,
+        gate: Gate::Manage,
+        workflows: &[WF_DESIGN],
+    },
+    PageSpec {
+        id: "design.blueprints",
+        path: "/design/blueprints",
+        method: Method::Get,
+        title: "體驗室 · 藍圖",
+        nav_group: None,
+        nav_href: None,
+        renderer: Renderer::Dynamic,
+        tier: Tier::Technical,
+        gate: Gate::Manage,
+        workflows: &[WF_DESIGN],
+    },
+    PageSpec {
+        id: "design.surfaces",
+        path: "/design/surfaces",
+        method: Method::Get,
+        title: "體驗室 · 表面",
+        nav_group: None,
+        nav_href: None,
+        renderer: Renderer::Dynamic,
+        tier: Tier::Technical,
+        gate: Gate::Manage,
+        workflows: &[WF_DESIGN],
+    },
+    PageSpec {
+        id: "design.matrices",
+        path: "/design/matrices",
+        method: Method::Get,
+        title: "體驗室 · 矩陣",
+        nav_group: None,
+        nav_href: None,
+        renderer: Renderer::Dynamic,
+        tier: Tier::Technical,
+        gate: Gate::Manage,
+        workflows: &[WF_DESIGN],
+    },
+    PageSpec {
+        id: "design.tokens",
+        path: "/design/tokens",
+        method: Method::Get,
+        title: "體驗室 · Token",
+        nav_group: None,
+        nav_href: None,
+        renderer: Renderer::Dynamic,
+        tier: Tier::Technical,
+        gate: Gate::Manage,
+        workflows: &[WF_DESIGN],
+    },
+    PageSpec {
+        id: "design.decisions",
+        path: "/design/decisions",
+        method: Method::Get,
+        title: "體驗室 · 決策",
+        nav_group: None,
+        nav_href: None,
+        renderer: Renderer::Dynamic,
+        tier: Tier::Technical,
+        gate: Gate::Manage,
+        workflows: &[WF_DESIGN],
     },
     PageSpec {
         id: "tauri.preview",
@@ -1177,9 +1327,17 @@ mod tests {
 
     #[test]
     fn public_gate_only_for_login() {
+        // 〔修訂 2026-11-13，密碼重設整合〕pre-auth 流程合法需要三頁公開：
+        // 登入、忘記密碼（登記請求）、設定新密碼（權杖連結）；其餘不得公開。
+        const PUBLIC_ALLOWED: [&str; 3] =
+            ["auth.login", "auth.forgot-password", "auth.reset-password"];
         for p in PAGES {
             if p.gate == Gate::Public {
-                assert_eq!(p.id, "auth.login", "Public gate leaked to {}", p.id);
+                assert!(
+                    PUBLIC_ALLOWED.contains(&p.id),
+                    "Public gate leaked to {}",
+                    p.id
+                );
             }
         }
     }
@@ -1265,6 +1423,10 @@ mod tests {
         // 路由對帳測試（W2）須於 W3 落地 /accounts/:id 後方成立。
         // 〔修訂 2026-11-10，計畫 1793033761021 B-5.0〕＋my.decisions
         // （D-6 自我稽核視圖，/my-decisions）→ Dynamic 43。
+        // 〔修訂 2026-11-13，計畫 1793708660255 v2.2 §8〕＋體驗室 10 頁
+        // （/design 系列；Technical／Manage）→ Dynamic 53。
+        // 〔修訂 2026-11-13，並行線整合收斂〕＋密碼重設 2 頁
+        // （/forgot-password、/reset-password；Public）→ Dynamic 55。
         let dynamic = PAGES
             .iter()
             .filter(|p| p.renderer == Renderer::Dynamic)
@@ -1273,7 +1435,7 @@ mod tests {
             .iter()
             .filter(|p| p.renderer == Renderer::Static)
             .count();
-        assert_eq!(dynamic, 43);
+        assert_eq!(dynamic, 55);
         assert_eq!(static_html, 23);
     }
 

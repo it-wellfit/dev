@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+{% import "partials/studio_nav.html" as studio_nav %}
+{% import "partials/lab_nav.html" as lab_nav %}
+<html lang="zh-Hant-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>體驗室 · 頁面藍圖 — AuxBridge 整合工作台</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%232563eb'/%3E%3Ctext x='8' y='12' font-size='10' font-family='sans-serif' fill='white' text-anchor='middle' font-weight='bold'%3EA%3C/text%3E%3C/svg%3E">
+    <link rel="stylesheet" href="/assets/design-system.css">
+</head>
+<body>
+    <a class="skip-link" href="#main">跳至主要內容</a>
+
+    <header class="app-header">
+        <div class="container">
+            <div>
+                <h1>體驗室 · 頁面藍圖</h1>
+                <p class="app-subtitle">八個頁面族的資訊層級、主動作與狀態涵蓋（ASCII wireframe，零 JS）</p>
+            </div>
+            <p class="app-subtitle">
+                使用者：<strong>{{ acting_user }}</strong>
+                ｜
+                <a class="btn btn-secondary" href="/">返回工作台</a>
+            </p>
+        </div>
+    </header>
+    {{ studio_nav::site_nav(nav) }}
+    {{ lab_nav::lab_nav(active) }}
+
+    <main id="main" class="container">
+        <section class="panel" aria-labelledby="bp-rule">
+            <h2 id="bp-rule">使用方式</h2>
+            <p class="section-note">
+                藍圖描述「先看到什麼、往哪裡走、主動作在哪」。新頁面先對照最接近的藍圖，
+                再落地為模板；差異必須在規格中登錄理由。窄螢幕時圖面可橫向捲動，內容順序不變。
+            </p>
+        </section>
+
+        <section class="panel" aria-labelledby="bp-1">
+            <h2 id="bp-1">1 ▸ 工作台首頁（總覽）</h2>
+            <pre>┌──────────────────────────────────────────────┐
+│ 狀態列：服務健康 ●  資料庫 ●  最後更新 09:30 │
+├──────────────────────────────────────────────┤
+│ KPI：待覆核 N ｜ 今日入帳 N ｜ 例外 N        │
+├──────────────────────────────────────────────┤
+│ 待辦佇列（前 5 筆，附整批入口）               │
+│   1. 覆核 A（12 筆）              [前往處理] │
+│   2. 匯入異常 B                    [查看]    │
+├──────────────────────────────────────────────┤
+│ 最近交易（5 筆）                    [檢視全部]│
+└──────────────────────────────────────────────┘</pre>
+            <p class="section-note">主動作：處理待辦（左上至右下掃視）。狀態涵蓋：空／載入／降級（狀態列即時反映）。</p>
+        </section>
+
+        <section class="panel" aria-labelledby="bp-2">
+            <h2 id="bp-2">2 ▸ 清單頁（交易、稽核、批次）</h2>
+            <pre>┌──────────────────────────────────────────────┐
+│ 標題＋總筆數 ｜ 篩選列（GET 表單：日期／狀態）│
+├──────────────────────────────────────────────┤
+│ 表格（20 筆／頁；金額右對齊；列→詳情）        │
+│   …                                          │
+├──────────────────────────────────────────────┤
+│ 分頁：← 上一頁 ｜ 第 x / y 頁・共 N 筆 ｜ 下一頁 →│
+└──────────────────────────────────────────────┘</pre>
+            <p class="section-note">主動作：找一筆→進詳情。狀態涵蓋：零結果（調整建議）／載入／錯誤（重試）。</p>
+        </section>
+
+        <section class="panel" aria-labelledby="bp-3">
+            <h2 id="bp-3">3 ▸ 詳情頁（交易、批次、科目）</h2>
+            <pre>┌──────────────────────────────────────────────┐
+│ 標題（編號＋狀態徽章）              [返回清單]│
+├──────────────────────────────────────────────┤
+│ 摘要：日期・摘要・金額・建立者                │
+│ 分錄表：科目・借方・貸方・平衡徽章            │
+│ 稽核軌跡（時間序；誰在何時做了什麼）          │
+│ 動作列（依權限；危險動作二段確認）            │
+└──────────────────────────────────────────────┘</pre>
+            <p class="section-note">主動作：判讀→（可選）處置。狀態涵蓋：無權限（動作列隱藏說明）／衝突（他人已處理）。</p>
+        </section>
+
+        <section class="panel" aria-labelledby="bp-4">
+            <h2 id="bp-4">4 ▸ 精靈（三步：選模板→填欄位→確認）</h2>
+            <pre>┌──────────────────────────────────────────────┐
+│ 步驟指示：① 選模板 ── ② 填欄位 ── ③ 確認    │
+├──────────────────────────────────────────────┤
+│ 內容區（單一工作，逐步聚焦）                  │
+│ 錯誤：就近顯示＋欄位修復指引                  │
+│ 動作列：[上一步]                [下一步／送出]│
+└──────────────────────────────────────────────┘</pre>
+            <p class="section-note">每步 POST＋PRG；瀏覽器返回不重複入帳；確認頁列具名筆數。</p>
+        </section>
+
+        <section class="panel" aria-labelledby="bp-5">
+            <h2 id="bp-5">5 ▸ 匯入（上傳→預覽→確認）</h2>
+            <pre>┌──────────────────────────────────────────────┐
+│ ① 上傳（格式白名單：CSV／TSV／XLSX／PDF…）    │
+│ ② 預覽（前 N 列＋總筆數＋錯誤列清單）          │
+│ ③ 確認（具名筆數；成功後 PRG→批次歷史）       │
+├──────────────────────────────────────────────┤
+│ 批次歷史：狀態徽章・失敗原因・重試入口        │
+└──────────────────────────────────────────────┘</pre>
+            <p class="section-note">主動作：三次點擊內完成一批。狀態涵蓋：錯誤列修正／部分成功（逐列）／冪等（重跑拒絕）。</p>
+        </section>
+
+        <section class="panel" aria-labelledby="bp-6">
+            <h2 id="bp-6">6 ▸ 對帳工作檯（前瞻；B 軸旗艦）</h2>
+            <pre>┌──────────────────────────────────────────────┐
+│ 篩選（期間／通路／狀態）｜差異摘要 KPI        │
+├───────────────────────┬──────────────────────┤
+│ 差異佇列              │ 明細與證據           │
+│  • 訂單 vs 撥款 12 筆 │  （選取項目的兩側數字│
+│  • 銀行 vs 帳務 3 筆  │   與來源連結）        │
+├───────────────────────┴──────────────────────┤
+│ 動作：指派／備註／結案（全程留軌跡）          │
+└──────────────────────────────────────────────┘</pre>
+            <p class="section-note">待 B-2 設計三案裁定後定稿；本圖僅定「佇列為主、證據在側」的資訊層級。</p>
+        </section>
+
+        <section class="panel" aria-labelledby="bp-7">
+            <h2 id="bp-7">7 ▸ 管理頁（使用者、角色、會話、系統、API）</h2>
+            <pre>┌──────────────────────────────────────────────┐
+│ 管理清單；列：識別・狀態・最近活動・動作      │
+│ 破壞性操作：二段確認＋稽核事件                │
+│ 技術頁（API／系統）：資訊密度優先、可複製值   │
+└──────────────────────────────────────────────┘</pre>
+            <p class="section-note">主動作：最小權限下的必要處置；每個動作可回答「誰、何時、做了什麼」。</p>
+        </section>
+
+        <section class="panel" aria-labelledby="bp-8">
+            <h2 id="bp-8">8 ▸ 列印（報表、傳票）</h2>
+            <pre>┌─ 頁首：公司／報表名／期間／產出時間 ────────┐
+│ 摘要（合計、筆數）                           │
+│ 表格（分頁不截斷；黑白可讀；tabular-nums）   │
+├─ 頁尾：頁碼・系統版本・「僅供內部使用」 ────┘</pre>
+            <p class="section-note">列印為 S4 表面：不依賴互動；顏色不得為唯一傳達（黑白檢視）。</p>
+        </section>
+    </main>
+
+    <footer class="site-footer">
+        <div class="container">
+            <p>AuxBridge 整合工作台 · 體驗室 · 藍圖規則：docs/design/EXPERIENCE_SPEC.md</p>
+            <p>計畫 1793708660255 v2.2 · 零 JavaScript · WCAG 2.2 AA 方向</p>
+        </div>
+    </footer>
+</body>
+</html>

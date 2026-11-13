@@ -110,6 +110,42 @@
             <p class="section-note">停用為可逆操作；停用會立即撤銷該帳號的全部工作階段。</p>
         </section>
 
+        <section aria-labelledby="reset-requests-title">
+            <h2 id="reset-requests-title">待處理密碼重設請求</h2>
+            {% if reset_requests.is_empty() %}
+            <p class="empty-state">尚無待處理請求。使用者於登入頁「忘記密碼？」登記後會出現在此。</p>
+            {% else %}
+            <div class="table-wrap">
+                <table>
+                    <caption>忘記密碼自助請求（核發一次性連結：30 分鐘有效、用後即焚、明文僅顯示一次）</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col">帳號</th>
+                            <th scope="col">登記時間</th>
+                            <th scope="col">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for r in reset_requests %}
+                        <tr>
+                            <td>{{ r.username }}</td>
+                            <td>{{ r.created_display }}</td>
+                            <td>
+                                <form method="post" action="/admin/users/issue_reset" class="form-inline">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                                    <input type="hidden" name="request_id" value="{{ r.request_id }}">
+                                    <button class="btn btn-primary" type="submit">核發一次性重設連結</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <p class="section-note">核發後連結只顯示一次；請當面或以既有安全管道交付。重設完成會撤銷該帳號全部工作階段並寫入稽核。</p>
+            {% endif %}
+        </section>
+
         <section aria-labelledby="reset-title">
             <h2 id="reset-title">重設密碼</h2>
             <form method="post" action="/admin/users/reset_password">

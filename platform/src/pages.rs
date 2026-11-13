@@ -311,7 +311,7 @@ pub async fn audit_page(
     let rows = rows_res.unwrap_or_default();
     let role_code = primary_role(&state.pool, &session.user_id).await;
     render(AuditPageTemplate {
-        acting_user: session.user_id.clone(),
+        acting_user: session.username.clone(),
         nav: nav.0.clone(),
         csrf_token: session.csrf_token.clone(),
         role_code,
@@ -389,7 +389,7 @@ pub async fn my_decisions(
     let rows = rows_res.unwrap_or_default();
     let role_code = primary_role(&state.pool, &session.user_id).await;
     render(MyDecisionsTemplate {
-        acting_user: session.user_id.clone(),
+        acting_user: session.username.clone(),
         nav: nav.0.clone(),
         role_code,
         db_error,
@@ -449,7 +449,7 @@ pub async fn trial_balance_page(
         .map(|r| r.credit.parse::<i64>().unwrap_or(0))
         .sum();
     render(TrialBalanceTemplate {
-        acting_user: session.user_id.clone(),
+        acting_user: session.username.clone(),
         nav: nav.0.clone(),
         csrf_token: session.csrf_token.clone(),
         balanced: total_debit == total_credit,
@@ -519,7 +519,7 @@ pub async fn account_ledger_page(
         vec![]
     };
     render(AccountLedgerTemplate {
-        acting_user: session.user_id.clone(),
+        acting_user: session.username.clone(),
         nav: nav.0.clone(),
         csrf_token: session.csrf_token.clone(),
         account,
@@ -598,7 +598,7 @@ pub async fn account_detail_page(
     let Some(a) = account else {
         // 未知 id：404 ＋ found=false 樣式頁（不洩漏存在性差異）。
         let mut t = render(AccountDetailTemplate {
-            acting_user: session.user_id.clone(),
+            acting_user: session.username.clone(),
             nav: nav.0.clone(),
             found: false,
             account_code: String::new(),
@@ -652,7 +652,7 @@ pub async fn account_detail_page(
     )
     .collect();
     render(AccountDetailTemplate {
-        acting_user: session.user_id.clone(),
+        acting_user: session.username.clone(),
         nav: nav.0.clone(),
         found: true,
         account_code: a.account_code,
@@ -773,7 +773,7 @@ pub async fn bankpay_batches_page(
     let batches = to_batch_views(batches_query(&state.pool, None).await);
     let total = batches.len();
     render(BankPayBatchesTemplate {
-        acting_user: session.user_id.clone(),
+        acting_user: session.username.clone(),
         nav: nav.0.clone(),
         csrf_token: session.csrf_token.clone(),
         batches,
@@ -815,7 +815,7 @@ pub async fn bankpay_batch_detail(
         .filter(|a| a.resource == batch_id)
         .collect();
     render(BankPayBatchDetailTemplate {
-        acting_user: session.user_id.clone(),
+        acting_user: session.username.clone(),
         nav: nav.0.clone(),
         csrf_token: session.csrf_token.clone(),
         not_found: batch.is_none(),
@@ -842,7 +842,7 @@ pub async fn bankpay_exceptions_page(
     let exceptions =
         to_batch_views(batches_query(&state.pool, Some(&["FAILED", "REJECTED"])).await);
     render(BankPayExceptionsTemplate {
-        acting_user: session.user_id.clone(),
+        acting_user: session.username.clone(),
         nav: nav.0.clone(),
         csrf_token: session.csrf_token.clone(),
         exceptions,
@@ -872,7 +872,7 @@ pub async fn import_history_page(
         .await
         .unwrap_or_default();
     render(ImportHistoryTemplate {
-        acting_user: session.user_id.clone(),
+        acting_user: session.username.clone(),
         nav: nav.0.clone(),
         csrf_token: session.csrf_token.clone(),
         rows,
@@ -900,7 +900,7 @@ pub async fn help_page(
 ) -> Response {
     let role_code = primary_role(&state.pool, &session.user_id).await;
     render(HelpTemplate {
-        acting_user: session.user_id.clone(),
+        acting_user: session.username.clone(),
         nav: nav.0.clone(),
         csrf_token: session.csrf_token.clone(),
         role_code,
@@ -953,7 +953,7 @@ pub async fn status_page(
     let overall = crate::status::overall_status(&modules_map);
     let timestamp = chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true);
     render(StatusPageTemplate {
-        acting_user: session.user_id.clone(),
+        acting_user: session.username.clone(),
         nav: nav.0.clone(),
         csrf_token: session.csrf_token.clone(),
         modules,
@@ -996,7 +996,7 @@ pub async fn profile_page(
 ) -> Response {
     let roles = roles_of(&state.pool, &session.user_id).await;
     render(ProfileTemplate {
-        acting_user: session.user_id.clone(),
+        acting_user: session.username.clone(),
         nav: nav.0.clone(),
         csrf_token: session.csrf_token.clone(),
         roles,
@@ -1220,7 +1220,7 @@ pub async fn admin_roles_page(
             .await
             .unwrap_or_default();
     render(AdminRolesTemplate {
-        acting_user: session.user_id.clone(),
+        acting_user: session.username.clone(),
         nav: nav.0.clone(),
         csrf_token: session.csrf_token.clone(),
         roles,
@@ -1271,7 +1271,7 @@ pub async fn admin_sessions_page(
     .await
     .unwrap_or_default();
     render(AdminSessionsTemplate {
-        acting_user: session.user_id.clone(),
+        acting_user: session.username.clone(),
         nav: nav.0.clone(),
         csrf_token: session.csrf_token.clone(),
         sessions,
@@ -1320,6 +1320,10 @@ pub struct AdminSystemTemplate {
     pub audit_count: i64,
     pub batch_count: i64,
     pub session_count: i64,
+    /// AI 建議特性旗標（erp_config ai/suggest_enabled；治理介面可切換）。
+    pub ai_suggest_enabled: bool,
+    /// 操作回饋（切換後重新渲染時攜帶）。
+    pub notice: Option<String>,
 }
 
 /// GET /admin/system — 系統資訊（版本、遷移、資料量；ROLE_MANAGE）。
@@ -1327,6 +1331,7 @@ pub async fn admin_system_page(
     State(state): State<AppState>,
     Extension(session): Extension<Session>,
     nav: Extension<crate::nav::NavModel>,
+    axum::extract::Query(query): axum::extract::Query<std::collections::HashMap<String, String>>,
 ) -> Response {
     if let Some(denied) =
         require_perm(&state, &session.user_id, "ROLE_MANAGE", "無權檢視系統資訊").await
@@ -1349,8 +1354,19 @@ pub async fn admin_system_page(
     let batch_count = count("SELECT COUNT(*) FROM bankpay_batches").await;
     let session_count =
         count("SELECT COUNT(*) FROM sessions WHERE expires_at > datetime('now')").await;
+    let ai_flag: Option<(String,)> =
+        sqlx::query_as("SELECT config_value FROM erp_config WHERE config_category = 'ai' AND config_key = 'suggest_enabled'")
+            .fetch_optional(&state.pool)
+            .await
+            .unwrap_or(None);
+    let ai_suggest_enabled = ai_flag.map(|(v,)| v == "1").unwrap_or(false);
+    let notice = if query.get("ai").map(|v| v == "changed").unwrap_or(false) {
+        Some("AI 建議旗標已更新並寫入稽核。".to_string())
+    } else {
+        None
+    };
     render(AdminSystemTemplate {
-        acting_user: session.user_id.clone(),
+        acting_user: session.username.clone(),
         nav: nav.0.clone(),
         csrf_token: session.csrf_token.clone(),
         version: env!("CARGO_PKG_VERSION").to_string(),
@@ -1360,5 +1376,55 @@ pub async fn admin_system_page(
         audit_count,
         batch_count,
         session_count,
+        ai_suggest_enabled,
+        notice,
     })
+}
+
+/// POST /admin/system/ai_flag — 切換 AI 建議特性旗標（ROLE_MANAGE；寫入稽核）。
+///
+/// 治理介面第一片：規則/特性旗標必須可由管理員在 UI 變動，而非僅能改 DB
+/// （2026-11-12 瀏覽器實證：ai/suggest_enabled 無任何 UI 可開啟，AI 建議形同
+/// 死功能）。旗標變更立即生效（每次 ai_suggest 即時讀取）。
+pub async fn admin_set_ai_flag(
+    State(state): State<AppState>,
+    Extension(session): Extension<Session>,
+    axum::Form(form): axum::Form<AiFlagForm>,
+) -> Response {
+    if let Some(denied) =
+        require_perm(&state, &session.user_id, "ROLE_MANAGE", "無權變更系統設定").await
+    {
+        return denied;
+    }
+    if form.csrf_token != session.csrf_token {
+        return (
+            axum::http::StatusCode::FORBIDDEN,
+            "CSRF 驗證失敗；請重新整理頁面後再操作。".to_string(),
+        )
+            .into_response();
+    }
+    let enabled = form.enabled.as_deref() == Some("1");
+    let value = if enabled { "1" } else { "0" };
+    let _ = sqlx::query(
+        "INSERT OR REPLACE INTO erp_config (config_id, config_category, config_key, config_value, config_type, is_sensitive) \
+         VALUES ('cfg-ai-suggest', 'ai', 'suggest_enabled', ?, 'BOOLEAN', 0)",
+    )
+    .bind(value)
+    .execute(&state.pool)
+    .await;
+    let _ = sqlx::query(
+        "INSERT INTO audit_log (log_id, transaction_id, event_type, event_data, performed_by) VALUES (?, NULL, 'AI_FLAG_CHANGED', ?, ?)",
+    )
+    .bind(uuid::Uuid::new_v4().to_string())
+    .bind(serde_json::json!({ "enabled": enabled }).to_string())
+    .bind(&session.user_id)
+    .execute(&state.pool)
+    .await;
+    Redirect::to("/admin/system?ai=changed").into_response()
+}
+
+#[derive(Debug, serde::Deserialize)]
+pub struct AiFlagForm {
+    pub csrf_token: String,
+    pub enabled: Option<String>,
 }

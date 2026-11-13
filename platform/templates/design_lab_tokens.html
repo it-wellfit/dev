@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+{% import "partials/studio_nav.html" as studio_nav %}
+{% import "partials/lab_nav.html" as lab_nav %}
+<html lang="zh-Hant-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>體驗室 · 設計 Token — AuxBridge 整合工作台</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%232563eb'/%3E%3Ctext x='8' y='12' font-size='10' font-family='sans-serif' fill='white' text-anchor='middle' font-weight='bold'%3EA%3C/text%3E%3C/svg%3E">
+    <link rel="stylesheet" href="/assets/design-system.css">
+</head>
+<body>
+    <a class="skip-link" href="#main">跳至主要內容</a>
+
+    <header class="app-header">
+        <div class="container">
+            <div>
+                <h1>體驗室 · 設計 Token</h1>
+                <p class="app-subtitle">色彩、間距、圓角、陰影數值；暗色優先主題層與對比規則</p>
+            </div>
+            <p class="app-subtitle">
+                使用者：<strong>{{ acting_user }}</strong>
+                ｜
+                <a class="btn btn-secondary" href="/">返回工作台</a>
+            </p>
+        </div>
+    </header>
+    {{ studio_nav::site_nav(nav) }}
+    {{ lab_nav::lab_nav(active) }}
+
+    <main id="main" class="container">
+        <section class="panel" aria-labelledby="tk-layer">
+            <h2 id="tk-layer">分層與來源</h2>
+            <ul>
+                <li>原始層：色階、間距、圓角、陰影（<code>design-system.css</code> 的 <code>:root</code>；與 <code>docs/design-system.css</code> 逐字同步，由測試把關）。</li>
+                <li>主題層：暗色優先＋玉山綠 accent（<code>ui-v2.css</code>；由伺服器串接於設計系統之後）。</li>
+                <li>元件層：按鈕、卡片、表格等以語義 Token 組裝，不直接引用原始色階。</li>
+            </ul>
+            <p class="section-note">修改規則：先改原始檔→同步審查副本→同提交；UI 一律用 <code>var(--token)</code>，不得硬編碼色值。</p>
+        </section>
+
+        <section class="panel" aria-labelledby="tk-semantic">
+            <h2 id="tk-semantic">語義 Token（淺色 ↔ 暗色優先）</h2>
+            <div class="table-wrap">
+                <table>
+                    <caption>主要語義 Token 與兩主題值</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col">Token</th>
+                            <th scope="col">淺色值</th>
+                            <th scope="col">暗色優先值</th>
+                            <th scope="col">用途</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td><code>--color-surface</code></td><td>#ffffff</td><td>#0f172a</td><td>頁面底色</td></tr>
+                        <tr><td><code>--color-surface-raised</code></td><td>#ffffff</td><td>#1e293b</td><td>浮起卡片</td></tr>
+                        <tr><td><code>--color-surface-sunken</code></td><td>#f8fafc</td><td>#020617</td><td>凹陷區（頁底）</td></tr>
+                        <tr><td><code>--color-text-primary</code></td><td>#0f172a</td><td>#f1f5f9</td><td>主文字</td></tr>
+                        <tr><td><code>--color-text-secondary</code></td><td>#475569</td><td>#cbd5e1</td><td>次文字</td></tr>
+                        <tr><td><code>--color-text-tertiary</code></td><td>#94a3b8</td><td>#94a3b8</td><td>輔助文字（禁用於長文）</td></tr>
+                        <tr><td><code>--color-border</code></td><td>#e2e8f0</td><td>#334155</td><td>一般邊框</td></tr>
+                        <tr><td><code>--color-border-strong</code></td><td>#cbd5e1</td><td>#475569</td><td>強調邊框</td></tr>
+                        <tr><td><code>--color-primary</code></td><td>#2563eb</td><td>#2dd4bf</td><td>主色（暗色為玉山綠）</td></tr>
+                        <tr><td><code>--color-primary-hover</code></td><td>#1d4ed8</td><td>#5eead4</td><td>主色 hover</td></tr>
+                        <tr><td><code>--color-success</code></td><td>#16a34a</td><td>#22c55e</td><td>成功</td></tr>
+                        <tr><td><code>--color-warning</code></td><td>#d97706</td><td>#f59e0b</td><td>警告</td></tr>
+                        <tr><td><code>--color-error</code></td><td>#dc2626</td><td>#f87171</td><td>錯誤</td></tr>
+                        <tr><td><code>--color-info</code></td><td>#2563eb</td><td>#60a5fa</td><td>資訊</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <p class="section-note">
+                徽章文字用 <code>-strong</code> 級（淺色 -700 級）確保 muted 背景上 AA 4.5:1；
+                暗色主題之 <code>-strong</code> 沿用亮色（由對比測試閘門把關）。
+            </p>
+        </section>
+
+        <section class="panel" aria-labelledby="tk-scale">
+            <h2 id="tk-scale">間距、圓角與陰影</h2>
+            <div class="table-wrap">
+                <table>
+                    <caption>間距（4px 網格）</caption>
+                    <thead>
+                        <tr><th scope="col">Token</th><th scope="col">值</th><th scope="col">Token</th><th scope="col">值</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>--space-1</td><td>4px</td><td>--space-6</td><td>24px</td></tr>
+                        <tr><td>--space-2</td><td>8px</td><td>--space-8</td><td>32px</td></tr>
+                        <tr><td>--space-3</td><td>12px</td><td>--space-10</td><td>40px</td></tr>
+                        <tr><td>--space-4</td><td>16px</td><td>--space-12</td><td>48px</td></tr>
+                        <tr><td>--space-5</td><td>20px</td><td>--space-16</td><td>64px</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="table-wrap mt-4">
+                <table>
+                    <caption>圓角與陰影</caption>
+                    <thead>
+                        <tr><th scope="col">Token</th><th scope="col">值</th><th scope="col">用途</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>--radius-sm</td><td>4px</td><td>按鈕、輸入（緊湊）</td></tr>
+                        <tr><td>--radius-md</td><td>8px</td><td>卡片、面板</td></tr>
+                        <tr><td>--radius-lg</td><td>12px</td><td>大型容器</td></tr>
+                        <tr><td>--radius-full</td><td>9999px</td><td>徽章、圓形標記</td></tr>
+                        <tr><td>--shadow-sm</td><td>0 1px 3px rgba(15,23,42,.1)</td><td>卡片預設（暗色另定義）</td></tr>
+                        <tr><td>--shadow-md</td><td>0 4px 6px rgba(15,23,42,.1)</td><td>浮起面板</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="panel" aria-labelledby="tk-contrast">
+            <h2 id="tk-contrast">對比與可及性規則</h2>
+            <ul>
+                <li>內文文字 ≥ 4.5:1；大字（≥24px 或 ≥19px 粗體）≥ 3:1；焦點環 ≥ 3:1（WCAG 2.2 AA）。</li>
+                <li>不以顏色為唯一傳達：狀態必有文字或符號（徽章含文字、差異列含標記）。</li>
+                <li>數值一律 tabular-nums；金額右對齊；禁用顏色單獨表示正負。</li>
+                <li>對比驗證由測試閘門（design_a11y 系列）把關；新增元件須附對比值。</li>
+            </ul>
+        </section>
+    </main>
+
+    <footer class="site-footer">
+        <div class="container">
+            <p>AuxBridge 整合工作台 · 體驗室 · Token SSOT：web/assets/design-system.css（審查副本 docs/design-system.css）＋ ui-v2.css</p>
+            <p>計畫 1793708660255 v2.2 · 零 JavaScript · WCAG 2.2 AA 方向</p>
+        </div>
+    </footer>
+</body>
+</html>

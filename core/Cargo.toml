@@ -37,3 +37,4 @@ proptest = "1.12"
 # Rust Analyzer configuration
 [package.metadata.rust-analyzer]
 all_features = true
+

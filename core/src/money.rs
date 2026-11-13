@@ -66,7 +66,12 @@ pub fn parse_decimal_to_minor(input: &str, dp: u32) -> Result<i64, MoneyError> {
     if s.is_empty() {
         return Err(MoneyError::Empty);
     }
-    let s = s.strip_prefix('+').unwrap_or(s);
+    // 2026-11-13 根因修復：接受千分位逗號（"12,000.00" 是財務標準記法）。
+    // 為何必要：草稿從自然語言（"支付租金 12,000 元"）萃取的金額含千分位，
+    // 原實作直接拒絕 → AI 建議採納流程 100% 斷鏈（實證 /drafts/adopt
+    // 回「金額格式不正確」）。剝除逗號後再驗證；負號/多小數點仍嚴格拒絕。
+    let s = s.replace(',', "");
+    let s = s.strip_prefix('+').unwrap_or(&s);
     if s.starts_with('-') {
         return Err(MoneyError::Negative);
     }
@@ -135,6 +140,32 @@ pub fn format_minor(minor: i64, dp: u32) -> String {
     format!(
         "{sign}{grouped}.{fraction_str}",
         sign = if negative { "-" } else { "" }
+    )
+}
+
+/// Format minor units as a PLAIN decimal string (no thousands grouping) —
+/// e.g. `12345` with `dp = 2` becomes `123.45`.
+///
+/// Why a second formatter: `<input type="number">` rejects grouped values
+/// (`"12,000.00"` → DOM value becomes empty), so form field values must be
+/// machine-readable while display strings keep the grouping (2026-11-12
+/// 瀏覽器實證：草稿預填金額因千分位被 number input 清空——資訊漏傳）。
+pub fn format_minor_plain(minor: i64, dp: u32) -> String {
+    let negative = minor < 0;
+    let magnitude = minor.unsigned_abs();
+    let scale = 10u64.pow(dp);
+    let integral = magnitude / scale;
+    let fraction = magnitude % scale;
+    if dp == 0 {
+        return format!(
+            "{negative_sign}{integral}",
+            negative_sign = if negative { "-" } else { "" }
+        );
+    }
+    format!(
+        "{sign}{integral}.{fraction:0width$}",
+        sign = if negative { "-" } else { "" },
+        width = dp as usize
     )
 }
 
@@ -272,10 +303,9 @@ mod tests {
             Err(MoneyError::TooManyDecimalPlaces { max: 2, got: 3 })
         );
         assert_eq!(parse_decimal_to_minor("-1", 2), Err(MoneyError::Negative));
-        assert_eq!(
-            parse_decimal_to_minor("1,234", 2),
-            Err(MoneyError::InvalidFormat)
-        );
+        // 2026-11-13：千分位逗號改為**接受**（財務標準記法；草稿採納流程依賴）。
+        assert_eq!(parse_decimal_to_minor("1,234", 2), Ok(123_400));
+        assert_eq!(parse_decimal_to_minor("1,234,567.89", 2), Ok(123_456_789));
         assert_eq!(
             parse_decimal_to_minor("1.2.3", 2),
             Err(MoneyError::InvalidFormat)
@@ -363,7 +393,9 @@ pub fn parse_decimal_to_minor_i128(input: &str, dp: u32) -> Result<i128, MoneyEr
     if s.is_empty() {
         return Err(MoneyError::Empty);
     }
-    let s = s.strip_prefix('+').unwrap_or(s);
+    // 2026-11-13：與 i64 版同步——接受千分位逗號（財務標準記法）。
+    let s = s.replace(',', "");
+    let s = s.strip_prefix('+').unwrap_or(&s);
     if s.starts_with('-') {
         return Err(MoneyError::Negative);
     }

@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+{% import "partials/studio_nav.html" as studio_nav %}
+{% import "partials/lab_nav.html" as lab_nav %}
+<html lang="zh-Hant-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>體驗室 · 全端表面 — AuxBridge 整合工作台</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%232563eb'/%3E%3Ctext x='8' y='12' font-size='10' font-family='sans-serif' fill='white' text-anchor='middle' font-weight='bold'%3EA%3C/text%3E%3C/svg%3E">
+    <link rel="stylesheet" href="/assets/design-system.css">
+</head>
+<body>
+    <a class="skip-link" href="#main">跳至主要內容</a>
+
+    <header class="app-header">
+        <div class="container">
+            <div>
+                <h1>體驗室 · 全端表面</h1>
+                <p class="app-subtitle">S1–S9：同一體驗契約、各依媒介最佳化（不是把同一頁縮放到處）</p>
+            </div>
+            <p class="app-subtitle">
+                使用者：<strong>{{ acting_user }}</strong>
+                ｜
+                <a class="btn btn-secondary" href="/">返回工作台</a>
+            </p>
+        </div>
+    </header>
+    {{ studio_nav::site_nav(nav) }}
+    {{ lab_nav::lab_nav(active) }}
+
+    <main id="main" class="container">
+        <section class="panel" aria-labelledby="sf-title">
+            <h2 id="sf-title">表面清單（S1–S9）</h2>
+            <div class="table-wrap">
+                <table>
+                    <caption>全端表面、限制與驗證方式</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col">表面</th>
+                            <th scope="col">載體與限制</th>
+                            <th scope="col">輸入</th>
+                            <th scope="col">體驗重點</th>
+                            <th scope="col">驗證方式</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>S1 Web 工作台</td><td>瀏覽器；≤900px 折疊；零 JS</td><td>滑鼠／鍵盤／觸控</td><td>密度、掃視、鍵盤流、八態</td><td>頁面矩陣、死鏈掃描、鍵盤走查</td></tr>
+                        <tr><td>S2 桌面殼</td><td>Tauri／WebView2；視窗；離線狀態</td><td>滑鼠／鍵盤</td><td>首啟、視窗標題、更新、錯誤</td><td>安裝與更新演練、錯誤態走查</td></tr>
+                        <tr><td>S3 KEM 控制台</td><td>靜態 HTML（65 檔）；無伺服器互動</td><td>滑鼠／鍵盤</td><td>導覽一致、可讀、可列印</td><td>靜態頁零 JS 掃描、對比檢查</td></tr>
+                        <tr><td>S4 列印</td><td>紙張／PDF；黑白；無互動</td><td>—</td><td>頁首頁尾、分頁、黑白可讀</td><td>列印預覽走查</td></tr>
+                        <tr><td>S5 匯出</td><td>CSV／JSON；Excel 開啟</td><td>—</td><td>命名、欄序、編碼一致</td><td>匯出檔比對</td></tr>
+                        <tr><td>S6 文件體系</td><td>Markdown／HTML；本地或儲存庫</td><td>滑鼠／鍵盤</td><td>受眾分層、可搜尋、零死鏈</td><td>連結檢查、metadata 稽核</td></tr>
+                        <tr><td>S7 API／DX</td><td>JSON；HTTP 狀態；錯誤碼</td><td>程式</td><td>一致封套、可預測、可測試</td><td>API 契約測試</td></tr>
+                        <tr><td>S8 通知／警報</td><td>Email／Teams；批次管線觸發</td><td>—</td><td>事件語義、嚴重度、可行動</td><td>範本走查、去重規則</td></tr>
+                        <tr><td>S9 工具組 CLI</td><td>終端機；管線；CI</td><td>鍵盤</td><td>help、退出碼、JSON、無破壞預設</td><td>TT-1..TT-5 檢查</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="panel" aria-labelledby="sf-device">
+            <h2 id="sf-device">跨裝置矩陣（S1 必測）</h2>
+            <div class="table-wrap">
+                <table>
+                    <caption>尺寸 × 檢查點</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col">尺寸</th>
+                            <th scope="col">導覽</th>
+                            <th scope="col">表格</th>
+                            <th scope="col">觸控目標</th>
+                            <th scope="col">密度</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>Desktop ≥1280</td><td>完整側欄</td><td>全欄顯示</td><td>≥44px（次要）</td><td>緊湊（預設）</td></tr>
+                        <tr><td>Laptop 1024</td><td>完整側欄</td><td>全欄顯示</td><td>≥44px</td><td>緊湊</td></tr>
+                        <tr><td>Tablet 768</td><td>折疊群組</td><td>橫向捲動</td><td>≥44px</td><td>標準</td></tr>
+                        <tr><td>Phone 390</td><td>折疊群組</td><td>橫向捲動＋關鍵欄優先</td><td>≥44px</td><td>標準</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <p class="section-note">輸入方式：滑鼠／鍵盤／觸控三者皆須可完成主要任務；輔助設定：reduced-motion、200% 縮放、高對比、螢幕閱讀器。</p>
+        </section>
+
+        <section class="panel" aria-labelledby="sf-print">
+            <h2 id="sf-print">列印規則（S4）</h2>
+            <ul>
+                <li>頁首：公司／報表名／期間／產出時間；頁尾：頁碼、系統版本、「僅供內部使用」。</li>
+                <li>分頁不截斷表格列與合計列；金額欄保有千分位與對齊。</li>
+                <li>黑白檢視仍可讀：不以顏色為唯一傳達（狀態須有文字或符號）。</li>
+                <li>互動元素（按鈕、導覽）列印時自動隱藏。</li>
+            </ul>
+        </section>
+
+        <section class="panel" aria-labelledby="sf-na">
+            <h2 id="sf-na">不適用（N/A）紀錄原則</h2>
+            <ul>
+                <li>S3 靜態頁：EC-4（POST／CSRF）不適用——無表單送出。</li>
+                <li>S4 列印：EC-7（動效）不適用——無互動。</li>
+                <li>S9 CLI：EC-3 以退出碼與輸出語義表達，不以八態呈現。</li>
+                <li>凡標 N/A 必須寫理由；UNKNOWN 必須註明解鎖條件。</li>
+            </ul>
+        </section>
+    </main>
+
+    <footer class="site-footer">
+        <div class="container">
+            <p>AuxBridge 整合工作台 · 體驗室 · 表面矩陣文件：docs/design/EXPERIENCE_SURFACE_MATRIX.md</p>
+            <p>計畫 1793708660255 v2.2 · 零 JavaScript · WCAG 2.2 AA 方向</p>
+        </div>
+    </footer>
+</body>
+</html>

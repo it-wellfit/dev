@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+{% import "partials/studio_nav.html" as studio_nav %}
+{% import "partials/lab_nav.html" as lab_nav %}
+<html lang="zh-Hant-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>體驗室 · 決策 log — AuxBridge 整合工作台</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%232563eb'/%3E%3Ctext x='8' y='12' font-size='10' font-family='sans-serif' fill='white' text-anchor='middle' font-weight='bold'%3EA%3C/text%3E%3C/svg%3E">
+    <link rel="stylesheet" href="/assets/design-system.css">
+</head>
+<body>
+    <a class="skip-link" href="#main">跳至主要內容</a>
+
+    <header class="app-header">
+        <div class="container">
+            <div>
+                <h1>體驗室 · 決策 log</h1>
+                <p class="app-subtitle">每個重要體驗決策都回答八欄：需求／選擇／原因／替代／優勢／缺點／證據／驗證</p>
+            </div>
+            <p class="app-subtitle">
+                使用者：<strong>{{ acting_user }}</strong>
+                ｜
+                <a class="btn btn-secondary" href="/">返回工作台</a>
+            </p>
+        </div>
+    </header>
+    {{ studio_nav::site_nav(nav) }}
+    {{ lab_nav::lab_nav(active) }}
+
+    <main id="main" class="container">
+        <section class="panel" aria-labelledby="dc-01">
+            <h2 id="dc-01">DEC-DL-01 ▸ 暗色優先主題分層</h2>
+            <div class="table-wrap">
+                <table>
+                    <caption>決策記錄（八欄）</caption>
+                    <tbody>
+                        <tr><th scope="row">需求</th><td>每日高頻使用的工具介面；淺色長時使用刺眼、層級辨識差。</td></tr>
+                        <tr><th scope="row">選擇</th><td>暗色優先（dark-first）＋玉山綠 accent；以獨立主題層（ui-v2.css）覆蓋全部語義 Token，不散改元件。</td></tr>
+                        <tr><th scope="row">原因</th><td>2026 專業工具主流（Linear／Vercel／Grafana／Supabase）皆暗色優先；集中覆蓋可一次修正殘留淺色背景。</td></tr>
+                        <tr><th scope="row">替代方案</th><td>① 淺色優先；② 雙主題切換（需狀態儲存→不符零 JS）；③ 逐元件改色（散落難維護）。</td></tr>
+                        <tr><th scope="row">優勢</th><td>層級清楚、長時間舒適；元件不需個別修改；淺色媒體查詢仍保有後備。</td></tr>
+                        <tr><th scope="row">缺點</th><td>列印與淺色需求須另驗（S4 黑白可讀列入檢查表）。</td></tr>
+                        <tr><th scope="row">證據</th><td>ui-v2.css（完整語義 Token 覆蓋）；護欄測試比對色值 ∈ 設計系統調色盤。</td></tr>
+                        <tr><th scope="row">驗證</th><td>R5 視覺輪：對比檢查＋逐頁走查；設計 Token 頁列出兩主題值。</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="panel" aria-labelledby="dc-02">
+            <h2 id="dc-02">DEC-DL-02 ▸ 零 JS 互動模型</h2>
+            <div class="table-wrap">
+                <table>
+                    <caption>決策記錄（八欄）</caption>
+                    <tbody>
+                        <tr><th scope="row">需求</th><td>高效能、易維護、跨裝置的互動；禁用耗費效能的 JS 工具鏈。</td></tr>
+                        <tr><th scope="row">選擇</th><td>互動僅用 CSS 與伺服器渲染：表單 POST＋PRG、<code>:target</code> 面板、<code>details</code> 披露、<code>:focus-visible</code> 焦點。</td></tr>
+                        <tr><th scope="row">原因</th><td>零 JS＝零啟動成本、零 XSS 面、無限裝置相容；金額與權限一律伺服器端 fail-closed。</td></tr>
+                        <tr><th scope="row">替代方案</th><td>① 少量 JS 增強（增加供應鏈與 CSP 風險）；② SPA（背離憲政約束）；③ HTMX 類工具（同屬 JS 依賴）。</td></tr>
+                        <tr><th scope="row">優勢</th><td>效能穩定（無 hydration）、可及性直接由語義 HTML 承接、測試面簡單（HTTP 層可全覆蓋）。</td></tr>
+                        <tr><th scope="row">缺點</th><td>複雜互動（拖曳、即時篩選）不可行——以流程設計迴避或明示限制。</td></tr>
+                        <tr><th scope="row">證據</th><td>護欄掃描：全模板腳本標籤數為 0、內聯樣式屬性數為 0；頁面矩陣全綠。</td></tr>
+                        <tr><th scope="row">驗證</th><td>R1 靜態輪＋R6 端到端輪；所有任務鏈以純瀏覽器（無 JS）完成。</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="panel" aria-labelledby="dc-03">
+            <h2 id="dc-03">DEC-DL-03 ▸ 體驗室 Gate=ROLE_MANAGE</h2>
+            <div class="table-wrap">
+                <table>
+                    <caption>決策記錄（八欄）</caption>
+                    <tbody>
+                        <tr><th scope="row">需求</th><td>體驗知識需被驗收與入門使用，但操作者層不得見開發文件（受眾分層 IA）。</td></tr>
+                        <tr><th scope="row">選擇</th><td>體驗室十頁設 <code>ROLE_MANAGE</code> 閘（伺服器端逐頁檢查）；導覽僅對管理者顯示入口。</td></tr>
+                        <tr><th scope="row">原因</th><td>「隱藏」不等於「保護」——直接輸入 URL 亦須 403；管理者與技術人員是規格的維護者。</td></tr>
+                        <tr><th scope="row">替代方案</th><td>① 全體可見（污染操作者資訊）；② 僅文件（無展示與回歸基準）；③ 導覽隱藏但不加閘（可繞過）。</td></tr>
+                        <tr><th scope="row">優勢</th><td>展示與保護兼得；與治理頁同一權限模型，無新增角色。</td></tr>
+                        <tr><th scope="row">缺點</th><td>新人訓練期間需管理者陪同瀏覽。</td></tr>
+                        <tr><th scope="row">證據</th><td>route 對帳（manifest↔api.rs 雙向）、角色矩陣測試（admin 200／store、finance 403／visitor 303）。</td></tr>
+                        <tr><th scope="row">驗證</th><td>R4 權限輪；體驗室專屬測試套件。</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <p class="section-note">
+                新決策一律以上表八欄登錄；未回答八欄者不得進入實作（規格與決策同步更新，同一提交）。
+            </p>
+        </section>
+    </main>
+
+    <footer class="site-footer">
+        <div class="container">
+            <p>AuxBridge 整合工作台 · 體驗室 · 決策 SSOT：docs/design/EXPERIENCE_SPEC.md（決策區）</p>
+            <p>計畫 1793708660255 v2.2 · 零 JavaScript · WCAG 2.2 AA 方向</p>
+        </div>
+    </footer>
+</body>
+</html>

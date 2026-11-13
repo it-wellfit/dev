@@ -27,7 +27,23 @@
             </dl>
             <p class="section-note">健康詳情：<a href="/status">/status</a>（30 秒自動更新）· API 對照：<a href="/admin/api/catalog">/admin/api/catalog</a>。</p>
         </section>
-    </main>
+    <section aria-labelledby="ai-flag-title">
+        <h2 id="ai-flag-title">AI 建議特性旗標（治理設定）</h2>
+        {% if let Some(n) = notice %}<p class="section-note" role="status">{{ n }}</p>{% endif %}
+        <p class="section-note">AI 建議（草稿頁「AI 建議」）目前狀態：
+        {% if ai_suggest_enabled %}<strong>已啟用</strong>{% else %}<strong>未啟用</strong>{% endif %}。
+        啟用後使用者於草稿解析頁可取得 Ollama 本地模型之分錄建議；AI 永不直接登帳，必經人工覆核與精靈確認。</p>
+        <form method="post" action="/admin/system/ai_flag">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            {% if ai_suggest_enabled %}
+            <input type="hidden" name="enabled" value="0">
+            <button class="btn btn-secondary" type="submit">停用 AI 建議</button>
+            {% else %}
+            <input type="hidden" name="enabled" value="1">
+            <button class="btn btn-primary" type="submit">啟用 AI 建議</button>
+            {% endif %}
+        </form>
+    </section>    </main>
     <footer class="app-footer"><div class="container"><p>AuxBridge 整合工作台 · 管理工作室（零 JavaScript）</p></div></footer>
 </body>
 </html>

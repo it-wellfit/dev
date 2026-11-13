@@ -611,6 +611,19 @@ This addendum records execution facts only; it does not approve product scope, c
 | 四關封印 | fmt 0／clippy -D warnings 淨空／**361 測試 0 失敗** | 2026-11-13 日誌 |
 
 This addendum records execution facts only; it does not approve product scope, certification, or release.
+
+## 2026-11-13 addendum #43 (體驗室十頁落地＋密碼重設整合收斂＋四關複驗)
+
+| Item | Disposition | Evidence |
+|---|---|---|
+| 體驗室十頁（Gate=Manage／零 JS／templates×10＋lab_nav／design_lab.rs／design_lab.rs tests 2/2；route↔manifest 對帳 4/4） | 完成：platform/src/design_lab.rs（10 handlers, ROLE_MANAGE-gated）；platform/templates/design_lab*.html（10）＋partials/lab_nav.html；10 routes in platform/src/api.rs；console_manifest WF_DESIGN + 10 PageSpecs | cargo test -p platform --test design_lab : 2 passed; cargo test -p platform --test page_matrix : 4 passed |
+| manifest 動態計數 43→53→55（修訂註記依 C-01；console_manifest lib 16/0） | 完成：console_manifest PAGES 動態計數 43→53→55 | cargo test -p console_manifest --lib : 16 passed |
+| 整合收斂（/forgot-password、/reset-password 補登 Public；/admin/users/issue_reset→NON_PAGE_ROUTES 28；web_crawl pre-auth skip；public_gate 白名單 3 頁） | 完成：migrations/0010_password_reset.sql；templates/forgot_password.html、reset_password.html；tests/password_reset.rs（2/2）；api.rs/auth.rs/pages.rs/apihub.rs/workbench.rs 整合；web_crawl skip list；public_gate 白名單 | cargo test -p platform --test password_reset : 2 passed; cargo test -p platform --test web_crawl : 6 passed |
+| 四關（fmt EXIT=0；clippy EXIT=0；audit EXIT=0；cargo test --locked 模式與結果） | 四關全綠；full suite single green run EXIT=0 | .kilo/sessions/20261113-design-lab/tests/20261113-e3-acceptance.log |
+| 聚焦套件數字 | console_manifest 16/0；page_matrix 4/0；web_crawl 6/0；design_lab 2/0；password_reset 2/0 | 同上 |
+
+This addendum records execution facts only; it does not approve product scope, certification, or release.
+
 ## Consolidation rules
 
 1. Keep one current navigation register and one acceptance/evidence ledger per project. Detailed requirements belong in their project documents.

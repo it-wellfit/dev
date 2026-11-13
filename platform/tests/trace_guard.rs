@@ -30,7 +30,10 @@ const VALID_VERDICTS: &[&str] = &[
 
 /// workspace 根下已存在的檔案快取（路徑 → 存在）。
 fn workspace_root() -> PathBuf {
-    Path::new(MANIFEST_DIR).parent().expect("workspace root").to_path_buf()
+    Path::new(MANIFEST_DIR)
+        .parent()
+        .expect("workspace root")
+        .to_path_buf()
 }
 
 fn collect_rs_sources(dir: &Path, out: &mut Vec<String>) {
@@ -39,10 +42,10 @@ fn collect_rs_sources(dir: &Path, out: &mut Vec<String>) {
             let path = entry.path();
             if path.is_dir() {
                 collect_rs_sources(&path, out);
-            } else if path.extension().and_then(|e| e.to_str()) == Some("rs") {
-                if let Ok(text) = fs::read_to_string(&path) {
-                    out.push(text);
-                }
+            } else if path.extension().and_then(|e| e.to_str()) == Some("rs")
+                && let Ok(text) = fs::read_to_string(&path)
+            {
+                out.push(text);
             }
         }
     }
@@ -55,10 +58,13 @@ fn traceability_matrix_rows_resolve() {
     let text = fs::read_to_string(&matrix_path)
         .unwrap_or_else(|e| panic!("traceability matrix readable: {e}"));
 
-    // 收集 platform 原始碼（供測試名存在性檢查）。
+    // 收集 platform＋core＋crates 原始碼（供測試名存在性檢查）——
+    // 2026-11-13 擴大：AMT-01 引用 core/src/money.rs 的測試曾被誤判不存在。
     let mut sources = Vec::new();
     collect_rs_sources(&Path::new(MANIFEST_DIR).join("src"), &mut sources);
     collect_rs_sources(&Path::new(MANIFEST_DIR).join("tests"), &mut sources);
+    collect_rs_sources(&root.join("core/src"), &mut sources);
+    collect_rs_sources(&root.join("crates"), &mut sources);
     let all_source = sources.join("\n");
 
     let mut checked_files = 0usize;
@@ -78,9 +84,17 @@ fn traceability_matrix_rows_resolve() {
         }
         let id_cell = cells[1];
         let id = id_cell.trim();
-        if !id.chars().next().map(|c| c.is_ascii_uppercase()).unwrap_or(false)
+        if !id
+            .chars()
+            .next()
+            .map(|c| c.is_ascii_uppercase())
+            .unwrap_or(false)
             || !id.contains('-')
-            || !id.split('-').nth(1).map(|n| !n.is_empty() && n.chars().all(|c| c.is_ascii_digit())).unwrap_or(false)
+            || !id
+                .split('-')
+                .nth(1)
+                .map(|n| !n.is_empty() && n.chars().all(|c| c.is_ascii_digit()))
+                .unwrap_or(false)
         {
             continue;
         }
@@ -94,15 +108,18 @@ fn traceability_matrix_rows_resolve() {
 
         // (a) 判定五級
         let verdict_clean = verdict.replace('*', "").trim().to_string();
-        let verdict_ok = VALID_VERDICTS
-            .iter()
-            .any(|v| verdict_clean.starts_with(v));
+        let verdict_ok = VALID_VERDICTS.iter().any(|v| verdict_clean.starts_with(v));
         if !verdict_ok {
             problems.push(format!("{id}: 判定「{verdict}」不在五級用語"));
         }
 
         // (b) 檔案路徑存在（設計/實作/證據欄；測試欄的 .rs 亦屬檔案）
-        for (label, column) in [("設計", design), ("實作", impl_col), ("測試", test_col), ("證據", evidence)] {
+        for (label, column) in [
+            ("設計", design),
+            ("實作", impl_col),
+            ("測試", test_col),
+            ("證據", evidence),
+        ] {
             for token in column.split('`').chain(column.split('`')) {
                 let tok = token.trim().trim_end_matches('（').trim_end_matches('）');
                 let looks_path = (tok.contains('/') || tok.contains('.'))
@@ -151,9 +168,18 @@ fn traceability_matrix_rows_resolve() {
         }
     }
 
-    assert!(rows >= 20, "矩陣應有 20+ 需求列（實測 {rows}）——格式變更須同步 trace_guard");
-    assert!(checked_files >= 5, "應驗證過 5+ 檔案引用（實測 {checked_files}）");
-    assert!(checked_tests >= 5, "應驗證過 5+ 測試名（實測 {checked_tests}）");
+    assert!(
+        rows >= 20,
+        "矩陣應有 20+ 需求列（實測 {rows}）——格式變更須同步 trace_guard"
+    );
+    assert!(
+        checked_files >= 5,
+        "應驗證過 5+ 檔案引用（實測 {checked_files}）"
+    );
+    assert!(
+        checked_tests >= 5,
+        "應驗證過 5+ 測試名（實測 {checked_tests}）"
+    );
     assert!(
         problems.is_empty(),
         "追溯矩陣與實作脫鉤（{} 項）:\n{}",

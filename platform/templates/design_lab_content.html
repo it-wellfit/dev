@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+{% import "partials/studio_nav.html" as studio_nav %}
+{% import "partials/lab_nav.html" as lab_nav %}
+<html lang="zh-Hant-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>體驗室 · 內容與語氣 — AuxBridge 整合工作台</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%232563eb'/%3E%3Ctext x='8' y='12' font-size='10' font-family='sans-serif' fill='white' text-anchor='middle' font-weight='bold'%3EA%3C/text%3E%3C/svg%3E">
+    <link rel="stylesheet" href="/assets/design-system.css">
+</head>
+<body>
+    <a class="skip-link" href="#main">跳至主要內容</a>
+
+    <header class="app-header">
+        <div class="container">
+            <div>
+                <h1>體驗室 · 內容與語氣</h1>
+                <p class="app-subtitle">microcopy 目錄、數字與時間格式、術語表（zh-Hant-TW）</p>
+            </div>
+            <p class="app-subtitle">
+                使用者：<strong>{{ acting_user }}</strong>
+                ｜
+                <a class="btn btn-secondary" href="/">返回工作台</a>
+            </p>
+        </div>
+    </header>
+    {{ studio_nav::site_nav(nav) }}
+    {{ lab_nav::lab_nav(active) }}
+
+    <main id="main" class="container">
+        <section class="panel" aria-labelledby="ct-rules">
+            <h2 id="ct-rules">語氣三原則</h2>
+            <ul>
+                <li><strong>可行動</strong>：錯誤一律含「問題＋可能原因＋處理方式」，並附下一步連結。</li>
+                <li><strong>誠實</strong>：未知以「—」；示意資料一律標示；模擬模式掛 <span class="badge badge-mock">模擬模式</span>；不製造假數字。</li>
+                <li><strong>一致</strong>：同一概念全站同術語（見下方術語表）；按鈕動詞開頭、可預期結果。</li>
+            </ul>
+        </section>
+
+        <section class="panel" aria-labelledby="ct-copy">
+            <h2 id="ct-copy">microcopy 目錄（依情境）</h2>
+            <div class="table-wrap">
+                <table>
+                    <caption>情境 × 範例文案（現行頁面用語對照）</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col">情境</th>
+                            <th scope="col">範例（問題＋原因＋處理）</th>
+                            <th scope="col">現行頁面</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>成功</td>
+                            <td>「已完成」／送出後以 PRG 導向結果頁；成功徽章＋下一步連結。</td>
+                            <td>交易清單、匯入確認</td>
+                        </tr>
+                        <tr>
+                            <td>錯誤</td>
+                            <td>「無法載入交易清單——可能原因：後端服務未啟動或連線中斷。請確認服務狀態後重試；若持續失敗，請聯絡系統管理員。」</td>
+                            <td>介面狀態、我的裁決紀錄</td>
+                        </tr>
+                        <tr>
+                            <td>空（Empty）</td>
+                            <td>「尚無資料——未知或無資料一律以『—』呈現，不以範例數字冒充真實帳務。」</td>
+                            <td>介面狀態、各清單頁</td>
+                        </tr>
+                        <tr>
+                            <td>零結果（Zero）</td>
+                            <td>「沒有符合目前條件的項目——資料庫中有其他紀錄，但沒有一筆符合目前篩選；請調整關鍵字或日期範圍後再試。」</td>
+                            <td>介面狀態、交易清單</td>
+                        </tr>
+                        <tr>
+                            <td>警告／降級</td>
+                            <td>「AI 決策服務暫停——規則引擎不受影響，登帳與查詢照常運作；服務恢復後本區塊回到完整狀態。」</td>
+                            <td>介面狀態、儀表板</td>
+                        </tr>
+                        <tr>
+                            <td>過期（Stale）</td>
+                            <td>「此資料非最新——本報告產生於（時間）；其後已有新交易入帳，數字可能不含最新異動。」</td>
+                            <td>月報、介面狀態</td>
+                        </tr>
+                        <tr>
+                            <td>無權限</td>
+                            <td>「無權檢視此內容——缺少權限碼（碼名）。請向系統管理員申請權限，或改用您可存取的頁面。」</td>
+                            <td>治理頁、體驗室</td>
+                        </tr>
+                        <tr>
+                            <td>確認（不可逆）</td>
+                            <td>「將對 12 筆執行覆核（具名筆數）——送出後不刪原紀錄，改以反向事件更正；請確認筆數後再送出。」</td>
+                            <td>批量覆核（二段確認）</td>
+                        </tr>
+                        <tr>
+                            <td>衝突（併發）</td>
+                            <td>「操作衝突：此項目已被處理——重複確認或狀態已變更（HTTP 409）。請重新載入最新狀態，確認後再送出；系統不會重複入帳（重放防護）。」</td>
+                            <td>介面狀態、覆核流程</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="panel" aria-labelledby="ct-format">
+            <h2 id="ct-format">數字、日期與時間格式</h2>
+            <div class="table-wrap">
+                <table>
+                    <caption>格式規則（單一事實來源：伺服器端格式化）</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col">類別</th>
+                            <th scope="col">規則</th>
+                            <th scope="col">範例</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>金額</td><td>整數分（i64）儲存；顯示千分位＋兩位小數；表格右對齊、tabular-nums</td><td>98,000.00 / 1,234.50</td></tr>
+                        <tr><td>未知值</td><td>一律「—」；不以 0、空白或範例數字代替</td><td>—</td></tr>
+                        <tr><td>日期</td><td>YYYY-MM-DD</td><td>2026-11-13</td></tr>
+                        <tr><td>時間</td><td>Asia/Taipei（+08:00）伺服器端格式化；附時區語義</td><td>2026-11-13 09:30:00</td></tr>
+                        <tr><td>相對時間</td><td>僅輔助；必附絕對時間（title 或鄰近文字）</td><td>3 分鐘前（09:30）</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <p class="section-note">貨幣別一律顯式（TWD／USD／EUR／JPY 白名單）；混合幣別不得直接加總。</p>
+        </section>
+
+        <section class="panel" aria-labelledby="ct-terms">
+            <h2 id="ct-terms">術語表（節錄）</h2>
+            <div class="table-wrap">
+                <table>
+                    <caption>全站統一術語（ubiquitous language）</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col">術語</th>
+                            <th scope="col">定義（一句）</th>
+                            <th scope="col">避免混用</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>交易（Transaction）</td><td>一組借貸分錄的容器，有唯一編號與狀態。</td><td>傳票（僅口語）、單據</td></tr>
+                        <tr><td>分錄（Item）</td><td>交易中的單邊借或貸，對應一個科目與金額。</td><td>明細行、條目</td></tr>
+                        <tr><td>科目（Account）</td><td>會計科目（含子科目樹）。</td><td>帳戶（易與銀行帳戶混淆）</td></tr>
+                        <tr><td>覆核（Review）</td><td>對待覆核交易的批量裁決（核准／退回），具稽核軌跡。</td><td>審核、批准</td></tr>
+                        <tr><td>批次（Batch）</td><td>一次匯入或一次覆核動作的集合，具識別碼。</td><td>批、群組</td></tr>
+                        <tr><td>例外（Exception）</td><td>對帳或處理中無法自動結案的差異項目。</td><td>異常（泛用）、錯誤</td></tr>
+                        <tr><td>對帳（Reconcile）</td><td>通路／銀行／帳務三方勾稽並處置差異。</td><td>核對（口語）</td></tr>
+                        <tr><td>稽核軌跡（Audit Trail）</td><td>不可竄改的事件序列（含操作者與時間）。</td><td>日誌（泛指系統日誌）</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <footer class="site-footer">
+        <div class="container">
+            <p>AuxBridge 整合工作台 · 體驗室 · 語氣與術語規則：docs/design/EXPERIENCE_SPEC.md</p>
+            <p>計畫 1793708660255 v2.2 · 零 JavaScript · WCAG 2.2 AA 方向</p>
+        </div>
+    </footer>
+</body>
+</html>

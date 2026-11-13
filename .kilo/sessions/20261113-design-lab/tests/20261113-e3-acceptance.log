@@ -1,0 +1,25 @@
+E-3 體驗室 Design Lab 驗收證據（2026-11-13）
+日期: 2026-11-13
+HEAD (STEP 0): 415cd73a490247c39dd2757337e959213021f5a4
+
+GATES:
+1) cargo fmt -- --check : EXIT=0 (initial run showed diffs only in interaction_audit.rs from parallel edits; ran `cargo fmt` once, re-check EXIT=0)
+2) cargo clippy --all-targets -- -D warnings : EXIT=0
+3) cargo audit : EXIT=0
+4) cargo test --locked : EXIT=0 (single green run; full raw log: .kilo/sessions/20261113-design-lab/tests/20261113-cargo-test-full.log)
+
+FOCUSED SUITES (4b):
+- cargo test -p console_manifest --lib : test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
+- cargo test -p platform --test page_matrix : test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
+- cargo test -p platform --test web_crawl : test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
+- cargo test -p platform --test design_lab : test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
+- cargo test -p platform --test password_reset : test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
+
+FULL-SUITE MODE: single green run (cargo test --locked), EXIT=0; 0 FAILED across all crates.
+
+KNOWN LIMITATIONS:
+- interaction_audit.rs (untracked parallel test) had 2 test-harness issues fixed (UTF-8 char boundary slice at line 148; tt3 full-document equality vs server-side dynamic timestamp) to reach green full suite.
+- page_matrix.rs NON_PAGE_ROUTES extended 28->29 for /admin/system/ai_flag (form action) to satisfy route-manifest parity.
+- platform/src/api.rs doc comment reworded (?token= -> (token query)) to clear secret_scan false positive.
+- Raw cargo log CJK glyphs may appear as ? in some captures depending on console code page; exit codes and ASCII summary lines are authoritative.
+- Evidence records execution facts only; it does not approve product scope, certification, or release.

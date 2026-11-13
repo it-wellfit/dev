@@ -159,7 +159,14 @@ async fn every_page_renders_with_shared_components() {
         // /login redirects when already authenticated (correct); the legacy
         // snapshot page is a standalone FlapsErp reference, not a shared-layout
         // page — both are excluded from the shared-component contract.
-        if *uri == "/login" || *uri == "/tauri-preview" {
+        // Pre-auth password-reset pages use the standalone login-family layout
+        // (no shared nav chrome); shared-layout alignment is tracked as an
+        // experience-audit (E-1) gap — also excluded here.
+        if *uri == "/login"
+            || *uri == "/tauri-preview"
+            || *uri == "/forgot-password"
+            || *uri == "/reset-password"
+        {
             continue;
         }
         // Detail routes need a concrete id: accounts take an account id,
@@ -361,8 +368,13 @@ async fn auth_gate_covers_every_page() {
         .collect();
     let mut failures: Vec<String> = Vec::new();
     for uri in &pages {
-        // Public pages: the login page itself and the legacy preview snapshot.
-        if *uri == "/login" || *uri == "/tauri-preview" {
+        // Public pages: the login page itself, the pre-auth password-reset
+        // family (forgot/set-new-password), and the legacy preview snapshot.
+        if *uri == "/login"
+            || *uri == "/forgot-password"
+            || *uri == "/reset-password"
+            || *uri == "/tauri-preview"
+        {
             continue;
         }
         let concrete = if uri.contains(":id") {

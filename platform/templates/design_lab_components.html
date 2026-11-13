@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+{% import "partials/studio_nav.html" as studio_nav %}
+{% import "partials/lab_nav.html" as lab_nav %}
+<html lang="zh-Hant-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>體驗室 · 元件 — AuxBridge 整合工作台</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%232563eb'/%3E%3Ctext x='8' y='12' font-size='10' font-family='sans-serif' fill='white' text-anchor='middle' font-weight='bold'%3EA%3C/text%3E%3C/svg%3E">
+    <link rel="stylesheet" href="/assets/design-system.css">
+</head>
+<body>
+    <a class="skip-link" href="#main">跳至主要內容</a>
+
+    <header class="app-header">
+        <div class="container">
+            <div>
+                <h1>體驗室 · 元件庫</h1>
+                <p class="app-subtitle">≥24 元件 × 狀態；僅使用既有 Design Token 類別（示意資料）</p>
+            </div>
+            <p class="app-subtitle">
+                使用者：<strong>{{ acting_user }}</strong>
+                ｜
+                <a class="btn btn-secondary" href="/">返回工作台</a>
+            </p>
+        </div>
+    </header>
+    {{ studio_nav::site_nav(nav) }}
+    {{ lab_nav::lab_nav(active) }}
+
+    <main id="main" class="container">
+        <section class="panel" aria-labelledby="c-buttons">
+            <h2 id="c-buttons">1 ▸ 按鈕（5 變體 × 3 尺寸 × 狀態）</h2>
+            <p>
+                <button class="btn btn-primary" type="button">主要動作</button>
+                <button class="btn btn-secondary" type="button">次要動作</button>
+                <button class="btn btn-ghost" type="button">幽靈（低干擾）</button>
+                <button class="btn btn-danger" type="button">危險（需確認）</button>
+                <button class="btn btn-success" type="button">成功路徑</button>
+            </p>
+            <p>
+                <button class="btn btn-primary btn-sm" type="button">小（表格內）</button>
+                <button class="btn btn-primary" type="button">標準</button>
+                <button class="btn btn-primary btn-lg" type="button">大（表單送出）</button>
+                <button class="btn btn-primary" type="button" disabled>停用（不可用）</button>
+            </p>
+            <p class="section-note">狀態：Default／Hover（CSS）／Focus（focus-visible 環）／Disabled（如上）／Loading（以狀態元件示意）／Error（由錯誤區塊承接）。連結型按鈕：<code>&lt;a class="btn …"&gt;</code>。</p>
+        </section>
+
+        <section class="panel" aria-labelledby="c-forms">
+            <h2 id="c-forms">2 ▸ 表單（輸入、提示、錯誤、動作列）</h2>
+            <div class="form-row">
+                <label for="demo-amount">金額（示意）</label>
+                <input class="input" id="demo-amount" type="text" placeholder="例如 1,500.50" aria-describedby="demo-amount-hint">
+                <p class="hint" id="demo-amount-hint">整數分（i64）儲存；顯示自動千分位與兩位小數。</p>
+            </div>
+            <div class="form-row">
+                <label for="demo-error">錯誤示範（示意）</label>
+                <input class="input" id="demo-error" type="text" value="abc" aria-describedby="demo-error-msg" aria-invalid="true">
+                <p class="field-error" id="demo-error-msg">請輸入數字，例如 1500.50。</p>
+            </div>
+            <div class="form-row">
+                <label for="demo-disabled">停用輸入（示意）</label>
+                <input class="input" id="demo-disabled" type="text" value="唯讀期間不可修改" disabled>
+            </div>
+            <div class="form-actions">
+                <button class="btn btn-primary" type="button">送出</button>
+                <button class="btn btn-secondary" type="button">取消</button>
+            </div>
+            <p class="section-note">狀態：Default／Hover／Focus／Disabled（如上）／Loading（送出後 PRG）／Error（field-error＋aria-invalid＋aria-describedby，缺一不可）。</p>
+        </section>
+
+        <section class="panel" aria-labelledby="c-badges">
+            <h2 id="c-badges">3 ▸ 徽章（6 色＋狀態點）</h2>
+            <p>
+                <span class="badge badge-success">已完成</span>
+                <span class="badge badge-warning">待處理</span>
+                <span class="badge badge-error">失敗</span>
+                <span class="badge badge-info">資訊</span>
+                <span class="badge badge-neutral">草稿</span>
+                <span class="badge badge-primary">已覆核</span>
+                <span class="badge badge-mock">模擬模式</span>
+                <span class="badge badge-dot">狀態點</span>
+            </p>
+            <p class="section-note">文字對比以 -strong 級把關（AA 4.5:1）；不得以顏色為唯一傳達——徽章必附文字。</p>
+        </section>
+
+        <section class="panel" aria-labelledby="c-cards">
+            <h2 id="c-cards">4 ▸ 卡片、面板與 KPI</h2>
+            <div class="grid grid-3 gap-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">卡片</h3>
+                        <p class="card-subtitle">標題＋副標＋內文＋動作</p>
+                    </div>
+                    <div class="card-body"><p>用於入口卡、摘要卡與清單卡。</p></div>
+                    <div class="card-footer"><a class="btn btn-secondary btn-sm" href="/design">動作</a></div>
+                </div>
+                <div class="panel">
+                    <h3>面板</h3>
+                    <p>頁內分區容器；標題以 aria-labelledby 連結。</p>
+                </div>
+                <div class="api-card">
+                    <div class="api-card-head"><span class="badge badge-info">API</span><strong>端點卡</strong></div>
+                    <div class="api-card-body"><p>目錄、測試、日誌頁使用的端點摘要卡。</p></div>
+                </div>
+            </div>
+            <dl class="kpi-grid mt-4">
+                <div class="kpi"><dt>待覆核筆數（示意）</dt><dd>12</dd></div>
+                <div class="kpi"><dt>今日入帳金額（示意）</dt><dd>98,000.00</dd></div>
+                <div class="kpi"><dt>未知值一律</dt><dd>—</dd></div>
+            </dl>
+        </section>
+
+        <section class="panel" aria-labelledby="c-table">
+            <h2 id="c-table">5 ▸ 表格（會計數字對齊）</h2>
+            <div class="table-wrap">
+                <table>
+                    <caption>示意：交易清單（非真實帳務）</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col">交易編號</th>
+                            <th scope="col">摘要</th>
+                            <th scope="col" class="text-right">金額</th>
+                            <th scope="col">狀態</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>TX-DEMO-101</td>
+                            <td>文具用品採購</td>
+                            <td class="text-right">1,234.50</td>
+                            <td><span class="badge badge-success">已完成</span></td>
+                        </tr>
+                        <tr>
+                            <td>TX-DEMO-102</td>
+                            <td>銀行轉帳－貨款</td>
+                            <td class="text-right">98,000.00</td>
+                            <td><span class="badge badge-info">待處理</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <p class="section-note">tabular-nums 由表格樣式全域套用；金額右對齊；caption 與 scope 必備。</p>
+        </section>
+
+        <section class="panel" aria-labelledby="c-misc">
+            <h2 id="c-misc">6 ▸ 分頁、披露與工具類</h2>
+            <nav class="pagination" aria-label="分頁範例（示意）">
+                <span class="is-disabled" aria-disabled="true">← 上一頁</span>
+                <span class="page-status">第 1 / 2 頁・共 25 筆</span>
+                <a href="/design/components">下一頁 →</a>
+            </nav>
+            <details class="mt-4">
+                <summary>披露（details／summary）：零 JS 展開收合</summary>
+                <p>用於篩選面板、說明與次要資訊；預設收合，鍵盤可操作。</p>
+            </details>
+            <p class="section-note mt-4">
+                工具類：<span class="text-secondary">text-secondary</span>、
+                <span class="text-right">text-right（右對齊）</span>、
+                <code>sr-only</code>（螢幕閱讀器專用）、
+                <span class="badge badge-neutral">badge-neutral</span>。
+            </p>
+            <p class="preview-note">preview-note：預覽或示意資料的統一標示語彙。</p>
+        </section>
+
+        <section class="panel" aria-labelledby="c-states">
+            <h2 id="c-states">7 ▸ 狀態元件（八態迷你示範）</h2>
+            <p class="loading-state"><span class="spinner" aria-hidden="true"></span>載入中…（大於 300ms 才顯示；尊重 reduced-motion）</p>
+            <p class="empty-state"><strong>空（Empty）</strong>：未知一律以「—」呈現，不以範例數字冒充。</p>
+            <div class="zero-state" role="status"><strong>零結果（Zero）</strong><p>篩選無相符；與全新空庫不同。</p></div>
+            <div class="degraded-state" role="status"><strong>降級（Partial）</strong><p>非核心服務暫停，核心照常。</p></div>
+            <div class="stale-state" role="status"><strong>過期（Stale）</strong><p>明示最後更新時間與可能缺漏。</p></div>
+            <div class="denied-state" role="alert"><strong>無權限（Denied）</strong><p>指名權限碼與申請方式。</p></div>
+            <div class="error-state" role="alert"><strong>錯誤（Error）</strong><p>問題＋原因＋處理＋重試。</p></div>
+            <div class="conflict-state" role="alert"><strong>衝突（Conflict）</strong><p>他人已先處理；重載後再送，不重複入帳。</p></div>
+        </section>
+    </main>
+
+    <footer class="site-footer">
+        <div class="container">
+            <p>AuxBridge 整合工作台 · 體驗室 · 元件清單與規則：docs/design/EXPERIENCE_SPEC.md</p>
+            <p>計畫 1793708660255 v2.2 · 零 JavaScript · WCAG 2.2 AA 方向</p>
+        </div>
+    </footer>
+</body>
+</html>

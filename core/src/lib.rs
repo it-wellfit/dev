@@ -16,7 +16,7 @@ pub use ledger::AuditLog;
 pub use ledger::LedgerEngine;
 pub use ledger::Transaction;
 pub use ledger::TransactionItem;
-pub use money::{MoneyError, format_minor, parse_decimal_to_minor};
+pub use money::{MoneyError, format_minor, format_minor_plain, parse_decimal_to_minor};
 pub use parser::{
     AiSuggestion, DraftEntry, Evidence, ParsedSuggestion, parse_ai_suggestion, parse_unstructured,
 };

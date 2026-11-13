@@ -62,6 +62,10 @@ impl OllamaClient {
             "model": self.model,
             "prompt": prompt,
             "stream": false,
+            // qwen3.5:4b 為 thinking model：不加 "think": false 時，實際輸出
+            // 落在 thinking 欄位而 response 為空（2026-11-13 實證：schema
+            // 驗證 EOF）。與 rerank 模組同一修法。
+            "think": false,
             "options": {
                 "temperature": self.temperature,
                 "top_p": self.top_p,

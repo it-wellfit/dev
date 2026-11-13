@@ -655,7 +655,7 @@ pub async fn apihub_catalog(
     let esun = esun_endpoints();
     let native = catalog_rows();
     let view = ApiCatalogTemplate {
-        acting_user: session.user_id.clone(),
+        acting_user: session.username.clone(),
         nav: nav.0.clone(),
         esun_total: esun.len(),
         native_total: native.len(),
@@ -700,7 +700,7 @@ pub async fn apihub_test(
         }
     }
     render_or_500(ApiTestTemplate {
-        acting_user: session.user_id.clone(),
+        acting_user: session.username.clone(),
         nav: nav.0.clone(),
         endpoints: catalog_rows(),
         selected,
@@ -759,7 +759,7 @@ pub async fn apihub_logs(
         )
         .collect();
     render_or_500(ApiLogsTemplate {
-        acting_user: session.user_id.clone(),
+        acting_user: session.username.clone(),
         nav: nav.0.clone(),
         logs,
     })
@@ -798,7 +798,7 @@ async fn render_config_page(
     })
     .collect();
     render_or_500(ApiConfigTemplate {
-        acting_user: session.user_id.clone(),
+        acting_user: session.username.clone(),
         csrf_token: session.csrf_token.clone(),
         nav: nav.clone(),
         esun_mock_mode: config.esun_mock_mode,
@@ -1076,7 +1076,7 @@ pub async fn apihub_records(
         )
         .collect();
     render_or_500(ApiRecordsTemplate {
-        acting_user: session.user_id.clone(),
+        acting_user: session.username.clone(),
         nav: nav.0.clone(),
         records,
         batches,
@@ -1101,7 +1101,7 @@ pub async fn apihub_codes(
         action: "正常處理".to_string(),
     }];
     render_or_500(ApiCodesTemplate {
-        acting_user: session.user_id.clone(),
+        acting_user: session.username.clone(),
         nav: nav.0.clone(),
         codes,
     })
@@ -1167,7 +1167,7 @@ pub async fn apihub_release(
         },
     ];
     render_or_500(ApiReleaseTemplate {
-        acting_user: session.user_id.clone(),
+        acting_user: session.username.clone(),
         nav: nav.0.clone(),
         items,
     })
@@ -1275,7 +1275,7 @@ pub async fn apihub_net(
         note: "遠端連通性測試需憑證；本頁不做網路探測（零副作用）".to_string(),
     });
     render_or_500(ApiNetTemplate {
-        acting_user: session.user_id.clone(),
+        acting_user: session.username.clone(),
         nav: nav.0.clone(),
         checks,
     })

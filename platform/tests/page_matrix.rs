@@ -395,7 +395,7 @@ async fn w2_w6_nav_matrix_headers_anchors_console() {
 
 /// 非頁面路由窮舉清單（資產、下載、表單動作、中間態、靜態主控台託管）。
 /// 每筆都必須在 `api.rs` 實際註冊，否則清單過期（測試會失敗）。
-const NON_PAGE_ROUTES: [&str; 27] = [
+const NON_PAGE_ROUTES: [&str; 29] = [
     "/logout",
     "/assets/design-system.css",
     "/assets/legacy-1420.css",
@@ -408,6 +408,10 @@ const NON_PAGE_ROUTES: [&str; 27] = [
     "/admin/ccm.json",
     "/admin/users/toggle",
     "/admin/users/reset_password",
+    // 密碼重設（並行線）：管理員核發一次性連結＝表單動作（非頁面）。
+    "/admin/users/issue_reset",
+    // 管理員切換 AI 旗標＝表單動作（非頁面）。
+    "/admin/system/ai_flag",
     "/import/preview",
     "/import/confirm",
     "/import/mapping",

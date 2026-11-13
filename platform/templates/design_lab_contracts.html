@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+{% import "partials/studio_nav.html" as studio_nav %}
+{% import "partials/lab_nav.html" as lab_nav %}
+<html lang="zh-Hant-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>體驗室 · 契約 — AuxBridge 整合工作台</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%232563eb'/%3E%3Ctext x='8' y='12' font-size='10' font-family='sans-serif' fill='white' text-anchor='middle' font-weight='bold'%3EA%3C/text%3E%3C/svg%3E">
+    <link rel="stylesheet" href="/assets/design-system.css">
+</head>
+<body>
+    <a class="skip-link" href="#main">跳至主要內容</a>
+
+    <header class="app-header">
+        <div class="container">
+            <div>
+                <h1>體驗室 · 體驗契約</h1>
+                <p class="app-subtitle">EC-1..EC-10 × 全端介面鏈 L1–L6 × 工具組契約 TT-1..TT-5</p>
+            </div>
+            <p class="app-subtitle">
+                使用者：<strong>{{ acting_user }}</strong>
+                ｜
+                <a class="btn btn-secondary" href="/">返回工作台</a>
+            </p>
+        </div>
+    </header>
+    {{ studio_nav::site_nav(nav) }}
+    {{ lab_nav::lab_nav(active) }}
+
+    <main id="main" class="container">
+        <section class="panel" aria-labelledby="ec-title">
+            <h2 id="ec-title">體驗契約（EC-1..EC-10）</h2>
+            <p class="section-note">
+                每條契約都是<strong>可驗收規則</strong>；E-1 稽核逐表面判定「符合／部分／
+                不適用（附理由）／UNKNOWN（解鎖條件）」，矩陣不得留空。
+            </p>
+            <div class="table-wrap">
+                <table>
+                    <caption>體驗契約總表（規則、適用表面、驗證方法）</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col">契約</th>
+                            <th scope="col">規則（可驗收）</th>
+                            <th scope="col">適用表面</th>
+                            <th scope="col">驗證方法</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>EC-1 識別與導覽</td><td>每頁 title＋單一 h1；導覽由 manifest 驅動、角色過濾、aria-current；skip-link；無死連結</td><td>S1/S2/S3/S6</td><td>頁面矩陣、導覽快照、死鏈掃描</td></tr>
+                        <tr><td>EC-2 資訊架構</td><td>studio＋section 兩層；Operator／Admin／Technical 分層；操作者不得見開發文件</td><td>S1/S2/S3/S6</td><td>IA 文件與 manifest 對帳</td></tr>
+                        <tr><td>EC-3 狀態語彙</td><td>資料八態文案互異、各含下一步；元件至少六態（default／hover／focus／disabled／loading／error）</td><td>S1/S2/S3</td><td>states 樣板、每頁錨點、文案斷言</td></tr>
+                        <tr><td>EC-4 動作語義</td><td>GET 讀／POST 寫＋CSRF＋PRG；危險動作二段確認；撤銷＝反向事件（不刪原紀錄）</td><td>S1/S2/S7</td><td>CSRF 矩陣與 HTTP 掃描</td></tr>
+                        <tr><td>EC-5 內容與語氣</td><td>zh-Hant-TW；錯誤＝問題＋原因＋處理；數字千分位、minor 兩位小數、+08:00；術語一致</td><td>全部表面</td><td>文案斷言、術語表對照</td></tr>
+                        <tr><td>EC-6 視覺語言</td><td>僅用 Token（原始／語義／元件三層）；無模板硬編碼色；對比 AA；暗色優先</td><td>S1–S4</td><td>Token 守恆、對比檢查</td></tr>
+                        <tr><td>EC-7 回饋與動效</td><td>互動僅 CSS；時序約 150ms；prefers-reduced-motion 停用非必要動畫；focus-visible 可見</td><td>S1/S2/S3</td><td>護欄掃描、鍵盤走查</td></tr>
+                        <tr><td>EC-8 無障礙</td><td>WCAG 2.2 AA：語義 HTML、表單標籤、替代文字、鍵盤可達、不以顏色為唯一傳達</td><td>S1–S4</td><td>a11y 檢查表、手動走查</td></tr>
+                        <tr><td>EC-9 效能與感知</td><td>清單 &lt;300ms、詳情 &lt;150ms、報表 &lt;500ms（2k 交易）；分頁；無明顯版面位移</td><td>S1/S2/S3</td><td>預熱＋p95、curl 計時</td></tr>
+                        <tr><td>EC-10 韌性與恢復</td><td>error／degraded／timeout／conflict／retry／empty；金額與權限 fail-closed、量測 fail-open</td><td>S1/S2/S3/S7/S8</td><td>故障注入、PIN 回歸</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="panel" aria-labelledby="chain-title">
+            <h2 id="chain-title">全端介面鏈（L1–L6）</h2>
+            <p class="section-note">「全端」不只畫面（S1–S9），也含後端介面；每層都有契約與驗證，禁止跨層假設。</p>
+            <div class="table-wrap">
+                <table>
+                    <caption>介面鏈分層與驗證</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col">層</th>
+                            <th scope="col">範圍</th>
+                            <th scope="col">契約要點</th>
+                            <th scope="col">驗證</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>L1 呈現</td><td>模板／CSS／瀏覽器</td><td>EC-1..EC-10；零 JS；Token；八態</td><td>護欄、頁面矩陣、無障礙</td></tr>
+                        <tr><td>L2 HTTP</td><td>路由、狀態碼、標頭、CSRF</td><td>動詞語義、錯誤碼、安全標頭、快取政策</td><td>API 契約測試、curl</td></tr>
+                        <tr><td>L3 應用</td><td>handler → 用例</td><td>授權、輸入驗證、冪等、交易邊界</td><td>整合測試、故障注入</td></tr>
+                        <tr><td>L4 領域</td><td>金額、分錄、狀態機</td><td>i64 minor、借貸平衡、狀態轉移</td><td>單元與 property 測試</td></tr>
+                        <tr><td>L5 資料</td><td>schema、索引、WAL</td><td>遷移、約束、索引、備份與還原</td><td>遷移測試、EXPLAIN、演練</td></tr>
+                        <tr><td>L6 運維</td><td>日誌、健康、備份、更新</td><td>可觀測、退出碼、復原</td><td>健康檢查、runbook</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="panel" aria-labelledby="tt-title">
+            <h2 id="tt-title">工具組體驗契約（TT-1..TT-5）</h2>
+            <p class="section-note">CLI、腳本與管線也是介面；「工具包不精緻」的另一半在此把關。</p>
+            <div class="table-wrap">
+                <table>
+                    <caption>工具組契約</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col">ID</th>
+                            <th scope="col">契約</th>
+                            <th scope="col">規則</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>TT-1</td><td>一致 help</td><td>每個子命令有 --help、用法、範例、退出碼說明</td></tr>
+                        <tr><td>TT-2</td><td>退出碼語義</td><td>0 成功；非 0 失敗；UNKNOWN 明確（不得以 0 冒充）</td></tr>
+                        <tr><td>TT-3</td><td>雙模式輸出</td><td>人類可讀＋--json 機器可讀；欄位穩定</td></tr>
+                        <tr><td>TT-4</td><td>無破壞預設</td><td>破壞性動作需 --yes 或 dry-run；預設不覆蓋</td></tr>
+                        <tr><td>TT-5</td><td>每台機器通用</td><td>偵測環境（CPU／GPU／路徑／相依）；禁寫死本機規格</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="panel" aria-labelledby="rules-title">
+            <h2 id="rules-title">契約使用規則</h2>
+            <ul>
+                <li>新頁面不得在規格缺席時新增；先在規格登錄契約對照。</li>
+                <li>不適用（N/A）必須寫理由（例：靜態頁無 POST → EC-4 不適用）。</li>
+                <li>任一層介面變更，必須同步契約文件與測試；上層不得假設下層已驗證（縱深防禦）。</li>
+            </ul>
+        </section>
+    </main>
+
+    <footer class="site-footer">
+        <div class="container">
+            <p>AuxBridge 整合工作台 · 體驗室 · 契約 SSOT：docs/standards/EXPERIENCE_CONTRACTS.md 與 docs/design/EXPERIENCE_SPEC.md</p>
+            <p>計畫 1793708660255 v2.2 · 零 JavaScript · WCAG 2.2 AA 方向</p>
+        </div>
+    </footer>
+</body>
+</html>

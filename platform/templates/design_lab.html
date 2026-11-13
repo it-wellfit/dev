@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+{% import "partials/studio_nav.html" as studio_nav %}
+{% import "partials/lab_nav.html" as lab_nav %}
+<html lang="zh-Hant-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>體驗室 — AuxBridge 整合工作台</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%232563eb'/%3E%3Ctext x='8' y='12' font-size='10' font-family='sans-serif' fill='white' text-anchor='middle' font-weight='bold'%3EA%3C/text%3E%3C/svg%3E">
+    <link rel="stylesheet" href="/assets/design-system.css">
+</head>
+<body>
+    <a class="skip-link" href="#main">跳至主要內容</a>
+
+    <header class="app-header">
+        <div class="container">
+            <div>
+                <h1>體驗室（Design Lab）</h1>
+                <p class="app-subtitle">全端 UI/UX 單一展示、回歸基準與入門——零 JavaScript 標本館</p>
+            </div>
+            <p class="app-subtitle">
+                使用者：<strong>{{ acting_user }}</strong>
+                ｜
+                <a class="btn btn-secondary" href="/">返回工作台</a>
+            </p>
+        </div>
+    </header>
+    {{ studio_nav::site_nav(nav) }}
+    {{ lab_nav::lab_nav(active) }}
+
+    <main id="main" class="container">
+        <section class="panel" aria-labelledby="lab-purpose">
+            <h2 id="lab-purpose">這間體驗室是什麼</h2>
+            <p class="section-note">
+                體驗室把散落在多份文件的體驗知識收斂為單一展示面。它同時是三種工具：
+            </p>
+            <ul>
+                <li><strong>展示</strong>——規格長什麼樣：契約、元件、狀態、語氣、藍圖、Token。</li>
+                <li><strong>回歸基準</strong>——每次驗收（R0–R9）逐頁對照本室；規格變更先改這裡與文件，再改產品。</li>
+                <li><strong>入門</strong>——新成員先看本室一輪，再進產品頁面。</li>
+            </ul>
+            <p class="section-note">
+                規格 SSOT 文件：<code>docs/design/EXPERIENCE_SPEC.md</code>；契約清單：
+                <code>docs/standards/EXPERIENCE_CONTRACTS.md</code>；追溯矩陣：
+                <code>docs/standards/REQUIREMENTS_TRACEABILITY.md</code>。
+                本室十頁皆為 <code>ROLE_MANAGE</code> 閘：操作者層不得見開發文件（受眾分層 IA）。
+                所有範例皆為<strong>示意資料</strong>，不冒充真實帳務。
+            </p>
+        </section>
+
+        <section class="panel" aria-labelledby="lab-entries">
+            <h2 id="lab-entries">分區入口</h2>
+            <div class="grid grid-auto-md gap-4">
+                <a class="card" href="/design/contracts">
+                    <div class="card-body">
+                        <h3 class="card-title">體驗契約</h3>
+                        <p class="card-subtitle">EC-1..EC-10 × 全端介面鏈 L1–L6 × 工具組 TT-1..TT-5。</p>
+                    </div>
+                </a>
+                <a class="card" href="/design/components">
+                    <div class="card-body">
+                        <h3 class="card-title">元件庫</h3>
+                        <p class="card-subtitle">≥24 元件：按鈕、表單、徽章、卡片、表格、分頁、狀態元件與其狀態。</p>
+                    </div>
+                </a>
+                <a class="card" href="/design/states">
+                    <div class="card-body">
+                        <h3 class="card-title">狀態語彙</h3>
+                        <p class="card-subtitle">資料八態 × 元件六態；全頁樣板 SSOT 在「介面狀態」頁。</p>
+                    </div>
+                </a>
+                <a class="card" href="/design/content">
+                    <div class="card-body">
+                        <h3 class="card-title">內容與語氣</h3>
+                        <p class="card-subtitle">microcopy 目錄（問題＋原因＋處理）、數字／日期／時區格式、術語表。</p>
+                    </div>
+                </a>
+                <a class="card" href="/design/blueprints">
+                    <div class="card-body">
+                        <h3 class="card-title">頁面藍圖</h3>
+                        <p class="card-subtitle">八個頁面族的資訊層級與主動作（ASCII wireframe，零 JS）。</p>
+                    </div>
+                </a>
+                <a class="card" href="/design/surfaces">
+                    <div class="card-body">
+                        <h3 class="card-title">全端表面</h3>
+                        <p class="card-subtitle">S1–S9：Web／桌面殼／控制台／列印／匯出／文件／API／通知／CLI。</p>
+                    </div>
+                </a>
+                <a class="card" href="/design/matrices">
+                    <div class="card-body">
+                        <h3 class="card-title">覆蓋矩陣</h3>
+                        <p class="card-subtitle">表面×契約、角色×任務×情境；P0 全測與 pairwise 抽樣規則。</p>
+                    </div>
+                </a>
+                <a class="card" href="/design/tokens">
+                    <div class="card-body">
+                        <h3 class="card-title">設計 Token</h3>
+                        <p class="card-subtitle">色彩、間距、圓角、陰影數值；暗色優先層與對比規則。</p>
+                    </div>
+                </a>
+                <a class="card" href="/design/decisions">
+                    <div class="card-body">
+                        <h3 class="card-title">決策 log</h3>
+                        <p class="card-subtitle">八欄格式範例：需求／選擇／原因／替代／優勢／缺點／證據／驗證。</p>
+                    </div>
+                </a>
+            </div>
+        </section>
+
+        <section class="panel" aria-labelledby="lab-protocol">
+            <h2 id="lab-protocol">驗收協議（R0–R9）</h2>
+            <ol>
+                <li>R0 基準量測：效能、頁面可達、CSS bytes 快照。</li>
+                <li>R1 編譯靜態：型別、警告、Token 守恆。</li>
+                <li>R2 測試套件：邏輯與回歸全綠。</li>
+                <li>R3 路由完整性：404、死鏈、manifest 對帳。</li>
+                <li>R4 權限矩陣：403、導覽洩漏。</li>
+                <li>R5 視覺與無障礙：對比、零 JS、focus。</li>
+                <li>R6 端到端流程：任務鏈、錯誤恢復。</li>
+                <li>R7 靜態控制台與跨裝置：響應式、列印。</li>
+                <li>R8 效能資源：p95、bytes、版面位移。</li>
+                <li>R9 閉環：零新缺陷，才成「驗證完全」。</li>
+            </ol>
+            <pre><code>$env:CARGO_TARGET_DIR = "$env:LOCALAPPDATA\Temp\dev-target-audit"
+cargo fmt -- --check
+cargo clippy --all-targets -- -D warnings
+cargo test --locked
+cargo audit</code></pre>
+            <p class="section-note">證據紀律：每項聲明＝命令＋exit code＋日期＋修訂版；UNKNOWN 不等於 PASS。</p>
+        </section>
+
+        <section class="panel" aria-labelledby="lab-rules">
+            <h2 id="lab-rules">使用規則</h2>
+            <ul>
+                <li>新頁面不得在規格缺席時新增；先補 <code>EXPERIENCE_SPEC</code> 條目。</li>
+                <li>每個頁面變更需附「本頁適用契約與驗證」對照。</li>
+                <li>不適用（N/A）必須寫理由（例：靜態頁無 POST → EC-4 不適用）。</li>
+                <li>本室元件僅使用既有 Design Token 類別；不得引入新 class 或 inline style。</li>
+                <li>規格、本室與產品三者不一致時，以「先修文件→再修本室→再修產品」為序，並同提交完成。</li>
+            </ul>
+        </section>
+    </main>
+
+    <footer class="site-footer">
+        <div class="container">
+            <p>AuxBridge 整合工作台 · 體驗室（Design Lab）· 規格 SSOT：docs/design/EXPERIENCE_SPEC.md</p>
+            <p>計畫 1793708660255 v2.2 · Gate=ROLE_MANAGE · 零 JavaScript · WCAG 2.2 AA 方向</p>
+        </div>
+    </footer>
+</body>
+</html>

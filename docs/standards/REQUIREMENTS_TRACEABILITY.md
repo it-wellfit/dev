@@ -71,8 +71,18 @@
 | TT-1 | 會話與身份操作契約 | EXPERIENCE_CONTRACTS §1 | login/logout/profile | `login_lockout_survives_correct_password` 等 | E-1..E-5 | PASS |
 | TT-2 | 帳務與交易操作契約 | 同上 | transactions/reviews/search | E2E D1–D8＋Rust 測試 | E-6..E-11 | PASS |
 | TT-3 | 匯入與草稿操作契約 | 同上 | import/drafts | E2E D10＋`import_confirm_is_replay_guarded` | E-12..E-14 | PASS |
-| TT-4 | 銀行支付操作契約（Mock 誠實標示） | 同上 | bankpay | `bankpay_api` 測試 | E-15..E-17 | PARTIAL（匯出流程 E2E 未跑） |
+| TT-4 | 銀行支付操作契約（Mock 誠實標示） | 同上 | bankpay | `bankpay_api` 測試＋E2E D11（建批→清單→例外頁） | E-15..E-17 | PASS |
 | TT-5 | 治理與系統操作契約 | 同上 | admin/audit | `rbac_matrix_server_side_gates`＋E2E | E-18..E-21 | PASS |
+
+## 6c. 使用者實測回饋修復（2026-11-13 第二批，P0）
+
+| ID | 需求 | 設計 | 實作位置 | 測試 | 證據 | 判定 |
+|---|---|---|---|---|---|---|
+| AMT-01 | 千分位金額（"12,000.00"）必須可解析——AI 建議採納流程原 100% 斷鏈 | 財務標準記法容許千分位；剝除逗號後驗證（負號/多點仍拒） | `core/src/money.rs`（parse_decimal_to_minor + _i128） | `parse_rejects_non_representable_input`（1,234→123,400）＋E2E D12 | 採納 400→**303**；core 44/0、platform 146/0 | PASS |
+| OVL-01 | 全域狀態晶片列不得壓過品牌頂欄（雙 sticky 相撞） | 吸頂職責唯一化：header sticky、status-bar 靜態 | `web/assets/ui-v2.css`（.status-bar position:static + 根因註解） | CSS 實證（served 含 position: static） | 根因：design-system.css:1661 sticky+z40 與 grid row2 衝突 | PASS |
+| UI-01 | /ai-decisions 卡片標題不得為 UUID | 人類可讀摘要（日期/科目/金額）；UUID 降為次要 hint | `platform/templates/ai_decisions.html` | 頁面契約測試＋HTTP 實證 | h3 無 UUID、摘要含 → | PASS |
+| UI-02 | 頂欄顯示帳號名而非內部 user_id | Session 增 username（JOIN users，COALESCE 防孤兒） | `platform/src/auth.rs`（get_valid_session）＋50 處 acting_user | `login_failure_shows_generic_error` 等既有 | 頂欄實測「使用者：admin」 | PASS |
+| WZ-01 | wizard 金額預填不得含千分位（number input 會清空值） | format_minor_plain（純數字） | `platform/src/api.rs`（平行流實作）＋測試斷言同步 | `drafts_parse_creates_draft_and_wizard_prefills` | value="12000.00" | PASS |
 
 ## 7. 未測／已知限制（誠實揭露）
 

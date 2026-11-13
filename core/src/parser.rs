@@ -74,6 +74,21 @@ fn trim_punct(s: &str) -> &str {
     })
 }
 
+/// Clean a leg mention into an account-ready hint: trim punctuation, then
+/// strip the currency-marker prefix ("元："/"元:"/"元 ") that survives when
+/// the amount and the arrow share a token ("… 45,000 元：應收帳款→銀行存款"
+/// → credit mention is "元：應收帳款"). 2026-11-12 瀏覽器實證：貸方預填
+/// 出現「元：應收帳款」髒前綴，人類得手動清理——資訊未正規化。
+fn clean_leg_mention(s: &str) -> &str {
+    let t = trim_punct(s);
+    let t = t
+        .strip_prefix("元：")
+        .or_else(|| t.strip_prefix("元:"))
+        .or_else(|| t.strip_prefix("元 "))
+        .unwrap_or(t);
+    trim_punct(t)
+}
+
 /// Try to parse a date token with the supported format set (rule table).
 fn parse_date_token(token: &str) -> Option<NaiveDate> {
     let token = trim_punct(token);
@@ -167,12 +182,12 @@ pub fn parse_unstructured(text: &str, keyword_accounts: &[(String, String)]) -> 
     if let Some((left, right, marker)) = arrow_split {
         // The left fragment may itself contain the date/amount; take the tail
         // of the left side (after the last whitespace) as the credit mention.
-        let credit_mention = trim_punct(
+        let credit_mention = clean_leg_mention(
             left.rsplit(|c: char| c.is_whitespace())
                 .next()
                 .unwrap_or(left),
         );
-        let debit_mention = trim_punct(
+        let debit_mention = clean_leg_mention(
             right
                 .split(|c: char| c.is_whitespace())
                 .next()
@@ -270,7 +285,18 @@ pub fn parse_ai_suggestion(text: &str) -> Result<ParsedSuggestion, String> {
     if debit.eq_ignore_ascii_case(&credit) {
         return Err("schema 驗證失敗（借貸科目相同）".to_string());
     }
-    let money = crate::value_objects::Money::new(amount_minor, &suggestion.currency)
+    // 幣別正規化（2026-11-13 實證）：模型可能呼應原文的「元／新台幣／NT$」
+    // 而非 ISO 碼；台灣情境預設 TWD（人類覆核頁仍顯示幣別可改）。
+    let currency_upper = suggestion.currency.trim().to_uppercase();
+    let normalized_currency = match currency_upper.as_str() {
+        "元" | "新台幣" | "台幣" | "NT$" | "NTD" | "TWD" => "TWD",
+        "人民幣" | "RMB" | "CNY" => "CNY",
+        "美元" | "USD" => "USD",
+        "日圓" | "JPY" => "JPY",
+        "歐元" | "EUR" => "EUR",
+        other => other,
+    };
+    let money = crate::value_objects::Money::new(amount_minor, normalized_currency)
         .map_err(|e| format!("schema 驗證失敗（{e}）"))?;
 
     Ok(ParsedSuggestion {
@@ -294,6 +320,39 @@ mod tests {
             ("租金".to_string(), "RENT-EXP".to_string()),
             ("薪資".to_string(), "PAYROLL-EXP".to_string()),
         ]
+    }
+
+    /// 2026-11-12 瀏覽器實證回歸：金額與幣別標記共用 token（"45,000 元：X→Y"）
+    /// 時，貸方提及不得殘留「元：」前綴——它會污染科目對映與依據卡。
+    #[test]
+    fn leg_mention_strips_currency_marker_prefix() {
+        let d = parse_unstructured(
+            "2026-11-12 收到客戶貨款 45,000 元：應收帳款→銀行存款",
+            &keywords(),
+        );
+        assert_eq!(d.amount_minor, Some(4_500_000));
+        assert_eq!(d.debit_account.as_deref(), Some("BANK"));
+        let credit = d.credit_account.as_deref().unwrap_or_default();
+        assert!(
+            !credit.starts_with("元"),
+            "credit mention must not keep the currency marker: {credit:?}"
+        );
+        assert_eq!(credit, "應收帳款");
+    }
+
+    /// 2026-11-12 瀏覽器實證回歸：金額必須進 draft（<input type=number> 預填
+    /// 依賴 draft.amount_minor；漏解析＝金額資訊漏傳到登帳頁）。
+    #[test]
+    fn amount_is_extracted_from_yuan_suffix_token() {
+        let d = parse_unstructured(
+            "2026-11-12 支付辦公室租金 12,000 元：現金→租金費用",
+            &keywords(),
+        );
+        assert_eq!(
+            d.amount_minor,
+            Some(1_200_000),
+            "12,000 元 → 1,200,000 minor"
+        );
     }
 
     /// DRAFT-001 acceptance: the worked example from the plan.

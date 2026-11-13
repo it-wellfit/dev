@@ -553,6 +553,19 @@ REQ-UX-03 八態與元件全狀態
 | v2.0 | 2026-11-12 | C→B→A＋UX-E 總計畫；體驗室概念 |
 | v2.1 | 2026-11-13 | 深化：EC-1..EC-10 體驗契約、S1–S9 表面矩陣、角色×任務×情境覆蓋、全問題覆蓋方法論、TT-1..TT-5 工具組契約、REQ/DEC/IMPL/TEST/EVID 追溯與自動校驗、T1–T9 工具包、文件 rubric、C-9/B-6/A-6 體驗對齊 |
 | v2.2 | 2026-11-13 | 再深化：§0 指令對照、§2.5 全端介面鏈 L1–L6、§5.4 失敗/邊界情境、§6.6 UI 細節檢查表、§9.4 文件清單與驗收、§10.5 推導鏈範例 |
+| v2.2.1 | 2026-11-13 | §17 執行現況回填：E-0 基線、E-3 體驗室十頁落地、並行整合收斂、四關複驗（證據連結） |
+
+## §17 執行現況（2026-11-13 回填；append-only；以證據為限）
+
+| 項目 | 狀態＋證據 |
+|---|---|
+| E-0 基線複測 | 隔離 target 建置綠；本日實作前後均複驗（C-05） |
+| E-3 體驗室（10 頁） | **已落地**：`platform/src/design_lab.rs`（10 handlers；ROLE_MANAGE 閘；macro 生成）、`platform/templates/design_lab*.html` ×10＋`partials/lab_nav.html`、`platform/tests/design_lab.rs`（閘矩陣＋零 JS＋內容標記）；10 路由於 `api.rs`；`console_manifest`：`WF_DESIGN`＋10 PageSpec |
+| manifest 計數 | 動態 43→53（體驗室）→55（並行整合兩頁）；測試修訂註記依 C-01 |
+| 並行整合（密碼重設） | `/forgot-password`、`/reset-password` 補登 Public；`/admin/users/issue_reset` 入 `NON_PAGE_ROUTES`（27→28）；`web_crawl` pre-auth skip（共用版型缺口列 E-1）；`public_gate_only_for_login` 白名單化（3 頁，附理由） |
+| 聚焦套件 | design_lab 2/2；page_matrix 4/4；web_crawl 6/6；password_reset 2/2；console_manifest lib 16/16 |
+| 四關 | fmt EXIT=0；clippy（workspace・all-targets・-D warnings）EXIT=0；audit EXIT=0；全庫 `cargo test --locked` 結果與 commit hash 見 `docs/PLAN_REGISTER.md` addendum #43 與 `.kilo/sessions/20261113-design-lab/tests/20261113-e3-acceptance.log` |
+| 未完（下一步） | E-1 體驗稽核文件（含已發現缺口：pre-auth 頁共用版型對齊）、E-2 `EXPERIENCE_SPEC`＋REQ/DEC 登錄、E-4 精修 backlog、E-5 全端一致性、E-7 R0–R9、E-8 封版；C/B/A 軸依 §11 續行 |
 
 ---
 

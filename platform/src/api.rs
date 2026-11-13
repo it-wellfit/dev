@@ -441,6 +441,15 @@ pub fn router(state: AppState) -> Router {
     let public = Router::new()
         .route("/login", get(auth::get_login).post(auth::post_login))
         .route("/logout", post(auth::post_logout))
+        // 忘記密碼自助流程（2026-11-12 瀏覽器實證補洞）：請求公開、核發僅 admin。
+        .route(
+            "/forgot-password",
+            get(forgot_password_page).post(forgot_password_submit),
+        )
+        .route(
+            "/reset-password",
+            get(reset_password_page).post(reset_password_submit),
+        )
         .route("/assets/design-system.css", get(design_system_css))
         .route("/api/health", get(health))
         // 桌面版（Tauri）UI 對照：純靜態設計文件，無任何資料，公開供比對。
@@ -470,6 +479,7 @@ pub fn router(state: AppState) -> Router {
         .route("/admin/ccm.json", get(admin_ccm_indicators))
         .route("/admin/users/toggle", post(admin_toggle_user))
         .route("/admin/users/reset_password", post(admin_reset_password))
+        .route("/admin/users/issue_reset", post(admin_issue_reset))
         .route("/import", get(import_upload_page))
         .route("/import/preview", post(import_preview))
         .route("/import/confirm", post(import_confirm))
@@ -539,6 +549,10 @@ pub fn router(state: AppState) -> Router {
             get(crate::pages::admin_sessions_page).post(crate::pages::admin_sessions_purge),
         )
         .route("/admin/system", get(crate::pages::admin_system_page))
+        .route(
+            "/admin/system/ai_flag",
+            post(crate::pages::admin_set_ai_flag),
+        )
         .route("/admin/audit", get(crate::pages::audit_page))
         // ── API 資料管理平台（零 JS；目錄由 apihub registry 驅動）──
         .route("/admin/api/catalog", get(crate::apihub::apihub_catalog))
@@ -553,6 +567,17 @@ pub fn router(state: AppState) -> Router {
         .route("/admin/api/codes", get(crate::apihub::apihub_codes))
         .route("/admin/api/release", get(crate::apihub::apihub_release))
         .route("/admin/api/net", get(crate::apihub::apihub_net))
+        // ── 體驗室（Design Lab；計畫 1793708660255 v2.2 §8；Gate=Manage）──
+        .route("/design", get(crate::design_lab::overview))
+        .route("/design/contracts", get(crate::design_lab::contracts))
+        .route("/design/components", get(crate::design_lab::components))
+        .route("/design/states", get(crate::design_lab::states))
+        .route("/design/content", get(crate::design_lab::content))
+        .route("/design/blueprints", get(crate::design_lab::blueprints))
+        .route("/design/surfaces", get(crate::design_lab::surfaces))
+        .route("/design/matrices", get(crate::design_lab::matrices))
+        .route("/design/tokens", get(crate::design_lab::tokens))
+        .route("/design/decisions", get(crate::design_lab::decisions))
         .route("/search", get(crate::workbench::search_page));
 
     // ── /api/* 群組 ──
@@ -1150,6 +1175,30 @@ pub struct AdminUserRow {
 /// Server-rendered user administration page (template:
 /// `platform/templates/admin_users.html`).
 #[derive(Template)]
+#[template(path = "forgot_password.html")]
+struct ForgotPasswordTemplate {
+    username: String,
+    error: Option<String>,
+    notice: Option<String>,
+}
+
+#[derive(Template)]
+#[template(path = "reset_password.html")]
+struct ResetPasswordTemplate {
+    token: String,
+    valid: bool,
+    error: Option<String>,
+    notice: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct AdminResetRequestRow {
+    pub request_id: String,
+    pub username: String,
+    pub created_display: String,
+}
+
+#[derive(Template)]
 #[template(path = "admin_users.html")]
 pub struct AdminUsersTemplate {
     pub acting_user: String,
@@ -1157,6 +1206,7 @@ pub struct AdminUsersTemplate {
     pub csrf_token: String,
     pub users: Vec<AdminUserRow>,
     pub roles: Vec<(String, String)>,
+    pub reset_requests: Vec<AdminResetRequestRow>,
     pub error: Option<String>,
     pub notice: Option<String>,
 }
@@ -1430,6 +1480,334 @@ pub struct AdminResetPasswordForm {
     pub new_password: String,
 }
 
+// ── Self-service password reset（2026-11-12 瀏覽器實證補洞：登入頁無忘記密碼）──
+//
+// 流程：使用者登記請求 → 管理員核發一次性連結 → 使用者自設新密碼。
+// 本地部署無郵件基礎設施；token 單次有效 30 分鐘、僅存 SHA-256 雜湊、
+// 用後即焚；重設完成撤銷該帳號全部工作階段（與 admin 重設同一威脅模型）。
+// 公開頁無 session → 無 CSRF token；token 本身即授權憑據（128+ 位元熵）。
+
+const RESET_TOKEN_TTL_MINUTES: i64 = 30;
+
+fn sha256_hex(input: &str) -> String {
+    use sha2::{Digest, Sha256};
+    let mut hasher = Sha256::new();
+    hasher.update(input.as_bytes());
+    hasher
+        .finalize()
+        .iter()
+        .map(|b| format!("{b:02x}"))
+        .collect()
+}
+
+fn now_plus_minutes(minutes: i64) -> chrono::DateTime<chrono::Utc> {
+    chrono::Utc::now() + chrono::Duration::minutes(minutes)
+}
+
+/// GET /forgot-password — public pre-auth request form.
+async fn forgot_password_page() -> Response {
+    let rendered = ForgotPasswordTemplate {
+        username: String::new(),
+        error: None,
+        notice: None,
+    };
+    render_or_500(rendered)
+}
+
+/// POST /forgot-password — register a reset request (no account enumeration:
+/// identical response whether or not the account exists; only existing
+/// accounts create a request row for the admin queue).
+async fn forgot_password_submit(
+    State(state): State<AppState>,
+    Form(form): Form<ForgotPasswordForm>,
+) -> Response {
+    let username = form.username.trim().to_string();
+    if username.is_empty() || username.len() > 64 {
+        return (StatusCode::BAD_REQUEST, "帳號空白或過長。".to_string()).into_response();
+    }
+    let user: Option<(String,)> =
+        sqlx::query_as("SELECT user_id FROM users WHERE username = ? AND is_active = 1")
+            .bind(&username)
+            .fetch_optional(&state.pool)
+            .await
+            .unwrap_or(None);
+    if let Some((user_id,)) = user {
+        let _ = sqlx::query(
+            "INSERT INTO password_reset_requests (request_id, username, status) VALUES (?, ?, 'pending')",
+        )
+        .bind(uuid::Uuid::new_v4().to_string())
+        .bind(&username)
+        .execute(&state.pool)
+        .await;
+        // 稽核：重設請求為安全事件（防偵測不到的帳號接管嘗試）。
+        let _ = sqlx::query(
+            "INSERT INTO audit_log (log_id, transaction_id, event_type, event_data, performed_by) VALUES (?, NULL, 'PASSWORD_RESET_REQUESTED', ?, ?)",
+        )
+        .bind(uuid::Uuid::new_v4().to_string())
+        .bind(serde_json::json!({ "username": username, "user_id": user_id }).to_string())
+        .bind("anonymous")
+        .execute(&state.pool)
+        .await;
+    }
+    let rendered = ForgotPasswordTemplate {
+        username,
+        error: None,
+        notice: Some(
+            "若帳號存在，重設請求已登記。處理方式：聯絡系統管理員核發一次性重設連結（30 分鐘內有效、用後即焚）。"
+                .to_string(),
+        ),
+    };
+    render_or_500(rendered)
+}
+
+/// GET /reset-password (token query) — validate the one-time token, render the
+/// new-password form.
+async fn reset_password_page(
+    State(state): State<AppState>,
+    axum::extract::Query(query): axum::extract::Query<std::collections::HashMap<String, String>>,
+) -> Response {
+    let token = query.get("token").cloned().unwrap_or_default();
+    let valid = reset_token_is_valid(&state, &token).await;
+    let rendered = ResetPasswordTemplate {
+        token,
+        valid,
+        error: if valid {
+            None
+        } else {
+            Some("連結無效、已使用或已過期。".to_string())
+        },
+        notice: None,
+    };
+    render_or_500(rendered)
+}
+
+/// POST /reset-password — consume the token, set the new password.
+async fn reset_password_submit(
+    State(state): State<AppState>,
+    Form(form): Form<ResetPasswordForm>,
+) -> Response {
+    let token = form.token.trim().to_string();
+    let record: Option<(String, String)> = sqlx::query_as(
+        "SELECT user_id, token_hash FROM password_reset_tokens \
+         WHERE token_hash = ? AND used_at IS NULL AND expires_at > CURRENT_TIMESTAMP",
+    )
+    .bind(sha256_hex(&token))
+    .fetch_optional(&state.pool)
+    .await
+    .unwrap_or(None);
+    let Some((user_id, _hash)) = record else {
+        let rendered = ResetPasswordTemplate {
+            token,
+            valid: false,
+            error: Some("連結無效、已使用或已過期。".to_string()),
+            notice: None,
+        };
+        return render_or_500(rendered);
+    };
+    let username: String = sqlx::query_scalar("SELECT username FROM users WHERE user_id = ?")
+        .bind(&user_id)
+        .fetch_optional(&state.pool)
+        .await
+        .unwrap_or(None)
+        .unwrap_or_default();
+    if form.password != form.password_confirm {
+        let rendered = ResetPasswordTemplate {
+            token,
+            valid: true,
+            error: Some("兩次輸入的新密碼不一致。".to_string()),
+            notice: None,
+        };
+        return render_or_500(rendered);
+    }
+    if let Err(msg) = validate_password_strength(&form.password, &username) {
+        let rendered = ResetPasswordTemplate {
+            token,
+            valid: true,
+            error: Some(msg.to_string()),
+            notice: None,
+        };
+        return render_or_500(rendered);
+    }
+    let Ok(hash) = auth::hash_password(&form.password) else {
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "密碼雜湊失敗。".to_string(),
+        )
+            .into_response();
+    };
+    let _ = sqlx::query("UPDATE users SET password_hash = ? WHERE user_id = ?")
+        .bind(&hash)
+        .bind(&user_id)
+        .execute(&state.pool)
+        .await;
+    // Security: revoke all sessions of the account (same rule as admin reset).
+    let _ = sqlx::query("DELETE FROM sessions WHERE user_id = ?")
+        .bind(&user_id)
+        .execute(&state.pool)
+        .await;
+    // 用後即焚 + 解決對應請求。
+    let _ = sqlx::query(
+        "UPDATE password_reset_tokens SET used_at = CURRENT_TIMESTAMP WHERE token_hash = ?",
+    )
+    .bind(sha256_hex(&token))
+    .execute(&state.pool)
+    .await;
+    let _ = sqlx::query(
+        "UPDATE password_reset_requests SET status = 'resolved', resolved_at = CURRENT_TIMESTAMP \
+         WHERE username = ? AND status = 'pending'",
+    )
+    .bind(&username)
+    .execute(&state.pool)
+    .await;
+    let _ = sqlx::query(
+        "INSERT INTO audit_log (log_id, transaction_id, event_type, event_data, performed_by) VALUES (?, NULL, 'PASSWORD_RESET_SELF', ?, ?)",
+    )
+    .bind(uuid::Uuid::new_v4().to_string())
+    .bind(serde_json::json!({ "username": username }).to_string())
+    .bind(&user_id)
+    .execute(&state.pool)
+    .await;
+    let rendered = ResetPasswordTemplate {
+        token: String::new(),
+        valid: false,
+        error: None,
+        notice: Some("新密碼已生效，所有既有工作階段已登出；請以新密碼登入。".to_string()),
+    };
+    render_or_500(rendered)
+}
+
+async fn reset_token_is_valid(state: &AppState, token: &str) -> bool {
+    if token.is_empty() {
+        return false;
+    }
+    let row: Option<(String,)> = sqlx::query_as(
+        "SELECT user_id FROM password_reset_tokens \
+         WHERE token_hash = ? AND used_at IS NULL AND expires_at > CURRENT_TIMESTAMP",
+    )
+    .bind(sha256_hex(token))
+    .fetch_optional(&state.pool)
+    .await
+    .unwrap_or(None);
+    row.is_some()
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ForgotPasswordForm {
+    pub username: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ResetPasswordForm {
+    pub token: String,
+    pub password: String,
+    pub password_confirm: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct AdminIssueResetForm {
+    pub csrf_token: String,
+    pub request_id: String,
+}
+
+/// POST /admin/users/issue_reset — administrator issues a one-time reset link
+/// for a pending request. The raw token is shown ONCE on the response page
+/// (never stored in plaintext); the DB keeps only its SHA-256 hash.
+async fn admin_issue_reset(
+    State(state): State<AppState>,
+    session: Extension<Session>,
+    headers: axum::http::HeaderMap,
+    Form(form): Form<AdminIssueResetForm>,
+) -> Response {
+    if !can_manage_users(&state, &session.user_id).await {
+        return render_admin_forbidden(&state, &session).await;
+    }
+    if form.csrf_token != session.csrf_token {
+        return (
+            StatusCode::FORBIDDEN,
+            "CSRF 驗證失敗；請重新整理頁面後再操作。".to_string(),
+        )
+            .into_response();
+    }
+    let request: Option<(String, String)> =
+        sqlx::query_as("SELECT username, status FROM password_reset_requests WHERE request_id = ?")
+            .bind(&form.request_id)
+            .fetch_optional(&state.pool)
+            .await
+            .unwrap_or(None);
+    let Some((username, status)) = request else {
+        return (StatusCode::BAD_REQUEST, "重設請求不存在。".to_string()).into_response();
+    };
+    if status != "pending" {
+        return (StatusCode::CONFLICT, "此請求已處理。".to_string()).into_response();
+    }
+    let Some((user_id,)): Option<(String,)> =
+        sqlx::query_as("SELECT user_id FROM users WHERE username = ? AND is_active = 1")
+            .bind(&username)
+            .fetch_optional(&state.pool)
+            .await
+            .unwrap_or(None)
+    else {
+        return (StatusCode::BAD_REQUEST, "帳號不存在或已停用。".to_string()).into_response();
+    };
+    // Token：兩個 UUID 串接（約 244 bits 熵）；僅存 SHA-256。
+    let raw_token = format!(
+        "{}{}",
+        uuid::Uuid::new_v4().simple(),
+        uuid::Uuid::new_v4().simple()
+    );
+    let expires = now_plus_minutes(RESET_TOKEN_TTL_MINUTES);
+    let _ = sqlx::query(
+        "INSERT INTO password_reset_tokens (token_hash, user_id, request_id, expires_at, created_by) \
+         VALUES (?, ?, ?, ?, ?)",
+    )
+    .bind(sha256_hex(&raw_token))
+    .bind(&user_id)
+    .bind(&form.request_id)
+    .bind(expires.naive_utc())
+    .bind(&session.user_id)
+    .execute(&state.pool)
+    .await;
+    let _ = sqlx::query(
+        "UPDATE password_reset_requests SET status = 'issued', resolved_at = CURRENT_TIMESTAMP WHERE request_id = ?",
+    )
+    .bind(&form.request_id)
+    .execute(&state.pool)
+    .await;
+    let _ = sqlx::query(
+        "INSERT INTO audit_log (log_id, transaction_id, event_type, event_data, performed_by) VALUES (?, NULL, 'RESET_TOKEN_ISSUED', ?, ?)",
+    )
+    .bind(uuid::Uuid::new_v4().to_string())
+    .bind(serde_json::json!({ "username": username, "request_id": form.request_id }).to_string())
+    .bind(&session.user_id)
+    .execute(&state.pool)
+    .await;
+    // 一次性連結只出現一次（本頁）；以 Host 組絕對位址方便當面交付。
+    let host = headers
+        .get(axum::http::header::HOST)
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("本機");
+    let body = format!(
+        r#"<!DOCTYPE html>
+<html lang="zh-Hant-TW"><head><meta charset="UTF-8"><title>一次性重設連結 — AuxBridge</title>
+<link rel="stylesheet" href="/assets/design-system.css"></head>
+<body><main class="container container-narrow"><div class="panel" role="status">
+<h1>一次性重設連結已核發</h1>
+<p>帳號：<strong>{username}</strong>（{RESET_TOKEN_TTL_MINUTES} 分鐘內有效、用後即焚；僅顯示這一次）。</p>
+<p>請將下列連結當面或以既有安全管道交付給使用者：</p>
+<p><a href="/reset-password?token={raw_token}">/reset-password?token={raw_token}</a></p>
+<p class="section-note">完整位址＝ http(s)://{host} + 上列路徑。此連結不入版控、不入稽核明細（稽核只記錄核發事件）。</p>
+<p><a class="btn btn-secondary" href="/admin/users">返回使用者管理</a></p>
+</div></main></body></html>
+"#,
+    );
+    (
+        StatusCode::OK,
+        [(axum::http::header::CONTENT_TYPE, "text/html; charset=utf-8")],
+        body,
+    )
+        .into_response()
+}
+
 /// POST /admin/users/reset_password — administrator sets a new password for
 /// an account (P1-8 residual). The old hash is replaced (Argon2id), all
 /// existing sessions of that account are revoked (a leaked password must not
@@ -1592,7 +1970,7 @@ async fn report_parallel_page(
 
     let chart_svg = auxbridge_core::parallel::render_parallel_coordinates(&series, 720, 260);
     let template = ParallelTemplate {
-        acting_user: session.user_id.clone(),
+        acting_user: session.username.clone(),
         nav: nav.0.clone(),
         months,
         chart_svg,
@@ -1650,7 +2028,7 @@ async fn ai_suggest(
     // AIS-001: flag gate (default OFF) - 503 with enablement guidance.
     if !ai_suggest_enabled(&state).await {
         let template = AiSuggestionTemplate {
-            acting_user: session.user_id.clone(),
+            acting_user: session.username.clone(),
             nav: nav.0.clone(),
             csrf_token: session.csrf_token.clone(),
             suggestion: None,
@@ -1671,9 +2049,11 @@ async fn ai_suggest(
     }
 
     // Build the Ollama client from configuration (existing ai module reuse).
+    // 模型 fallback 與 rerank 模組一致（qwen3.5:4b）——"llama3" 未安裝會讓
+    // AI 建議恆為不可用（2026-11-13 瀏覽器實證：model 'llama3' not found）。
     let model = erp_config_value(&state, "model")
         .await
-        .unwrap_or_else(|| "llama3".to_string());
+        .unwrap_or_else(|| "qwen3.5:4b".to_string());
     let base_url = erp_config_value(&state, "base_url")
         .await
         .unwrap_or_else(|| "http://127.0.0.1:11434".to_string());
@@ -1681,14 +2061,35 @@ async fn ai_suggest(
         crate::ai::ollama_client::OllamaClient::new(crate::ai::ollama_client::OllamaConfig {
             base_url,
             model,
-            timeout_ms: 5_000,
+            // 4B 模型的 JSON 結構化輸出實測可達 30 秒+；5s 逾時必然失敗。
+            timeout_ms: 60_000,
             temperature: 0.2,
             top_p: 0.9,
             max_tokens: Some(512),
         });
 
+    // 混合解析（2026-11-13 實證）：規則解析器對「數字／日期」是確定性的
+    // （R-AMOUNT-YUAN 已實證 88,500→8,850,000 minor），而 4B 模型曾把千分位
+    // 數字截斷（88,500→885.00，財務紅線）。故把規則解析結果作為權威提示
+    // 放進 prompt；模型只補結構與科目對映。
+    let keywords = parser_keywords(&state).await;
+    let rule_draft = auxbridge_core::parse_unstructured(&text, &keywords);
+    let amount_hint = rule_draft
+        .amount_minor
+        .map(|m| format!("{}（{}）", auxbridge_core::format_minor_plain(m, 2), m))
+        .unwrap_or_else(|| "未解析出".to_string());
+    let date_hint = rule_draft
+        .date
+        .map(|d| d.to_string())
+        .unwrap_or_else(|| "未解析出".to_string());
+
     let prompt = format!(
-        "你是會計分錄解析助理。僅輸出一個 JSON 物件，欄位：date（YYYY-MM-DD）、debit_account、credit_account、amount（兩位小數字串）、currency。不要輸出其他文字。原文：{text}"
+        "你是會計分錄解析助理。僅輸出一個 JSON 物件，欄位：date（YYYY-MM-DD）、\
+         debit_account、credit_account（使用大寫英文科目代碼或原文）、\
+         amount（兩位小數字串）、currency（必須為三位字母 ISO 4217 代碼，\
+         例如原文的「元／新台幣」對應 TWD）。不要輸出其他文字。\n\
+         權威提示（規則解析結果，必須照抄進 JSON，不得改值）：\
+         amount={amount_hint}、date={date_hint}。\n原文：{text}"
     );
 
     let response_text = match client.generate(&prompt).await {
@@ -1696,7 +2097,7 @@ async fn ai_suggest(
         Err(e) => {
             // 韌性：Ollama 離線/逾時 -> graceful degradation.
             let template = AiSuggestionTemplate {
-                acting_user: session.user_id.clone(),
+                acting_user: session.username.clone(),
                 nav: nav.0.clone(),
                 csrf_token: session.csrf_token.clone(),
                 suggestion: None,
@@ -1713,7 +2114,7 @@ async fn ai_suggest(
         Ok(p) => p,
         Err(msg) => {
             let template = AiSuggestionTemplate {
-                acting_user: session.user_id.clone(),
+                acting_user: session.username.clone(),
                 nav: nav.0.clone(),
                 csrf_token: session.csrf_token.clone(),
                 suggestion: None,
@@ -1742,7 +2143,7 @@ async fn ai_suggest(
     .await;
 
     let template = AiSuggestionTemplate {
-        acting_user: session.user_id.clone(),
+        acting_user: session.username.clone(),
         nav: nav.0.clone(),
         csrf_token: session.csrf_token.clone(),
         suggestion: Some(parsed),
@@ -1886,7 +2287,7 @@ async fn parse_coverage_page(
     let ratio = (complete * 100).checked_div(total).unwrap_or(0);
 
     let template = ParseCoverageTemplate {
-        acting_user: session.user_id.clone(),
+        acting_user: session.username.clone(),
         nav: nav.0.clone(),
         total,
         complete,
@@ -1910,7 +2311,7 @@ async fn states_page(
     nav: Extension<crate::nav::NavModel>,
 ) -> Response {
     render_or_500(StatesTemplate {
-        acting_user: session.user_id.clone(),
+        acting_user: session.username.clone(),
         nav: nav.0.clone(),
     })
 }
@@ -2082,7 +2483,7 @@ async fn build_accounts_template(
         .collect();
 
     AccountsTemplate {
-        acting_user: session.user_id.clone(),
+        acting_user: session.username.clone(),
         nav: nav.clone(),
         csrf_token: session.csrf_token.clone(),
         can_manage: can_manage_users(state, &session.user_id).await,
@@ -2339,7 +2740,7 @@ async fn ai_decisions_page(
             .collect();
 
     render_or_500(AiDecisionsTemplate {
-        acting_user: session.user_id.clone(),
+        acting_user: session.username.clone(),
         nav: nav.0.clone(),
         csrf_token: session.csrf_token.clone(),
         suggestions,
@@ -2606,7 +3007,7 @@ async fn transactions_page(
     let next_page = (page < total_pages).then(|| page_link(page + 1));
 
     render_or_500(TransactionsTemplate {
-        acting_user: session.user_id.clone(),
+        acting_user: session.username.clone(),
         nav: nav.0.clone(),
         query: search,
         rows,
@@ -2897,7 +3298,7 @@ async fn reviews_bulk(
     .await;
 
     render_or_500(BulkReviewTemplate {
-        acting_user: session.user_id.clone(),
+        acting_user: session.username.clone(),
         nav: nav.0.clone(),
         decision_label: decision_label.to_string(),
         outcomes,
@@ -3195,7 +3596,7 @@ async fn transaction_detail_page(
         header
     else {
         let not_found = TransactionDetailTemplate {
-            acting_user: session.user_id.clone(),
+            acting_user: session.username.clone(),
             nav: nav.0.clone(),
             not_found: true,
             tx_id: id,
@@ -3254,7 +3655,7 @@ async fn transaction_detail_page(
     let balanced = debit_sum == credit_sum;
 
     render_or_500(TransactionDetailTemplate {
-        acting_user: session.user_id.clone(),
+        acting_user: session.username.clone(),
         nav: nav.0.clone(),
         not_found: false,
         tx_id,
@@ -3325,17 +3726,37 @@ async fn build_admin_page(
             .await
             .unwrap_or_default();
 
+    // 待處理密碼重設請求（忘記密碼自助流程；FIFO）。
+    let reset_request_rows: Vec<(String, String, String)> = sqlx::query_as(
+        "SELECT request_id, username, strftime('%Y-%m-%d %H:%M', created_at) FROM password_reset_requests \
+         WHERE status = 'pending' ORDER BY created_at LIMIT 50",
+    )
+    .fetch_all(&state.pool)
+    .await
+    .unwrap_or_default();
+    let reset_requests: Vec<AdminResetRequestRow> = reset_request_rows
+        .into_iter()
+        .map(
+            |(request_id, username, created_display)| AdminResetRequestRow {
+                request_id,
+                username,
+                created_display,
+            },
+        )
+        .collect();
+
     // 導覽與其他工作台頁一致（studio_nav macro）：依權限旗標過濾，admin 群組
     // 於 ROLE_MANAGE 者可見；目前路徑 /admin/users 使該項標記為 active。
     let flags = nav_flags(state, &session.user_id).await;
     let nav = crate::nav::NavModel::build(&flags, "/admin/users");
 
     AdminUsersTemplate {
-        acting_user: session.user_id.clone(),
+        acting_user: session.username.clone(),
         nav,
         csrf_token: session.csrf_token.clone(),
         users,
         roles,
+        reset_requests,
         error,
         notice,
     }
@@ -3478,7 +3899,7 @@ async fn import_upload_page(
         });
     }
     let template = ImportTemplate {
-        acting_user: session.user_id.clone(),
+        acting_user: session.username.clone(),
         nav: nav.0.clone(),
         csrf_token: session.csrf_token.clone(),
         notice,
@@ -4586,7 +5007,7 @@ async fn mapping_page(
         .map(|(_, _, json)| crate::ingest::cells_from_json(json))
         .collect();
     let template = MappingTemplate {
-        acting_user: session.user_id.clone(),
+        acting_user: session.username.clone(),
         nav: nav.0.clone(),
         csrf_token: session.csrf_token.clone(),
         batch_id,
@@ -5012,7 +5433,7 @@ async fn drafts_page(
         .collect();
 
     let template = DraftsTemplate {
-        acting_user: session.user_id.clone(),
+        acting_user: session.username.clone(),
         nav: nav.0.clone(),
         csrf_token: session.csrf_token.clone(),
         drafts,
@@ -5125,20 +5546,37 @@ async fn wizard_page(
                 match row.and_then(|(json,)| {
                     serde_json::from_str::<auxbridge_core::DraftEntry>(&json).ok()
                 }) {
-                    Some(d) => (
-                        FormValues {
-                            debit_account: d.debit_account.clone().unwrap_or_default(),
-                            credit_account: d.credit_account.clone().unwrap_or_default(),
-                            amount: d
-                                .amount_minor
-                                .map(|m| format_minor(m, 2))
-                                .unwrap_or_default(),
-                            currency: "TWD".to_string(),
-                            description: "（自草稿預填，請依據卡核對）".to_string(),
-                            transaction_date: d.date.map(|d| d.to_string()).unwrap_or_default(),
-                        },
-                        Some("非結構化解析草稿（依據卡見草稿頁）".to_string()),
-                    ),
+                    Some(d) => {
+                        // 依據卡描述帶解析證據（原文 matched tokens），不再用
+                        // 寫死占位字串——回報「資訊漏掉沒傳遞」之描述半邊。
+                        let evidence_note = d
+                            .evidence
+                            .iter()
+                            .map(|e| e.matched.as_str())
+                            .collect::<Vec<_>>()
+                            .join("；");
+                        let description = if evidence_note.is_empty() {
+                            "（自草稿預填，請依據卡核對）".to_string()
+                        } else {
+                            format!("（自草稿預填：{evidence_note}）")
+                        };
+                        (
+                            FormValues {
+                                debit_account: d.debit_account.clone().unwrap_or_default(),
+                                credit_account: d.credit_account.clone().unwrap_or_default(),
+                                // plain 格式：number input 拒絕千分位逗號
+                                // （"12,000.00"→DOM value 空）——資訊漏傳根因。
+                                amount: d
+                                    .amount_minor
+                                    .map(|m| auxbridge_core::format_minor_plain(m, 2))
+                                    .unwrap_or_default(),
+                                currency: "TWD".to_string(),
+                                description,
+                                transaction_date: d.date.map(|d| d.to_string()).unwrap_or_default(),
+                            },
+                            Some("非結構化解析草稿（依據卡見草稿頁）".to_string()),
+                        )
+                    }
                     None => (FormValues::default(), None),
                 }
             } else if let (Some(batch_id), Some(row_no)) = (&query.from_batch, query.row_no) {
@@ -5155,7 +5593,7 @@ async fn wizard_page(
                         FormValues {
                             debit_account: d.debit_account.clone(),
                             credit_account: d.credit_account.clone(),
-                            amount: auxbridge_core::format_minor(d.amount_minor, 2),
+                            amount: auxbridge_core::format_minor_plain(d.amount_minor, 2),
                             currency: d.currency.clone(),
                             description: d.description.clone(),
                             transaction_date: d.date.clone(),
@@ -5181,7 +5619,7 @@ async fn wizard_page(
                     .unwrap_or_default();
 
             let rendered = WizardTemplate {
-                acting_user: session.user_id.clone(),
+                acting_user: session.username.clone(),
                 nav: nav.0.clone(),
                 csrf_token: session.csrf_token.clone(),
                 step: 2,
@@ -5203,7 +5641,7 @@ async fn wizard_page(
         }
         _ => {
             let rendered = WizardTemplate {
-                acting_user: session.user_id.clone(),
+                acting_user: session.username.clone(),
                 nav: nav.0.clone(),
                 csrf_token: session.csrf_token.clone(),
                 step: 1,
@@ -5281,7 +5719,7 @@ async fn wizard_step2(
                 .await
                 .unwrap_or_default();
         let rendered = WizardTemplate {
-            acting_user: session.user_id.clone(),
+            acting_user: session.username.clone(),
             nav: nav.0.clone(),
             csrf_token: session.csrf_token.clone(),
             step: 2,
@@ -5339,7 +5777,7 @@ async fn wizard_step2(
                 .await
                 .unwrap_or_default();
         let rendered = WizardTemplate {
-            acting_user: session.user_id.clone(),
+            acting_user: session.username.clone(),
             nav: nav.0.clone(),
             csrf_token: session.csrf_token.clone(),
             step: 2,
@@ -5362,7 +5800,7 @@ async fn wizard_step2(
 
     let amount_minor = amount_minor.unwrap_or(0);
     let rendered = WizardTemplate {
-        acting_user: session.user_id.clone(),
+        acting_user: session.username.clone(),
         nav: nav.0.clone(),
         csrf_token: session.csrf_token.clone(),
         step: 3,
@@ -5478,7 +5916,7 @@ async fn report_monthly_page(
     let total_credit: i64 = rows.iter().map(|r| r.credit_minor).sum();
 
     let template = MonthlyReportTemplate {
-        acting_user: session.user_id.clone(),
+        acting_user: session.username.clone(),
         nav: nav.0.clone(),
         ym,
         currency: "TWD".to_string(),
@@ -5676,7 +6114,7 @@ async fn report_pivot_page(
 
     let matrix = assemble_pivot(&raw_cells, measure, 20);
     let template = PivotTemplate {
-        acting_user: session.user_id.clone(),
+        acting_user: session.username.clone(),
         nav: nav.0.clone(),
         rows_dim: rows_dim.to_string(),
         cols_dim: cols_dim.to_string(),
@@ -5923,7 +6361,7 @@ async fn build_index(
     let (status_chips, sys_status_overall) = status_chips(state).await;
     // W2（grill-B）：NavModel 由 require_session middleware 注入（manifest SSOT 過濾）。
     IndexTemplate {
-        acting_user: session.user_id.clone(),
+        acting_user: session.username.clone(),
         csrf_token: session.csrf_token.clone(),
         // M-1（D-5/B-1）：渲染當下即為「隊列開啟」時點（epoch 毫秒）。
         queue_opened_at: chrono::Utc::now().timestamp_millis().to_string(),
@@ -6554,6 +6992,9 @@ mod tests {
             );
             let static_shell = page.path == "/tauri-preview"
                 || page.path == "/login"
+                // 公開預登入頁：獨立版面（無 site-nav），與 /login 同類。
+                || page.path == "/forgot-password"
+                || page.path == "/reset-password"
                 || page.path.starts_with("/console");
             if !static_shell {
                 assert!(body.contains("site-nav"), "頁面 {} 缺導覽", page.path);
@@ -7575,7 +8016,9 @@ mod tests {
         assert_eq!(status, StatusCode::OK);
         assert!(page.contains("value=\"RENT-EXP\""), "debit prefilled");
         assert!(page.contains("value=\"CASH\""), "credit prefilled");
-        assert!(page.contains("value=\"12,000.00\""), "amount prefilled");
+        // 2026-11-13：金額預填改用 format_minor_plain（純數字）——
+        // <input type="number"> 不接受千分位逗號（瀏覽器會忽略該值）。
+        assert!(page.contains("value=\"12000.00\""), "amount prefilled");
         assert!(page.contains("依據卡"), "provenance note rendered");
     }
 

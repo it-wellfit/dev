@@ -137,6 +137,9 @@ pub fn verify_password(plaintext: &str, stored: &str) -> bool {
 pub struct Session {
     pub session_id: String,
     pub user_id: String,
+    /// 顯示名（users.username；2026-11-13 補）：頂欄過去直接顯示 user_id
+    /// （"user-admin"）而非帳號名（"admin"）——對使用者是無意義的內部識別碼。
+    pub username: String,
     pub csrf_token: String,
     pub expires_at: String,
 }
@@ -164,8 +167,11 @@ pub async fn create_session(
 /// Load a session if it exists and has not expired.
 pub async fn get_valid_session(pool: &SqlitePool, session_id: &str) -> Option<Session> {
     sqlx::query_as::<_, Session>(
-        "SELECT session_id, user_id, csrf_token, expires_at FROM sessions \
-         WHERE session_id = ? AND expires_at > datetime('now')",
+        "SELECT s.session_id, s.user_id, COALESCE(u.username, s.user_id) AS username, \
+                s.csrf_token, s.expires_at \
+         FROM sessions s \
+         LEFT JOIN users u ON u.user_id = s.user_id \
+         WHERE s.session_id = ? AND s.expires_at > datetime('now')",
     )
     .bind(session_id)
     .fetch_optional(pool)
