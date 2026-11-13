@@ -223,12 +223,12 @@ pub fn validate_claim(claim: &Claim, ctx: Option<&ValidationContext>) -> Vec<Kem
                 claim.id
             ))),
             Some(s) => {
-                if let Some(ctx) = ctx {
-                    if !ctx.known_ids.contains(s) {
-                        errs.push(KemError::SchemaViolation(format!(
-                            "V-A07 superseded_by unknown id: {s}"
-                        )));
-                    }
+                if let Some(ctx) = ctx
+                    && !ctx.known_ids.contains(s)
+                {
+                    errs.push(KemError::SchemaViolation(format!(
+                        "V-A07 superseded_by unknown id: {s}"
+                    )));
                 }
             }
         },
@@ -241,13 +241,13 @@ pub fn validate_claim(claim: &Claim, ctx: Option<&ValidationContext>) -> Vec<Kem
         _ => {}
     }
     // V-A08: valid_to >= valid_from when present
-    if let Some(to) = claim.valid_to {
-        if to < claim.valid_from {
-            errs.push(KemError::SchemaViolation(format!(
-                "V-A08 valid_to {to} before valid_from {}",
-                claim.valid_from
-            )));
-        }
+    if let Some(to) = claim.valid_to
+        && to < claim.valid_from
+    {
+        errs.push(KemError::SchemaViolation(format!(
+            "V-A08 valid_to {to} before valid_from {}",
+            claim.valid_from
+        )));
     }
     // V-A09: published requires topics
     if claim.status == ClaimStatus::Published && claim.topics.is_empty() {

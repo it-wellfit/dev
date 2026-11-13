@@ -243,7 +243,14 @@ impl AIDecisionGating {
             transaction.transaction_id,
             transaction.transaction_date,
             transaction.description,
-            items.iter().map(|item| format!("  - {} {} (Account: {})", item.item_type, item.amount_minor, item.account_id)).collect::<Vec<_>>().join("\n"),
+            items
+                .iter()
+                .map(|item| format!(
+                    "  - {} {} (Account: {})",
+                    item.item_type, item.amount_minor, item.account_id
+                ))
+                .collect::<Vec<_>>()
+                .join("\n"),
             context.user_id,
             context.branch_id,
             serde_json::to_string(&context.metadata).unwrap_or_default()

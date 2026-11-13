@@ -70,3 +70,11 @@
 - `.kilo/plans/1793708660255-elite-product-engineering-execution-plan.md`（執行計畫）
 - `.cargo/audit.toml`（rsa 漏洞處置）
 - `.kilo/sessions/20261103-dev-elite-impl/runs/`（clippy/audit 前後對照日誌）
+
+## 8. 2026-11-12 修訂（D-02 之 edition 基線已更新）
+
+- **變更**：根 workspace 之 Rust edition 由 **2021 → 2024**（6 個成員 crate 全部；`web/src-tauri` 亦同）。Cargo resolver 維持 `2`（2024 edition 預設即 resolver 2）。
+- **理由**：2024 為當前穩定 edition（SOTA），可取得 let-chains、`gen` 關鍵字保留、RPIT 生命週期捕捉修正等語言改進；`ekpi-platform` 已於 2024。
+- **成本/風險**：實測**零程式碼變更需求**（`cargo check --workspace --all-targets` 直接通過）；新增 7 處 `clippy::collapsible_if`（let-chain 建議）與 rustfmt `style_edition = 2024` 之 import 排序差異，已以 `cargo clippy --fix`＋`cargo fmt` 修正。
+- **驗證（2026-11-12 實測）**：fmt EXIT=0；clippy `--all-targets --locked -D warnings` EXIT=0；`cargo test --locked` **36 suites／360 passed／0 failed**（排除環境敏感之效能斷言；該斷言單獨跑通過）。
+- **不變**：axum 0.7、SQLite、resolver 2、tokio 1.x 之基線維持（升 axum 0.8 仍屬獨立 POC，見 §3 D-02）。

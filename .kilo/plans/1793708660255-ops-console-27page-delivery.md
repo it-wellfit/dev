@@ -1,3 +1,481 @@
+# AuxBridge 完整工具包與最佳 UI/UX 體驗總計畫（C→B→A × 體驗室 UX-E）
+
+> 計畫編號：1793708660255（沿用主計畫檔）｜版本：**v2.1**｜日期：2026-11-13｜狀態：**implementation-ready（待使用者審閱；§15 待裁定點未回覆時依建議執行並記錄理由）**
+>
+> **v2.1 refine 重點（回應使用者 2026-11-13 指令）**：
+> 1. 把「全端 UI/UX 觀念」定義為 **10 條體驗契約（EC-1..EC-10）× 9 個表面（S1–S9）** 的驗證矩陣，不是「多做幾頁」。
+> 2. 把「拓展所有可能、處理所有問題」變成 **問題來源清單 → 分級 → 衍生細節五問 → 覆蓋證明** 的可稽核流程。
+> 3. 把「完整工具包＋最佳文件」變成 **T1–T9 工件 + 文件質量 rubric + 工具組體驗契約（TT-1..TT-5）**。
+> 4. 把「可追溯、可查證、可解釋、可推導、可驗證」變成 **REQ→DEC→IMPL→TEST→EVID 追溯矩陣 + 自動校驗測試**。
+>
+> **檔案沿革**：v1.0＝「零 JS 營運控制台 27+ 頁收斂計畫」（未竟項已由 `1793033568961-unified-ops-console-manifest` 吸收並執行）；v2.0＝C→B→A＋UX-E 總計畫；本版 v2.1 為深度 refine。v1.0 原文保留於附錄 A（依 C-01 不刪除）；v2.0→v2.1 修訂見 §16。
+>
+> **使用者指令（2026-11-12／11-13，效力最高）**：
+> 1. 主軸順序必須走 **C → B → A**（C＝覆核軸、B＝經辦軸、A＝整合軸）。
+> 2. 工具包不精緻、缺全端介面 UI/UX 觀念——必須再深度優化，產出**最佳 UI/UX 產品體驗（體驗室）**。
+> 3. 拓展所有可能與實際處理所有問題——專業實務之所有情境、大大小小問題與衍生細節必須最佳化處理完善；交付＝**完整工具包＋最佳文件**；禁脫鉤、禁背離所有目標與條件及需求。
+> 4. 杜絕所有錯誤與幻覺——**可追溯、可查證、可解釋、可推導、可驗證完全**。
+>
+> **效力與上位**：WORKSPACE_CHARTER ＞ GOVERNANCE_STANDARD ＞ SHARED_STANDARDS ＞ ADR ＞ 本檔。運作制度＝《MASTER PROMPT：Evidence-Driven Global Engineering…》（`1794365729846`／C-13）：迭代交付 A–L 節、發布判定五級（PASS／CONDITIONAL PASS／BLOCKED／REJECTED／NOT VERIFIED）。
+> **上位計畫（不重複，必先讀）**：`1793033761021`（覆核 Brief＋D-1..D-7）｜`1793782615513-ui-v2-sidebar-redesign`（7/7 裁決＋R0–R9 協議）｜`1793033568961`（manifest SSOT＋W1–W10）｜`1793034142477` §3.5（非協商約束）｜`1792865422970` §26/§27。
+> **相鄰線（協作不重疊）**：`1793033952894` 電商 OMS v4（T0=2026-11-17）；FlapsErp 原廠優化線（`docs/04-operations/`）。
+> **標籤消歧**：本檔 Phase C／B／A＝三軸；ultimate 計畫之任務 B-1..B-8 一律寫作 **uB-1..uB-8**。
+
+---
+
+## §1 現況基線（2026-11-12 複測；本版未重測，實作前 W0 必須複測）
+
+| # | 事實 | 證據 |
+|---|---|---|
+| 1 | 建置與測試綠：`cargo check -p platform` EXIT=0；`cargo test -p platform`（隔離 target）全整合套件 0 failed＋lib 146 passed | 本線驗證代理 2026-11-12 實錄 |
+| 2 | 建置鎖：dev-target 有 orphan `auxbridge-server`（PID 25016、127.0.0.1:8095）持有 debug exe → 建置前釋放 | 進程表；PLAN_REGISTER #31 |
+| 3 | 版控：HEAD=`bb4f10d`；11-10 以來 14 提交；工作樹 93 項未收斂 → 每切片重測（C-05） | git log／status |
+| 4 | 品牌：AuxBridge 輔翼（`auxbridge-server`／`auxbridge_core`／`AUXBRIDGE_*`／`auxbridge.db`） | NAMING_AND_BOUNDARY_DECREE；naming_guard |
+| 5 | 進料門戶全格式：CSV/XLSX/PDF/OCR（PP-OCRv4）/EML/DOCX/映射 profile | PLAN_REGISTER #27/#28/#30 |
+| 6 | 覆核軸：uB-1 量測（M-1 機器下限 11ms）、uB-5.0 `/my-decisions`、uB-5.1 二段確認、uB-5.2 AA 修復、P0 批已落地；未竟：uB-5.1 筆數預覽、uB-5.3、uB-6、uB-7、A-1/A-4/E-1 固化、uB-8、Q9、D-7(a) | `1793033761021` §12–§17 |
+| 7 | 體驗層：`ui-v2.css`（451 行，dark-first＋玉山綠 token）已由 `api.rs:683 include_str!` 串接；**側欄未落地**（模板零 `sidebar`）；逐頁 QA 7 區＋R0–R9 未見完成證據 | api.rs:683；grep；`partials/studio_nav.html` |
+| 8 | `states.html`（239 行）已定義八態：`empty/zero/loading/partial/stale/denied/error/conflict`，含按鈕／表單／徽章／錯誤／降級示範 | `platform/templates/states.html` |
+| 9 | manifest 契約欄位：`PageSpec{id,path,method,title,nav_group,nav_href,renderer,tier,gate,workflows}`；`Tier=Operator/Admin/Technical`；`Gate=Public/All/Read/Write/Manage` | `crates/console_manifest/src/lib.rs` |
+| 10 | guards 已掃 8 個目錄：編碼損傷、`<script`=0、`style=`=0、console 零 JS／零內聯、token canonical、unsafe=0 | `platform/tests/guards.rs` |
+| 11 | 問題來源已存在：`IMPROVEMENT_BACKLOG`（P0–P3）、`GAPS_AND_RISKS`（GAP-01..08＋風險矩陣）、`MUTATION_SCORE_REPORT`、`NEXT_ACTIONS` | 各檔 |
+| 12 | `docs/design/` 現有 `INFORMATION_ARCHITECTURE.md`、`UI_DESIGN_DECONSTRUCTION_v1.0.md`；**無 EXPERIENCE_SPEC／體驗矩陣** | 目錄實測 |
+| 13 | 相鄰線：OMS v4 Native-First（T0=11-17；S4 三方差異報表＋人工複核佇列）；FlapsErp 原廠優化線 | `1793033952894` v4 |
+
+---
+
+## §2 名詞與範圍裁定（消歧；禁模糊）
+
+### 2.1 「工具包」的定義（T1–T9）
+
+| ID | 工件 | 內容 | 質量門 |
+|---|---|---|---|
+| T1 | 平台本體 | `auxbridge-server`＋`web/`（動態頁、零 JS） | 可啟動、四關綠、頁面矩陣綠 |
+| T2 | 桌面殼 | Tauri v0.2、NSIS、updater（unsigned=test-only） | 安裝/啟動/更新/錯誤四態可驗證 |
+| T3 | KEM 控制台 | `/console/*` 靜態頁（65 檔） | 受保護、零 JS、與平台一致 |
+| T4 | 進料門戶 | CSV/XLSX/PDF/OCR/EML/DOCX/映射 | 全格式端到端測試綠 |
+| T5 | 自動化接線 | `wellfit` CLI/crates＋`flaps_bridge` | 冪等、重試、審計鏈可驗證 |
+| T6 | 演示資料包 | seed 腳本、demo DB、操作手冊 | 可重現、可還原、禁生產 |
+| T7 | 驗證包 | 測試、證據 log、追溯矩陣 | 每需求有 TEST＋EVID |
+| T8 | 運維工具 | 備份 CLI、效能探針、健康檢查 | 破壞性預設關閉、輸出可讀 |
+| T9 | 文件包 | docs＋runbooks＋release notes＋決策 log | 受眾標籤、零死鏈、可執行 |
+
+### 2.2 「全端」的定義（S1–S9；不是「所有頁面」）
+
+> 全端＝**同一體驗契約在多個表面的實現一致性**，加上每個表面依其媒介的最佳化。不是把同一頁縮放到處。
+
+| ID | 表面 | 載體／限制 | 主要輸入 | 體驗重點 |
+|---|---|---|---|---|
+| S1 | Web 工作台 | 瀏覽器、≤900px 折疊、無 JS | 滑鼠／鍵盤／觸控 | 密度、掃視、鍵盤流、八態 |
+| S2 | 桌面殼 | Tauri WebView2、視窗、離線 | 滑鼠／鍵盤 | 首啟、視窗標題、更新、錯誤 |
+| S3 | KEM 控制台 | 靜態 HTML、無伺服器互動 | 滑鼠／鍵盤 | 導覽一致、可讀、可列印 |
+| S4 | 列印 | 紙張／PDF、黑白 | 無 | 頁首頁尾、分頁、對比、可讀 |
+| S5 | 匯出 | CSV／JSON、Excel 可開 | 無 | 命名、欄序、編碼、穩定 |
+| S6 | 文件體系 | Markdown／HTML、GitHub/本地 | 滑鼠／鍵盤 | 受眾分層、可搜尋、零死鏈 |
+| S7 | API／DX | JSON、HTTP 狀態、錯誤碼 | 程式 | 一致封套、可預測、可測試 |
+| S8 | 通知／警報 | Email／Teams、批次管線 | 無 | 事件語義、嚴重度、可行動 |
+| S9 | 工具組 CLI | 終端機、管線、CI | 鍵盤 | help、退出碼、JSON、無破壞預設 |
+
+**裝置矩陣（S1 必測）**：desktop ≥1280、laptop 1024、tablet 768、phone 390；輸入：滑鼠／鍵盤／觸控；輔助：螢幕閱讀器、reduced-motion、200% 縮放、高對比。
+
+### 2.3 角色／人物映射
+
+| 平台角色（程式碼） | 產品人物 | 主要任務 |
+|---|---|---|
+| visitor | 訪客 | 登入、錯誤頁 |
+| store | P1 一線經辦（門市/營運） | 匯入、草稿、登帳、查詢、對帳、付款 |
+| finance | P1 經辦＋P2 覆核 | 批量裁決、例外、報表 |
+| admin | P3 IT 管理員 | 帳號、角色、會話、系統、API |
+| （技術） | P3 技術人員 | API、日誌、設定、部署、體驗室 |
+| （稽核） | P5 外部/內部稽核 | 唯讀軌跡、證據匯出 |
+
+> 角色閘以程式碼 `NavFlags`／`Gate` 為準；文件角色僅供 IA 分層，不新增後端角色。
+
+### 2.4 明確不在範圍（防止脫鉤）
+
+- 原生手機 App、微信小程序、Electron（零 JS／憲政衝突；如需另立 ADR）。
+- 重寫 FlapsErp 原廠產品本體（僅原廠通道；`flaps_bridge` 例外）。
+- OEKAP／Wellfit 功能開發（僅介面/文件對接）。
+- 以「增加頁面數」冒充品質；以裝飾取代資訊密度。
+- 任何會破壞零 JS、金額整數、CSRF/PRG、四關的「優化」。
+
+---
+
+## §3 體驗契約 EC-1..EC-10（全端 UI/UX 的核心定義）
+
+> 每條契約＝可驗收規則；E-1 逐表面判定「符合／部分／N/A（附理由）／UNKNOWN」。
+
+| ID | 契約 | 規則（可驗收） | 適用表面 | 驗證方法 |
+|---|---|---|---|---|
+| EC-1 | 識別與導覽 | 每頁有 `title`＋單一 `h1`；導覽由 manifest 驅動、角色過濾、`aria-current`；skip-link；無死連結 | S1/S2/S3/S6 | page_matrix、nav 快照、死鏈掃描 |
+| EC-2 | 資訊架構 | studio＋section 兩層；頁分 Operator/Admin/Technical；操作者不得見開發文件連結 | S1/S2/S3/S6 | IA 文件、nav 角色矩陣 |
+| EC-3 | 狀態語彙 | 八態文案互異、各含下一步；元件至少 Default/Hover/Focus/Disabled/Loading/Error | S1/S2/S3 | states.html、每頁 data-state 錨點、文案斷言 |
+| EC-4 | 動作語義 | GET 讀／POST 寫＋CSRF＋PRG；危險動作二段確認；撤銷＝反向事件不刪原紀錄 | S1/S2/S7 | CSRF 矩陣、PIN、HTTP 掃描 |
+| EC-5 | 內容與語氣 | zh-Hant-TW；錯誤＝問題＋原因＋處理；數字千分位／minor／+08:00；術語表一致 | 全部 | 文案 lint、ubiquitous language、內容斷言 |
+| EC-6 | 視覺語言 | 只用 token（原始/語義/元件三層）；無模板硬編碼色；對比 AA；dark-first | S1/S2/S3/S4 | token guard、raw-hex 掃描、對比腳本 |
+| EC-7 | 回饋與動效 | CSS-only；150ms ease；`prefers-reduced-motion`；focus-visible | S1/S2/S3 | guards、CSS 審查、鍵盤走查 |
+| EC-8 | 無障礙 | WCAG 2.2 AA：語義、標籤、替代文字、鍵盤、不以顏色唯一、200% 縮放 | S1/S2/S3/S4 | a11y 檢查表、手動走查、自動掃描 |
+| EC-9 | 效能與感知 | 清單 <300ms、詳情 <150ms、報表 <500ms（2k 交易）；分頁；無明顯位移 | S1/S2/S3 | 預熱＋p95、curl timing、served bytes |
+| EC-10 | 韌性與恢復 | error／degraded／timeout／conflict／retry／empty；金額與權限 fail-closed、量測 fail-open | S1/S2/S3/S7/S8 | 故障注入、fault tests、PIN |
+
+**契約使用規則**：
+1. 新頁面不得在 `EXPERIENCE_SPEC` 缺條目下新增；先補規格。
+2. 每頁的 PR 必須附「本頁適用契約與驗證」表。
+3. N/A 必須寫理由（例：靜態頁無 POST → EC-4 N/A）。
+
+---
+
+## §4 表面 × 契約矩陣（S1–S9 × EC-1..EC-10）
+
+- 產出：`docs/design/EXPERIENCE_SURFACE_MATRIX.md`（E-1 建立；每格＝狀態＋證據＋缺口 ID）。
+- 規則：**零空格**；每格只能填 `符合`／`部分（GAP-ID）`／`N/A（理由）`／`UNKNOWN（解鎖條件）`。
+- 已知 N/A 範例：S3 靜態頁 EC-4 N/A（無 POST）；S4 列印 EC-7 N/A（無互動）；S9 CLI EC-3 以 exit code/JSON 表達（非八態）。
+- 驗收：矩陣完整性測試（`experience_traceability.rs`）檢查每格非空、每個缺口有 ID、每個 UNKNOWN 有解鎖條件。
+
+---
+
+## §5 角色 × 任務 × 情境矩陣（「所有情境」的可執行定義）
+
+### 5.1 維度
+
+| 維度 | 取值 |
+|---|---|
+| 角色 | V 訪客／C 經辦／R 覆核／M 主管／A 管理員／T 技術／U 稽核 |
+| 任務 | 每角色 5–8 個高頻任務（E-1 盤點；範例：C＝匯入、草稿、登帳、查詢、對帳、付款） |
+| 狀態 | empty／zero／loading／partial／stale／denied／error／conflict |
+| 裝置 | desktop／laptop／tablet／phone |
+| 網路 | LAN／WAN 高延遲／離線（殼） |
+| 資料量 | 0／20／2k／100k |
+| 併發 | 1／10／50 |
+| 輸入 | 滑鼠／鍵盤／觸控 |
+| 輔助 | 預設／reduced-motion／200%／高對比／螢幕閱讀器 |
+
+### 5.2 覆蓋規則（避免 19,683 種組合的假承諾）
+
+1. **關鍵路徑全測**：每角色 × 每任務 × 八態 × 主要裝置（P0 組合）必須有測試或 E2E 證據。
+2. **Pairwise 抽樣**：其餘組合以 pairwise（每對維度值至少一次）抽樣；結果記錄於 `EXPERIENCE_SCENARIO_MATRIX.md`。
+3. **禁止「想到才測」**：矩陣未覆蓋格必須標 `UNKNOWN`＋解鎖條件；不得留空。
+4. **規模承認**：組合空間是級數，不是已交付頁數；本計畫承諾「可驗證子集」＋「擴展律」——新增頁面沿用同一契約與矩陣，不需重設計。
+
+### 5.3 產出
+
+- `docs/design/EXPERIENCE_SCENARIO_MATRIX.md`：維度、組合、狀態、證據、缺口。
+- 驗收：P0 組合 100% 有證據；pairwise 覆蓋率 ≥ 95%；UNKNOWN 全部有 owner/日期。
+
+---
+
+## §6 全問題覆蓋方法論（「大大小小問題與衍生細節」）
+
+### 6.1 問題來源（必須逐個盤點，不得憑印象）
+
+| 來源 | 檔案／方法 | 產出 |
+|---|---|---|
+| 產品 backlog | `docs/product/IMPROVEMENT_BACKLOG.md`（P0–P3） | 問題 ID、狀態、驗收 |
+| 缺口/風險 | `docs/GAPS_AND_RISKS.md`（GAP-01..08、風險矩陣） | GAP／RSK ID |
+| 測試 | `cargo test`（失敗/ignored/flaky）、`platform/tests/*` | TEST 缺口 |
+| 靜態掃描 | guards、clippy、encoding、dead-link、token | SCAN 缺口 |
+| 設計審查 | ui-v2 7 區 QA、八態、a11y、對比 | UX 缺口 |
+| 使用者回饋 | UI/UX 批評、文件受眾分層、操作痛點 | UX 缺口 |
+| 營運事件 | 備份/還原、鎖、OOM、時鐘、網路 | OPS 缺口 |
+| 情境推演 | §5 矩陣未覆蓋格 | GAP |
+
+### 6.2 分級與驗收
+
+| 級 | 定義 | 驗收門檻 |
+|---|---|---|
+| P0 | 正確性、安全、資料完整性、阻斷 | 必須修復＋回歸測試＋證據；否則不得發布 |
+| P1 | 核心流程、韌性、可維護性 | 修復或明確接受（附理由/期限） |
+| P2 | 體驗、一致性、可讀性 | 排入 E-4 backlog；同輪或下輪 |
+| P3 | 精緻度、觀察項 | 記錄；不阻塞發布 |
+
+### 6.3 衍生細節五問（每個問題必答）
+
+1. **觸發條件**：什麼輸入/狀態/時序會發生？
+2. **影響面**：哪些頁面/角色/表面/資料？
+3. **相鄰元件**：同頁/同元件/共用 CSS/共用 API 是否受牽連？
+4. **回滾/降級**：失敗時如何回到安全狀態？
+5. **驗證**：用哪個測試/命令/證據證明已修？修復是否製造新問題（交互效應）？
+
+### 6.4 覆蓋證明與 UNKNOWN 規則
+
+- 問題登記：`docs/design/EXPERIENCE_PROBLEM_REGISTER.md`（ID、來源、證據、分級、處置、驗證、狀態、owner/日期）。
+- 指標：覆蓋率＝已處置/已識別；**未識別不是 0**——以探索性測試、設計走查、角色旅程補足，並記錄「搜尋方法」。
+- 禁止以「沒想到」結案；只能以「已搜尋（方法）」＋「UNKNOWN（解鎖條件）」結案。
+
+### 6.5 與 R0–R9 的映射
+
+| 輪 | 透鏡 | 主要抓的問題類別 |
+|---|---|---|
+| R0 | 基準量測 | 效能、頁面可達、CSS bytes |
+| R1 | 編譯靜態 | 型別、警告、token |
+| R2 | 測試套件 | 邏輯、回歸 |
+| R3 | 路由完整性 | 404、死鏈、manifest |
+| R4 | 權限矩陣 | 403、導覽洩漏 |
+| R5 | 視覺/無障礙 | 對比、零 JS、focus |
+| R6 | 端到端流程 | 任務鏈、錯誤恢復 |
+| R7 | 靜態控制台/跨裝置 | S3、響應式、列印 |
+| R8 | 效能資源 | p95、bytes、位移 |
+| R9 | 閉環 | 零新缺陷＝驗證完全 |
+
+---
+
+## §7 體驗規格 SSOT（`docs/design/EXPERIENCE_SPEC.md`）
+
+**章節目錄（E-2 必須產出）**：
+
+1. 目的、範圍、名詞
+2. 體驗契約 EC-1..EC-10（逐條規則、適用、驗證）
+3. 表面矩陣 S1–S9（引用 §4 檔）
+4. 資訊架構與導覽（studio/section、tier、role gate）
+5. 視覺語言：token 三層（原始/語義/元件）、色彩、字型（Inter/JetBrains Mono woff2）、間距、密度、圓角、陰影、dark-first
+5.1 元件 token（新增）：按鈕/輸入/卡片/表格/徽章/導覽/狀態/列印
+6. 元件庫（≥24）：每個含用途、解剖、狀態、Do/Don't、可訪問性、程式碼對應
+7. 內容與語氣：microcopy 目錄（成功/錯誤/空/警告/確認/不可逆）、數字/日期/時區格式、術語表
+8. 狀態與錯誤：八態文案、三要素、重試/下一步
+9. 互動與動效：CSS-only、時序、reduced-motion
+10. 無障礙：WCAG 2.2 AA 檢查表、鍵盤、焦點、替代文字
+11. 效能預算：頁面類別、p95、bytes、位移
+12. 跨表面一致性：S1–S9 各自規則與 N/A
+13. 驗收與追溯：REQ→DEC→TEST→EVID
+14. 決策記錄（格式：需求／選擇／原因／替代／優勢／缺點／證據／驗證）
+
+**每個重要決策必須回答 8 欄**；不回答者不得進入實作。
+
+---
+
+## §8 體驗室（`/design`）規格
+
+### 8.1 路由與權限
+
+| 路由 | 內容 | Gate | 說明 |
+|---|---|---|---|
+| `/design` | 總覽：契約、矩陣、元件、狀態、內容、藍圖入口 | Manage | 入口卡 + 使用說明 |
+| `/design/contracts` | EC-1..EC-10 條文 + 正反例 | Manage | 每條至少 1 正例 1 反例 |
+| `/design/components` | ≥24 元件 × 狀態矩陣 | Manage | 每元件 6 態 |
+| `/design/states` | 元件級八態 + 連結 `/states`（全頁八態 SSOT） | Manage | 不重複全頁八態 |
+| `/design/content` | microcopy 目錄（依情境） | Manage | 每情境含三要素 |
+| `/design/blueprints` | 頁面藍圖（wireframe 級） | Manage | 每頁族至少 1 張 |
+| `/design/surfaces` | S1–S9 規則/限制/N/A 展示 | Manage | 引用表面矩陣 |
+| `/design/matrices` | 表面×契約、角色×任務×情境（由 SSOT 檔渲染） | Manage | 與 docs 檔一致 |
+| `/design/tokens` | token 值、對比表、dark/light | Manage | 可驗算 |
+| `/design/decisions` | 體驗決策 log（8 欄） | Manage | 與 §7.14 一致 |
+
+> 首版可先以單頁 `/design`＋`:target` 分區；當內容超過 3 頁份量再拆分（避免過早膨脹）。`/states` 保留為全頁八態 SSOT，`/design/states` 只做元件級矩陣並互鏈。
+
+### 8.2 零 JS 與 token 約束
+
+- 只用 `details`/`:target`/`:has()`/`:checked`/`:hover`/`:focus-visible`；不得 `<script>`、不得 `style=`。
+- 顏色/間距/字體一律 `var(--token)`；不得 raw hex（token 定義區除外）。
+- 列印樣式：A4、黑白可讀、頁首頁尾、避免分頁截斷。
+
+### 8.3 註冊與驗收
+
+- 在 `console_manifest` 加 `PageSpec`（`renderer=Dynamic`、`tier=Technical`、`gate=Manage`、`workflows=["design"]`）；更新動態頁計數測試（C-01 註記）。
+- guards 掃描目錄納入新模板。
+- 驗收：每路由 200；AA；`<script`=0；`style=`=0；900px 折疊；列印預覽；每元件至少 1 個真實頁面使用（或標 `planned`＋Issue）。
+
+---
+
+## §9 工具包與最佳文件
+
+### 9.1 工具組體驗契約（TT-1..TT-5）
+
+> 「工具包不精緻」的另一半：CLI/腳本/管線也是介面。
+
+| ID | 契約 | 規則 |
+|---|---|---|
+| TT-1 | 一致 help | 每個子命令有 `--help`、用法、範例、退出碼說明 |
+| TT-2 | 退出碼語義 | 0 成功；非 0 失敗；`UNKNOWN` 明確（不得 0 冒充） |
+| TT-3 | 雙模式輸出 | 人類可讀 + `--json` 機器可讀；欄位穩定 |
+| TT-4 | 無破壞預設 | 破壞性動作需 `--yes`／dry-run；預設不覆蓋 |
+| TT-5 | 每台機器通用 | 偵測環境（CPU/GPU/路徑/相依）；禁寫死本機規格 |
+
+### 9.2 文件體系（受眾 × 類型）
+
+| 受眾 | 類型 | 範例 |
+|---|---|---|
+| 操作者（P1） | 快速上手、操作手冊、疑難排解 | 登入、匯入、草稿、對帳、付款 |
+| 管理者（P2） | 治理、審批、報表解讀 | 覆核、例外、KPI |
+| 技術者（P3） | 架構、API、部署、runbook | ADR、API、備份、更新 |
+| 稽核（P5） | 證據、軌跡、控制 | 稽核軌跡、控制矩陣 |
+
+**每份文件必備 metadata**：文件 ID、受眾、版本、適用範圍、最後驗證日期、證據連結、owner。
+**硬規則**：命令可複製；不得寫死本機規格；不得有死鏈；數字附日期與方法；未驗證標 `UNKNOWN`。
+
+### 9.3 文件質量 rubric（最佳文件）
+
+| 維度 | 問題 | 通過標準 |
+|---|---|---|
+| 可執行 | 照做能否成功？ | 命令可複製、路徑通用、前置檢查 |
+| 可追溯 | 數字/結論哪來？ | 每個主張有來源/命令/日期 |
+| 可解釋 | 為什麼這樣做？ | 有理由、替代方案、trade-off |
+| 可推導 | 從需求到實作是否一氣？ | 需求→決策→實作→測試鏈完整 |
+| 可驗證 | 如何證明有效？ | 驗收命令＋預期輸出 |
+| 可維護 | 誰更新、何時更新？ | owner、更新觸發、版本 |
+
+---
+
+## §10 追溯與驗證（反幻覺的核心）
+
+### 10.1 ID 與矩陣
+
+| ID 類 | 範例 | 規則 |
+|---|---|---|
+| REQ-UX-xx | REQ-UX-01 全端體驗契約 | 每條需求至少 1 個 DEC、1 個 TEST、1 個 EVID |
+| DEC-UX-xx | DEC-UX-01 dark-first 主題層 | 必填 8 欄決策格式 |
+| IMPL | `platform/templates/index.html:42` | 檔案:行（可變更，需複查） |
+| TEST | `page_matrix::...` | 測試全名 |
+| EVID | commit／log 路徑 | 綁修訂版與日期 |
+
+**需求集（E-2 細化）**：
+REQ-UX-01 全端契約｜02 角色×任務×情境覆蓋｜03 八態與元件全狀態｜04 零 JS｜05 無障礙 AA｜06 效能預算｜07 錯誤可恢復｜08 內容與語氣｜09 視覺語言/token｜10 體驗室｜11 EXPERIENCE_SPEC｜12 工具組 TT｜13 文件體系｜14 追溯矩陣｜15 問題覆蓋｜16 跨裝置｜17 桌面殼｜18 列印/匯出｜19 多輪驗證｜20 交付/發布。
+
+### 10.2 自動校驗
+
+- 產出：`platform/tests/experience_traceability.rs`（純 Rust、零新依賴）。
+- 檢查：
+  1. 每個 REQ 至少 1 DEC／1 TEST／1 EVID；不得懸空。
+  2. 每個 DEC 有 8 欄；每個 TEST 存在；每個 EVID 路徑存在。
+  3. 表面×契約矩陣零空格；每個缺口有 ID；每個 UNKNOWN 有解鎖條件。
+  4. 問題登記每筆有來源、分級、處置、驗證、狀態。
+- 失敗即 CI 紅；不得以「文件問題」忽略。
+
+### 10.3 驗證層級與命令
+
+| 層 | 內容 | 命令/方法 |
+|---|---|---|
+| L1 靜態 | fmt、clippy、guards、編碼、token | 四關＋guards |
+| L2 單元 | core/platform 邏輯 | `cargo test --locked` |
+| L3 整合 | 路由、DB、CSRF、RBAC | `cargo test -p platform` |
+| L4 頁面矩陣 | 角色×頁×八態 | `page_matrix` |
+| L5 端到端 | 任務鏈（登入→…→稽核） | curl E2E、瀏覽器走查 |
+| L6 無障礙 | AA、鍵盤、對比 | a11y 檢查表＋掃描 |
+| L7 效能 | p95、bytes、位移 | 預熱＋p95、curl |
+| L8 跨裝置 | 4 尺寸×3 輸入 | 走查＋截圖 |
+| L9 文件/追溯 | 死鏈、metadata、矩陣 | 連結檢查＋`experience_traceability` |
+
+### 10.4 反幻覺協議（每個人也適用）
+
+1. 每個聲明＝命令＋exit code＋日期＋修訂版；無證據不得寫「已通過」。
+2. `UNKNOWN ≠ PASS ≠ FAIL`；不得以沉默代替 UNKNOWN。
+3. 不得做無數據支撐的趨勢判斷（「變快了」需前後量測）。
+4. 修復後必須重跑受影響的下游驗證（交互效應）。
+5. 文件和程式碼同一提交更新；數字附方法與日期。
+
+---
+
+## §11 C→B→A 任務（深化；每軸含體驗對齊）
+
+### 11.1 Phase C：覆核軸收尾
+
+| # | 任務 | 內容 | DoD |
+|---|---|---|---|
+| C-1 | uB-5.1 筆數預覽 | 零 JS 二段確認（伺服器渲染精確筆數） | PIN＋R4/R6 |
+| C-2 | uB-5.3 八態文案 | 四頁矩陣＋下一步 | 文案表＋PIN |
+| C-3 | uB-6 V3 品質 | 元件質感、AA、reduced-motion、跨視窗 | 對比表＋R5 |
+| C-4 | 固化批 | A-1 聚合、A-4 保留、E-1 固化 | 文件＋測試 |
+| C-5 | 單向門 | Q9 ADR（建議暫緩）；D-7(a) 上游管線小切片 | ADR×2＋PIN |
+| C-6 | uB-8 並行軌 | PDF、文件範本（條件式） | 產物或 UNKNOWN |
+| C-7 | uB-7 完整一輪 | 四關＋適應度＋M-1/M-5 | A–L 報告 |
+| C-8 | 出口閘 | PIN＋R1–R9 | 閉環報告 |
+| **C-9** | **覆核台體驗對齊** | 以 EC-1..EC-10 驗收批量裁決、`/my-decisions`、差異掃視 | 契約矩陣 C 軸全綠 |
+
+### 11.2 Phase B：經辦軸旗艦（對帳與例外）
+
+| # | 任務 | 內容 | DoD |
+|---|---|---|---|
+| B-0 | 全鏈掃描 | 段×現況×缺口×歸屬 | 表 |
+| B-1 | 研究 | 對帳 UX、例外工單、撥款對帳（來源＋日期） | 研究檔 |
+| B-2 | 設計 ≥3 案 | WHY/WHAT/HOW/TRADE-OFFS/EVIDENCE | 裁定 |
+| B-3 | Brief | KPI：偵出率、單件時間、追溯完備、帳齡 | 確認 |
+| B-4 | 實作 | 對帳工作檯、例外工單、OMS 介面 | RED→GREEN |
+| B-5 | 迭代驗證 | R0–R9＋A–L | 報告 |
+| **B-6** | **對帳體驗對齊** | EC-3/4/5/8/10 全驗收；例外必須可恢復 | 契約矩陣 B 軸全綠 |
+
+### 11.3 Phase A：整合軸
+
+| # | 任務 | 內容 | DoD |
+|---|---|---|---|
+| A-1 | 統一藍圖封版 | EXPERIENCE_SPEC v1.0；頁面/表面/情境對帳 | 封版 |
+| A-2 | 完整工具包 | T1–T9 全部達質量門 | 清單＋證據 |
+| A-3 | 文件體系 | 受眾×類型、metadata、零死鏈 | 稽核報告 |
+| A-4 | 全維驗證 | L1–L9；R0–R9 | 全綠 |
+| A-5 | 發布判定 | 五級；unsigned 聲明；Known Limitations | 判定 |
+| **A-6** | **全端封版** | 表面×契約矩陣全綠；無 P0/P1 缺口；追溯矩陣零懸空 | 封版證據 |
+
+---
+
+## §12 UX-E 執行序列（E-0..E-8）
+
+| # | 任務 | 產出 | DoD |
+|---|---|---|---|
+| E-0 | W0 基線複測 | 建置/測試/頁面/效能快照 | 與 §1 對帳 |
+| E-1 | 全端體驗稽核 | `EXPERIENCE_AUDIT_v1.md`、`EXPERIENCE_SURFACE_MATRIX.md`、`EXPERIENCE_SCENARIO_MATRIX.md`、`EXPERIENCE_PROBLEM_REGISTER.md` | 零空格；每項證據 |
+| E-2 | EXPERIENCE_SPEC | §7 全章＋REQ/DEC 表 | 核可（雙向門） |
+| E-3 | 體驗室 | §8 路由與內容 | 200/AA/零 JS/無內聯 |
+| E-4 | 精修 backlog | P0/P1 修復；P2 排程 | 清單歸零或接受 |
+| E-5 | 全端一致性 | S1–S9 走查；跨裝置 | 矩陣全綠 |
+| E-6 | 文件對齊 | 受眾標籤、metadata、死鏈 | 稽核通過 |
+| E-7 | 多輪驗證 | R0–R9＋趨勢表 | 閉環零新缺陷 |
+| E-8 | 封版追溯 | `EXPERIENCE_TRACEABILITY.md`＋自動校驗 | 零懸空 |
+
+---
+
+## §13 交付物與 DoD（完整工具包＋最佳文件）
+
+| 類 | 交付物 | DoD |
+|---|---|---|
+| 程式 | T1–T5 可執行 | 四關綠、頁面/情境矩陣綠 |
+| 體驗 | EXPERIENCE_SPEC、體驗室、表面/情境矩陣 | §7/§8 驗收 |
+| 工具 | T8 CLI/腳本 | TT-1..TT-5 |
+| 文件 | T9 docs＋runbooks＋release notes | rubric 六維；零死鏈 |
+| 證據 | 測試 log、追溯矩陣、決策 log | 每 REQ 有 TEST+EVID |
+| 發布 | 安裝器/更新/已知限制 | 五級判定；unsigned 誠實 |
+
+---
+
+## §14 風險登記
+
+| # | 風險 | 因應 |
+|---|---|---|
+| R1 | 並行衝突（93 項） | C-05、單一寫者、斷言式補丁 |
+| R2 | ui-v2 落地不明 | E-1 首解；補執行或記錄放棄 |
+| R3 | orphan 鎖 | 先釋放；隔離 target |
+| R4 | OMS 介面漂移 | 契約文件化；差異報表格式先凍結 |
+| R5 | 體驗室範圍蔓延 | 首版 10 路由；新增走 manifest |
+| R6 | 矩陣過大/形式化 | 關鍵路徑全測＋pairwise；自動校驗 |
+| R7 | 文件/程式漂移 | 同提交；追溯測試 |
+| R8 | 工具組被忽略 | TT 契約納入 T8 驗收 |
+| R9 | 無障礙只靠自動 | 自動＋手動走查；AA 檢查表 |
+
+---
+
+## §15 待確認裁定點（附建議；未回覆依建議執行）
+
+- **D-1 體驗室路由**：建議 `/design` 系列（10 路由）＋`Gate=Manage`。
+- **D-2 視覺方向**：維持 Data-Driven Premium（已入 token）× D-3 互動；側欄依 ui-v2 執行。
+- **D-3 Phase B 與 OMS 分工**：B＝工作檯/佇列/工單；OMS＝偵測/沖銷；接口＝差異報表。
+- **D-4 Q9/Q10**：Q9 暫緩；Q10(a) 列入 C 軸小切片。
+- **D-5 文件受眾**：加入「稽核」層（操作者/管理者/技術者/稽核）。
+- **D-6 `/states` 定位**：保留為全頁八態 SSOT；`/design/states` 做元件級矩陣並互鏈。
+- **D-7 表面優先序**：S1→S2→S3→S4→S5→S6→S7→S8→S9。
+- **D-8 工具組範圍**：T8 納入 TT；Wellfit 原廠腳本僅建議套用，不納入本計畫交付。
+
+---
+
+## §16 修訂紀錄
+
+| 版本 | 日期 | 修訂 |
+|---|---|---|
+| v1.0 | 2026-11-09 | 27+ 頁收斂計畫（已整合；附錄 A） |
+| v2.0 | 2026-11-12 | C→B→A＋UX-E 總計畫；體驗室概念 |
+| v2.1 | 2026-11-13 | 深化：EC-1..EC-10 體驗契約、S1–S9 表面矩陣、角色×任務×情境覆蓋、全問題覆蓋方法論、TT-1..TT-5 工具組契約、REQ/DEC/IMPL/TEST/EVID 追溯與自動校驗、T1–T9 工具包、文件 rubric、C-9/B-6/A-6 體驗對齊 |
+
+---
+
+## 附錄 A：v1.0 原文（SUPERSEDED／已整合——僅供追溯，禁止作為現行指引）
+
+> 以下為本檔 v1.0（2026-11-09「零 JS 營運控制台 27+ 頁收斂計畫」）原文保留。其未竟項已由 `1793033568961-unified-ops-console-manifest` 吸收並執行；保留依 C-01。
+
 # 零 JS 營運控制台「27+ 頁一次交付」收斂執行計畫
 
 > 計畫編號：1793708660255-ops-console-27page-delivery｜版本 v1.0｜日期：2026-11-09｜狀態：**implementation-ready**

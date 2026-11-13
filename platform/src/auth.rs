@@ -12,13 +12,13 @@
 //! - Authorization remains RBAC (`user_roles` → `LEDGER_WRITE`); this module
 //!   only establishes *who* is acting (T-01), not what they may do.
 
-use argon2::password_hash::{
-    rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString,
-};
 use argon2::Argon2;
+use argon2::password_hash::{
+    PasswordHash, PasswordHasher, PasswordVerifier, SaltString, rand_core::OsRng,
+};
 use askama::Template;
 use axum::extract::{ConnectInfo, Form, Request, State};
-use axum::http::{header, HeaderMap, StatusCode};
+use axum::http::{HeaderMap, StatusCode, header};
 use axum::middleware::Next;
 use axum::response::{Html, IntoResponse, Redirect, Response};
 use serde::Deserialize;
@@ -528,21 +528,21 @@ pub async fn post_logout(
     peer: Option<ConnectInfo<std::net::SocketAddr>>,
     Form(form): Form<LogoutForm>,
 ) -> Response {
-    if let Some(session) = current_session(&state, &headers).await {
-        if session.csrf_token == form.csrf_token {
-            let _ = delete_session(&state.pool, &session.session_id).await;
-            // 稽核：登出（工作階段撤銷）可溯源（2026-11-12 規格補洞）。
-            let (ip, ua) = request_context_with_peer(&headers, peer.map(|p| p.0));
-            crate::pages::write_event_ctx(
-                &state.pool,
-                "LOGOUT",
-                &session.user_id,
-                serde_json::json!({ "session_id": session.session_id }),
-                ip.as_deref(),
-                ua.as_deref(),
-            )
-            .await;
-        }
+    if let Some(session) = current_session(&state, &headers).await
+        && session.csrf_token == form.csrf_token
+    {
+        let _ = delete_session(&state.pool, &session.session_id).await;
+        // 稽核：登出（工作階段撤銷）可溯源（2026-11-12 規格補洞）。
+        let (ip, ua) = request_context_with_peer(&headers, peer.map(|p| p.0));
+        crate::pages::write_event_ctx(
+            &state.pool,
+            "LOGOUT",
+            &session.user_id,
+            serde_json::json!({ "session_id": session.session_id }),
+            ip.as_deref(),
+            ua.as_deref(),
+        )
+        .await;
     }
     let mut response = Redirect::to("/login").into_response();
     if let Ok(value) = header::HeaderValue::from_str(&clear_cookie_value()) {

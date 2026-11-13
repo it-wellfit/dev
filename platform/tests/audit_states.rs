@@ -10,10 +10,10 @@
 //!   （NOT_PENDING），不產生雙寫；摘要事件如實記錄部分失敗。
 //! - §15 D-1：稽核時間以 Asia/Taipei（UTC+08:00）呈現（伺服器端格式化）。
 
-use axum::body::Body;
-use axum::http::{header, Request, StatusCode};
 use axum::Router;
-use platform::api::{router, AppState};
+use axum::body::Body;
+use axum::http::{Request, StatusCode, header};
+use platform::api::{AppState, router};
 use platform::auth;
 use sqlx::sqlite::SqlitePoolOptions;
 use sqlx::{Row, SqlitePool};

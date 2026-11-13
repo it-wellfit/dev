@@ -5,11 +5,11 @@
 //! with the platform's core services.
 
 use axum::{
+    Router,
     extract::{Path, Query, State},
     http::StatusCode,
     response::{IntoResponse, Json},
     routing::{get, post},
-    Router,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -142,7 +142,7 @@ pub async fn audit_list(
             return Err((
                 axum::http::StatusCode::INTERNAL_SERVER_ERROR,
                 format!("查詢失敗：{}", e),
-            ))
+            ));
         }
     };
 

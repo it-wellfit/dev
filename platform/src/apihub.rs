@@ -56,8 +56,7 @@ pub fn registry() -> &'static [ApiEndpointSpec] {
         ApiEndpointSpec {
             method: "GET",
             path: "/api/status",
-            description:
-                "系統狀態即時探測（資料庫／搜尋／同步／COM／AI／BankPay）；永不 500，狀態在 body。",
+            description: "系統狀態即時探測（資料庫／搜尋／同步／COM／AI／BankPay）；永不 500，狀態在 body。",
             auth: "session",
             params: &[],
             live: true,
@@ -165,8 +164,7 @@ pub fn registry() -> &'static [ApiEndpointSpec] {
             params: &[
                 ApiParam {
                     name: "from",
-                    description:
-                        "string：來源狀態（Pending／Submitted／Completed／Failed／Rejected）",
+                    description: "string：來源狀態（Pending／Submitted／Completed／Failed／Rejected）",
                 },
                 ApiParam {
                     name: "to",

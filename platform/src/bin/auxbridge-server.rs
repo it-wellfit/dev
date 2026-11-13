@@ -52,12 +52,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     if let Some(path) = db_url
         .strip_prefix("sqlite://")
         .and_then(|rest| rest.split('?').next())
+        && let Some(parent) = std::path::Path::new(path).parent()
+        && !parent.as_os_str().is_empty()
     {
-        if let Some(parent) = std::path::Path::new(path).parent() {
-            if !parent.as_os_str().is_empty() {
-                std::fs::create_dir_all(parent)?;
-            }
-        }
+        std::fs::create_dir_all(parent)?;
     }
 
     let pool = sqlx::sqlite::SqlitePoolOptions::new()

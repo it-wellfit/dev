@@ -3,7 +3,7 @@
 //! → 中文標題映射（同義詞）→ 2 列草稿（浮點金額正規化）。
 
 use axum::body::Body;
-use axum::http::{header, Request, StatusCode};
+use axum::http::{Request, StatusCode, header};
 use sqlx::sqlite::SqlitePoolOptions;
 use tower::ServiceExt;
 

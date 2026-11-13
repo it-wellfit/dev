@@ -22,7 +22,7 @@ cargo audit                                           ; # 依賴安全（.cargo/
 ```
 
 - 建置產物若受桌面應用程式控制原則阻擋，改用 `$env:CARGO_TARGET_DIR = "$env:LOCALAPPDATA\Temp\dev-target"`。
-- 技術棧基線與決策見 `docs/adr/ADR-0001-tech-stack-baseline.md`（edition 2021 / axum 0.7 / SQLite，升級需獨立 POC）。
+- 技術棧基線與決策見 `docs/adr/ADR-0001-tech-stack-baseline.md`（**edition 2024** / axum 0.7 / SQLite；升級需獨立 POC）。edition 2021 → 2024 已於 2026-11-12 完成遷移（零程式碼變更需求；見 addendum #37）。
 
 ## 3. 硬性規則速查（完整定義見 owner 文件）
 

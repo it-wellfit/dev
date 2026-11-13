@@ -5,13 +5,13 @@
 //! marker. This file is the safety net for the future api.rs module split:
 //! the refactor must keep every assertion below unchanged and green.
 
-use axum::body::Body;
-use axum::http::{header, Request, StatusCode};
 use axum::Router;
-use platform::api::{router, AppState};
+use axum::body::Body;
+use axum::http::{Request, StatusCode, header};
+use platform::api::{AppState, router};
 use platform::auth;
-use sqlx::sqlite::SqlitePoolOptions;
 use sqlx::SqlitePool;
+use sqlx::sqlite::SqlitePoolOptions;
 use tower::ServiceExt;
 
 const TEST_ADMIN_PASSWORD: &str = "Admin-Test-Passw0rd!";

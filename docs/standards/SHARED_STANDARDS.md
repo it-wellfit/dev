@@ -62,6 +62,7 @@
 ### 2.3 工具鏈與版本
 - `rust-toolchain.toml` 固定 channel 與元件（rustfmt／clippy）。
 - 每個 crate 應宣告 `rust-version`（MSRV）；未宣告視為未定義支援範圍。
+- **Rust edition：2024**（2026-11-12 起；ADR-0001 §8 修訂）。新 crate 一律 2024；既有 crate 不得以「維持 2021」為理由拒絕遷移。
 
 ---
 

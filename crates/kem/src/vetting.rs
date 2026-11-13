@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 
-use crate::schema::{known_ids_of, validate_claim, Claim, ClaimStatus, KemError, Track};
+use crate::schema::{Claim, ClaimStatus, KemError, Track, known_ids_of, validate_claim};
 
 /// Verdict outcome of T1 vetting.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

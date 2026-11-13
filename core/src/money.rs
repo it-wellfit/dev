@@ -235,14 +235,18 @@ mod tests {
         assert!(!MoneyError::Empty.to_string().is_empty());
         assert!(!MoneyError::InvalidFormat.to_string().is_empty());
         assert!(!MoneyError::Negative.to_string().is_empty());
-        assert!(!MoneyError::Overflow {
-            max_total_digits: 17
-        }
-        .to_string()
-        .is_empty());
-        assert!(!MoneyError::TooManyDecimalPlaces { max: 2, got: 5 }
+        assert!(
+            !MoneyError::Overflow {
+                max_total_digits: 17
+            }
             .to_string()
-            .is_empty());
+            .is_empty()
+        );
+        assert!(
+            !MoneyError::TooManyDecimalPlaces { max: 2, got: 5 }
+                .to_string()
+                .is_empty()
+        );
         assert!(MoneyError::Empty.to_string().contains("金額"));
         assert!(MoneyError::Negative.to_string().contains("負數"));
     }

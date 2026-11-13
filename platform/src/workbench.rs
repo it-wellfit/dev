@@ -9,10 +9,10 @@
 use std::collections::HashMap;
 
 use askama::Template;
+use axum::Extension;
 use axum::extract::{Query, State};
 use axum::http::StatusCode;
 use axum::response::{Html, IntoResponse, Response};
-use axum::Extension;
 
 use crate::api::AppState;
 use crate::auth::Session;

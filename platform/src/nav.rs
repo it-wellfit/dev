@@ -8,7 +8,7 @@
 //! 計算位置：`auth::require_session` middleware 每認證請求一次
 //! （NavFlags 查詢＋純記憶體過濾）；handler 一行從 Extension 複製。
 
-use console_manifest::{Gate, NavKind, NAV_GROUPS, PAGES, STUDIOS};
+use console_manifest::{Gate, NAV_GROUPS, NavKind, PAGES, STUDIOS};
 
 use crate::api::NavFlags;
 
@@ -103,10 +103,10 @@ impl NavModel {
         for s in STUDIOS {
             let mut groups: Vec<NavGroupView> = Vec::new();
             for (g, view) in &group_views {
-                if g.studio == s.id {
-                    if let Some(v) = view {
-                        groups.push(v.clone());
-                    }
+                if g.studio == s.id
+                    && let Some(v) = view
+                {
+                    groups.push(v.clone());
                 }
             }
             // 工作室內所有群組皆被過濾 → 整室不渲染。
@@ -120,14 +120,14 @@ impl NavModel {
         }
 
         for (g, view) in &group_views {
-            if g.id == "overview" {
-                if let Some(v) = view {
-                    for it in &v.items {
-                        if it.id == "home.index" {
-                            home = it.clone();
-                        } else {
-                            top.push(it.clone());
-                        }
+            if g.id == "overview"
+                && let Some(v) = view
+            {
+                for it in &v.items {
+                    if it.id == "home.index" {
+                        home = it.clone();
+                    } else {
+                        top.push(it.clone());
                     }
                 }
             }
@@ -224,45 +224,56 @@ mod tests {
     fn manage_user_sees_governance_and_admin() {
         let m = NavModel::build(&flags(true, true, true), "/audit");
         let gov = studio(&m, "gov").expect("gov 工作室");
-        assert!(gov
-            .groups
-            .iter()
-            .flat_map(|g| g.items.iter())
-            .any(|it| it.id == "audit.page" && it.active));
-        assert!(studio(&m, "gov")
-            .expect("gov")
-            .groups
-            .iter()
-            .any(|g| g.id == "admin"));
-        assert!(studio(&m, "gov")
-            .expect("gov")
-            .groups
-            .iter()
-            .any(|g| g.id == "apihub"));
+        assert!(
+            gov.groups
+                .iter()
+                .flat_map(|g| g.items.iter())
+                .any(|it| it.id == "audit.page" && it.active)
+        );
+        assert!(
+            studio(&m, "gov")
+                .expect("gov")
+                .groups
+                .iter()
+                .any(|g| g.id == "admin")
+        );
+        assert!(
+            studio(&m, "gov")
+                .expect("gov")
+                .groups
+                .iter()
+                .any(|g| g.id == "apihub")
+        );
     }
 
     #[test]
     fn aria_current_exact_and_prefix() {
         let f = flags(true, false, false);
-        assert!(NavModel::build(&f, "/transactions")
-            .studios
-            .iter()
-            .flat_map(|s| s.groups.iter())
-            .flat_map(|g| g.items.iter())
-            .any(|it| it.id == "tx.list" && it.active));
+        assert!(
+            NavModel::build(&f, "/transactions")
+                .studios
+                .iter()
+                .flat_map(|s| s.groups.iter())
+                .flat_map(|g| g.items.iter())
+                .any(|it| it.id == "tx.list" && it.active)
+        );
         // 前綴邊界：/accounts/ACC-1 命中 /accounts；/accounts-foo 不命中。
-        assert!(NavModel::build(&f, "/accounts/ACC-1")
-            .studios
-            .iter()
-            .flat_map(|s| s.groups.iter())
-            .flat_map(|g| g.items.iter())
-            .any(|it| it.id == "accounts.list" && it.active));
-        assert!(!NavModel::build(&f, "/accounts-foo")
-            .studios
-            .iter()
-            .flat_map(|s| s.groups.iter())
-            .flat_map(|g| g.items.iter())
-            .any(|it| it.active));
+        assert!(
+            NavModel::build(&f, "/accounts/ACC-1")
+                .studios
+                .iter()
+                .flat_map(|s| s.groups.iter())
+                .flat_map(|g| g.items.iter())
+                .any(|it| it.id == "accounts.list" && it.active)
+        );
+        assert!(
+            !NavModel::build(&f, "/accounts-foo")
+                .studios
+                .iter()
+                .flat_map(|s| s.groups.iter())
+                .flat_map(|g| g.items.iter())
+                .any(|it| it.active)
+        );
         // 首頁僅精確命中。
         assert!(NavModel::build(&f, "/").home.active);
         assert!(!NavModel::build(&f, "/transactions").home.active);
@@ -272,11 +283,12 @@ mod tests {
     fn knowledge_group_present_for_all_authenticated() {
         let m = NavModel::build(&flags(false, false, false), "/");
         let ops = studio(&m, "ops").expect("ops 工作室");
-        assert!(ops
-            .groups
-            .iter()
-            .flat_map(|g| g.items.iter())
-            .any(|it| it.href == "/console/index.html"));
+        assert!(
+            ops.groups
+                .iter()
+                .flat_map(|g| g.items.iter())
+                .any(|it| it.href == "/console/index.html")
+        );
     }
 
     #[test]
@@ -286,11 +298,12 @@ mod tests {
         assert_eq!(m.home.href, "/");
         assert_eq!(m.home.label, "總覽");
         // home 不重複出現在工作室區段。
-        assert!(!m
-            .studios
-            .iter()
-            .flat_map(|s| s.groups.iter())
-            .flat_map(|g| g.items.iter())
-            .any(|it| it.id == "home.index"));
+        assert!(
+            !m.studios
+                .iter()
+                .flat_map(|s| s.groups.iter())
+                .flat_map(|g| g.items.iter())
+                .any(|it| it.id == "home.index")
+        );
     }
 }

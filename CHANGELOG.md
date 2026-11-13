@@ -3,6 +3,17 @@
 本檔記錄根 workspace（`core/`、`platform/`、`web/`、`crates/flaps_bridge`）的實際變更。格式參考 Keep a Changelog。子專案（ekpi-platform、Wellfit、SyncMesh）各自有變更記錄。
 
 
+## [Unreleased] — 2026-11-12（Rust edition 2024 遷移）
+
+### Changed
+- **edition 2021 → 2024**：6 個成員 crate 與 `web/src-tauri` 全部遷移（Cargo resolver 維持 2；ADR-0001 §8 已修訂）。`cargo fix --edition-idioms` 無需任何語意修正。
+- 因 2024 之 lints／rustfmt `style_edition` 而修正：7 處 `clippy::collapsible_if` 改為 let-chain（`cargo clippy --fix`）；import 排序與多行呼叫格式（`cargo fmt`）。共 49 檔、+729／−351 行（多為格式）。
+
+### Verified（2026-11-12 實測）
+- `cargo check --workspace --all-targets` 直接通過（**零程式碼變更需求**）。
+- fmt EXIT=0；clippy `--all-targets --locked -D warnings` EXIT=0；`cargo test --locked` **36 suites／360 passed／0 failed**（排除環境敏感效能斷言；該斷言單獨執行通過）。
+- `cargo machete` 逐成員無輸出；audit／deny 續綠。
+
 ## [Unreleased] — 2026-11-12（精簡與進化：依賴瘦身、SOTA 工具鏈、規格補齊）
 
 ### Added

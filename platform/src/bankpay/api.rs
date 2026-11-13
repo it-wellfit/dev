@@ -19,10 +19,10 @@
 //!   `result_large_err` 合規），僅在 handler 邊界轉為 `Response`。
 
 use askama::Template;
+use axum::Extension;
 use axum::extract::{Form, Query, State};
 use axum::http::{HeaderMap, StatusCode};
 use axum::response::{IntoResponse, Json, Redirect, Response};
-use axum::Extension;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use sqlx::SqlitePool;
@@ -32,10 +32,10 @@ use crate::api::{AppState, StatusChip};
 use crate::auth::Session;
 use crate::bankpay::client::EsunClient;
 use crate::bankpay::model::{
-    validate_amount, validate_currency, validate_identifier, ExportRequest, ExportResponse,
-    ImportRequest, ImportResponse, QueryRequest, QueryResponse,
+    ExportRequest, ExportResponse, ImportRequest, ImportResponse, QueryRequest, QueryResponse,
+    validate_amount, validate_currency, validate_identifier,
 };
-use crate::bankpay::state::{validate_transition, BankPayStatus};
+use crate::bankpay::state::{BankPayStatus, validate_transition};
 
 /// 匯入檔白名單目錄（相對於工作目錄；僅接受其內的 `.csv`）。
 const IMPORT_DIR: &str = "data/bankpay/inbound";
@@ -532,10 +532,9 @@ async fn query_inner(
                 resp.currency = Some(row.currency.clone());
                 if let (Some(from), Some(to)) =
                     (parse_status(&row.status), parse_status(&resp.status))
+                    && validate_transition(&from, &to).is_ok()
                 {
-                    if validate_transition(&from, &to).is_ok() {
-                        advance_batch(&state.pool, &row.batch_id, &from, &to, None).await?;
-                    }
+                    advance_batch(&state.pool, &row.batch_id, &from, &to, None).await?;
                 }
             }
             write_audit(
@@ -1096,7 +1095,10 @@ pub async fn bankpay_export_form(
                     sys_status_overall: data.overall,
                     error: None,
                 },
-                format!("金額驗證失敗：{e}。問題：金額「{}」無法轉為整數分；處理方式：以小數輸入（如 500.00，即 50000 分）後重試。", form.amount.trim()),
+                format!(
+                    "金額驗證失敗：{e}。問題：金額「{}」無法轉為整數分；處理方式：以小數輸入（如 500.00，即 50000 分）後重試。",
+                    form.amount.trim()
+                ),
                 StatusCode::BAD_REQUEST,
             );
         }

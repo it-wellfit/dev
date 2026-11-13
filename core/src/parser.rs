@@ -139,22 +139,22 @@ pub fn parse_unstructured(text: &str, keyword_accounts: &[(String, String)]) -> 
 
     // Dates and amounts: token-wise scan, first hit wins.
     for token in text.split(|c: char| c.is_whitespace()) {
-        if draft.date.is_none() {
-            if let Some(d) = parse_date_token(token) {
-                draft.date = Some(d);
-                draft
-                    .evidence
-                    .push(Evidence::new("R-DATE", trim_punct(token)));
-                continue;
-            }
+        if draft.date.is_none()
+            && let Some(d) = parse_date_token(token)
+        {
+            draft.date = Some(d);
+            draft
+                .evidence
+                .push(Evidence::new("R-DATE", trim_punct(token)));
+            continue;
         }
-        if draft.amount_minor.is_none() {
-            if let Some(minor) = parse_amount_token(token) {
-                draft.amount_minor = Some(minor);
-                draft
-                    .evidence
-                    .push(Evidence::new("R-AMOUNT-YUAN", trim_punct(token)));
-            }
+        if draft.amount_minor.is_none()
+            && let Some(minor) = parse_amount_token(token)
+        {
+            draft.amount_minor = Some(minor);
+            draft
+                .evidence
+                .push(Evidence::new("R-AMOUNT-YUAN", trim_punct(token)));
         }
     }
 
@@ -309,18 +309,24 @@ mod tests {
         assert_eq!(draft.credit_account.as_deref(), Some("CASH"));
         assert!(draft.is_complete());
         // 依據卡：每個欄位都有規則來源。
-        assert!(draft
-            .evidence
-            .iter()
-            .any(|e| e.rule == "R-DATE" && e.matched.contains("2026-11-04")));
-        assert!(draft
-            .evidence
-            .iter()
-            .any(|e| e.rule == "R-AMOUNT-YUAN" && e.matched.contains("12,000")));
-        assert!(draft
-            .evidence
-            .iter()
-            .any(|e| e.rule == "R-ACCT-KEYWORD" && e.matched.contains("租金")));
+        assert!(
+            draft
+                .evidence
+                .iter()
+                .any(|e| e.rule == "R-DATE" && e.matched.contains("2026-11-04"))
+        );
+        assert!(
+            draft
+                .evidence
+                .iter()
+                .any(|e| e.rule == "R-AMOUNT-YUAN" && e.matched.contains("12,000"))
+        );
+        assert!(
+            draft
+                .evidence
+                .iter()
+                .any(|e| e.rule == "R-ACCT-KEYWORD" && e.matched.contains("租金"))
+        );
     }
 
     #[test]

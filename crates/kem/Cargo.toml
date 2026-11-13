@@ -1,7 +1,7 @@
 [package]
 name = "kem"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 rust-version = "1.99"
 description = "Knowledge Evolution Module: immutable capture, atomic claims, rule vetting, hash-chained ledger, BM25 retrieval, evolution and governance"
 license = "LicenseRef-Proprietary"

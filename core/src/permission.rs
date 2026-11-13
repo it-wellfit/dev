@@ -163,10 +163,10 @@ impl PermissionChecker {
 
         // Check if any of the user's roles has the permission
         for role_id in user_roles {
-            if let Some(permissions) = self.role_permissions.get(role_id) {
-                if permissions.contains(&permission_code.to_string()) {
-                    return true;
-                }
+            if let Some(permissions) = self.role_permissions.get(role_id)
+                && permissions.contains(&permission_code.to_string())
+            {
+                return true;
             }
         }
 

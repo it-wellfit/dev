@@ -11,9 +11,9 @@ use std::process::ExitCode;
 
 use kem::filing::{load_claims, write_index, write_log};
 use kem::ledger::LedgerAction;
-use kem::schema::{known_ids_of, validate_claim, Claim, KemError, ValidationContext};
+use kem::schema::{Claim, KemError, ValidationContext, known_ids_of, validate_claim};
 use kem::seed::{seed_claims, seed_raw_sources};
-use kem::vetting::{record_verdict, stage_claim, vet_t1, Outcome, VetContext};
+use kem::vetting::{Outcome, VetContext, record_verdict, stage_claim, vet_t1};
 
 struct Args {
     root: PathBuf,
@@ -470,11 +470,7 @@ fn cmd_ask(root: &Path, flags: &std::collections::HashMap<String, String>) -> Re
     // offline and deterministic.
     let expanded = if use_prf {
         let terms = kem::search::prf_expand(&index, &visible, &query, 3, prf_terms);
-        if terms.is_empty() {
-            None
-        } else {
-            Some(terms)
-        }
+        if terms.is_empty() { None } else { Some(terms) }
     } else {
         None
     };
@@ -1054,7 +1050,7 @@ fn cmd_review(
         other => {
             return Err(KemError::InvalidInput(format!(
                 "unknown disposition {other:?}"
-            )))
+            )));
         }
     };
     let reviewer = flags
@@ -1082,10 +1078,10 @@ fn next_id(
     let prefix = format!("claim-{today}-");
     let mut max = 0u32;
     for c in existing.iter().map(|c| &c.id).chain(known.iter()) {
-        if let Some(num) = c.strip_prefix(&prefix) {
-            if let Ok(n) = num.parse::<u32>() {
-                max = max.max(n);
-            }
+        if let Some(num) = c.strip_prefix(&prefix)
+            && let Ok(n) = num.parse::<u32>()
+        {
+            max = max.max(n);
         }
     }
     Ok(format!("{prefix}{:03}", max + 1))

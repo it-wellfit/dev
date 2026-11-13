@@ -9,13 +9,13 @@
 //! - 輸入驗證（金額/幣別/識別碼）→ 400；匯入路徑穿越 → 400。
 //! - /api/status 回應形狀與模擬模式警示。
 
-use axum::body::Body;
-use axum::http::{header, Request, StatusCode};
 use axum::Router;
-use platform::api::{router, AppState};
+use axum::body::Body;
+use axum::http::{Request, StatusCode, header};
+use platform::api::{AppState, router};
 use platform::auth;
-use sqlx::sqlite::SqlitePoolOptions;
 use sqlx::SqlitePool;
+use sqlx::sqlite::SqlitePoolOptions;
 use tower::ServiceExt;
 
 const TEST_ADMIN_PASSWORD: &str = "Admin-Test-Passw0rd!";

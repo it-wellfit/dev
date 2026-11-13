@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize};
 use std::path::Path;
 
 use crate::ledger::LedgerAction;
-use crate::schema::{known_ids_of, validate_claim, Claim, ClaimStatus, ClaimType, KemError, Track};
+use crate::schema::{Claim, ClaimStatus, ClaimType, KemError, Track, known_ids_of, validate_claim};
 
 /// Per-type confidence half-life in days (KEM doc §4.5: architecture
 /// decisions fade slowly, transient facts fast; concepts/glossary no decay).
@@ -278,10 +278,10 @@ pub fn extract_json(text: &str) -> Option<serde_json::Value> {
 pub fn extract_json_loose(text: &str) -> Option<serde_json::Value> {
     let mut last = None;
     for (i, _) in text.match_indices('{') {
-        if let Some(end) = text[i..].find('}') {
-            if let Ok(v) = serde_json::from_str::<serde_json::Value>(&text[i..=i + end]) {
-                last = Some(v);
-            }
+        if let Some(end) = text[i..].find('}')
+            && let Ok(v) = serde_json::from_str::<serde_json::Value>(&text[i..=i + end])
+        {
+            last = Some(v);
         }
     }
     last

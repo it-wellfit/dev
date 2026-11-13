@@ -33,4 +33,4 @@ pub mod vetting;
 pub const SCHEMA_VERSION: &str = "1";
 
 pub use ledger::{LedgerAction, LedgerEntry};
-pub use schema::{validate_claim, Claim, ClaimStatus, ClaimType, Evidence, KemError, Track};
+pub use schema::{Claim, ClaimStatus, ClaimType, Evidence, KemError, Track, validate_claim};

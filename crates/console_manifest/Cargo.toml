@@ -1,7 +1,7 @@
 [package]
 name = "console_manifest"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 rust-version = "1.99"
 description = "Unified ops console manifest: single page/registry SSOT consumed by the platform dynamic renderer and the KEM static renderer"
 license = "LicenseRef-Proprietary"

@@ -36,10 +36,10 @@ fn collect(dir: &Path, exts: &[&str], out: &mut Vec<PathBuf>) {
         let path = entry.path();
         if path.is_dir() {
             collect(&path, exts, out);
-        } else if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
-            if exts.contains(&ext) {
-                out.push(path);
-            }
+        } else if let Some(ext) = path.extension().and_then(|e| e.to_str())
+            && exts.contains(&ext)
+        {
+            out.push(path);
         }
     }
 }

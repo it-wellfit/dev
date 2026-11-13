@@ -4,7 +4,7 @@
 default-run = "auxbridge-web"
 name = "auxbridge-web"
 version = "0.2.0"
-edition = "2021"
+edition = "2024"
 rust-version = "1.99"
 description = "AuxBridge - Enterprise Auxiliary Platform"
 license = "LicenseRef-Proprietary"

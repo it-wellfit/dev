@@ -1,8 +1,9 @@
-# 三大工作室 SLICE 執行計畫（PHASE-G1..G4）— v8.2
+# 三大工作室 SLICE 執行計畫（PHASE-G1..G4）— v8.3
 
-> 計畫編號：1793787631643｜日期：2026-11-10（v8 初版）；2026-11-12（v8.1 SPEC-GAP 缺口補強；v8.2 深度稽核＋SOTA 採用雷達＋LEAN＋跨裝置＋營運級別＋API 契約＋資料治理＋測試策略）｜狀態：implementation-ready
+> 計畫編號：1793787631643｜日期：2026-11-10（v8 初版）；2026-11-12（v8.1 SPEC-GAP／v8.2 深度稽核＋SOTA＋LEAN＋跨裝置＋營運＋契約＋治理＋測試策略）；2026-11-13（v8.3 第三輪稽核：驗證 v8.2 新章節，修 D3-01..D3-08）｜狀態：implementation-ready
 > v8 變更：RP-6 全域盤點（Dev 根目錄未登錄文件群＋Kilo 快照區 ~70 份計畫＋web/legacy-1420 並存事實與零 JS 適應度驗證）；RP-7 雙報告 HTML 渲染對稱化；RP-8 懸空引用修復。
 > v8.2 變更：SPEC-GAP-2 深度稽核（RRF 融合／嵌入斷路器／批次寫入／角色 seed 事實校正／api.rs 5,950 行實測）；**PHASE-G4 執行切片 G4.1–G4.8**；TECH-SOTA 免費 SOTA 技術雷達；LEAN 精簡預算；UX-XDEVICE 跨平台跨裝置；OPS-SLA 營運級別（含 STRIDE）；API-CONTRACT 契約；DATA-GOV 資料治理；PERF-BUDGET 效能預算；TEST-STRATEGY 測試策略；FLAG 旗標；A11Y 檢查表。
+> v8.3 變更：SPEC-GAP-3 第三輪稽核（proptest 已採用誤標／tracing 拆列／`/api/health` 既有、`/ready` 未實作／5 旗標未實作／320px＋container query 缺口／edition 2024 實測）；**PHASE-G4 增 G4.9–G4.10**；§1 補技術基線（edition 2024／rust 1.99／axum 0.7／askama 0.16）。
 > 上位架構 SSOT：`.kilo/plans/1792865422970-three-studio-governance-platform.md`（v3.1 §7/§17/§20/§22）
 > 執行者注意：衝突以上位為準；每切片先做 §0 樹態核查再立 RED。
 
@@ -13,7 +14,7 @@
 本計畫為「三大工作室（部門業務工作台 S1、API 中樞與資料管理 S2、治理稽核平台 S3）」的執行計畫，並包含下列軌道：
 
 - **PHASE-G1～G3（三大工作室執行）**：本計畫**直接執行**，包含 12 個切片。
-- **PHASE-G4（深度稽核修復，D2）**：本計畫**直接執行**，處理 SPEC-GAP-2 之程式級缺口（測試/角色/單位/文件）。
+- **PHASE-G4（深度稽核修復，D2/D3）**：本計畫**直接執行**，處理 SPEC-GAP-2/3 之程式級缺口（測試/角色/單位/文件/旗標/響應式）。
 - **PHASE-K（知識管理系統架構藍圖）**：本計畫**僅產出架構藍圖**，執行由「專案品質檢查與文件管理優化專案」負責。
 - **PHASE-RP（輔翼ERP效能評估進度報告整合與演進）**：本計畫**僅產出架構藍圖與執行順序**，由「專案品質檢查與文件管理優化專案」承接實作。
 - **跨切面規格（TECH-SOTA／LEAN／UX-XDEVICE／OPS-SLA／API-CONTRACT／DATA-GOV／PERF-BUDGET／TEST-STRATEGY／FLAG／A11Y）**：本計畫**定義並適用**於 G1～G4；PHASE-K 承接時一併沿用。
@@ -83,9 +84,11 @@
 
 Zero-JS（script=0）；**金額** i64/i128 minor 禁浮點；GET 讀/POST 寫（CSRF 10/10 維持）/PRG；`#![forbid(unsafe_code)]`；clippy 零警告不新增 allow；UTF-8 無 BOM（PowerShell 用 `[System.IO.File]::WriteAllText`，禁 `>`）；UNKNOWN≠PASS≠FAIL；切片完成即 PLAN_REGISTER addendum＋上位 §22 追溯更新；四關（fmt/clippy -D warnings/test --locked/audit）EXIT=0。
 
+**技術基線（2026-11-13 實測；取代 AGENTS.md §2 之「edition 2021」過時記載）**：core/platform/platform-hub 均 **edition 2024、rust-version 1.99**；根 workspace resolver 2（members 不含 platform-hub）；platform-hub 為獨立 workspace（resolver 3）；platform 用 **axum 0.7＋askama 0.16**（非 0.8）；platform-hub 用 sqlx 0.9＋PostgreSQL 18。AGENTS.md／ADR-0001 §3.2 之「edition 2021」為文件漂移（D3-06），由文件線修正，本計畫以實測為準。
+
 ## 2. 任務清單（依序；每項含擴充點與 DoD）
 
-> **完成狀態總覽（2026-11-12 更新）**：PHASE-G1/G2/G3 共 12 切片＋PRE-R1a 全數實作完成並驗證（G1.1＋G2.x 見 addendum #12；G1.2–G1.4＋G3.x 見 #13；全工作區 246 passed / 0 failed，含並行線新增）。未執行：G3.4（僅規格，OQ-GOV-04 阻塞）、PRE-R1b（可選）、**PHASE-G4 G4.1–G4.8（D2 深度稽核修復，本輪新增）**。
+> **完成狀態總覽（2026-11-13 更新）**：PHASE-G1/G2/G3 共 12 切片＋PRE-R1a 全數實作完成並驗證（G1.1＋G2.x 見 addendum #12；G1.2–G1.4＋G3.x 見 #13；全工作區 246 passed / 0 failed，含並行線新增）。未執行：G3.4（僅規格，OQ-GOV-04 阻塞）、PRE-R1b（可選）、**PHASE-G4 G4.1–G4.10（D2/D3 深度稽核修復）**。
 
 ### PHASE-G1 — S1 工作台卓越化
 - [x] **G1.1 八資料態全覆蓋**（WP-08）
@@ -143,6 +146,8 @@ Zero-JS（script=0）；**金額** i64/i128 minor 禁浮點；GET 讀/POST 寫�
 - [ ] **G4.6 A11Y 檢查表落地**（D2-16）：A11Y 10 項轉為 `docs/standards/A11Y_CHECKLIST.md`；可機械檢查項（label/landmark/標題層級）納入測試；DoD：文件＋檢查綠。
 - [ ] **G4.7 PERF-BUDGET 基線量測**（D2-11）：為 `/api/search`（向量/ BM25-only）與 TTFB 建 benchmark；記錄基線與方法；DoD：基線入冊（未量測標 UNKNOWN）。
 - [ ] **G4.8 OPS-SLA runbook**（D2-08）：SLO/SLI、備份還原、事件管理（P1/P2）runbook；DoD：文件入 `docs/04-operations/` 且 README 登錄。
+- [ ] **G4.9 旗標機制＋`/ready`**（D3-03/D3-04）：實作 `search_hybrid`／`search_rrf`／`ccm_chain_verify` 旗標（環境變數/設定驅動，預設值見 FLAG）＋每旗標「關閉後正確行為」測試；`/api/health` 已存在（DB 狀態/503），`/ready` 為**選項**（若實作須與 `/api/health` 語義區分並文件化）；DoD：旗標各 2 測試（on/off）＋四關。
+- [ ] **G4.10 響應式 320px＋container query**（D3-05）：`design-system.css` 補 320px 斷點與 `@container`（或等效 media）；驗證 320/375/768/1024/1440/1920 六斷點無橫向捲動；DoD：CSS 檢查＋手動/Playwright 矩陣記錄。
 
 ### 平行安排（非切片，只加測試不改結構）
 - [x] **PRE-R1a**（✅ 並行線交付 2026-11-09：`platform/tests/characterization.rs`，6 tests PASS）：api.rs 路由特徵化測試集（請求→狀態碼+關鍵 DOM 斷言），作未來模組化安全網。
@@ -150,7 +155,7 @@ Zero-JS（script=0）；**金額** i64/i128 minor 禁浮點；GET 讀/POST 寫�
 
 ## 3. 執行順序
 
-G1.1 → G1.2 → G1.3 → G1.4 → G2.1 → G2.2 → G2.3 → G3.1 → G2.4 → G2.5 → G3.2 → G3.3 → **G4.1 → G4.2 → G4.3 → G4.4 → G4.5 → G4.6 → G4.7 → G4.8**（D2 修復）。單切片單提交；每切片完成即更新上位 §22 追溯矩陣（零孤兒）＋PLAN_REGISTER addendum，不批量補帳。
+G1.1 → G1.2 → G1.3 → G1.4 → G2.1 → G2.2 → G2.3 → G3.1 → G2.4 → G2.5 → G3.2 → G3.3 → **G4.1 → G4.2 → G4.3 → G4.4 → G4.5 → G4.6 → G4.7 → G4.8 → G4.9 → G4.10**（D2/D3 修復）。單切片單提交；每切片完成即更新上位 §22 追溯矩陣（零孤兒）＋PLAN_REGISTER addendum，不批量補帳。
 
 ## 4. 驗證計畫
 
@@ -170,6 +175,7 @@ G1.1 → G1.2 → G1.3 → G1.4 → G2.1 → G2.2 → G2.3 → G3.1 → G2.4 →
 | D2-05 VIEWER 無 seed | G4.2；未修前 landing 表標「未啟用」 |
 | D2-11 效能預算未量測 | G4.7 建基線；未量測標 UNKNOWN（C-10） |
 | SOTA 新依賴（proptest/cargo-mutants/tracing 等） | TECH-SOTA 五閘門＋POC＋ADR；未過不進 Cargo.toml |
+| AGENTS.md／ADR-0001 §3.2「edition 2021」漂移（D3-06） | §1 已載實測基線（edition 2024／rust 1.99／axum 0.7）；文件線修正 AGENTS.md（本計畫不改非計畫檔） |
 
 ## 6. 明示不在範圍
 
@@ -636,6 +642,34 @@ pub struct VectorDoc {
 
 ---
 
+# SPEC-GAP-3 — 第三輪稽核（2026-11-13）：驗證 v8.2 新章節
+
+> 方法：對 v8.2 新增章節之每項「現況」主張做程式碼/設定實證（`Cargo.toml`、`api.rs`、`auth.rs`、`design-system.css`、templates）。結果：8 項需修正（D3-01..D3-08）——3 項「已採用卻標 Trial」、3 項「宣稱存在但未實作/未達」、1 項文件漂移、1 項部分達成。
+
+## D3.1 缺口清單
+
+| ID | v8.2 主張 | 實證（2026-11-13） | 判定 | 修復 |
+|---|---|---|---|---|
+| D3-01 | proptest＝Trial | `platform/Cargo.toml:67-74`、`core/Cargo.toml:27-33` 均 `[dev-dependencies] proptest = "1.12"`（INV-01 金額不變量已用） | ❌ 已採用 | TECH-SOTA 改 Adopt |
+| D3-02 | tracing＝建議 Adopt（單列） | `platform-hub/Cargo.toml:38` `[dependencies] tracing = "0.1"`；`platform/Cargo.toml` 未引入 | 🟡 部分 | 拆列：hub=Adopt、platform=Trial |
+| D3-03 | `/health`＋`/ready` | `/api/health` 存在（`api.rs:445,848`；DB 不可達→503，測試 6400/6765）；`/api/modules/health`（`cross_module_api.rs:448`）；`/api/bankpay/health`；**`/ready` 不存在** | 🟡 部分 | 改引 `/api/health`；`/ready` 列 G4.9 選項 |
+| D3-04 | 5 個 feature flags | `search_hybrid`／`search_rrf`／`ccm_chain_verify` grep 零命中 | ❌ 未實作 | FLAG 標「待實作」＋G4.9 |
+| D3-05 | 320px＋container query | `design-system.css` 斷點 640/768/1024；**無 320、無 `@container`**（有 dark/print/reduced-motion/focus-visible/contrast/forced-colors） | 🟡 部分 | UX-XDEVICE 標現況＋G4.10 |
+| D3-06 | 基線 edition 2021（AGENTS.md §2） | `core/platform/platform-hub` 均 **edition 2024、rust-version 1.99**；根 resolver 2；hub resolver 3；platform **axum 0.7（非 0.8）** | ❌ 文件漂移 | §1 補實測基線；AGENTS.md 由文件線修 |
+| D3-07 | A11Y 基礎 | 模板普遍 `header/main/footer/label/nav`；CSS 有 focus-visible/contrast/forced-colors | ✅ 基礎在 | G4.6 逐頁驗證 |
+| D3-08 | 24h 工作階段＋Cookie 旗標 | `SESSION_TTL_HOURS=24`（`auth.rs:32-33`）；`HttpOnly; SameSite=Lax; Path=/; Max-Age`＋條件式 `Secure`（`auth.rs:226-228`） | ✅ 一致 | 無 |
+
+## D3.2 處置摘要
+
+- TECH-SOTA：proptest 移至 Adopt；tracing 拆為 hub Adopt／platform Trial。
+- OPS-SLA：改引既有 `/api/health`；`/ready` 標未實作。
+- FLAG：全旗標標「待實作」，由 G4.9 落地。
+- UX-XDEVICE：標現況（無 320px/container），由 G4.10 補齊。
+- §1：補技術基線實測（edition 2024／rust 1.99／axum 0.7／askama 0.16）。
+- PHASE-G4：新增 G4.9（旗標＋`/ready`）與 G4.10（320px＋container query）。
+
+---
+
 # TECH-SOTA — 免費 SOTA 技術雷達（2026-11-12）
 
 > 原則：**免費（FOSS）優先、量測後採用、可回滾、零 JS 不變**。每項須通過五閘門：①授權（MIT/Apache-2.0）②維護（近 12 月有更新）③安全（`cargo audit`／OSV 無已知 CVE）④量測（POC 前後數據）⑤回滾（feature flag／可移除）。未過即不得進入 `Cargo.toml`。
@@ -647,8 +681,9 @@ pub struct VectorDoc {
 | Adopt | Argon2id 認證 | ✅ 已用 | 維持 | OWASP 建議 |
 | Adopt | SQLx＋SQLite（本機）／PostgreSQL 18（OQ-GOV-01） | ✅ | 維持 | 型別安全、編譯期檢查 |
 | Adopt | Askama 模板（型別安全 HTML） | ✅ 已用 | 維持 | 零 JS、編譯期 escaping |
-| Adopt | `tracing`＋`tracing-subscriber` | 評估 | 建議 Adopt | 結構化日誌標準；輕量 |
-| Trial | `proptest`（屬性測試） | 評估 | 建議 Trial | 金額/日期/分頁不變量；純測試依賴 |
+| Adopt | `tracing`（platform-hub） | ✅ 已用（`[dependencies] tracing = "0.1"`） | 維持 | 結構化日誌；hub 已有 |
+| Adopt | `proptest`（屬性測試） | ✅ 已用（platform/core `[dev-dependencies]` 1.12；INV-01 金額不變量） | 維持 | 純測試依賴；已驗證（D3-01） |
+| Trial | `tracing`＋`tracing-subscriber`（platform） | 未引入 | 建議 Trial | 與 hub 對齊；需 POC 量測（D3-02） |
 | Trial | `cargo-mutants`（變異測試） | 評估 | 建議 Trial | 驗證測試強度；僅 CI |
 | Trial | `cargo deny`（授權/公告/來源） | 評估 | 建議 Trial | 供應鏈治理；CI 執行 |
 | Trial | `cargo-fuzz`（libFuzzer/AFL） | 已部分 | 維持 Trial | GAP-04 ASan DLL 阻塞；Linux CI 可跑 |
@@ -705,6 +740,8 @@ pub struct VectorDoc {
 | 低階效能 | 4× CPU 節流首屏 ≤2s | Lighthouse／手動節流 |
 | 無障礙 | WCAG 2.2 AA；零 JS；語義 HTML；表單 label | axe-core（**測試專用**，離線注入；不進 production HTML）或手動檢查表 |
 
+> 現況（2026-11-13 實證）：`design-system.css` 已有 640/768/1024 斷點、dark mode、print、`prefers-reduced-motion`、`:focus-visible`、`prefers-contrast`、`forced-colors`；**無 320px 斷點、無 `@container`**（D3-05）→ 由 G4.10 補齊；模板普遍具 `header/main/footer/label/nav`（A11Y 基礎在，逐頁驗證待 G4.6）。
+
 ---
 
 # OPS-SLA — 營運級別與可觀測性（彌補 D2-08）
@@ -718,7 +755,7 @@ pub struct VectorDoc {
 | 稽核鏈完整率 | 100% | CCM 指標（G3.3） |
 | 備份成功率 | 100% | 備份腳本 exit code |
 
-- **可觀測性**：`tracing`＋`tracing-subscriber`（JSON 到 stderr）；`X-Request-Id` 貫穿；`/health`（liveness）與 `/ready`（DB/索引就緒）。
+- **可觀測性**：`tracing`＋`tracing-subscriber`（JSON 到 stderr；platform-hub 已有 `tracing`，platform 待 Trial）；`X-Request-Id` 貫穿；**`/api/health` 已存在**（回報 DB 狀態、DB 不可達→503；`api.rs:445,848`；測試 `health_reports_database_status`／`health_degrades_to_503_when_db_unreachable`）；`/api/modules/health`（需 session）與 `/api/bankpay/health` 亦已存在。`/ready` **未實作**（G4.9 選項；現行 `/api/health` 已同時表達 liveness＋readiness 語義）。
 - **備份/DR**：SQLite `VACUUM INTO` 每日、保留 7 日；RPO ≤24h、RTO ≤1h；還原演練每季（記錄於 runbook）。
 - **機密**：環境變數；`.env` 不進版控；工作階段金鑰/密碼每 90 天或事件驅動輪替。
 - **事件管理**：P1（不可用）30 分鐘內回報擁有者；P2（降級）1 個工作日；每件附時間線與根因（FMEA/STPA）。
@@ -816,6 +853,8 @@ pub struct VectorDoc {
 - 旗標由環境變數/設定檔驅動（不硬編碼）；變更須記錄於 audit_log 與 runbook。
 - 每個旗標須有「關閉後的正確行為」測試（雙向門）。
 
+> 現況（2026-11-13 實證）：上表旗標**全數未實作**（`search_hybrid`／`search_rrf`／`ccm_chain_verify` grep 零命中）→ 由 G4.9 實作；實作前不得對外聲稱旗標存在（D3-04）。
+
 ---
 
 # A11Y — 無障礙驗收檢查表（彌補 D2-16）
@@ -833,13 +872,14 @@ pub struct VectorDoc {
 
 ---
 
-# 附錄：第二輪缺口修復優先序
+# 附錄：缺口修復優先序（第二／第三輪）
 
 | 優先 | 缺口 ID | 理由 |
 |---|---|---|
 | P0 | D2-01, D2-02, D2-07, D2-08, D2-09, D2-11 | 驗收/契約/跨裝置/效能——直接影響可用性 |
 | P1 | D2-04, D2-05, D2-06, D2-12, D2-13, D2-16 | 實作可執行性與品質閘門 |
 | P2 | D2-03, D2-10, D2-14, D2-15 | 長期維護性與精簡 |
+| D3 | D3-04, D3-05 → G4.9/G4.10；D3-01/02/03 已修；D3-06 → 文件線；D3-07/08 已驗證 | 第三輪：已採用誤標、未實作誤宣、文件漂移 |
 
 ---
 

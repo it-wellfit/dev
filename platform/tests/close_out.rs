@@ -1,13 +1,13 @@
 //! Slice 9 close-out tests (P3-2 design-token sync, P3-1 report budget,
 //! P1-9 session revocation, P1-8 residual password reset).
 
-use axum::body::Body;
-use axum::http::{header, Request, StatusCode};
 use axum::Router;
+use axum::body::Body;
+use axum::http::{Request, StatusCode, header};
 use sqlx::SqlitePool;
 use tower::ServiceExt;
 
-use platform::api::{router, AppState};
+use platform::api::{AppState, router};
 
 const TEST_ADMIN_PASSWORD: &str = "test-admin-pass";
 const TEST_STORE_PASSWORD: &str = "test-store-pass";

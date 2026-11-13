@@ -11,7 +11,7 @@
 #![forbid(unsafe_code)]
 
 use axum::body::Body;
-use axum::http::{header, Request, StatusCode};
+use axum::http::{Request, StatusCode, header};
 use sqlx::sqlite::SqlitePoolOptions;
 use std::collections::BTreeSet;
 use tower::ServiceExt;
@@ -398,13 +398,24 @@ async fn unknown_path_returns_html_404() {
 
     let (status, body) = get(&app, "/definitely-not-a-page", Some(&cookie)).await;
     assert_eq!(status, StatusCode::NOT_FOUND, "unknown path must 404");
-    // UX finding: axum's default 404 is an empty body. A blank page is a
-    // poor experience; assert the current contract explicitly so a future
-    // custom 404 page is a deliberate, tested upgrade.
+    // Branded 404 (2026-11-12 瀏覽器實證補洞): axum 的空 body 404 是不良體驗；
+    // 自訂頁須含識別文字＋返回連結，且維持零 JS。
     assert!(
-        body.is_empty() || body.contains("404") || body.contains("找不到"),
-        "404 body should at least identify itself; got {} bytes",
+        body.contains("404"),
+        "404 page must identify itself; got {} bytes",
         body.len()
+    );
+    assert!(
+        body.contains("返回工作台"),
+        "404 page must offer a way home"
+    );
+    assert!(
+        !body.contains("<script"),
+        "404 page must keep the zero-JS contract"
+    );
+    assert!(
+        body.contains("/assets/design-system.css"),
+        "404 page must be styled"
     );
 }
 

@@ -11,9 +11,9 @@
 //! 互動狀態全覆蓋：預設/懸停/焦點可見/空/錯誤；深色模式；列印樣式；prefers-reduced-motion。
 //! 字面 script 標籤不會出現於輸出 HTML（憲章 §2.3：計數恆為 0）。
 
+use crate::KemError;
 use crate::filing::status_counts;
 use crate::schema::{Claim, ClaimStatus, ClaimType};
-use crate::KemError;
 use chrono::Utc;
 use std::fmt::Write as _;
 use std::path::Path;
@@ -231,8 +231,14 @@ pub fn write_dashboard(
             let _ = write!(
                 h,
                 "<tr><td><a href=\"claims/{}.json\"><code>{}</code></a></td><td>{}</td><td><span class=\"type\">{}</span></td><td>{}</td><td>{}</td><td>{}{}</td><td>{}</td></tr>",
-                c.id, c.id, esc(&c.title), type_label(c.claim_type),
-                status_pill(c.status), confidence_bar(c.confidence), ev, more,
+                c.id,
+                c.id,
+                esc(&c.title),
+                type_label(c.claim_type),
+                status_pill(c.status),
+                confidence_bar(c.confidence),
+                ev,
+                more,
                 esc(&c.topics.join("、"))
             );
         }

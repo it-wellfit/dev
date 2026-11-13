@@ -41,10 +41,10 @@ fn collect_text_files(dir: &Path, out: &mut Vec<PathBuf>) {
         let path = entry.path();
         if path.is_dir() {
             collect_text_files(&path, out);
-        } else if let Some(ext) = path.extension().and_then(|s| s.to_str()) {
-            if TEXT_EXTENSIONS.contains(&ext) {
-                out.push(path);
-            }
+        } else if let Some(ext) = path.extension().and_then(|s| s.to_str())
+            && TEXT_EXTENSIONS.contains(&ext)
+        {
+            out.push(path);
         }
     }
 }

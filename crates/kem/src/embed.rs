@@ -269,10 +269,11 @@ pub fn fresh_lookup<'a>(
     let mut m: HashMap<&str, &[f32]> = HashMap::new();
     for c in claims {
         let sha = sha256_hex(c.body.as_bytes());
-        if let Some(v) = index.entries.iter().find(|e| e.id == c.id) {
-            if v.body_sha == sha && !v.vec.is_empty() {
-                m.insert(c.id.as_str(), v.vec.as_slice());
-            }
+        if let Some(v) = index.entries.iter().find(|e| e.id == c.id)
+            && v.body_sha == sha
+            && !v.vec.is_empty()
+        {
+            m.insert(c.id.as_str(), v.vec.as_slice());
         }
     }
     m

@@ -14,10 +14,10 @@
 use askama::Template;
 use auxbridge_core::permission::PermissionManager;
 use auxbridge_core::{
-    format_minor, parse_decimal_to_minor, LedgerEngine, Transaction, TransactionItem,
+    LedgerEngine, Transaction, TransactionItem, format_minor, parse_decimal_to_minor,
 };
 use axum::extract::{Form, Path, Query, State};
-use axum::http::{header, StatusCode};
+use axum::http::{StatusCode, header};
 use axum::response::{Html, IntoResponse, Redirect, Response};
 use axum::routing::{get, post};
 use axum::{Extension, Json, Router};
@@ -595,8 +595,39 @@ pub fn router(state: AppState) -> Router {
     // no-store (session data must not be cached).
     public
         .merge(protected)
+        // 自訂 404 頁（2026-11-12 瀏覽器實證補洞）：axum 預設 404 為空 body，
+        // 使用者看到白頁——體驗不良。品牌化 404 附「返回工作台」連結。
+        .fallback(not_found_page)
         .layer(axum::middleware::map_response(auth::security_headers))
         .with_state(state)
+}
+
+/// GET（fallback）— 404 找不到頁面。零 JS、設計系統樣式、含返回連結。
+async fn not_found_page() -> Response {
+    const BODY: &str = r#"<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>找不到頁面 — AuxBridge 整合工作台</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%232563eb'/%3E%3Ctext x='8' y='12' font-size='10' text-anchor='middle' fill='white'%3EA%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/assets/design-system.css">
+</head>
+<body>
+<main class="container login-panel" style="text-align:center">
+<h1>404・找不到頁面</h1>
+<p class="app-subtitle">問題：此網址不存在或已移動。可能原因：連結過期或輸入錯誤。處理方式：返回工作台首頁重新導航。</p>
+<p><a class="btn btn-primary" href="/">返回工作台</a></p>
+</main>
+</body>
+</html>
+"#;
+    (
+        StatusCode::NOT_FOUND,
+        [(header::CONTENT_TYPE, "text/html; charset=utf-8")],
+        BODY,
+    )
+        .into_response()
 }
 
 /// 密碼政策（NIST SP 800-63B 對齊；2026-11-12 規格補洞）。
@@ -734,10 +765,10 @@ const FONT_FILES: &[(&str, &[u8])] = &[
 fn console_root() -> Option<std::path::PathBuf> {
     let rel = std::path::Path::new("knowledge/console");
     let mut candidates: Vec<std::path::PathBuf> = Vec::new();
-    if let Ok(exe) = std::env::current_exe() {
-        if let Some(dir) = exe.parent() {
-            candidates.push(dir.join(rel));
-        }
+    if let Ok(exe) = std::env::current_exe()
+        && let Some(dir) = exe.parent()
+    {
+        candidates.push(dir.join(rel));
     }
     if let Ok(cwd) = std::env::current_dir() {
         let mut dir = Some(cwd);
@@ -1442,7 +1473,7 @@ async fn admin_reset_password(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 format!("密碼雜湊失敗：{e}"),
             )
-                .into_response()
+                .into_response();
         }
     };
     sqlx::query("UPDATE users SET password_hash = ? WHERE user_id = ?")
@@ -1666,7 +1697,7 @@ async fn ai_suggest(
             // 韌性：Ollama 離線/逾時 -> graceful degradation.
             let template = AiSuggestionTemplate {
                 acting_user: session.user_id.clone(),
-            nav: nav.0.clone(),
+                nav: nav.0.clone(),
                 csrf_token: session.csrf_token.clone(),
                 suggestion: None,
                 degrade_message: Some(format!(
@@ -2003,18 +2034,17 @@ async fn build_accounts_template(
     for (id, code, name, typ, currency, active, parent) in &rows {
         match parent.as_deref() {
             Some(parent_id) if !parent_id.is_empty() => {
-                if let Some(&gidx) = root_index.get(parent_id) {
-                    if let Some(&ridx) = root_row_index.get(parent_id) {
-                        if let Some(root) = groups[gidx].roots.get_mut(ridx) {
-                            root.children.push(AccountChildRow {
-                                id: id.clone(),
-                                code: code.clone(),
-                                name: name.clone(),
-                                currency: currency.clone(),
-                                active: *active,
-                            });
-                        }
-                    }
+                if let Some(&gidx) = root_index.get(parent_id)
+                    && let Some(&ridx) = root_row_index.get(parent_id)
+                    && let Some(root) = groups[gidx].roots.get_mut(ridx)
+                {
+                    root.children.push(AccountChildRow {
+                        id: id.clone(),
+                        code: code.clone(),
+                        name: name.clone(),
+                        currency: currency.clone(),
+                        active: *active,
+                    });
                 }
             }
             _ => {
@@ -3388,12 +3418,13 @@ async fn import_upload_page(
         let mut out = Vec::with_capacity(bytes.len());
         let mut i = 0;
         while i < bytes.len() {
-            if bytes[i] == b'%' && i + 2 < bytes.len() {
-                if let Ok(v) = u8::from_str_radix(&n[i + 1..i + 3], 16) {
-                    out.push(v);
-                    i += 3;
-                    continue;
-                }
+            if bytes[i] == b'%'
+                && i + 2 < bytes.len()
+                && let Ok(v) = u8::from_str_radix(&n[i + 1..i + 3], 16)
+            {
+                out.push(v);
+                i += 3;
+                continue;
             }
             out.push(bytes[i]);
             i += 1;
@@ -3829,7 +3860,7 @@ async fn import_preview(
             Some("file") => match field.bytes().await {
                 Ok(b) => bytes = Some(b.to_vec()),
                 Err(e) => {
-                    return (StatusCode::BAD_REQUEST, format!("讀取檔案失敗：{e}")).into_response()
+                    return (StatusCode::BAD_REQUEST, format!("讀取檔案失敗：{e}")).into_response();
                 }
             },
             _ => {}
@@ -4052,10 +4083,8 @@ async fn import_preview(
                             .unwrap_or((vec![None; header.len()], false))
                     })
                     .unwrap_or((Vec::new(), false));
-                if needs_reorder {
-                    if let Some((_, header)) = rows.first() {
-                        let _ = crate::ingest::save_profile(&state.pool, header, &mapping).await;
-                    }
+                if needs_reorder && let Some((_, header)) = rows.first() {
+                    let _ = crate::ingest::save_profile(&state.pool, header, &mapping).await;
                 }
                 for (row_no, cells) in rows.into_iter().skip(1) {
                     let line_no = row_no + 1;
@@ -4193,12 +4222,9 @@ async fn import_preview(
                                         .unwrap_or((vec![None; header.len()], false))
                                 })
                                 .unwrap_or((Vec::new(), false));
-                            if needs_reorder {
-                                if let Some((_, header)) = rows.first() {
-                                    let _ =
-                                        crate::ingest::save_profile(&state.pool, header, &mapping)
-                                            .await;
-                                }
+                            if needs_reorder && let Some((_, header)) = rows.first() {
+                                let _ = crate::ingest::save_profile(&state.pool, header, &mapping)
+                                    .await;
                             }
                             for (row_no, cells) in rows.into_iter().skip(1) {
                                 let line_no = row_no + 1;
@@ -4225,12 +4251,9 @@ async fn import_preview(
                                         .unwrap_or((vec![None; header.len()], false))
                                 })
                                 .unwrap_or((Vec::new(), false));
-                            if needs_reorder {
-                                if let Some((_, header)) = rows.first() {
-                                    let _ =
-                                        crate::ingest::save_profile(&state.pool, header, &mapping)
-                                            .await;
-                                }
+                            if needs_reorder && let Some((_, header)) = rows.first() {
+                                let _ = crate::ingest::save_profile(&state.pool, header, &mapping)
+                                    .await;
                             }
                             for (row_no, cells) in rows.into_iter().skip(1) {
                                 let line_no = row_no + 1;
@@ -4257,12 +4280,9 @@ async fn import_preview(
                                         .unwrap_or((vec![None; header.len()], false))
                                 })
                                 .unwrap_or((Vec::new(), false));
-                            if needs_reorder {
-                                if let Some((_, header)) = rows.first() {
-                                    let _ =
-                                        crate::ingest::save_profile(&state.pool, header, &mapping)
-                                            .await;
-                                }
+                            if needs_reorder && let Some((_, header)) = rows.first() {
+                                let _ = crate::ingest::save_profile(&state.pool, header, &mapping)
+                                    .await;
                             }
                             for (row_no, cells) in rows.into_iter().skip(1) {
                                 let line_no = row_no + 1;
@@ -4682,10 +4702,10 @@ async fn mapping_apply(
         let cells = crate::ingest::cells_from_json(json);
         let mut mapped: [String; 6] = Default::default();
         for (target_idx, source_idx) in mapping.iter().enumerate() {
-            if let Some(src) = source_idx {
-                if *src < cells.len() {
-                    mapped[target_idx] = cells[*src].clone();
-                }
+            if let Some(src) = source_idx
+                && *src < cells.len()
+            {
+                mapped[target_idx] = cells[*src].clone();
             }
         }
         match validate_fields(
@@ -5218,11 +5238,22 @@ fn render_or_500(template: impl askama::Template) -> Response {
 pub struct WizardStep2Form {
     pub csrf_token: String,
     pub template: String,
+    /// Step-1 submission marker (`choose` = template picked, render step 2).
+    /// Missing on the step-2 submission (full fields). 2026-11-12 修復：此前
+    /// step-1 提交因缺 debit_account 等欄位被拒（422），精靈第一步不可用。
+    #[serde(default)]
+    pub template_stage: Option<String>,
+    #[serde(default)]
     pub debit_account: String,
+    #[serde(default)]
     pub credit_account: String,
+    #[serde(default)]
     pub amount: String,
+    #[serde(default)]
     pub currency: String,
+    #[serde(default)]
     pub description: String,
+    #[serde(default)]
     pub transaction_date: String,
 }
 
@@ -5239,6 +5270,29 @@ async fn wizard_step2(
             "CSRF 驗證失敗；請重新整理頁面後再操作。".to_string(),
         )
             .into_response();
+    }
+
+    // 步驟 1 → 步驟 2：使用者已選模板，渲染細節表單（借貸欄位尚未填，
+    // 不做 R-BALANCE 等驗證——那是步驟 2 提交時的職責）。
+    if form.template_stage.as_deref() == Some("choose") {
+        let accounts: Vec<String> =
+            sqlx::query_scalar("SELECT account_id FROM accounts ORDER BY account_id LIMIT 100")
+                .fetch_all(&state.pool)
+                .await
+                .unwrap_or_default();
+        let rendered = WizardTemplate {
+            acting_user: session.user_id.clone(),
+            nav: nav.0.clone(),
+            csrf_token: session.csrf_token.clone(),
+            step: 2,
+            template: form.template.clone(),
+            accounts,
+            error: None,
+            from_note: None,
+            amount_display: String::new(),
+            form: FormValues::default(),
+        };
+        return render_or_500(rendered);
     }
 
     let mut form_error: Option<String> = None;
@@ -5513,9 +5567,9 @@ fn dim_expr(dim: &str) -> Option<&'static str> {
 /// Whitelisted measure expressions.
 fn measure_expr(measure: &str) -> Option<&'static str> {
     match measure {
-        "debit" => Some(
-            "COALESCE(SUM(CASE WHEN i.item_type = 'DEBIT' THEN i.amount_minor ELSE 0 END), 0)",
-        ),
+        "debit" => {
+            Some("COALESCE(SUM(CASE WHEN i.item_type = 'DEBIT' THEN i.amount_minor ELSE 0 END), 0)")
+        }
         "credit" => Some(
             "COALESCE(SUM(CASE WHEN i.item_type = 'CREDIT' THEN i.amount_minor ELSE 0 END), 0)",
         ),
@@ -6881,8 +6935,8 @@ mod tests {
 
         // Create an account (admin role path).
         let body = format!(
-        "csrf_token={csrf}&account_code=TEST-ACC-001&account_name=test%20account&account_type=ASSETS&currency=TWD&parent_account_id="
-    );
+            "csrf_token={csrf}&account_code=TEST-ACC-001&account_name=test%20account&account_type=ASSETS&currency=TWD&parent_account_id="
+        );
         let request = Request::builder()
             .method("POST")
             .uri("/accounts")
@@ -6936,8 +6990,8 @@ mod tests {
         // store1 has no ROLE_MANAGE grant (permissions only via direct seeding).
         let (cookie, csrf) = login(&app, &pool, "store1", TEST_STORE_PASSWORD).await;
         let body = format!(
-        "csrf_token={csrf}&account_code=TEST-ACC-002&account_name=x&account_type=ASSETS&currency=TWD&parent_account_id="
-    );
+            "csrf_token={csrf}&account_code=TEST-ACC-002&account_name=x&account_type=ASSETS&currency=TWD&parent_account_id="
+        );
         let request = Request::builder()
             .method("POST")
             .uri("/accounts")
@@ -9217,7 +9271,12 @@ mod tests {
 
         println!(
             "Stress test: {} transactions, {} monthly queries, timings_ms={:?}, p95={}ms, max={}ms, total={}ms",
-            tx_count, timings_ms.len(), timings_ms, p95_ms, max_ms, total_ms
+            tx_count,
+            timings_ms.len(),
+            timings_ms,
+            p95_ms,
+            max_ms,
+            total_ms
         );
         assert!(
             p95_ms <= 650,

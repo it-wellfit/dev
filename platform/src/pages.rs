@@ -5,10 +5,10 @@
 use std::collections::HashMap;
 
 use askama::Template;
+use axum::Extension;
 use axum::extract::{Form, Path, Query, State};
 use axum::http::StatusCode;
 use axum::response::{Html, IntoResponse, Redirect, Response};
-use axum::Extension;
 use serde::Deserialize;
 use sqlx::SqlitePool;
 use uuid::Uuid;

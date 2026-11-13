@@ -10,7 +10,7 @@
 #![forbid(unsafe_code)]
 
 use axum::body::Body;
-use axum::http::{header, Request, StatusCode};
+use axum::http::{Request, StatusCode, header};
 use sqlx::sqlite::SqlitePoolOptions;
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};

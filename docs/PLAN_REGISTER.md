@@ -584,6 +584,20 @@ This addendum records execution facts only; it does not approve product scope, c
 
 This addendum records execution facts only; it does not approve product scope, certification, or release.
 
+## 2026-11-12 addendum #37 (Rust edition 2024 遷移——語言層 SOTA 對齊)
+
+| Item | Disposition | Evidence |
+|---|---|---|
+| edition 遷移 | **完成**：6 成員 crate＋`web/src-tauri` 由 2021 → 2024（resolver 維持 2） | 7 份 Cargo.toml 之 `edition = "2024"`；`cargo check --workspace --all-targets` EXIT=0（未改任何邏輯） |
+| edition idiom 修正 | **完成**：`cargo fix --edition-idioms --all-targets` 無 machine-applicable 變更（程式碼原已符合） | 指令輸出僅重編譯，無檔案修改 |
+| 2024 新增 lints | **完成**：7 處 `collapsible_if` 改 let-chain（`cargo clippy --fix`） | `cargo clippy --all-targets --locked -- -D warnings` EXIT=0 |
+| 2024 格式 | **完成**：rustfmt `style_edition = 2024` 之 import 排序與換行（`cargo fmt`） | `cargo fmt -- --check` EXIT=0；差異集中於 import 順序與多行呼叫 |
+| 基線重測 | **PASS**：fmt 0／clippy 0／test **36 suites、360 passed、0 failed**（排除環境敏感效能斷言） | 2026-11-12 實測（排除 `stress_10000_transactions_p95`；該項單獨執行通過，併跑受 CPU 競爭影響，見 §3.2 規則） |
+| 文件同步 | **完成**：ADR-0001 增 §8 修訂（不竄改歷史）、AGENTS.md 基線句、SHARED_STANDARDS §2.3（edition 政策）、CHANGELOG | 四處同批更新（§4.3 文件與代碼同步） |
+| 未竟 | **OPEN**：axum 0.7 → 0.8（路由語法破壞性變更）仍屬獨立 POC；`scripts/backup.ps1` 仍缺（§8.1） | 待排程；axum 0.8 需路由字面值 `"/:id"` → `"/{id}"` 全面遷移與回歸測試 |
+
+This addendum records execution facts only; it does not approve product scope, certification, or release.
+
 ## Consolidation rules
 
 1. Keep one current navigation register and one acceptance/evidence ledger per project. Detailed requirements belong in their project documents.

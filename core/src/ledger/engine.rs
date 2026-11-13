@@ -347,7 +347,7 @@ impl LedgerEngine {
     ) -> Result<Vec<crate::ledger::transaction::Transaction>, Box<dyn std::error::Error>> {
         use sqlx::QueryBuilder;
         let mut qb: QueryBuilder<sqlx::Sqlite> = QueryBuilder::new(
-            "SELECT transaction_id, transaction_code, transaction_date, description, reference_number, status, source_type, created_by, created_at, updated_at FROM transactions WHERE 1=1"
+            "SELECT transaction_id, transaction_code, transaction_date, description, reference_number, status, source_type, created_by, created_at, updated_at FROM transactions WHERE 1=1",
         );
 
         if let Some(start) = start_date {

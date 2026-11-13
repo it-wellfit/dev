@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 
-use crate::embed::{fresh_lookup, VectorIndexFile};
+use crate::embed::{VectorIndexFile, fresh_lookup};
 use crate::schema::{Claim, ClaimStatus, KemError};
 
 pub const K1: f64 = 1.5;
@@ -389,11 +389,7 @@ fn lexical_sim(a: &Claim, b: &Claim) -> f32 {
     }
     let inter = ta.intersection(&tb).count() as f32;
     let union = ta.union(&tb).count() as f32;
-    if union == 0.0 {
-        0.0
-    } else {
-        inter / union
-    }
+    if union == 0.0 { 0.0 } else { inter / union }
 }
 
 /// Maximal Marginal Relevance (Carbonell & Goldstein, SIGIR 1998).

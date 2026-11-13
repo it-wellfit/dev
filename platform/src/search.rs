@@ -18,7 +18,7 @@
 //!
 //! Scores are ranking signals, never amounts (INV-01 governs money only).
 
-use crate::bm25::{tokenize, BM25Index};
+use crate::bm25::{BM25Index, tokenize};
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -259,10 +259,10 @@ impl SearchEngine {
     /// 嵌入呼叫（2 秒上限 + 斷路器）：逾時或失敗 → None（BM25-only 誠實降級）
     /// 並停用嵌入 60 秒。離線/未設定端點情境下，搜尋延遲由 180s 降至 ≤2s。
     async fn embed_with_breaker(&self, texts: &[String]) -> Option<kem::embed::EmbedResult> {
-        if let Some(until) = *self.embed_disabled_until.read().await {
-            if std::time::Instant::now() < until {
-                return None;
-            }
+        if let Some(until) = *self.embed_disabled_until.read().await
+            && std::time::Instant::now() < until
+        {
+            return None;
         }
         let pool = self.embed_pool.as_ref().clone();
         let fut = kem::embed::embed_batch(&pool, texts);
@@ -384,11 +384,10 @@ impl SearchEngine {
         if let Some(result) = self
             .embed_with_breaker(std::slice::from_ref(&content))
             .await
+            && let Some(vec) = result.vecs.first()
         {
-            if let Some(vec) = result.vecs.first() {
-                let mut vectors = self.vectors.write().await;
-                vectors.insert(doc_id, (content_hash(&content), vec.clone()));
-            }
+            let mut vectors = self.vectors.write().await;
+            vectors.insert(doc_id, (content_hash(&content), vec.clone()));
         }
     }
 
