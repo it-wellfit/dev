@@ -172,7 +172,7 @@ async fn design_lab_content_markers() {
 
     let markers: [(&str, &[&str]); 10] = [
         ("/design", &["分區入口", "R0", "EXPERIENCE_SPEC"]),
-        ("/design/contracts", &["EC-1", "EC-10", "TT-1", "L1 呈現"]),
+        ("/design/contracts", &["EC-1", "EC-10", "TC-1", "L1 呈現"]),
         ("/design/components", &["按鈕", "徽章", "分頁", "KPI"]),
         (
             "/design/states",

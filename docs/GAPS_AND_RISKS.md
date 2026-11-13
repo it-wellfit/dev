@@ -76,4 +76,6 @@
 | 3 | 長尾（164 crate） | 2.1 MiB | 逐一檢視是否為「僅單一功能使用」（如 `pdf-extract` 可只留 lopdf；`calamine` 若僅 XLSX 可關 xls 支援） | 需功能盤點 |
 | 4 | LTO 策略 | 建置時間↔大小 | 目前 fat LTO（6m48s）；若改 `lto = "thin"` 可縮短建置，大小可能略增（需 A/B 量測） | 待量測 |
 
-**與安裝包之關係**：桌面安裝包之 sidecar 由 `web/src-tauri/binaries/auxbridge-server-x86_64-pc-windows-msvc.exe`（6.19 MB）提供，**與本表 34.5 MB 之 root release 產物不一致**；需釐清 sidecar 之建置參數（可能為舊版或未含 OCR 堆疊），列為追蹤項。
+**與安裝包之關係（2026-11-13 已釐清並修復）**：原 `web/src-tauri/binaries/auxbridge-server-x86_64-pc-windows-msvc.exe`（6.19 MB）經二進位掃描**不含 `paddleocr`／`onnxruntime` 字串**，證實為 OCR 堆疊加入前之舊產物；若沿用，安裝版之匯入／OCR 功能將失效（伺服器端無 OCR）。
+已以 `target/release/auxbridge-server.exe`（34,517,504 bytes，含 OCR）替換，並重建安裝包：NSIS 壓縮後 **12.30 MiB**（`AuxBridge_0.2.0_x64-setup.exe`）＋簽章；`latest.json` 已重產，`updater_artifact` 驗收（7＋2）通過。
+→ 規則：**sidecar 必須由当前原始碼重建**，不得沿用歷史產物；建置後以二進位掃描驗證關鍵模組（OCR／更新）存在。

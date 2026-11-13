@@ -16,7 +16,7 @@
         <div class="container">
             <div>
                 <h1>體驗室 · 體驗契約</h1>
-                <p class="app-subtitle">EC-1..EC-10 × 全端介面鏈 L1–L6 × 工具組契約 TT-1..TT-5</p>
+                <p class="app-subtitle">EC-1..EC-10 × 全端介面鏈 L1–L6 × 工具組契約 TC-1..TC-5</p>
             </div>
             <p class="app-subtitle">
                 使用者：<strong>{{ acting_user }}</strong>
@@ -89,8 +89,12 @@
         </section>
 
         <section class="panel" aria-labelledby="tt-title">
-            <h2 id="tt-title">工具組體驗契約（TT-1..TT-5）</h2>
-            <p class="section-note">CLI、腳本與管線也是介面；「工具包不精緻」的另一半在此把關。</p>
+            <h2 id="tt-title">工具組體驗契約（TC-1..TC-5）</h2>
+            <p class="section-note">
+                CLI、腳本與管線也是介面；「工具包不精緻」的另一半在此把關。
+                互動層契約 TT-1..TT-8（工程）見 docs/engineering/UX_CONTRACTS.md；
+                本頁 TC 系列為工具組（CLI／腳本）契約，兩者刻意分名，避免混淆。
+            </p>
             <div class="table-wrap">
                 <table>
                     <caption>工具組契約</caption>
@@ -102,11 +106,11 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <tr><td>TT-1</td><td>一致 help</td><td>每個子命令有 --help、用法、範例、退出碼說明</td></tr>
-                        <tr><td>TT-2</td><td>退出碼語義</td><td>0 成功；非 0 失敗；UNKNOWN 明確（不得以 0 冒充）</td></tr>
-                        <tr><td>TT-3</td><td>雙模式輸出</td><td>人類可讀＋--json 機器可讀；欄位穩定</td></tr>
-                        <tr><td>TT-4</td><td>無破壞預設</td><td>破壞性動作需 --yes 或 dry-run；預設不覆蓋</td></tr>
-                        <tr><td>TT-5</td><td>每台機器通用</td><td>偵測環境（CPU／GPU／路徑／相依）；禁寫死本機規格</td></tr>
+                        <tr><td>TC-1</td><td>一致 help</td><td>每個子命令有 --help、用法、範例、退出碼說明</td></tr>
+                        <tr><td>TC-2</td><td>退出碼語義</td><td>0 成功；非 0 失敗；UNKNOWN 明確（不得以 0 冒充）</td></tr>
+                        <tr><td>TC-3</td><td>雙模式輸出</td><td>人類可讀＋--json 機器可讀；欄位穩定</td></tr>
+                        <tr><td>TC-4</td><td>無破壞預設</td><td>破壞性動作需 --yes 或 dry-run；預設不覆蓋</td></tr>
+                        <tr><td>TC-5</td><td>每台機器通用</td><td>偵測環境（CPU／GPU／路徑／相依）；禁寫死本機規格</td></tr>
                     </tbody>
                 </table>
             </div>

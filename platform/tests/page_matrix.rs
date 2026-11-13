@@ -395,7 +395,7 @@ async fn w2_w6_nav_matrix_headers_anchors_console() {
 
 /// 非頁面路由窮舉清單（資產、下載、表單動作、中間態、靜態主控台託管）。
 /// 每筆都必須在 `api.rs` 實際註冊，否則清單過期（測試會失敗）。
-const NON_PAGE_ROUTES: [&str; 29] = [
+const NON_PAGE_ROUTES: [&str; 34] = [
     "/logout",
     "/assets/design-system.css",
     "/assets/legacy-1420.css",
@@ -412,10 +412,18 @@ const NON_PAGE_ROUTES: [&str; 29] = [
     "/admin/users/issue_reset",
     // 管理員切換 AI 旗標＝表單動作（非頁面）。
     "/admin/system/ai_flag",
+    // 管理員設定 AI 模型＝表單動作（非頁面）。
+    "/admin/system/ai_model",
+    // AI 模型切換（並行流整合；表單動作，非頁面）。
+    "/admin/system/ai_model",
     "/import/preview",
     "/import/confirm",
     "/import/mapping",
     "/import/mapping/apply",
+    // 匯入範本下載（並行流整合；檔案下載端點，非頁面）。
+    "/import/template/csv",
+    "/import/template/tsv",
+    "/import/template/xlsx",
     "/drafts/parse",
     "/new/step2",
     "/reports/monthly.csv",

@@ -482,6 +482,10 @@ pub fn router(state: AppState) -> Router {
         .route("/admin/users/issue_reset", post(admin_issue_reset))
         .route("/import", get(import_upload_page))
         .route("/import/preview", post(import_preview))
+        // 匯入範本下載（CSV/TSV/XLSX；2026-11-12 規格補洞）。
+        .route("/import/template/csv", get(import_template_csv))
+        .route("/import/template/tsv", get(import_template_tsv))
+        .route("/import/template/xlsx", get(import_template_xlsx))
         .route("/import/confirm", post(import_confirm))
         .route("/import/mapping", get(mapping_page))
         .route("/import/mapping/apply", post(mapping_apply))
@@ -552,6 +556,10 @@ pub fn router(state: AppState) -> Router {
         .route(
             "/admin/system/ai_flag",
             post(crate::pages::admin_set_ai_flag),
+        )
+        .route(
+            "/admin/system/ai_model",
+            post(crate::pages::admin_set_ai_model),
         )
         .route("/admin/audit", get(crate::pages::audit_page))
         // ── API 資料管理平台（零 JS；目錄由 apihub registry 驅動）──
@@ -2062,10 +2070,15 @@ async fn ai_suggest(
             base_url,
             model,
             // 4B 模型的 JSON 結構化輸出實測可達 30 秒+；5s 逾時必然失敗。
-            timeout_ms: 60_000,
-            temperature: 0.2,
-            top_p: 0.9,
-            max_tokens: Some(512),
+            timeout_ms: crate::ai::prompt::SUGGEST_TIMEOUT_MS,
+            // 溫度 0：抽取任務的確定性標準（2026 SOTA 共識；0.7 使 schema
+            // 有效性 -20%）。
+            temperature: crate::ai::prompt::SUGGEST_TEMPERATURE,
+            top_p: crate::ai::prompt::SUGGEST_TOP_P,
+            max_tokens: Some(crate::ai::prompt::SUGGEST_MAX_TOKENS),
+            // 結構化解碼約束：解碼層強制合法 JSON（SOTA：約束解碼器勝過
+            // 提示詞懇求）。
+            format: Some(crate::ai::prompt::suggest_schema()),
         });
 
     // 混合解析（2026-11-13 實證）：規則解析器對「數字／日期」是確定性的
@@ -2083,13 +2096,12 @@ async fn ai_suggest(
         .map(|d| d.to_string())
         .unwrap_or_else(|| "未解析出".to_string());
 
-    let prompt = format!(
-        "你是會計分錄解析助理。僅輸出一個 JSON 物件，欄位：date（YYYY-MM-DD）、\
-         debit_account、credit_account（使用大寫英文科目代碼或原文）、\
-         amount（兩位小數字串）、currency（必須為三位字母 ISO 4217 代碼，\
-         例如原文的「元／新台幣」對應 TWD）。不要輸出其他文字。\n\
-         權威提示（規則解析結果，必須照抄進 JSON，不得改值）：\
-         amount={amount_hint}、date={date_hint}。\n原文：{text}"
+    // 提示詞與 schema 單一來源（platform::ai::prompt）——與 ai_bench harness
+    // 共用，評測證據不得與生產行為脫鉤（2026-11-13 使用者裁定）。
+    let prompt = crate::ai::prompt::suggest_prompt(
+        &text,
+        rule_draft.amount_minor.map(|_| amount_hint.as_str()),
+        rule_draft.date.as_ref().map(|_| date_hint.as_str()),
     );
 
     let response_text = match client.generate(&prompt).await {
@@ -4249,6 +4261,57 @@ fn parse_eml_attachments(data: &[u8]) -> Result<Vec<(String, Vec<u8>)>, String> 
 
 /// POST /import/preview — parse + validate + persist a draft batch (no ledger
 /// side effects). IMP-001.
+/// 匯入範本下載（2026-11-12 規格補洞）：欄序＝date, debit_account, credit_account,
+/// amount, currency, description（與 `push_import_row` 契約一致）。使用者填好直接
+/// 上傳即走「表頭自動對映」（decide_mapping）；不需手動映射。
+fn import_template_response(body: &'static str, filename: &'static str) -> Response {
+    let mut response = (
+        [(header::CONTENT_TYPE, "text/csv; charset=utf-8")],
+        body.to_string(),
+    )
+        .into_response();
+    let cd = format!("attachment; filename=\"{filename}\"");
+    if let Ok(value) = axum::http::HeaderValue::from_str(&cd) {
+        response
+            .headers_mut()
+            .insert(header::CONTENT_DISPOSITION, value);
+    }
+    response
+}
+
+async fn import_template_csv() -> Response {
+    import_template_response(
+        include_str!("../templates/import_templates/template.csv"),
+        "auxbridge-import-template.csv",
+    )
+}
+
+async fn import_template_tsv() -> Response {
+    import_template_response(
+        include_str!("../templates/import_templates/template.tsv"),
+        "auxbridge-import-template.tsv",
+    )
+}
+
+async fn import_template_xlsx() -> Response {
+    let mut response = (
+        [(
+            header::CONTENT_TYPE,
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )],
+        include_bytes!("../templates/import_templates/template.xlsx").to_vec(),
+    )
+        .into_response();
+    if let Ok(value) =
+        axum::http::HeaderValue::from_str("attachment; filename=\"auxbridge-import-template.xlsx\"")
+    {
+        response
+            .headers_mut()
+            .insert(header::CONTENT_DISPOSITION, value);
+    }
+    response
+}
+
 async fn import_preview(
     State(state): State<AppState>,
     session: Extension<Session>,
@@ -5082,6 +5145,17 @@ async fn mapping_apply(
                     .into_response();
             }
             seen[*idx] = true;
+        }
+    }
+    // 2026-11-13（缺陷 #3）：映射值域驗證——非法索引（>5）原被靜默接受，
+    // 導致欄位錯位與解析全錯（fail-safe：非法值必須 400 拒絕）。有效值：0–5。
+    for idx in mapping.iter().flatten() {
+        if *idx > 5 {
+            return (
+                StatusCode::BAD_REQUEST,
+                "映射來源欄位超出範圍（有效值：0–5 或忽略）。".to_string(),
+            )
+                .into_response();
         }
     }
     let rows: Vec<(i64, String, String)> = sqlx::query_as(

@@ -109,6 +109,10 @@ endpoint（tauri.conf）：`https://updates.auxbridge.internal/erp/latest.json`�
 - **CI 變更**：新增 cargo-machete 閘；**移除 it-wellfit/wellfit checkout**（桌面套件已不再依賴 Wellfit crate）。
 - **release 設定**：`strip = "symbols"`（縮小安裝包）；`rust-version = 1.99` 已宣告於各 crate。
 - **文件治理**：十份必要文件與兩道 Rust 治理閘（docs_governance／secret_scan）已就位，取代原本不存在之 `scripts/check-docs`／`check-secrets`。
+
+其他硬化（2026-11-13）：
+- **sidecar 重建規則**：`web/src-tauri/binaries/auxbridge-server-<triple>.exe` 必須由當前原始碼 `cargo build --release -p platform` 產生（不得沿用歷史產物）。2026-11-13 實測：舊 sidecar（6.19 MB）不含 `paddleocr`／`onnxruntime`，安裝版因此缺 OCR；已替換為 34.5 MB 現版並重建安裝包（12.30 MiB）＋重產 `latest.json`。
+- **驗證 sidecar**：以二進位字串掃描確認關鍵模組存在（`paddleocr`、`tokio-1.`）；或於安裝版執行匯入功能確認 OCR 可用。
 - **unsafe 全數移除**：刪除未參與編譯之 COM 死碼 `platform/src/com/{async_ipc,batch,bridge,pool}.rs`（6 處 unsafe，且無 `CoInitializeEx`，若接上即未定義行為）；8 個 crate 根全部補 `#![forbid(unsafe_code)]`；新增 guard 測試掃描全區 unsafe 語法（實測 0 處）。真實 COM 通道留在 `flaps_bridge`（`real-com` feature，crate 根已 forbid）。
 - **每個 workspace 自有弱點政策**：`cargo audit` 以 workspace 根為政策搜尋起點，故新增 `web/src-tauri/.cargo/audit.toml`（三則處置：RUSTSEC-2026-0459／2024-0370／2024-0429，含桌面特有暴露評估）。
 - **SBOM 產生方式統一**：`--manifest-path` 從 repo 根執行會產生錯誤範圍（實測 6 份全部落到 `core/`），必須以 crate 目錄為 CWD；檔名隨 crate（`auxbridge_core`／`auxbridge-web`），舊名 `flaps_core`／`flaps-erp-web` 已刪除。
@@ -120,7 +124,7 @@ endpoint（tauri.conf）：`https://updates.auxbridge.internal/erp/latest.json`�
 
 | # | 項目 | 狀態 | 證據 |
 |---|---|---|---|
-| 1 | `cargo tauri build` 全綠 → 安裝器＋.sig 產出 | **PASS（2026-11-11 重產）** | `AuxBridge_0.2.0_x64-setup.exe`（5,233,244 bytes）＋`.sig`（440 bytes）；首跑發現舊產物 `.sig`（01:47）與 11:53 重編之執行檔不符 → 驗收測試正確失敗，重新簽章後通過 |
+| 1 | `cargo tauri build` 全綠 → 安裝器＋.sig 產出 | **PASS（2026-11-13 重產）** | `AuxBridge_0.2.0_x64-setup.exe`（12.30 MiB；含新版 sidecar 34.5 MB，NSIS 壓縮後）＋`.sig`（440 bytes）；sidecar 已由當前原始碼重建（舊 sidecar 缺 OCR，見 `GAPS_AND_RISKS` §4） |`.sig`（440 bytes）；首跑發現舊產物 `.sig`（01:47）與 11:53 重編之執行檔不符 → 驗收測試正確失敗，重新簽章後通過 |
 | 2 | latest.json 三件一致（version／url／signature） | **PASS** | `make_latest_json` 產出並以設定公鑰驗簽通過；`version=0.2.0`；url 為 `…/erp/AuxBridge_0.2.0_x64-setup.exe` |
 | 3 | 正例：產物通過 minisign 驗簽 | **PASS（自動化）** | `web/src-tauri/tests/updater_artifact.rs::release_artifacts_are_signed_and_version_bound` |
 | 4 | 負例一：竄改簽章 → 驗簽必敗 | **PASS（自動化）** | 同上測試（竄改簽章文字**第 2 行載荷**；第 1 行為未簽章之 untrusted comment，竄改不影響驗簽——2026-11-11 修正） |

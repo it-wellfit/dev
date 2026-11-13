@@ -1,9 +1,10 @@
-# 三大工作室 SLICE 執行計畫（PHASE-G1..G4）— v8.3
+# 三大工作室 SLICE 執行計畫（PHASE-G1..G4）— v8.4
 
-> 計畫編號：1793787631643｜日期：2026-11-10（v8 初版）；2026-11-12（v8.1 SPEC-GAP／v8.2 深度稽核＋SOTA＋LEAN＋跨裝置＋營運＋契約＋治理＋測試策略）；2026-11-13（v8.3 第三輪稽核：驗證 v8.2 新章節，修 D3-01..D3-08）｜狀態：implementation-ready
+> 計畫編號：1793787631643｜日期：2026-11-10（v8 初版）；2026-11-12（v8.1 SPEC-GAP／v8.2 深度稽核＋SOTA＋LEAN＋跨裝置＋營運＋契約＋治理＋測試策略）；2026-11-13（v8.3 第三輪稽核 D3-01..D3-08；v8.4 第四輪稽核 D4-01..D4-06：API-CONTRACT 現況校正）｜狀態：implementation-ready
 > v8 變更：RP-6 全域盤點（Dev 根目錄未登錄文件群＋Kilo 快照區 ~70 份計畫＋web/legacy-1420 並存事實與零 JS 適應度驗證）；RP-7 雙報告 HTML 渲染對稱化；RP-8 懸空引用修復。
 > v8.2 變更：SPEC-GAP-2 深度稽核（RRF 融合／嵌入斷路器／批次寫入／角色 seed 事實校正／api.rs 5,950 行實測）；**PHASE-G4 執行切片 G4.1–G4.8**；TECH-SOTA 免費 SOTA 技術雷達；LEAN 精簡預算；UX-XDEVICE 跨平台跨裝置；OPS-SLA 營運級別（含 STRIDE）；API-CONTRACT 契約；DATA-GOV 資料治理；PERF-BUDGET 效能預算；TEST-STRATEGY 測試策略；FLAG 旗標；A11Y 檢查表。
 > v8.3 變更：SPEC-GAP-3 第三輪稽核（proptest 已採用誤標／tracing 拆列／`/api/health` 既有、`/ready` 未實作／5 旗標未實作／320px＋container query 缺口／edition 2024 實測）；**PHASE-G4 增 G4.9–G4.10**；§1 補技術基線（edition 2024／rust 1.99／axum 0.7／askama 0.16）。
+> v8.4 變更：SPEC-GAP-4 第四輪稽核（JSON 錯誤信封／`Idempotency-Key`／`/api/search` 限流／`/api/v1`／`X-Request-Id` 均未實作；HTML 三段式錯誤與停用撤銷工作階段已實作）；**PHASE-G4 增 G4.11**；API-CONTRACT 頂部加「現況」；OPS-SLA 之 `X-Request-Id` 標待實作。
 > 上位架構 SSOT：`.kilo/plans/1792865422970-three-studio-governance-platform.md`（v3.1 §7/§17/§20/§22）
 > 執行者注意：衝突以上位為準；每切片先做 §0 樹態核查再立 RED。
 
@@ -88,7 +89,7 @@ Zero-JS（script=0）；**金額** i64/i128 minor 禁浮點；GET 讀/POST 寫�
 
 ## 2. 任務清單（依序；每項含擴充點與 DoD）
 
-> **完成狀態總覽（2026-11-13 更新）**：PHASE-G1/G2/G3 共 12 切片＋PRE-R1a 全數實作完成並驗證（G1.1＋G2.x 見 addendum #12；G1.2–G1.4＋G3.x 見 #13；全工作區 246 passed / 0 failed，含並行線新增）。未執行：G3.4（僅規格，OQ-GOV-04 阻塞）、PRE-R1b（可選）、**PHASE-G4 G4.1–G4.10（D2/D3 深度稽核修復）**。
+> **完成狀態總覽（2026-11-13 更新）**：PHASE-G1/G2/G3 共 12 切片＋PRE-R1a 全數實作完成並驗證（G1.1＋G2.x 見 addendum #12；G1.2–G1.4＋G3.x 見 #13；全工作區 246 passed / 0 failed，含並行線新增）。未執行：G3.4（僅規格，OQ-GOV-04 阻塞）、PRE-R1b（可選）、**PHASE-G4 G4.1–G4.11（D2/D3/D4 深度稽核修復）**。
 
 ### PHASE-G1 — S1 工作台卓越化
 - [x] **G1.1 八資料態全覆蓋**（WP-08）
@@ -148,6 +149,7 @@ Zero-JS（script=0）；**金額** i64/i128 minor 禁浮點；GET 讀/POST 寫�
 - [ ] **G4.8 OPS-SLA runbook**（D2-08）：SLO/SLI、備份還原、事件管理（P1/P2）runbook；DoD：文件入 `docs/04-operations/` 且 README 登錄。
 - [ ] **G4.9 旗標機制＋`/ready`**（D3-03/D3-04）：實作 `search_hybrid`／`search_rrf`／`ccm_chain_verify` 旗標（環境變數/設定驅動，預設值見 FLAG）＋每旗標「關閉後正確行為」測試；`/api/health` 已存在（DB 狀態/503），`/ready` 為**選項**（若實作須與 `/api/health` 語義區分並文件化）；DoD：旗標各 2 測試（on/off）＋四關。
 - [ ] **G4.10 響應式 320px＋container query**（D3-05）：`design-system.css` 補 320px 斷點與 `@container`（或等效 media）；驗證 320/375/768/1024/1440/1920 六斷點無橫向捲動；DoD：CSS 檢查＋手動/Playwright 矩陣記錄。
+- [ ] **G4.11 API 契約落地**（D4-01..D4-04）：為 `/api/*` JSON 端點實作標準錯誤信封 `{code,message,hint,retryable,request_id}`；`/api/search` 加 30 次/分/工作階段限流（429＋`Retry-After`）；POST 寫入支援 `Idempotency-Key`（同鍵重放回原結果）；`X-Request-Id` 產生與回應標頭；`/api/v1` 版本化**僅在 ADR 通過後**執行（可選）。DoD：錯誤信封/限流/冪等各 2 測試＋四關。
 
 ### 平行安排（非切片，只加測試不改結構）
 - [x] **PRE-R1a**（✅ 並行線交付 2026-11-09：`platform/tests/characterization.rs`，6 tests PASS）：api.rs 路由特徵化測試集（請求→狀態碼+關鍵 DOM 斷言），作未來模組化安全網。
@@ -155,7 +157,7 @@ Zero-JS（script=0）；**金額** i64/i128 minor 禁浮點；GET 讀/POST 寫�
 
 ## 3. 執行順序
 
-G1.1 → G1.2 → G1.3 → G1.4 → G2.1 → G2.2 → G2.3 → G3.1 → G2.4 → G2.5 → G3.2 → G3.3 → **G4.1 → G4.2 → G4.3 → G4.4 → G4.5 → G4.6 → G4.7 → G4.8 → G4.9 → G4.10**（D2/D3 修復）。單切片單提交；每切片完成即更新上位 §22 追溯矩陣（零孤兒）＋PLAN_REGISTER addendum，不批量補帳。
+G1.1 → G1.2 → G1.3 → G1.4 → G2.1 → G2.2 → G2.3 → G3.1 → G2.4 → G2.5 → G3.2 → G3.3 → **G4.1 → G4.2 → G4.3 → G4.4 → G4.5 → G4.6 → G4.7 → G4.8 → G4.9 → G4.10 → G4.11**（D2/D3/D4 修復）。單切片單提交；每切片完成即更新上位 §22 追溯矩陣（零孤兒）＋PLAN_REGISTER addendum，不批量補帳。
 
 ## 4. 驗證計畫
 
@@ -670,6 +672,21 @@ pub struct VectorDoc {
 
 ---
 
+# SPEC-GAP-4 — 第四輪稽核（2026-11-13）：驗證 API-CONTRACT 與工作階段
+
+| ID | 主張 | 實證（2026-11-13） | 判定 | 修復 |
+|---|---|---|---|---|
+| D4-01 | JSON 錯誤信封 `{code,message,hint,retryable,request_id}` | 無；現行為 HTML/文字錯誤 | ❌ 待實作 | 標「待 G4.11」 |
+| D4-02 | `Idempotency-Key` | grep 零命中 | ❌ 待實作 | G4.11 |
+| D4-03 | `/api/search` 30 次/分/工作階段 | 僅 `LoginRateLimiter`（登入；`auth.rs:55-65,423`） | ❌ 待實作 | G4.11 |
+| D4-04 | `/api/v1` 版本化、`X-Request-Id` | grep 零命中 | ❌ 待實作/可選 | G4.11（版本化需 ADR） |
+| D4-05 | 帳號停用撤銷工作階段 | `DELETE FROM sessions WHERE user_id = ?`（`api.rs:1475,1652,1874`） | ✅ 已實作 | 無 |
+| D4-06 | HTML 三段式錯誤（問題＋可能原因＋處理方式） | `api.rs:652,960,1008,1163,2117,2561…` | ✅ 已實作 | 無 |
+
+**處置**：API-CONTRACT 頂部加「現況」段（已實作 vs 待實作）；G4.11 承接 D4-01..D4-04；D4-05/06 已驗證。OPS-SLA 之 `X-Request-Id` 標「待 G4.11」。
+
+---
+
 # TECH-SOTA — 免費 SOTA 技術雷達（2026-11-12）
 
 > 原則：**免費（FOSS）優先、量測後採用、可回滾、零 JS 不變**。每項須通過五閘門：①授權（MIT/Apache-2.0）②維護（近 12 月有更新）③安全（`cargo audit`／OSV 無已知 CVE）④量測（POC 前後數據）⑤回滾（feature flag／可移除）。未過即不得進入 `Cargo.toml`。
@@ -755,7 +772,7 @@ pub struct VectorDoc {
 | 稽核鏈完整率 | 100% | CCM 指標（G3.3） |
 | 備份成功率 | 100% | 備份腳本 exit code |
 
-- **可觀測性**：`tracing`＋`tracing-subscriber`（JSON 到 stderr；platform-hub 已有 `tracing`，platform 待 Trial）；`X-Request-Id` 貫穿；**`/api/health` 已存在**（回報 DB 狀態、DB 不可達→503；`api.rs:445,848`；測試 `health_reports_database_status`／`health_degrades_to_503_when_db_unreachable`）；`/api/modules/health`（需 session）與 `/api/bankpay/health` 亦已存在。`/ready` **未實作**（G4.9 選項；現行 `/api/health` 已同時表達 liveness＋readiness 語義）。
+- **可觀測性**：`tracing`＋`tracing-subscriber`（JSON 到 stderr；platform-hub 已有 `tracing`，platform 待 Trial）；`X-Request-Id` 貫穿（**待 G4.11**，現行未實作）；**`/api/health` 已存在**（回報 DB 狀態、DB 不可達→503；`api.rs:445,848`；測試 `health_reports_database_status`／`health_degrades_to_503_when_db_unreachable`）；`/api/modules/health`（需 session）與 `/api/bankpay/health` 亦已存在。`/ready` **未實作**（G4.9 選項；現行 `/api/health` 已同時表達 liveness＋readiness 語義）。
 - **備份/DR**：SQLite `VACUUM INTO` 每日、保留 7 日；RPO ≤24h、RTO ≤1h；還原演練每季（記錄於 runbook）。
 - **機密**：環境變數；`.env` 不進版控；工作階段金鑰/密碼每 90 天或事件驅動輪替。
 - **事件管理**：P1（不可用）30 分鐘內回報擁有者；P2（降級）1 個工作日；每件附時間線與根因（FMEA/STPA）。
@@ -775,14 +792,16 @@ pub struct VectorDoc {
 
 # API-CONTRACT — API 契約與錯誤分類（彌補 D2-09）
 
-- **錯誤格式（JSON）**：`{"error": {"code": "…", "message": "…", "hint": "問題＋可能原因＋處理方式", "retryable": false, "request_id": "…"}}`。
-- **代碼表**：`VALIDATION`／`UNAUTHENTICATED`／`FORBIDDEN`／`NOT_FOUND`／`CONFLICT`／`RATE_LIMITED`／`UPSTREAM_UNAVAILABLE`／`INTERNAL`。
-- **HTML 頁錯誤**：沿用「問題＋可能原因＋處理方式」三段式（憲章 §4）。
+> **現況（2026-11-13 實證；D4-01..D4-06）**：HTML 三段式錯誤**已實作**（`api.rs:652,960,1008,1163,2117,2561…`）；登入速率限制**已實作**（`LoginRateLimiter`，`auth.rs:55-65,423`）；帳號停用/重設**撤銷全部工作階段**（`api.rs:1475,1652,1874`）；14 POST 表單 CSRF、24h TTL 已驗證。**未實作**：JSON 錯誤信封、`Idempotency-Key`、`/api/search` 30 次/分、`/api/v1` 版本化、`X-Request-Id`（→ G4.11；版本化屬可選，需 ADR）。
+
+- **錯誤格式（JSON，待 G4.11）**：`{"error": {"code": "…", "message": "…", "hint": "問題＋可能原因＋處理方式", "retryable": false, "request_id": "…"}}`。
+- **代碼表（待 G4.11）**：`VALIDATION`／`UNAUTHENTICATED`／`FORBIDDEN`／`NOT_FOUND`／`CONFLICT`／`RATE_LIMITED`／`UPSTREAM_UNAVAILABLE`／`INTERNAL`。
+- **HTML 頁錯誤（已實作）**：沿用「問題＋可能原因＋處理方式」三段式（憲章 §4；實證見上）。
 - **分頁**：cursor 優先（`next_cursor`）；既有 offset 分頁須保留 `q` 與 filters（G1.2 已驗證）。
-- **冪等**：POST 寫入接受 `Idempotency-Key`；同鍵重放回第一次結果（不重播副作用）。
-- **版本化**：`/api/v1/*` 明確版本；破壞性變更需新版本＋90 天重疊（內部 API 可例外，需 ADR）。
-- **速率限制**：登入 5 次/15 分；`/api/search` 30 次/分/工作階段；超限 429＋`Retry-After`。
-- **CSRF/工作階段**：所有 POST 同步 token（14 表單）；工作階段 24h 可撤銷；Cookie `HttpOnly`＋`SameSite=Lax`＋`Secure`（TLS 環境）。
+- **冪等（待 G4.11）**：POST 寫入接受 `Idempotency-Key`；同鍵重放回第一次結果（不重播副作用）。
+- **版本化（待 G4.11／可選 ADR）**：`/api/v1/*` 明確版本；破壞性變更需新版本＋90 天重疊（內部 API 可例外，需 ADR）。
+- **速率限制**：登入 5 次/15 分（**已實作**）；`/api/search` 30 次/分/工作階段（**待 G4.11**）；超限 429＋`Retry-After`。
+- **CSRF/工作階段**：所有 POST 同步 token（14 表單，已驗證）；工作階段 24h 可撤銷（`SESSION_TTL_HOURS=24`；停用即撤銷已實作）；Cookie `HttpOnly`＋`SameSite=Lax`＋`Secure`（TLS 環境，條件式已實作）。
 
 ---
 
@@ -872,7 +891,7 @@ pub struct VectorDoc {
 
 ---
 
-# 附錄：缺口修復優先序（第二／第三輪）
+# 附錄：缺口修復優先序（第二～第四輪）
 
 | 優先 | 缺口 ID | 理由 |
 |---|---|---|
@@ -880,7 +899,8 @@ pub struct VectorDoc {
 | P1 | D2-04, D2-05, D2-06, D2-12, D2-13, D2-16 | 實作可執行性與品質閘門 |
 | P2 | D2-03, D2-10, D2-14, D2-15 | 長期維護性與精簡 |
 | D3 | D3-04, D3-05 → G4.9/G4.10；D3-01/02/03 已修；D3-06 → 文件線；D3-07/08 已驗證 | 第三輪：已採用誤標、未實作誤宣、文件漂移 |
+| D4 | D4-01..D4-04 → G4.11；D4-05/06 已驗證 | 第四輪：API 契約待實作、HTML 三段式已實作 |
 
 ---
 
-**本計畫結束（v8.2）。** 後續執行由 code agent 依切片順序進行；每切片完成後更新 PLAN_REGISTER addendum。所有「完成」聲明以證據為準；本檔不構成部署、認證或合約授權。
+**本計畫結束（v8.4）。** 後續執行由 code agent 依切片順序進行；每切片完成後更新 PLAN_REGISTER addendum。所有「完成」聲明以證據為準；本檔不構成部署、認證或合約授權。

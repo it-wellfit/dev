@@ -29,6 +29,12 @@
 
         <section aria-labelledby="upload-title">
             <h2 id="upload-title">上傳 CSV／TSV</h2>
+            <p class="hint">
+                首次匯入請先下載範本，依欄位填寫後直接上傳（表頭會自動對映，免手動映射）：
+                <a href="/import/template/csv">CSV 範本</a>・
+                <a href="/import/template/tsv">TSV 範本</a>・
+                <a href="/import/template/xlsx">Excel 範本 (.xlsx)</a>
+            </p>
             <form method="post" action="/import/preview" enctype="multipart/form-data">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                 <fieldset>

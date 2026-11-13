@@ -24,6 +24,11 @@ pub struct OllamaConfig {
     pub temperature: f32,
     pub top_p: f32,
     pub max_tokens: Option<u32>,
+    /// 結構化解碼約束（Ollama `format` 參數；JSON Schema 物件）。
+    /// 2026 SOTA 共識：「停止在提示詞裡懇求，約束解碼器」——`format` 使
+    /// 非法 JSON 在解碼層即不可能（llmconfigurator.com 2026-07；AscentCore
+    /// 2026-04 小型模型評測）。None＝純提示詞模式（不建議用於抽取）。
+    pub format: Option<serde_json::Value>,
 }
 
 pub struct OllamaClient {
@@ -35,6 +40,7 @@ pub struct OllamaClient {
     temperature: f32,
     top_p: f32,
     max_tokens: Option<u32>,
+    format: Option<serde_json::Value>,
 }
 
 impl OllamaClient {
@@ -52,13 +58,14 @@ impl OllamaClient {
             temperature: config.temperature,
             top_p: config.top_p,
             max_tokens: config.max_tokens,
+            format: config.format,
         }
     }
 
     pub async fn generate(&self, prompt: &str) -> Result<String, OllamaError> {
         let url = format!("{}/api/generate", self.base_url);
 
-        let payload = json!({
+        let mut payload = json!({
             "model": self.model,
             "prompt": prompt,
             "stream": false,
@@ -72,6 +79,11 @@ impl OllamaClient {
                 "num_predict": self.max_tokens,
             }
         });
+
+        // 結構化解碼約束：format schema 存在時附加（解碼層強制合法 JSON）。
+        if let Some(schema) = &self.format {
+            payload["format"] = schema.clone();
+        }
 
         let response = self
             .client
@@ -101,21 +113,21 @@ impl OllamaClient {
         Ok(response.status().is_success())
     }
 
-    pub async fn list_models(&self) -> Result<Vec<String>, OllamaError> {
+    /// 已安裝模型清單（治理介面的選項來源）。不可達→None（呼叫端降級）。
+    pub async fn list_models(&self) -> Option<Vec<String>> {
         let url = format!("{}/api/tags", self.base_url);
-
-        let response = self.client.get(&url).send().await?;
-
+        let response = self.client.get(&url).send().await.ok()?;
         if !response.status().is_success() {
-            return Err(OllamaError::Api("Failed to list models".to_string()));
+            return None;
         }
-
-        let tags_response: TagsResponse = response.json().await?;
-        Ok(tags_response
-            .models
-            .iter()
-            .map(|m| m.name.clone())
-            .collect())
+        let value: serde_json::Value = response.json().await.ok()?;
+        Some(
+            value["models"]
+                .as_array()?
+                .iter()
+                .filter_map(|m| m["name"].as_str().map(String::from))
+                .collect(),
+        )
     }
 }
 
@@ -134,11 +146,13 @@ struct OllamaResponse {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[allow(dead_code)]
 struct TagsResponse {
     models: Vec<ModelInfo>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[allow(dead_code)]
 struct ModelInfo {
     name: String,
     model: String,
@@ -149,6 +163,7 @@ struct ModelInfo {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[allow(dead_code)]
 struct ModelDetails {
     parent_model: String,
     format: String,

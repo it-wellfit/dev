@@ -3,6 +3,19 @@
 本檔記錄根 workspace（`core/`、`platform/`、`web/`、`crates/flaps_bridge`）的實際變更。格式參考 Keep a Changelog。子專案（ekpi-platform、Wellfit、SyncMesh）各自有變更記錄。
 
 
+## [Unreleased] — 2026-11-13（匯入範本與實務閉環：CSV/TSV/XLSX 範本下載＋端點）
+
+### Added
+- **匯入範本下載**（使用者實測反饋：只有上傳、沒有範本，使用者無從得知欄位格式）：
+  `GET /import/template/csv`、`/import/template/tsv`、`/import/template/xlsx`（session 保護；`Content-Disposition: attachment`）。範本欄序＝`日期,借方科目,貸方科目,金額,幣別,摘要`（與 `push_import_row` 契約一致），含 2 列範例資料；CSV/TSV 為 UTF-8 無 BOM（Excel 另存時請選 UTF-8）。
+- **範本檔案**：`platform/templates/import_templates/template.{csv,tsv,xlsx}`（XLSX 以 OOXML zip 結構產生，Excel/ Numbers/ LibreOffice 可開）。
+- **匯入頁範本連結**：`/import` 上傳區新增「CSV 範本・TSV 範本・Excel 範本」下載連結。
+
+### 驗證（2026-11-13 實測）
+- 三種範本下載：200＋正確 Content-Type/Disposition（csv 175B、tsv 175B、xlsx 1802B）
+- **範本原樣上傳閉環**：下載範本→原樣上傳→**零映射直接 303 入帳（32→34 筆）**——中文表頭經 `decide_mapping` 同義詞自動對映（不需人工映射頁）
+- `cargo fmt/clippy -D warnings` PASS；`cargo test --locked -p platform --lib` **149 passed / 0 failed**
+
 ## [Unreleased] — 2026-11-12（Rust edition 2024 遷移）
 
 ### Changed

@@ -625,6 +625,36 @@ This addendum records execution facts only; it does not approve product scope, c
 
 This addendum records execution facts only; it does not approve product scope, certification, or release.
 
+## 2026-11-13 addendum #44 (使用者回報四缺陷全修＋互動層稽核＋體驗契約工件)
+
+| Item | Disposition | Evidence |
+|---|---|---|
+| **①忘記密碼全鏈**（回報） | migration 0010（requests＋tokens 僅存 SHA-256）＋3 路由＋2 模板＋admin 待處理佇列＋一次性 token（30 分、用後即焚、撤銷全 session）＋登入頁入口 | password_reset 2/2；curl 全鏈：請求→核發（64 字元）→重設→新密碼 303 |
+| **②草稿→登帳資訊漏傳**（回報，P0 財務） | 根因：format_minor 千分位被 number input 清空＋parser「元：」髒前綴＋description 寫死占位。修：format_minor_plain＋clean_leg_mention＋description 帶解析證據（+2 迴歸測試） | 瀏覽器：amount=45000.00/credit=應收帳款/description 帶證據 |
+| **③AI 建議不可用**（回報，四層根因） | 旗標無 UI→治理 toggle（稽核）；llama3 未安裝→qwen3.5:4b；thinking model 回應空→think:false；模型金額截斷（88,500→885.00 財務紅線）→混合解析（規則提示權威值）；幣別「元」→正規化 TWD＋prompt 強化 | curl 實測 88,500.00 TWD 正確 |
+| **④互動層深度稽核**（新閘門） | interaction_audit.rs TT-1..TT-5：錨點目標/details 下拉/:target 面板/多步流程（含 R-BALANCE 規則回饋）/搜尋回填 | 5/5 綠 |
+| 體驗契約工件 | docs/engineering/UX_CONTRACTS.md：TT-1..TT-8（REQ→DEC→IMPL→TEST→EVID）＋問題來源清單分級＋已知限制 | 文件 diff |
+| ConnectInfo 回歸（並行流） | post_login/post_logout 必填 ConnectInfo 斷 oneshot 登入→Option 修復 | page_matrix 4/4 恢復 |
+| 四關封印 | fmt 0／**375 測試 0 失敗**（lib 146＋kem 71＋core 44＋bridge 7＋bankpay 16＋整合含 interaction_audit 5、password_reset 2、web_crawl 6） | 2026-11-13 日誌 |
+| 未竟（誠實揭露） | 互動教學（TT-9）與工作流設計器（TT-10）列 P2 路線未實作；Ollama 需運行（rerank/HyDE 誠實降級已測） | UX_CONTRACTS.md |
+
+This addendum records execution facts only; it does not approve product scope, certification, or release.
+
+## 2026-11-13 addendum #45 (E-1/E-2/E-8 體驗文件套件落地：稽核、規格、矩陣、登錄、追溯＋自動校驗)
+
+| Item | Disposition | Evidence |
+|---|---|---|
+| E-1 稽核 | `docs/design/EXPERIENCE_AUDIT_v1.md`：八源盤點＋S×EC 逐格＋XP 缺口（P1×2 附解鎖；XP-009 誤報撤回留痕）＋R0–R9 對照（R1–R4 執行、R5 部分、R6–R8 UNKNOWN） | 文件；本 addendum |
+| E-1 矩陣 | `docs/design/EXPERIENCE_SURFACE_MATRIX.md`（S1–S9×EC-1..10 零空格）＋`docs/design/EXPERIENCE_SCENARIO_MATRIX.md`（CP-01..12＋pairwise 計畫＋UNKNOWN 登錄） | 文件 |
+| E-1 登錄 | `docs/design/EXPERIENCE_PROBLEM_REGISTER.md`（XP-001..009 八欄；UNKNOWN 附解鎖） | 文件 |
+| E-2 規格 | `docs/design/EXPERIENCE_SPEC.md`（EC 詳細＋表面＋IA＋視覺＋元件庫 28 項＋內容＋八態＋互動＋AA＋效能預算＋跨表面＋TC-1..5＋決策） | 文件 |
+| E-8 追溯 | `docs/design/EXPERIENCE_TRACEABILITY.md`（REQ-UX-01..20；五級判定；NOT TESTED 附解鎖）＋自動校驗 `platform/tests/experience_traceability.rs`（5/5：零空格/五級/解鎖/token 路徑/XP 引用閉環） | 測試 5/5 |
+| 標籤分名 | 工具組契約 TT→TC（與工程互動 TT-1..TT-8 分名；體驗室三頁＋design_lab 測試標記同步；計畫檔 §9.1/§0/§10/§13 更新） | design_lab 2/2 |
+| 誤報更正 | XP-009（對比閘門缺席）經複驗撤銷：`platform/tests/design_a11y.rs` 3 測試在庫；撤回理由登載於稽核 §4 與登錄 | 稽核 §4 |
+| 四關 | fmt 0／clippy 0／audit 0／cargo test --locked（模式見驗收 log） | `.kilo/sessions/20261113-design-lab/tests/20261113-e1e2-acceptance.log` |
+
+This addendum records execution facts only; it does not approve product scope, certification, or release.
+
 ## Consolidation rules
 
 1. Keep one current navigation register and one acceptance/evidence ledger per project. Detailed requirements belong in their project documents.

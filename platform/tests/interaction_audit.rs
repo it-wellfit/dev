@@ -132,7 +132,6 @@ async fn tt2_details_dropdowns_are_wellformed() {
     let app = platform::api::router(state);
     let cookie = login(&app, "admin", ADMIN_PASSWORD).await;
 
-    // TT-2：每個 <details class="nav-menu"> 必須有 <summary> 與 .nav-menu-items
     // TT-2：每頁導覽的下拉原語齊備——nav-menu 容器、summary（點擊目標）、
     // items 容器（展開內容）。全域計數（char-safe），不逐一切片。
     for uri in ["/", "/import", "/reports/monthly", "/bankpay"] {

@@ -14,6 +14,7 @@ pub mod decision_gating;
 pub mod inference_client;
 pub mod model_orchestrator;
 pub mod ollama_client;
+pub mod prompt;
 
 pub use chutes_client::ChutesClient;
 pub use decision_gating::{AIContext, AIDecision, AIDecisionGating, DecisionGatingStrategy};

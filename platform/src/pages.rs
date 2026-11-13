@@ -1322,6 +1322,10 @@ pub struct AdminSystemTemplate {
     pub session_count: i64,
     /// AI 建議特性旗標（erp_config ai/suggest_enabled；治理介面可切換）。
     pub ai_suggest_enabled: bool,
+    /// 目前 AI 模型（erp_config ai/model；fallback qwen3.5:4b）。
+    pub ai_model: String,
+    /// Ollama 已安裝模型清單（伺服器端查詢；治理介面的選項來源）。
+    pub ai_models: Vec<String>,
     /// 操作回饋（切換後重新渲染時攜帶）。
     pub notice: Option<String>,
 }
@@ -1360,8 +1364,34 @@ pub async fn admin_system_page(
             .await
             .unwrap_or(None);
     let ai_suggest_enabled = ai_flag.map(|(v,)| v == "1").unwrap_or(false);
+    let ai_model: String = sqlx::query_as(
+        "SELECT config_value FROM erp_config WHERE config_category = 'ai' AND config_key = 'model'",
+    )
+    .fetch_optional(&state.pool)
+    .await
+    .unwrap_or(None)
+    .map(|(v,)| v)
+    .unwrap_or_else(|| "qwen3.5:4b".to_string());
+    // Ollama 已安裝模型（伺服器端查詢；不可達→僅列目前值，管理員仍可手動
+    // 選擇——下拉選項不含也不阻塞）。
+    let ai_models: Vec<String> =
+        match crate::ai::ollama_client::OllamaClient::new(crate::ai::ollama_client::OllamaConfig {
+            base_url: "http://127.0.0.1:11434".to_string(),
+            model: ai_model.clone(),
+            timeout_ms: 3_000,
+            temperature: 0.0,
+            top_p: 0.9,
+            max_tokens: Some(1),
+            format: None,
+        })
+        .list_models()
+        .await
+        {
+            Some(models) => models,
+            None => vec![ai_model.clone()],
+        };
     let notice = if query.get("ai").map(|v| v == "changed").unwrap_or(false) {
-        Some("AI 建議旗標已更新並寫入稽核。".to_string())
+        Some("AI 設定已更新並寫入稽核。模型選擇依據：cargo run --release -p platform --example ai_bench（評測證據）。".to_string())
     } else {
         None
     };
@@ -1377,6 +1407,8 @@ pub async fn admin_system_page(
         batch_count,
         session_count,
         ai_suggest_enabled,
+        ai_model,
+        ai_models,
         notice,
     })
 }
@@ -1427,4 +1459,55 @@ pub async fn admin_set_ai_flag(
 pub struct AiFlagForm {
     pub csrf_token: String,
     pub enabled: Option<String>,
+}
+
+#[derive(Debug, serde::Deserialize)]
+pub struct AiModelForm {
+    pub csrf_token: String,
+    pub model: String,
+}
+
+/// POST /admin/system/ai_model — 設定 AI 建議模型（ROLE_MANAGE；寫入稽核）。
+/// 模型選擇依據：ai_bench 評測證據（見 UX_CONTRACTS.md）。
+pub async fn admin_set_ai_model(
+    State(state): State<AppState>,
+    Extension(session): Extension<Session>,
+    axum::Form(form): axum::Form<AiModelForm>,
+) -> Response {
+    if let Some(denied) =
+        require_perm(&state, &session.user_id, "ROLE_MANAGE", "無權變更系統設定").await
+    {
+        return denied;
+    }
+    if form.csrf_token != session.csrf_token {
+        return (
+            axum::http::StatusCode::FORBIDDEN,
+            "CSRF 驗證失敗；請重新整理頁面後再操作。".to_string(),
+        )
+            .into_response();
+    }
+    let model = form.model.trim().to_string();
+    if model.is_empty() || model.len() > 64 {
+        return (
+            axum::http::StatusCode::BAD_REQUEST,
+            "模型名稱空白或過長。".to_string(),
+        )
+            .into_response();
+    }
+    let _ = sqlx::query(
+        "INSERT OR REPLACE INTO erp_config (config_id, config_category, config_key, config_value, config_type, is_sensitive) \
+         VALUES ('cfg-ai-model', 'ai', 'model', ?, 'STRING', 0)",
+    )
+    .bind(&model)
+    .execute(&state.pool)
+    .await;
+    let _ = sqlx::query(
+        "INSERT INTO audit_log (log_id, transaction_id, event_type, event_data, performed_by) VALUES (?, NULL, 'AI_MODEL_CHANGED', ?, ?)",
+    )
+    .bind(uuid::Uuid::new_v4().to_string())
+    .bind(serde_json::json!({ "model": model }).to_string())
+    .bind(&session.user_id)
+    .execute(&state.pool)
+    .await;
+    Redirect::to("/admin/system?ai=changed").into_response()
 }
