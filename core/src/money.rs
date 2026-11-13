@@ -58,7 +58,8 @@ impl std::error::Error for MoneyError {}
 ///
 /// Rules (deterministic, fail-closed):
 /// - optional leading `+`; leading `-` is rejected (use DEBIT/CREDIT instead)
-/// - digits with at most one decimal point; thousands separators rejected
+/// - digits with at most one decimal point; `,` allowed only as a thousands
+///   separator **between digits** (never leading/trailing/doubled)
 /// - more than `dp` fractional digits is rejected (no silent rounding)
 /// - the result must fit within [`MAX_TOTAL_DIGITS`] digits
 pub fn parse_decimal_to_minor(input: &str, dp: u32) -> Result<i64, MoneyError> {
@@ -70,8 +71,23 @@ pub fn parse_decimal_to_minor(input: &str, dp: u32) -> Result<i64, MoneyError> {
     // 為何必要：草稿從自然語言（"支付租金 12,000 元"）萃取的金額含千分位，
     // 原實作直接拒絕 → AI 建議採納流程 100% 斷鏈（實證 /drafts/adopt
     // 回「金額格式不正確」）。剝除逗號後再驗證；負號/多小數點仍嚴格拒絕。
+    // 2026-11-13 追加：逗號僅可置於數字之間，且剝除後不得為空——否則 ","
+    // 會被判為 0（ fail-open ），已以 money_props 性質測試驗證此缺陷。
+    let bytes = s.as_bytes();
+    for (index, byte) in bytes.iter().enumerate() {
+        if *byte == b',' {
+            let prev_digit = index > 0 && bytes[index - 1].is_ascii_digit();
+            let next_digit = index + 1 < bytes.len() && bytes[index + 1].is_ascii_digit();
+            if !prev_digit || !next_digit {
+                return Err(MoneyError::InvalidFormat);
+            }
+        }
+    }
     let s = s.replace(',', "");
     let s = s.strip_prefix('+').unwrap_or(&s);
+    if s.is_empty() {
+        return Err(MoneyError::Empty);
+    }
     if s.starts_with('-') {
         return Err(MoneyError::Negative);
     }

@@ -34,6 +34,8 @@
 | user-demo-finance | demo-finance | FINANCE | demo-finance-2026 |
 | user-demo-viewer | demo-viewer | STORE | demo-viewer-2026 |
 
+> 另：`initialize_default()` 亦 seed `role-viewer`（VIEWER，唯讀報表）；示範帳號未指派（可由 admin 於使用者管理指派）。
+
 ## 4. 重置
 
 ```powershell

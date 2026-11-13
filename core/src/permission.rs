@@ -246,6 +246,12 @@ impl PermissionManager {
                 Some("Store operation management rights".to_string()),
             ),
             Role::new(
+                "role-viewer".to_string(),
+                "Viewer".to_string(),
+                "VIEWER".to_string(),
+                Some("Read-only report viewer rights".to_string()),
+            ),
+            Role::new(
                 "role-pos".to_string(),
                 "POS Operator".to_string(),
                 "POS".to_string(),
@@ -381,6 +387,12 @@ impl PermissionManager {
                 "role-store".to_string(),
                 "perm-ledger-read".to_string(),
                 "LEDGER_READ".to_string(),
+                "system".to_string(),
+            ),
+            RolePermission::new(
+                "role-viewer".to_string(),
+                "perm-report-view".to_string(),
+                "REPORT_VIEW".to_string(),
                 "system".to_string(),
             ),
             RolePermission::new(

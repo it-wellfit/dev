@@ -40,8 +40,10 @@ proptest! {
     }
 
     /// P2（文法閘，fail-closed）：parse 接受的輸入必符合文檔文法
-    /// （僅數字/至多一個點、無負號、無千分位、小數 ≤dp、非負）；
-    /// 其餘一律 Err——「拒絕即安全」，永不出現靜默捨入或意外符號。
+    /// （可選 `+`、僅數字／小數點／千分位逗號、逗號僅置於數字之間、至多一個點、
+    /// 小數 ≤dp、非負）；其餘一律 Err——「拒絕即安全」，永不出現靜默捨入或意外符號。
+    /// 註：千分位逗號為**已記錄**之文法（`money.rs` 之 `1,234`→123400 測試），
+    /// 故本質性以「逗號位置合法」取代「不得含逗號」。
     #[test]
     fn parse_accepts_only_documented_grammar(input in ".*") {
         // Err 分支 = fail-closed 安全（拒絕即安全），無需斷言；
@@ -51,9 +53,20 @@ proptest! {
             let s = trimmed.strip_prefix('+').unwrap_or(trimmed);
             prop_assert!(!s.starts_with('-'), "negative must be rejected");
             prop_assert!(
-                s.bytes().all(|b| b.is_ascii_digit() || b == b'.'),
-                "accepted input must contain only digits and one dot"
+                s.bytes().all(|b| b.is_ascii_digit() || b == b'.' || b == b','),
+                "accepted input must contain only digits, one dot and thousands separators"
             );
+            let bytes = s.as_bytes();
+            for (index, byte) in bytes.iter().enumerate() {
+                if *byte == b',' {
+                    let prev_digit = index > 0 && bytes[index - 1].is_ascii_digit();
+                    let next_digit = index + 1 < bytes.len() && bytes[index + 1].is_ascii_digit();
+                    prop_assert!(
+                        prev_digit && next_digit,
+                        "thousands separator must sit between digits"
+                    );
+                }
+            }
             prop_assert!(s.matches('.').count() <= 1, "at most one decimal point");
             if let Some(dot) = s.find('.') {
                 prop_assert!(

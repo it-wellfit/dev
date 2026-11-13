@@ -8995,6 +8995,40 @@ mod tests {
         );
     }
 
+    /// G4.2 (D2-05): VIEWER is a seeded read-only role (core permission seed) and
+    /// shares the reports entry with STORE (template condition `STORE || VIEWER`).
+    #[tokio::test]
+    async fn viewer_landing_leads_with_reports() {
+        let (app, pool, cookie, csrf) = seeded_app_with_admin().await;
+        let viewer_cookie =
+            create_role_user_and_login(&app, &pool, &cookie, &csrf, "viewerg4", "VIEWER").await;
+        let request = Request::builder()
+            .uri("/")
+            .header(header::COOKIE, viewer_cookie)
+            .body(Body::empty())
+            .expect("build request");
+        let (status, body, _) = send(app, request).await;
+        assert_eq!(status, StatusCode::OK);
+        assert!(body.contains("data-role=\"VIEWER\""), "role declared");
+        assert!(
+            body.contains("href=\"/reports/monthly\""),
+            "VIEWER (read-only) landing must surface the reports entry"
+        );
+    }
+
+    /// G4.2 (D2-05): the production seed path (`PermissionManager::initialize_default`,
+    /// invoked by `AppState::new`) must include the VIEWER role.
+    #[tokio::test]
+    async fn seeded_roles_include_viewer() {
+        let (_app, pool, _cookie, _csrf) = seeded_app_with_admin().await;
+        let (code,): (String,) =
+            sqlx::query_as("SELECT role_code FROM roles WHERE role_id = 'role-viewer'")
+                .fetch_one(&pool)
+                .await
+                .expect("VIEWER role must be seeded by initialize_default");
+        assert_eq!(code, "VIEWER");
+    }
+
     #[tokio::test]
     async fn kpi_definitions_are_inline() {
         let (app, _pool, cookie, _csrf) = seeded_app_with_admin().await;

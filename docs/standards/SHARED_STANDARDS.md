@@ -213,10 +213,11 @@
 ## 8. 操作標準 (Operations Standards)
 
 ### 8.1 備份與還原
-- 每個專案必須有備份程序 (`scripts/backup.ps1` 或等效)。
-- 備份必須包含所有分支與標籤 (`git bundle create ... --branches --tags`)。
-- 還原演練必須每月執行一次，並記錄結果。
-- 備份須離線儲存，並定期驗證完整性 (`git bundle verify`)。
+- 每個專案必須有備份程序（本 repo：`cargo run --release --bin auxbridge-backup -- --db <db> --out backups --keep 14`；見 `OPERATIONS_RUNBOOK.md` §3）。
+- 備份必須包含所有分支與標籤（`git bundle create ... --branches --tags`）。
+- 備份須為**一致性快照**：以 `VACUUM INTO` 於唯讀連線產生，並附 `PRAGMA integrity_check`、`PRAGMA foreign_key_check` 與 SHA-256 校驗檔（`auxbridge-backup` 已內建）。
+- 還原演練必須每月執行一次，並以 `auxbridge-backup --verify <file>` 驗證後才可用於還原。
+- 備份須離線儲存，並定期驗證完整性。
 
 ### 8.2 監控與可觀測性
 - 所有服務必須暴露健康檢查端點 (或 CLI `status` 子命令)。

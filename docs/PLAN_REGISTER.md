@@ -655,6 +655,34 @@ This addendum records execution facts only; it does not approve product scope, c
 
 This addendum records execution facts only; it does not approve product scope, certification, or release.
 
+## 2026-11-13 addendum #46 (AI 模型選擇實證化：ai_bench harness＋結構化解碼＋治理 UI 完備)
+
+| Item | Disposition | Evidence |
+|---|---|---|
+| **FREE SOTA 研究** | 2026-11 小型模型結構化抽取共識（5 來源）：解碼約束＞提示詞懇求（Ollama format schema）；溫度 0 為抽取標準（0.7 使 schema 有效性 -20%）；llama3.1:8b＝最可靠結構化（AscentCore BEST JSON SCHEMA 95.7%；aai-labs best on financial ratio） | websearch 5 來源（記錄於 UX_CONTRACTS） |
+| **ai_bench harness（持續演進工具）** | platform/examples/ai_bench.rs：6 案例黃金集×N 模型×6 指標（schema/date/debit/credit/amount/currency）；與生產共用 prompt（ai::prompt 單一來源）——新模型上市重跑即得證據 | 實測輸出表 |
+| **結構化解碼落地** | OllamaConfig 加 format schema（解碼層強制合法 JSON）＋溫度 0.2→0；prompt.rs 單一來源（提示詞不得與生產脫鉤） | cargo check 淨 |
+| **評測證據（4 模型×6 案例）** | llama3.1:8b schema 6/6 科目 4/6（勝）；gemma3:4b 6/6、2/6；qwen3.5:4b 5/6、2/6；qwen2.5:7b 5/6、1/6 → **採用 llama3.1:8b**（已設 erp_config，303 實證） | bench 輸出 |
+| **AI 治理 UI 完備** | /admin/system 加模型選擇器（伺服器端查 Ollama 清單；不可達降級為僅列現值）＋/admin/system/ai_model 路由（ROLE_MANAGE＋稽核 AI_MODEL_CHANGED） | 渲染實證＋set-model 303 |
+| **生產全鏈實證** | llama3.1:8b：借=進貨費用、貸=銀行存款、金額=88,500.00 TWD（科目原樣、金額精確） | curl 實測 |
+| **編碼損壞修復** | admin_system.html 整檔雙重編碼損壞（PUA 字元，守衛抓獲）→ 整檔重建乾淨 UTF-8 | guards 6/6 恢復 |
+| 四關封印 | fmt 0／clippy -D warnings 淨空／**383 測試 0 失敗** | 2026-11-13 日誌 |
+| 未竟 | prompt 與規則值一致性測試（ai::prompt 單元測試 3 已有）；工作流設計器（TT-10）仍列 P2 | UX_CONTRACTS.md |
+This addendum records execution facts only; it does not approve product scope, certification, or release.
+
+## 2026-11-13 addendum #38 (備份工具補齊＋金額文法 fail-open 修復)
+
+| Item | Disposition | Evidence |
+|---|---|---|
+| 備份程序（§8.1 缺口） | **完成**：新增 Rust 工具 `platform/src/bin/auxbridge-backup.rs`——唯讀連線 `VACUUM INTO` 一致性快照、`integrity_check`＋`foreign_key_check`、SHA-256 校驗檔、JSONL 清單、保留策略（預設 14）、`--verify` 模式 | `platform/tests/backup_tool.rs` 4 tests：建立/校驗/保留/零保留拒絕/缺 DB 拒絕/竄改負例全通過 |
+| 保留策略與碰撞 | **完成**：同一秒重複執行以 `-2`／`-3` 後綴避免覆寫（`VACUUM INTO` 亦拒絕既有檔） | 測試 `backup_retention_keeps_only_latest_n`（三次執行→保留 2 份）通過 |
+| **金額文法 fail-open（真缺陷）** | **已修復**：`parse_decimal_to_minor(",")` 原回 `Ok(0)`（逗號剝除後為空仍未拒絕） | 由 `money_props::parse_accepts_only_documented_grammar` 之 proptest 抓到（minimal failing input = `,`）；修復後該性質與 core 44 tests 全通過 |
+| 文法/測試對齊 | **完成**：`money_props` 性質改為「逗號僅可置於數字之間」（原「不得含逗號」與已記錄文法 `1,234`→123400 牴觸）；`money.rs` 文件註解同步修正 | proptest regressions 種子（`,`）已存擋並回歸通過 |
+| 文件同步 | **完成**：SHARED_STANDARDS §8.1 改指新工具、OPERATIONS_RUNBOOK §3 新增備份/驗證/還原演練表、TROUBLESHOOTING §5 更新缺口敘述 | 三份文件同批更新（§4.3） |
+| 驗證 | **PASS**：`cargo test --locked` **44 suites／390 passed／0 failed**（排除環境敏感效能斷言）；fmt 0／clippy `-D warnings` 0 | 2026-11-13 實測 |
+
+This addendum records execution facts only; it does not approve product scope, certification, or release.
+
 ## Consolidation rules
 
 1. Keep one current navigation register and one acceptance/evidence ledger per project. Detailed requirements belong in their project documents.

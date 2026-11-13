@@ -21,9 +21,17 @@
 
 ## 3. 備份與還原（依 `SHARED_STANDARDS` §8.1）
 
-- 備份內容：`data/`（SQLite DB）＋ `knowledge/` ＋ `docs/` 之版本庫。
-- 建議頻率：每日；保留 30 日；離線保存並驗證。
-- **還原演練**：每月一次；本 repo 目前以人工演練為之（`scripts/backup.ps1` 尚未提供 → 見 `TROUBLESHOOTING.md` 之已知缺口）。
+工具：`cargo run --release --bin auxbridge-backup`（原始碼 `platform/src/bin/auxbridge-backup.rs`）
+
+| 作業 | 命令 | 說明 |
+|---|---|---|
+| 建立備份 | `cargo run --release --bin auxbridge-backup -- --db data/auxbridge.db --out backups --keep 14` | 唯讀連線 `VACUUM INTO` 一致性快照＋`integrity_check`／`foreign_key_check`＋SHA-256＋JSONL 清單；保留最近 14 份 |
+| 驗證備份 | `cargo run --release --bin auxbridge-backup -- --verify backups/auxbridge-<ts>.db` | 校驗碼比對＋完整性檢查；PASS 才可用於還原 |
+| 還原演練 | 停止服務 → 以驗證通過之備份覆蓋 DB（含 `-wal`／`-shm` 清除）→ 啟動並確認 `/status` 與交易筆數 | 每月至少一次並記錄 |
+
+- 內容：SQLite 資料庫快照（含 WAL 內容）；`knowledge/` 與 `docs/` 另以版本庫／檔案備份保存。
+- 保存：離線保存、保留 30 日；每月還原演練並留存紀錄。
+- 目前限制：git 層之分支／標籤備份（`git bundle`）尚未自動化（仍為人工），列為追蹤項。
 
 ## 4. 更新（安裝版）
 

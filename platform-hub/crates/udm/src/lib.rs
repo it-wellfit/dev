@@ -8,11 +8,20 @@ use serde::{Deserialize, Serialize};
 use std::fmt;
 
 /// Money in integer cents (1/100 of the base currency unit).
+///
+/// G4.3 (D2-04): the unit is part of the type. Do NOT convert by touching the
+/// inner `i64`; use [`TryFrom`] between units, which rejects lossy conversions.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct MoneyCents(pub i64);
 
 impl MoneyCents {
     pub const ZERO: Self = Self(0);
+    /// Scale exponent: value = raw / 10^SCALE (2 → cents).
+    pub const SCALE: i32 = 2;
+    /// The declared scale (always [`Self::SCALE`]).
+    pub const fn scale(&self) -> i32 {
+        Self::SCALE
+    }
 }
 
 impl fmt::Display for MoneyCents {
@@ -24,8 +33,70 @@ impl fmt::Display for MoneyCents {
 }
 
 /// Fixed-point decimal with 4 decimal places (10^4 scale).
+///
+/// G4.3 (D2-04): distinct unit from [`MoneyCents`]. Conversion is explicit and
+/// lossy conversions are rejected (see [`UnitConversionError`]).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct Decimal4(pub i64);
+
+impl Decimal4 {
+    /// Scale exponent: value = raw / 10^SCALE (4 → 1/10 000).
+    pub const SCALE: i32 = 4;
+    /// The declared scale (always [`Self::SCALE`]).
+    pub const fn scale(&self) -> i32 {
+        Self::SCALE
+    }
+}
+
+/// Error returned when a unit conversion would lose precision or overflow.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct UnitConversionError {
+    pub from_scale: i32,
+    pub to_scale: i32,
+    pub raw: i64,
+}
+
+impl fmt::Display for UnitConversionError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "lossy unit conversion: raw {} at scale 10^{} cannot convert to scale 10^{}",
+            self.raw, self.from_scale, self.to_scale
+        )
+    }
+}
+
+impl std::error::Error for UnitConversionError {}
+
+/// `Decimal4` (10^4) → `MoneyCents` (10^2): exact only. A raw value not
+/// divisible by 100 carries sub-cent precision and is rejected.
+impl TryFrom<Decimal4> for MoneyCents {
+    type Error = UnitConversionError;
+
+    fn try_from(value: Decimal4) -> Result<Self, Self::Error> {
+        if value.0 % 100 != 0 {
+            return Err(UnitConversionError {
+                from_scale: Decimal4::SCALE,
+                to_scale: MoneyCents::SCALE,
+                raw: value.0,
+            });
+        }
+        Ok(Self(value.0 / 100))
+    }
+}
+
+/// `MoneyCents` (10^2) → `Decimal4` (10^4): always exact, checked for overflow.
+impl TryFrom<MoneyCents> for Decimal4 {
+    type Error = UnitConversionError;
+
+    fn try_from(value: MoneyCents) -> Result<Self, Self::Error> {
+        value.0.checked_mul(100).map(Self).ok_or(UnitConversionError {
+            from_scale: MoneyCents::SCALE,
+            to_scale: Decimal4::SCALE,
+            raw: value.0,
+        })
+    }
+}
 
 /// Provenance: source platform + contract version + field source.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -269,6 +340,51 @@ mod tests {
     fn money_cents_display() {
         assert_eq!(MoneyCents(600).to_string(), "6.00");
         assert_eq!(MoneyCents(120000).to_string(), "1200.00");
+    }
+
+    /// G4.3 (D2-04): scales are explicit and conversions are unit-aware.
+    #[test]
+    fn unit_scales_are_explicit() {
+        assert_eq!(MoneyCents::SCALE, 2);
+        assert_eq!(Decimal4::SCALE, 4);
+        assert_eq!(MoneyCents(1).scale(), 2);
+        assert_eq!(Decimal4(1).scale(), 4);
+    }
+
+    /// Exact `Decimal4` → `MoneyCents` (raw divisible by 100) succeeds.
+    #[test]
+    fn decimal4_to_money_cents_exact() {
+        let cents = MoneyCents::try_from(Decimal4(123_400)).expect("exact conversion");
+        assert_eq!(cents, MoneyCents(1_234));
+    }
+
+    /// Lossy `Decimal4` → `MoneyCents` (sub-cent remainder) is rejected.
+    #[test]
+    fn decimal4_to_money_cents_rejects_sub_cent() {
+        let err = MoneyCents::try_from(Decimal4(12_345)).expect_err("sub-cent must fail");
+        assert_eq!(err.from_scale, 4);
+        assert_eq!(err.to_scale, 2);
+        assert_eq!(err.raw, 12_345);
+    }
+
+    /// Round-trip is exact for cent-aligned values.
+    #[test]
+    fn money_cents_decimal4_roundtrip_is_exact() {
+        let decimal = Decimal4::try_from(MoneyCents(1_234)).expect("exact widening");
+        assert_eq!(decimal, Decimal4(123_400));
+        assert_eq!(
+            MoneyCents::try_from(decimal).expect("exact narrowing"),
+            MoneyCents(1_234)
+        );
+    }
+
+    /// Overflow on widening is rejected, not wrapped.
+    #[test]
+    fn money_cents_to_decimal4_rejects_overflow() {
+        let err = Decimal4::try_from(MoneyCents(i64::MAX)).expect_err("overflow must fail");
+        assert_eq!(err.from_scale, 2);
+        assert_eq!(err.to_scale, 4);
+        assert_eq!(err.raw, i64::MAX);
     }
 
     #[test]

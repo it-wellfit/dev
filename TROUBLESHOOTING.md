@@ -39,7 +39,7 @@
 ## 5. 已知缺口
 
 - `scripts/backup.ps1`、`scripts/check-docs`、`scripts/check-secrets` 尚未提供（`SHARED_STANDARDS` §8.1／§6.2 引用之腳本）。
-  現階段替代：文件完整性由 `platform/tests/docs_governance.rs`、機密掃描由 `platform/tests/secret_scan.rs` 於 `cargo test` 執行。
+  現階段替代：資料庫備份／驗證以 **`cargo run --release --bin auxbridge-backup`** 取代（一致性快照＋SHA-256＋保留策略＋`--verify`）；文件完整性由 `platform/tests/docs_governance.rs`、機密掃描由 `platform/tests/secret_scan.rs` 於 `cargo test` 執行。git 層之 `git bundle` 備份仍為人工。
 
 ## 6. 變更紀錄
 

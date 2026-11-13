@@ -26,6 +26,8 @@ http://127.0.0.1:8090
 | demo-finance | demo-finance-2026 | FINANCE | 可登帳、可查報表 |
 | demo-viewer | demo-viewer-2026 | STORE | 唯讀（登帳會被 403 拒絕——可展示 RBAC） |
 
+> 角色 seed（`core/src/permission.rs::initialize_default`）含 ADMIN／FINANCE／STORE／POS／**VIEWER**（唯讀報表；登入後導向 `/reports/monthly`，與 STORE 同為唯讀入口）。示範帳號 demo-viewer 仍指派 STORE 以保留 RBAC 差異展示。
+
 ## 3. 核心展示流程（建議順序）
 
 | # | 流程 | 路徑 | 展示重點 |
