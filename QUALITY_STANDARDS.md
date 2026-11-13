@@ -35,12 +35,15 @@
 
 ## 5. 效能與品質預算（可量測）
 
-| 指標 | 目標 | 量測方式 |
-|---|---|---|
-| 建置時間（release，變更後增量） | 記錄基線，不得無理由變差 | `Measure-Command { cargo build --release }` |
-| 二進位大小（auxbridge-server／auxbridge-web） | 記錄基線，成長需說明 | `Get-Item target/release/*.exe` |
-| 相依 crate 數（root／desktop lock） | 只減不增（除非有理由） | `Select-String '^\[\[package\]\]' Cargo.lock` |
-| 重複版本數 | 維持 `warn` 並逐季檢視 | `cargo tree -d` |
+| 指標 | 目標 | 量測方式 | 現況（2026-11-13 量測） |
+|---|---|---|---|
+| 建置時間（release，變更後增量） | 記錄基線，不得無理由變差 | `Measure-Command { cargo build --release }` | 6m48s（僅 platform 重編；fat LTO） |
+| 二進位大小（auxbridge-server／kem） | 記錄基線，成長需說明 | `Get-Item target/release/*.exe` | server **34.5 MB**（32.9 MiB；.text 23.2 MiB）、kem 3.4 MB |
+| 相依 crate 數（root／desktop lock） | 只減不增（除非有理由） | `Select-String '^\[\[package\]\]' Cargo.lock` | root **456**、desktop **496** |
+| 重複版本數 | 維持 `warn` 並逐季檢視 | `cargo tree -d` | 見 addendum #35 |
+| 單元/整合測試數 | 只增（除刪除功能） | `cargo test --locked` | **36 suites／360 passed**（排除環境敏感效能斷言） |
+
+二進位大小之分解與可執行削減清單見 `docs/GAPS_AND_RISKS.md` §4。
 
 ## 6. 變更紀錄
 

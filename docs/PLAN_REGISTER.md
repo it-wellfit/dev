@@ -598,6 +598,19 @@ This addendum records execution facts only; it does not approve product scope, c
 
 This addendum records execution facts only; it does not approve product scope, certification, or release.
 
+## 2026-11-12 addendum #42 (網頁全面實證：瀏覽器互動測試抓出 HTTP 測試盲區——3 真實缺陷修復)
+
+| Item | Disposition | Evidence |
+|---|---|---|
+| **web_crawl 整合測試（6 閘門）** | 新增 `platform/tests/web_crawl.rs`：①manifest 全頁渲染＋共用元件（skip-link/app-header/main/CSS）②BFS 全內部連結爬取（死連結=FAIL）③表單 method 契約（明確 get/post；寫入頁必 POST）④visitor auth gate 全頁 303⑤404 頁契約⑥靜態資產 content-type | 6/6 綠 |
+| **缺陷1：ConnectInfo 回歸** | post_login/post_logout 必填 ConnectInfo → oneshot 測試登入全斷（page_matrix 2/4 失敗）→ 改 `Option<ConnectInfo>`（保留生產 IP 稽核） | page_matrix 4/4 恢復 |
+| **缺陷2：ui-v2 grid 側欄碰撞** | 並行流 ui-v2.css 把 body 改 grid 側欄佈局（220px＋100vh sticky z20）但只給 4 子元素明確定位，其餘 auto-placement 落入側欄被蓋——**bankpay 子導覽連結瀏覽器實測無法點擊**（HTTP 測試盲區）。修復：`body > :not(.site-nav) { grid-column: 2 }` | Playwright elementFromPoint：修復前被側欄攔截、修復後 `clickable:true`；點擊後 #mode-title 高亮 rgba(45,212,191,.1) |
+| **缺陷3：精靈第一步 422** | /new step-1（template_stage=choose）提交 → `missing field debit_account` 422 空白頁（精靈不可用）。修復：WizardStep2Form 欄位 serde default＋handler 加 stage=choose 分支（渲染 step-2 表單） | Playwright 全三步：step1 選模板→step2 欄位齊→step3 確認摘要 ACC-A/ACC-B/1,500.50 TWD |
+| **缺陷4：404 空白頁** | axum 預設 404 空 body → 品牌 404 fallback（識別＋問題/原因/處理方式＋返回連結＋設計系統＋零 JS） | 瀏覽器實證：title/h1/連結/CSS/scripts=0 |
+| 瀏覽器實證覆蓋 | Playwright MCP：34 頁導航（0 HTTP 錯誤）、console 0 錯誤 0 警告、36 nav 連結、catalog 12 卡、搜尋 q 保留、logout PRG→login、登出後 auth gate 重導向 | 本節 |
+| 四關封印 | fmt 0／clippy -D warnings 淨空／**361 測試 0 失敗** | 2026-11-13 日誌 |
+
+This addendum records execution facts only; it does not approve product scope, certification, or release.
 ## Consolidation rules
 
 1. Keep one current navigation register and one acceptance/evidence ledger per project. Detailed requirements belong in their project documents.

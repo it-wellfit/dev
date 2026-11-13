@@ -25,7 +25,7 @@
 | ID | 需求 | 設計 | 實作位置 | 測試 | 證據 | 判定 |
 |---|---|---|---|---|---|---|
 | S-01 | CSRF 覆蓋所有狀態變更 POST | 逐路由稽核（27 條） | api.rs / auth.rs / bankpay / pages / apihub | 既有 CSRF 測試（forged token 系列） | 25 條有檢查；`/login` 無 session 前豁免（設計上不可能有 token）；`transition_handler` 為純驗證無狀態變更 → 不適用 | PASS |
-| S-02 | 稽核事件可溯源（IP/User-Agent） | migration 0009 加 `ip_address`/`user_agent` + 索引；`pages::write_event_ctx` | `migrations/0009_audit_request_context.sql`、`pages.rs`、`auth.rs`（LOGIN_SUCCEEDED/FAILED、LOGOUT） | 備份快照欄位實證（`PRAGMA table_info`） | 快照含兩欄；登入/登出寫入 | PASS |
+| S-02 | 稽核事件可溯源（IP/User-Agent） | migration `platform/migrations/0009_audit_request_context.sql` 加 `ip_address`/`user_agent` + 索引；`platform/src/pages.rs`、`platform/src/auth.rs`（LOGIN_SUCCEEDED/FAILED、LOGOUT） | 備份快照欄位實證（`PRAGMA table_info`） | 快照含兩欄；登入/登出寫入 | PASS |
 | S-03 | HSTS（HTTPS 部署強制 TLS） | `security_headers` 無條件送出（http 下瀏覽器忽略，無害） | `auth.rs` | `security_headers_include_hsts` | 實測 `max-age=31536000; includeSubDomains` | PASS |
 | S-04 | 公開路由 body 上限（防記憶體耗盡） | public router 加 `DefaultBodyLimit::max(64KiB)` | `api.rs` router() | 編譯期掛載；未測 65KiB 拒絕 | 掛載位置審查 | PARTIAL（未執行 65KiB 負向測試） |
 | S-05 | 搜尋查詢長度上限（防成本放大） | `MAX_SEARCH_QUERY = 200`（與交易清單一致） | `workbench.rs` | `search_caps_overlong_query_without_error`（5000 字元→200） | 測試綠 | PASS |
@@ -57,6 +57,22 @@
 | U-03 | 金融數字等寬對齊 | `table { font-variant-numeric: tabular-nums }` | `ui-v2.css:277` | — | CSS 實測 | PASS |
 | U-04 | 文字選取品牌化 | `::selection`（primary-muted alpha） | `ui-v2.css` | — | CSS 實測 | PASS |
 | U-05 | 鍵盤可見焦點 | `:focus-visible`（design-system 五處） | `design-system.css` | — | CSS 審查 | PASS |
+
+## 6b. 體驗契約與驗證深化（2026-11-13 批次）
+
+| ID | 需求 | 設計 | 實作位置 | 測試 | 證據 | 判定 |
+|---|---|---|---|---|---|---|
+| RB-01 | 無權限角色直接 URL 存取管理/寫入頁必須 403（原僅導覽隱藏） | Defense in Depth（隱藏≠保護） | `platform/src/pages.rs`（require_perm）、`platform/src/api.rs`（4 個寫入頁閘） | `platform/tests/web_crawl.rs`、`rbac_matrix_server_side_gates` | RBAC 矩陣 264 組：真實越權 0（store/pos 曾 200 的 7 頁全改 403） | PASS |
+| LC-01 | 全站內部連結不得死連結 | 全站連結圖驗證 | `platform/src/api.rs`（internal_links_all_resolve） | 同左 | 77+ 連結全可達 | PASS |
+| PC-01 | 全 manifest 頁符合 L0/L1 頁面殼契約 | `docs/standards/EXPERIENCE_CONTRACTS.md` L0–L1 | `platform/src/api.rs`（all_manifest_pages_render_under_contract） | 同左 | 66 頁 × 契約檢查 | PASS |
+| IP-01 | 稽核必須記錄真實對端 IP（原僅 X-Forwarded-For，直連恆 NULL） | ConnectInfo → X-Forwarded-For → NULL | `platform/src/bin/auxbridge-server.rs`（into_make_service_with_connect_info）、`platform/src/auth.rs` | 稽核欄位實證 | 快照 ip_address 欄 | PASS |
+| TC-01 | 追溯矩陣與實作不得脫鉤（自動校驗） | 總控指令 §13 機械化 | `platform/tests/trace_guard.rs` | 同左 | 抓到 S-02 路徑漂移並修正 | PASS |
+| EC-01 | 體驗契約系統（分層模型＋TT-1..5＋二十五問） | `docs/standards/EXPERIENCE_CONTRACTS.md` | 同左 | `trace_guard::experience_contracts_present` | 3/3 tests | PASS |
+| TT-1 | 會話與身份操作契約 | EXPERIENCE_CONTRACTS §1 | login/logout/profile | `login_lockout_survives_correct_password` 等 | E-1..E-5 | PASS |
+| TT-2 | 帳務與交易操作契約 | 同上 | transactions/reviews/search | E2E D1–D8＋Rust 測試 | E-6..E-11 | PASS |
+| TT-3 | 匯入與草稿操作契約 | 同上 | import/drafts | E2E D10＋`import_confirm_is_replay_guarded` | E-12..E-14 | PASS |
+| TT-4 | 銀行支付操作契約（Mock 誠實標示） | 同上 | bankpay | `bankpay_api` 測試 | E-15..E-17 | PARTIAL（匯出流程 E2E 未跑） |
+| TT-5 | 治理與系統操作契約 | 同上 | admin/audit | `rbac_matrix_server_side_gates`＋E2E | E-18..E-21 | PASS |
 
 ## 7. 未測／已知限制（誠實揭露）
 

@@ -52,3 +52,28 @@
 | **p95 量測法誤判** | 冷啟動計入小樣本 p95 | 誤報 SLA 違規（本週 535ms 誤判） | 預熱趟＋≥21 樣本；SLA 只規範 warm 穩態 | ✅ 已修正 |
 | **依賴 CVE 殘餘（RUSTSEC-2026-0459）** | 開啟第三方提供的 .db＋-wal 檔對 | 頁快取未初始化記憶體洩漏（本地向量，6.8 medium） | 已文件化接受（audit.toml）：僅開啟 data\ 自建檔；重審觸發＝sqlx 放寬 libsqlite3-sys 範圍至 ≥0.39 | 🟡 已文件化（addendum #14） |
 | **並行線同檔衝突** | 兩 session 同改 api.rs/kem | 瞬時編譯錯誤 | board 分工宣告；門檻重跑前 `cargo check` 對齊 | 🟡 監控中 |
+| **二進位大小（34.5 MB server）** | 交付安裝包／冷啟動 | 下載與磁碟成本；無單一主因可歸因 | 見 §4 量測與可執行清單（image 解碼器為最大可移除項，需上游 PR） | 🟡 追蹤中（2026-11-13） |
+
+## 📏 4. 二進位大小分析（2026-11-13 實測）
+
+量測方式：`cargo bloat --release --crates -p platform --bin auxbridge-server`（rustc 1.99.1、release profile：opt-level 3、lto=true、codegen-units 1、panic=abort、strip=symbols、debug=0）。
+
+| 指標 | 值 |
+|---|---|
+| 檔案大小 | **32.9 MiB**（`auxbridge-server.exe` 34,514,432 bytes） |
+| `.text` 區段 | **23.2 MiB** |
+| 相依 crate 數（root lock） | 456 |
+| 建置時間（增量，仅 platform） | 6m48s |
+
+**前几大項目（.text 佔比）**：未命名泛型/黏合 1.2 MiB、std 1.1 MiB、axum 979 KiB、platform 496 KiB、rustls 356 KiB、zune_jpeg 228 KiB、h2 218 KiB、image 175 KiB、image_webp 160 KiB、lopdf 154 KiB、hyper 150 KiB、tokio 135 KiB、sqlx_core 126 KiB、exr 117 KiB、calamine 110 KiB、ring 109 KiB…其餘 164 個 crate 合占約 2.1 MiB（長尾）。
+
+**結論**：無單一 crate 可歸因（最大單項 < 1.2 MiB），屬「長尾累積」；可執行削減優先序：
+
+| 優先 | 項目 | 預估 | 作法 | 阻塞 |
+|---|---|---|---|---|
+| 1 | `image` 解碼器（avif/exr/tiff/webp/gif/hdr/dds/qoi/ico/bmp/ff） | ~0.8 MiB＋AV1 編碼鏈（rav1e/paste） | 上游 `paddleocr_rs_onnx` 之 `image = "0.25"` 未關預設功能，特性聯集使平台端 `default-features=false` 失效；需上游 PR（加 `default-features=false`＋格式 feature）或 fork | 上游（不得改第三方原始碼：C-11／邊界裁定） |
+| 2 | `std`/panic 格式化與 backtrace 支援 | 視需求 | `panic = "abort"` 已啟用；可再關閉 `backtrace`（`RUST_BACKTRACE` 支援遺失，需評估需求量測） | 需產品決策 |
+| 3 | 長尾（164 crate） | 2.1 MiB | 逐一檢視是否為「僅單一功能使用」（如 `pdf-extract` 可只留 lopdf；`calamine` 若僅 XLSX 可關 xls 支援） | 需功能盤點 |
+| 4 | LTO 策略 | 建置時間↔大小 | 目前 fat LTO（6m48s）；若改 `lto = "thin"` 可縮短建置，大小可能略增（需 A/B 量測） | 待量測 |
+
+**與安裝包之關係**：桌面安裝包之 sidecar 由 `web/src-tauri/binaries/auxbridge-server-x86_64-pc-windows-msvc.exe`（6.19 MB）提供，**與本表 34.5 MB 之 root release 產物不一致**；需釐清 sidecar 之建置參數（可能為舊版或未含 OCR 堆疊），列為追蹤項。

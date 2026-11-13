@@ -17,9 +17,13 @@ opt-level = 3
 codegen-units = 1
 lto = true
 panic = "abort"
-split-debuginfo = "info"
-# 2026-11-12 精實化：移除符號表（保留行號資訊供 panic 定位）——安裝包更小。
-strip = "debuginfo"
+# 2026-11-13 量測：debuginfo 關閉（`debug = 0`）＋ `strip = "symbols"` 對 auxbridge-server.exe
+# **大小無顯著影響**（34,508,800 → 34,514,432 bytes；先前 split-debuginfo="info" 亦非主因），
+# 故維持「不產生 debuginfo」以簡化產物；大小主因為相依（見 QUALITY_STANDARDS §5 與
+# docs/GAPS_AND_RISKS.md「二進位大小分析」）。
+debug = 0
+split-debuginfo = "off"
+strip = "symbols"
 
 
 
