@@ -1,0 +1,29 @@
+E-1／E-2／E-8 驗收證據（2026-11-13；E-3 見 20261113-e3-acceptance.log）
+HEAD at verification: 5136429（4c29a1e／5136429 掃描整併本線工件；下方套件為當版實測）
+
+聚焦套件（當版實測；命令＋結果原文）
+- cargo test -p platform --test experience_traceability : ok. 5 passed; 0 failed; 0 ignored; finished in 0.03s
+- cargo test -p platform --test design_lab : ok. 2 passed; 0 failed; 0 ignored; finished in 3.61s
+- cargo test -p platform --test page_matrix : ok. 4 passed; 0 failed; 0 ignored; finished in 3.80s
+- cargo test -p platform --test money_props : ok. 4 passed; 0 failed; 0 ignored; finished in 0.02s
+
+靜態閘（早於整併；對象含本線變更）
+- cargo fmt -- --check : EXIT=0
+- cargo clippy -p platform -p console_manifest --all-targets -- -D warnings : EXIT=0
+
+集成修正（本線執行；page_matrix route↔manifest 對帳）
+- /admin/system/ai_model → NON_PAGE_ROUTES（並行線表單動作）
+- /import/template/{csv,tsv,xlsx} → NON_PAGE_ROUTES（範本下載端點）
+- NON_PAGE_ROUTES 29→34（含並行新增 1 項）；page_matrix 4/4 綠
+
+鑑識記錄（反幻覺）
+- 20261113-full-run.log 之「EXIT=101（money_props input=","）」＝提交過渡期舊修訂二進位；
+  金額文法 fail-open 已於 5136429 修復（逗號僅置於數字之間；"," 一律拒絕）；
+  當版 money_props 4/4 綠（上行）。該 log 保留為歷史，不代表現版失敗。
+- 20261113-full-run2.log 為部分輸出（背景追蹤器遺失、未完成）→ 已刪除、未納入證據；
+  全庫「單次綠」之最終複驗：由並行品質波（現行 cargo 執行中）或下輪承接
+  ＝UNKNOWN（解鎖：下一輪 cargo test --locked 全庫執行並留痕）。
+- 掃描整併說明：本線 6 份 docs/design 文件＋platform/tests/experience_traceability.rs＋design_lab 模板與測試＋
+  計畫檔＋PLAN_REGISTER（#45 等）已由 4c29a1e／5136429 入庫（sweep-commit 合作模式）。
+
+範圍：本 log 僅登載執行事實；不構成產品範圍、認證或發布核准。
