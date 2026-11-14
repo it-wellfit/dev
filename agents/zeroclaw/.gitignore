@@ -1,0 +1,8 @@
+# ZeroClaw local runtime artifacts. Never commit these.
+instance/
+config.toml
+secrets/
+*.log
+.env
+*.env
+bin/

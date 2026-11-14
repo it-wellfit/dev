@@ -12,6 +12,7 @@ pub mod cross_module_api;
 pub mod db;
 pub mod design_lab;
 pub mod flags;
+pub mod icons;
 pub mod idempotency;
 pub mod ingest;
 pub mod nav;

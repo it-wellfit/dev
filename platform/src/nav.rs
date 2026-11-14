@@ -27,6 +27,10 @@ pub struct NavItem {
 pub struct NavGroupView {
     pub id: &'static str,
     pub label: &'static str,
+    /// 圖標 key（Lucide；2026-11-14 UI-1）。
+    pub icon: &'static str,
+    /// 預渲染 SVG（`icons::svg`；建構時一次，模板零過濾器）。
+    pub icon_svg: String,
     pub is_menu: bool,
     pub items: Vec<NavItem>,
 }
@@ -36,6 +40,10 @@ pub struct NavGroupView {
 pub struct StudioView {
     pub id: &'static str,
     pub label: &'static str,
+    /// 圖標 key（Lucide；2026-11-14 UI-1）。
+    pub icon: &'static str,
+    /// 預渲染 SVG（`icons::svg`；建構時一次，模板零過濾器）。
+    pub icon_svg: String,
     pub groups: Vec<NavGroupView>,
 }
 /// 完整導覽模型（每請求一份；Askama 模板直接迭代）。
@@ -49,8 +57,17 @@ pub struct NavModel {
     pub home: NavItem,
     pub top: Vec<NavItem>,
     pub studios: Vec<StudioView>,
+    /// 麵包屑（2026-11-13）：目前頁所屬工作室＋群組（`None`＝總覽/自我服務頁）。
+    pub section: Option<SectionLabel>,
     /// 目前角色徽章（bootstrap admin 為空字串時不渲染）。
     pub role_code: String,
+}
+
+/// 麵包屑段（studio → group 兩級標籤；頁名由各頁模板自行渲染）。
+#[derive(Debug, Clone)]
+pub struct SectionLabel {
+    pub studio_label: &'static str,
+    pub group_label: &'static str,
 }
 
 impl NavModel {
@@ -81,6 +98,8 @@ impl NavModel {
                     Some(NavGroupView {
                         id: g.id,
                         label: g.label,
+                        icon: g.icon,
+                        icon_svg: crate::icons::svg(g.icon, "ico"),
                         is_menu: g.kind == NavKind::Menu,
                         items,
                     })
@@ -114,6 +133,8 @@ impl NavModel {
                 studios.push(StudioView {
                     id: s.id,
                     label: s.label,
+                    icon: s.icon,
+                    icon_svg: crate::icons::svg(s.icon, "ico"),
                     groups,
                 });
             }
@@ -143,10 +164,31 @@ impl NavModel {
             };
         }
 
+        // 麵包屑：目前路徑所屬群組 → 其 studio（含群組 href）。
+        let mut section: Option<SectionLabel> = None;
+        for (g, view) in &group_views {
+            if view.is_some()
+                && let Some(v) = view
+                && v.items.iter().any(|it| it.active)
+            {
+                let studio_label = STUDIOS
+                    .iter()
+                    .find(|s| s.id == g.studio)
+                    .map(|s| s.label)
+                    .unwrap_or("");
+                section = Some(SectionLabel {
+                    studio_label,
+                    group_label: g.label,
+                });
+                break;
+            }
+        }
+
         NavModel {
             home,
             top,
             studios,
+            section,
             role_code: flags.role_code.clone(),
         }
     }

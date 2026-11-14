@@ -148,7 +148,7 @@
   --shadow-xl: 0 20px 25px -5px rgba(15, 23, 42, 0.1), 0 8px 10px -6px rgba(15, 23, 42, 0.1);
   --shadow-2xl: 0 25px 50px -12px rgba(15, 23, 42, 0.25);
   --shadow-inner: inset 0 2px 4px 0 rgba(15, 23, 42, 0.05);
-  --shadow-glow: 0 0 20px rgba(37, 99, 235, 0.15);
+  --shadow-glow: 0 0 20px rgba(45, 212, 191, 0.15);
 
   /* ============================================================
      5. Design Tokens — Typography

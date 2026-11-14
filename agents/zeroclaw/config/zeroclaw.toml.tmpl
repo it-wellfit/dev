@@ -1,0 +1,98 @@
+# ZeroClaw portable config template.
+#
+# Placeholders are rendered by scripts/install.ps1 (Windows) or scripts/install.sh
+# (Linux/macOS/WSL2). Never commit a rendered copy: it may contain machine paths.
+#
+# Secrets are NOT stored here. Inject them at runtime, e.g.
+#   ZEROCLAW_providers__models__gemini__free__api_key=<key>
+# or set them through the masked prompt:
+#   zeroclaw config set providers.models.gemini.free.api_key
+#
+# Schema version 4 is the current on-disk format (see docs/reference/config.md).
+
+schema_version = 4
+
+[runtime]
+# Pin the interpreter so command policy and behaviour are identical everywhere.
+# "powershell" = Windows PowerShell 5.1, "pwsh" = PowerShell 7+, "cmd" = cmd.exe.
+shell = "powershell"
+# kind = "native"
+
+# ---------------------------------------------------------------------------
+# Model providers
+# ---------------------------------------------------------------------------
+
+# Primary: local Ollama. Use the native API path, never "/v1":
+# the OpenAI-compatible route makes tool calling unreliable.
+[providers.models.ollama.local]
+model = "__PRIMARY_MODEL__"
+uri = "http://127.0.0.1:11434"
+num_ctx = 8192
+num_predict = 1024
+# Local failure falls through to the free hosted tier.
+fallback = ["gemini.free"]
+
+# Secondary: Google Gemini API free tier.
+# "gemini" is the canonical slot; "google" is only an alias.
+# Requires GEMINI_API_KEY or GOOGLE_API_KEY in the environment.
+[providers.models.gemini.free]
+model = "__FALLBACK_MODEL__"
+fallback_models = ["gemini-3.5-flash-lite"]
+timeout_secs = 60
+
+# ---------------------------------------------------------------------------
+# Agent: the join between provider, risk profile and runtime profile
+# ---------------------------------------------------------------------------
+
+[agents.assistant]
+model_provider = "ollama.local"
+risk_profile = "local"
+runtime_profile = "bounded"
+
+[agents.assistant.workspace]
+# Never grant unrestricted filesystem access on a host without an OS sandbox.
+unrestricted_filesystem = false
+read_memory_from = []
+
+# Memory backend is chosen here (default: sqlite). It is locked once the agent
+# has written on-disk data, so decide before the first real run.
+
+# ---------------------------------------------------------------------------
+# Runtime profile: bounds cost and latency
+# ---------------------------------------------------------------------------
+
+[runtime_profiles.bounded]
+agentic = true
+max_tool_iterations = 8
+max_history_messages = 40
+max_context_tokens = 32000
+
+# ---------------------------------------------------------------------------
+# Risk profile: application-layer security only (Windows has no OS sandbox)
+# ---------------------------------------------------------------------------
+
+[risk_profiles.local]
+level = "supervised"
+workspace_only = true
+allowed_roots = ["__WORKSPACE__"]
+forbidden_paths = [
+__FORBIDDEN__
+]
+# Empty means "default policy"; a non-empty list is strict: anything not listed
+# is blocked. Fill it from measurements, not guesses (see README).
+allowed_commands = []
+sandbox_enabled = false
+sandbox_backend = "none"
+shell_env_passthrough = []
+# Add exact browser/hardware tool names here once enumerated on this build.
+excluded_tools = []
+
+# ---------------------------------------------------------------------------
+# Gateway
+# ---------------------------------------------------------------------------
+
+[gateway]
+# Pairing must stay on so /api/* is not open to any local process.
+require_pairing = true
+# Bind address stays at the shipped default (loopback). Confirm the exact key
+# with `zeroclaw config schema` before changing it; never expose 42617 to a LAN.

@@ -466,6 +466,7 @@ pub fn router(state: AppState) -> Router {
         // 桌面版（Tauri）UI 對照：純靜態設計文件，無任何資料，公開供比對。
         .route("/tauri-preview", get(tauri_preview))
         .route("/assets/legacy-1420.css", get(legacy_1420_css))
+        .route("/assets/ui-v2.css", get(UI_V2_CSS))
         .route("/assets/fonts/:file", get(serve_font))
         // 公開路由 body 上限（2026-11-12 規格補洞）：登入表單僅需數百 bytes；
         // 未設限時任意大小 POST 可被用來消耗記憶體（DefaultBodyLimit 僅掛在
@@ -3992,9 +3993,11 @@ async fn load_batch_view(state: &AppState, batch_id: &str) -> Option<ImportBatch
         status_display: if status == "draft" {
             "待確認（未登帳）".to_string()
         } else if status == "mapping" {
-            "待欄位映射".to_string()
-        } else {
+            "待欄位映射（映射後方可確認）".to_string()
+        } else if status == "confirmed" {
             "已確認登帳".to_string()
+        } else {
+            status.clone()
         },
         is_draft: status == "draft",
         rows: rows
