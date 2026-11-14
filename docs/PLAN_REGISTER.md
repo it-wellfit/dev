@@ -683,6 +683,20 @@ This addendum records execution facts only; it does not approve product scope, c
 
 This addendum records execution facts only; it does not approve product scope, certification, or release.
 
+## 2026-11-14 addendum #48 (v0.2.0 發布收斂：版本統一＋tag＋GitHub Release＋分支對齊)
+
+| Item | Disposition | Evidence |
+|---|---|---|
+| **版本號統一** | root workspace 六 crate（core/platform/web/kem/console_manifest/flaps_bridge）0.0.1/0.1.0 → **0.2.0**（對齊桌面殼與安裝包）；path-dep 釘選同步（auxbridge_core/console_manifest/kem）；Cargo.lock 6 套件更新 | git diff Cargo.lock：6 處 0.2.0 |
+| **SBOM 重產** | 6 份（runbook §108 程序：crate 目錄 CWD＋crate 目錄雜散清理） | sbom_freshness 3/3 綠 |
+| **tag v0.2.0** | 附註標籤 → `4c29a1e`（0.2.0 產物對應樹：sidecar 重建＋安裝包重產）；標註含產物尺寸與 sha256；其後 main 變更屬下一版 | tag show |
+| **GitHub Release** | `gh release create v0.2.0`：附加安裝器＋.sig＋latest.json 三件產物＋sha256＋release notes（SHARED_STANDARDS §5.3） | gh release view |
+| **推送合規** | SHARED_STANDARDS §5.1「main 受保護禁止直接推送」→ 以 `release/v0.2.0` 分支承載本地 3 commits 推送＋PR 合併（非直接 push main）；issue 追蹤單建檔並於 commit 引用 | PR 編號 |
+| **分支對齊（不得落後）** | develop/release/test（本地與遠端皆 ba9123c，落後 main 70、零分歧）→ 全數 fast-forward 至對齊後之 main 並推送 | ls-remote 四分支同點 |
+| 驗證 | cargo check/test（sbom_freshness/guards/secret_scan 全綠）＋fmt 0 | 本節 |
+| 未竟 | Authenticode 購證（OV-EV）與 updates.auxbridge.internal 主機＝既有 BLOCKED，不在本收斂範圍 | UPDATER_RUNBOOK §5 |
+
+This addendum records execution facts only; it does not approve product scope, certification, or release.
 ## Consolidation rules
 
 1. Keep one current navigation register and one acceptance/evidence ledger per project. Detailed requirements belong in their project documents.
@@ -846,5 +860,25 @@ This addendum records execution facts only; it does not approve product scope, c
 | 資料庫硬化 | `connect_options`：FK=ON、WAL、synchronous=NORMAL、busy_timeout、mmap；唯讀連線跳過寫入型 pragma | `connect_options_enforces_foreign_keys_and_wal`、`vacuum_into_*` |
 | 效能 | 嵌入 2s 逾時＋斷路器；批量索引（消除 O(n²)）；套件 150s→27s | `search_finds_*` 46ms |
 | 發布判定 | **PASS**（fmt/clippy/143 tests/34 頁掃描/區網/備份實證）；**PARTIAL**：65KiB 負向未測、還原演練未歸檔 | 本 addendum |
+
+This addendum records execution facts only; it does not approve product scope, certification, or release.
+
+## 2026-11-13 addendum #47 (PHASE-G4 深度稽核修復 G4.1–G4.11：測試/角色/單位/契約/旗標/響應式)
+
+| Item | Disposition | Evidence |
+|---|---|---|
+| G4.1 RAG-S3 整合測試 | 新增 `platform/tests/search_api.rs` 4 例（排序/CJK/未知詞空陣列/via 誠實） | 4 passed（2026-11-13） |
+| G4.2 VIEWER 角色 | `core/src/permission.rs::initialize_default` seed `role-viewer`（唯讀 REPORT_VIEW）；`viewer_landing_leads_with_reports`＋`seeded_roles_include_viewer` | 2 passed；DEMO_GUIDE/DEMO_DATA 已註記 |
+| G4.3 Decimal4 單位契約 | `MoneyCents`(10²)/`Decimal4`(10⁴) 加 `SCALE`＋`TryFrom`（lossy 拒絕、overflow 拒絕） | udm 14 passed（+5） |
+| G4.4 API 目錄一致性 | `apihub.rs` Tantivy→BM25＋RRF；`api_catalog_consistency.rs` 目錄↔路由註冊檢查 | 2 passed |
+| G4.5 G1.4 逐名核 | 回填 S.2.1：`bulk_review_reports_mixed_outcomes_and_audits_each_row`（含 `SELF_ADJUDICATION_FORBIDDEN` row-level，非 403）等 4 名 | 計畫 §S.2.1 更新 |
+| G4.6 A11Y | `docs/standards/A11Y_CHECKLIST.md`＋`platform/tests/a11y_static.rs`（lang/viewport/landmark/h1/label/img） | 5 passed |
+| G4.7 效能基線 | `platform/tests/perf_baseline.rs`；`docs/04-operations/PERF_BASELINE_v1.0.md` | BM25-only p50 2.86ms／p95 4.18ms；TTFB p50 5.30ms／p95 6.89ms；向量腿 UNKNOWN（無 embedder） |
+| G4.8 OPS-SLA runbook | `docs/04-operations/OPS_SLA_RUNBOOK_v1.0.md`（SLO/SLI、備份還原、P1/P2）＋README §2.8 登錄 | 文件 |
+| G4.9 旗標 | `platform/src/flags.rs`（`AUXBRIDGE_FLAG_*`，預設 on）；`search_hybrid`→BM25-only、`search_rrf`→加權融合、`ccm_chain_verify`→M3 null＋note | flags 2＋search 2＋ccm 1 passed |
+| G4.10 響應式 | `design-system.css` 360px 斷點＋`@container page (max-width:480px)`；`responsive_css.rs` | 3 passed；瀏覽器矩陣待人工 |
+| G4.11 API 契約 | JSON 錯誤信封（`api_error.rs`）＋`X-Request-Id` middleware＋`/api/search` 30/min 限流（`ratelimit.rs`，429＋Retry-After）＋`Idempotency-Key`（migration 0011＋`idempotency.rs`，replay 不重播副作用） | `api_contract.rs` 6 passed |
+| 四關 | fmt EXIT=0／clippy -D warnings 淨（root＋hub）／`cargo test --workspace --no-fail-fast` 全綠／`cargo audit` 0 vulnerabilities | 2026-11-13 實測 |
+| 未竟 | `/api/v1` 版本化（需 ADR）；瀏覽器響應式矩陣（人工）；向量腿效能基線（需 embedder）； CCM M2 登入事件（既有 GAP） | 本 addendum |
 
 This addendum records execution facts only; it does not approve product scope, certification, or release.

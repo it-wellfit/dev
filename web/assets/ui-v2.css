@@ -319,9 +319,57 @@ body:has(.login-panel) .site-nav { display: none; }
 /* ── 無導航頁（稽核/狀態/設定等單欄頁）：排除 Grid 側欄，避免空白 220px ── */
 body:not(:has(.site-nav)) { display: block; }
 
-/* ── 響應式：≤900px 單欄堆疊（觸控友善、零重疊） ── */
+/* ── 響應式漢堡抽屜（2026-11-13 方案 A：≤900px 頂部 ☰ 選單，零 JS checkbox hack） ── */
+.nav-toggle { display: none; }
+.nav-drawer-summary { display: none; }
+
+/* ── 響應式：≤900px 漢堡抽屜（觸控友善、零重疊、IA 不壓平） ── */
 @media (max-width: 900px) {
   body { display: block; background: var(--color-background); }
+
+  /* ☰ 選單鈕（全寬列，可點擊區域 ≥44px） */
+  .nav-drawer-summary {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-4);
+    background: var(--color-surface);
+    border-bottom: 1px solid var(--color-border);
+    color: var(--color-text-primary);
+    font-size: var(--font-size-md);
+    font-weight: 600;
+    cursor: pointer;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .nav-drawer-summary:hover { background: var(--color-surface-raised); }
+  .nav-drawer-summary:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: -2px; }
+  .nav-toggle:checked + .nav-drawer-summary { background: var(--color-primary-subtle); }
+
+  /* 抽屜本體：預設摺疊，勾選後展開（單欄縱向） */
+  .site-nav .container { display: none; }
+  .nav-toggle:checked ~ .container {
+    display: flex;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    gap: 0;
+    padding: var(--space-2);
+    max-height: 70vh;
+    overflow-y: auto;
+  }
+  .site-nav { position: static; height: auto; overflow-y: visible; border-right: none; border-bottom: 1px solid var(--color-border); }
+  /* 工作室標頭在抽屜中顯示（IA 三層不壓平） */
+  .site-nav .container .nav-studio-header { display: block; }
+
+  .site-nav details.nav-menu .nav-menu-items {
+    position: static;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+  }
+}
+
+/* ── ≤900px 補充（既有規則保留） ── */
 
   .site-nav {
     position: static;
@@ -455,4 +503,23 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--color-primary)
 
 @media (prefers-reduced-motion: no-preference) {
   html { scroll-behavior: smooth; }
+}
+
+/* ── 微細節 P0（2026-11-13 演化參考點兌現，來自 UI_DESIGN_DECONSTRUCTION）：
+   ① 焦點雙環（Linear 模式：ring 與元素間留底色縫隙）——覆蓋 design-system
+      的硬編碼藍色 glow rgba(37,99,235,.2)（舊 sky-500 殘留，非品牌色）。
+   ② ::placeholder 對齊 --color-text-tertiary（原為瀏覽器預設灰，跨平台不一致）。 ── */
+.btn:focus-visible,
+a:focus-visible,
+summary:focus-visible {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  box-shadow:
+    0 0 0 2px var(--color-background),
+    0 0 0 4px var(--color-primary);
+}
+
+::placeholder {
+  color: var(--color-text-tertiary);
+  opacity: 1;
 }

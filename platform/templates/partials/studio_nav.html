@@ -8,6 +8,11 @@
 {% import "partials/state_anchors.html" as state_anchors %}
 {% macro site_nav(nav) %}
 <nav class="site-nav" aria-label="主導覽">
+    {# 2026-11-13 響應式漢堡抽屜（零 JS checkbox hack）：
+        ≤900px 時 checkbox+label 變 ☰ 選單鈕，container 預設摺疊、勾選展開；
+        >900px 時 checkbox/label 隱藏、container 常駐顯示（桌面側欄）。 #}
+    <input type="checkbox" id="nav-toggle" class="nav-toggle" aria-label="切換導覽選單">
+    <label for="nav-toggle" class="nav-drawer-summary">☰ 選單</label>
     <div class="container">
         <a href="{{ nav.home.href }}"{% if nav.home.active %} aria-current="page"{% endif %}>{{ nav.home.label }}</a>
         {% for it in nav.top %}

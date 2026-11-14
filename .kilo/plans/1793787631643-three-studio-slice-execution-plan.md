@@ -89,7 +89,7 @@ Zero-JS（script=0）；**金額** i64/i128 minor 禁浮點；GET 讀/POST 寫�
 
 ## 2. 任務清單（依序；每項含擴充點與 DoD）
 
-> **完成狀態總覽（2026-11-13 更新）**：PHASE-G1/G2/G3 共 12 切片＋PRE-R1a 全數實作完成並驗證（G1.1＋G2.x 見 addendum #12；G1.2–G1.4＋G3.x 見 #13；全工作區 246 passed / 0 failed，含並行線新增）。未執行：G3.4（僅規格，OQ-GOV-04 阻塞）、PRE-R1b（可選）、**PHASE-G4 G4.1–G4.11（D2/D3/D4 深度稽核修復）**。
+> **完成狀態總覽（2026-11-13 更新）**：PHASE-G1/G2/G3 共 12 切片＋PRE-R1a 全數實作完成並驗證（G1.1＋G2.x 見 addendum #12；G1.2–G1.4＋G3.x 見 #13）。**PHASE-G4 G4.1–G4.11 已實作完成（2026-11-13）**：search_api 4、api_catalog_consistency 2、a11y_static 5、responsive_css 3、api_contract 6、flags 2、search flag 2、ccm flag 1、perf_baseline 1（BM25-only p95 3.20 ms／TTFB p95 4.83 ms）。未執行：G3.4（僅規格，OQ-GOV-04 阻塞）、PRE-R1b（可選）。
 
 ### PHASE-G1 — S1 工作台卓越化
 - [x] **G1.1 八資料態全覆蓋**（WP-08）
@@ -139,17 +139,17 @@ Zero-JS（script=0）；**金額** i64/i128 minor 禁浮點；GET 讀/POST 寫�
 - [ ] **G3.4 外部唯讀門戶**：僅規格（OQ-GOV-04 憑證模型未決；阻塞）。
 
 ### PHASE-G4 — 深度稽核修復（D2，2026-11-12 新增；單切片單提交）
-- [ ] **G4.1 RAG-S3 整合測試**（D2-02）：新增 `search_api_*` 4 例（fixture 語料排序、CJK 查詢、未知詞回 `[]`、無 embedder 時 `via="bm25"`）；DoD：4 測試綠＋四關。
-- [ ] **G4.2 VIEWER 角色 seed/測試**（D2-05）：`seed-demo.ps1` 或 migration 增 VIEWER；landing 測試覆蓋 `VIEWER→報表入口`；DoD：測試綠＋DEMO 文件更新。
-- [ ] **G4.3 Decimal4 單位契約**（D2-04）：定義 `Decimal4`（10^4）與 `MoneyCents`（10^2）之關係——禁止直接互轉；如需換算走明確 `TryFrom`＋scale 標註；DoD：round-trip＋非法轉換測試。
-- [ ] **G4.4 API 目錄 stale 修正**（D2-06）：`apihub.rs:212-213`「Tantivy」改為「BM25＋RRF」；加文件↔路由一致性測試；DoD：測試綠。
-- [ ] **G4.5 G1.4 測試逐名核**（D2-02b）：列出批量部分失敗/自我裁決 403 之實際測試名並回填 S.2.1；DoD：表更新＋無懸空名。
-- [ ] **G4.6 A11Y 檢查表落地**（D2-16）：A11Y 10 項轉為 `docs/standards/A11Y_CHECKLIST.md`；可機械檢查項（label/landmark/標題層級）納入測試；DoD：文件＋檢查綠。
-- [ ] **G4.7 PERF-BUDGET 基線量測**（D2-11）：為 `/api/search`（向量/ BM25-only）與 TTFB 建 benchmark；記錄基線與方法；DoD：基線入冊（未量測標 UNKNOWN）。
-- [ ] **G4.8 OPS-SLA runbook**（D2-08）：SLO/SLI、備份還原、事件管理（P1/P2）runbook；DoD：文件入 `docs/04-operations/` 且 README 登錄。
-- [ ] **G4.9 旗標機制＋`/ready`**（D3-03/D3-04）：實作 `search_hybrid`／`search_rrf`／`ccm_chain_verify` 旗標（環境變數/設定驅動，預設值見 FLAG）＋每旗標「關閉後正確行為」測試；`/api/health` 已存在（DB 狀態/503），`/ready` 為**選項**（若實作須與 `/api/health` 語義區分並文件化）；DoD：旗標各 2 測試（on/off）＋四關。
-- [ ] **G4.10 響應式 320px＋container query**（D3-05）：`design-system.css` 補 320px 斷點與 `@container`（或等效 media）；驗證 320/375/768/1024/1440/1920 六斷點無橫向捲動；DoD：CSS 檢查＋手動/Playwright 矩陣記錄。
-- [ ] **G4.11 API 契約落地**（D4-01..D4-04）：為 `/api/*` JSON 端點實作標準錯誤信封 `{code,message,hint,retryable,request_id}`；`/api/search` 加 30 次/分/工作階段限流（429＋`Retry-After`）；POST 寫入支援 `Idempotency-Key`（同鍵重放回原結果）；`X-Request-Id` 產生與回應標頭；`/api/v1` 版本化**僅在 ADR 通過後**執行（可選）。DoD：錯誤信封/限流/冪等各 2 測試＋四關。
+- [x] **G4.1 RAG-S3 整合測試**（D2-02）：新增 `search_api_*` 4 例（fixture 語料排序、CJK 查詢、未知詞回 `[]`、無 embedder 時 `via="bm25"`）；DoD：4 測試綠＋四關。
+- [x] **G4.2 VIEWER 角色 seed/測試**（D2-05）：`seed-demo.ps1` 或 migration 增 VIEWER；landing 測試覆蓋 `VIEWER→報表入口`；DoD：測試綠＋DEMO 文件更新。
+- [x] **G4.3 Decimal4 單位契約**（D2-04）：定義 `Decimal4`（10^4）與 `MoneyCents`（10^2）之關係——禁止直接互轉；如需換算走明確 `TryFrom`＋scale 標註；DoD：round-trip＋非法轉換測試。
+- [x] **G4.4 API 目錄 stale 修正**（D2-06）：`apihub.rs:212-213`「Tantivy」改為「BM25＋RRF」；加文件↔路由一致性測試；DoD：測試綠。
+- [x] **G4.5 G1.4 測試逐名核**（D2-02b）：列出批量部分失敗/自我裁決 403 之實際測試名並回填 S.2.1；DoD：表更新＋無懸空名。
+- [x] **G4.6 A11Y 檢查表落地**（D2-16）：A11Y 10 項轉為 `docs/standards/A11Y_CHECKLIST.md`；可機械檢查項（label/landmark/標題層級）納入測試；DoD：文件＋檢查綠。
+- [x] **G4.7 PERF-BUDGET 基線量測**（D2-11）：為 `/api/search`（向量/ BM25-only）與 TTFB 建 benchmark；記錄基線與方法；DoD：基線入冊（未量測標 UNKNOWN）。
+- [x] **G4.8 OPS-SLA runbook**（D2-08）：SLO/SLI、備份還原、事件管理（P1/P2）runbook；DoD：文件入 `docs/04-operations/` 且 README 登錄。
+- [x] **G4.9 旗標機制＋`/ready`**（D3-03/D3-04）：實作 `search_hybrid`／`search_rrf`／`ccm_chain_verify` 旗標（環境變數/設定驅動，預設值見 FLAG）＋每旗標「關閉後正確行為」測試；`/api/health` 已存在（DB 狀態/503），`/ready` 為**選項**（若實作須與 `/api/health` 語義區分並文件化）；DoD：旗標各 2 測試（on/off）＋四關。
+- [x] **G4.10 響應式 320px＋container query**（D3-05）：`design-system.css` 補 320px 斷點與 `@container`（或等效 media）；驗證 320/375/768/1024/1440/1920 六斷點無橫向捲動；DoD：CSS 檢查＋手動/Playwright 矩陣記錄。
+- [x] **G4.11 API 契約落地**（D4-01..D4-04）：為 `/api/*` JSON 端點實作標準錯誤信封 `{code,message,hint,retryable,request_id}`；`/api/search` 加 30 次/分/工作階段限流（429＋`Retry-After`）；POST 寫入支援 `Idempotency-Key`（同鍵重放回原結果）；`X-Request-Id` 產生與回應標頭；`/api/v1` 版本化**僅在 ADR 通過後**執行（可選）。DoD：錯誤信封/限流/冪等各 2 測試＋四關。
 
 ### 平行安排（非切片，只加測試不改結構）
 - [x] **PRE-R1a**（✅ 並行線交付 2026-11-09：`platform/tests/characterization.rs`，6 tests PASS）：api.rs 路由特徵化測試集（請求→狀態碼+關鍵 DOM 斷言），作未來模組化安全網。
@@ -421,8 +421,8 @@ RAG-S1～S4 已全數實作完成並驗證（詳見 addendum #17——原 #15 �
 | RAG-S3 | **無專屬整合測試**：`/api/search` 僅路由接線（`search_query`/`search_get`，via="direct"） | `platform/src/cross_module_api.rs:435-436` | ❌ 缺口 D2-02：需補 `search_api_*` 整合測試 |
 | G1.1 | `states_page_covers_eight_data_states` | `platform/src/api.rs:8204` | ✅（原表示例 `import_zero_result_vs_empty` 不存在，已刪） |
 | G1.2 | `pagination_links_preserve_search_term`, `detail_back_link_preserves_list_context` | `platform/src/api.rs:8248,8283` | ✅ |
-| G1.3 | `finance_landing_leads_with_review_queue`, `store_landing_leads_with_reports`, `admin_landing_defaults_to_overview`；VIEWER 無示範帳號 → 未覆蓋 | `platform/src/api.rs:8370,8392,8411` | 🟡 3/4（缺口 D2-05） |
-| G1.4 | 批量部分失敗 + 自我裁決 403（api.rs 測試群，未逐一核名） | `platform/src/api.rs` | 🟡 待逐名核（D2-02） |
+| G1.3 | `finance_landing_leads_with_review_queue`, `store_landing_leads_with_reports`, `admin_landing_defaults_to_overview`, `viewer_landing_leads_with_reports`（G4.2 新增） | `platform/src/api.rs:8941,8963,8982,8998` | ✅ 4/4（VIEWER 已補） |
+| G1.4 | `bulk_review_reports_mixed_outcomes_and_audits_each_row`（部分失敗＋自我裁決 `SELF_ADJUDICATION_FORBIDDEN`，row-level 非 HTTP 403）, `bulk_review_requires_ledger_write`（403）, `bulk_review_rejects_forged_csrf`（403）, `bulk_review_requires_two_step_confirmation` | `platform/src/api.rs:9058,9402,9418,9350` | ✅ 逐名核（2026-11-13；G4.5） |
 | G2.1 | `duplicate_consume_never_reapplies`, `exhausted_attempts_dead_letter_and_backoff_is_exponential_bounded`, `dead_letter_record_then_signed_replay` | `platform-hub/crates/eventbus/src/lib.rs:306,317,350` | ✅（原表第 2 名不完整） |
 | G2.2 | `threshold_failures_open_and_fast_fail`, `open_recloses_via_half_open_probes`, `half_open_failure_reopens_immediately` | `platform-hub/crates/channels/src/lib.rs:499,521,547` | ✅ |
 | G2.3 | `customer_record_roundtrip_serde`, `invoice_record_roundtrip_serde`, `payment_record_roundtrip_serde`, `minor_cents_boundary_is_explicit_and_lossless` | `platform-hub/crates/udm/src/lib.rs:309,326,345,366` | ✅（原名缺 `_serde`／`_and_lossless`） |

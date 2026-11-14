@@ -2,9 +2,9 @@
   "bomFormat": "CycloneDX",
   "specVersion": "1.5",
   "version": 1,
-  "serialNumber": "urn:uuid:0e76331a-f8d7-42c1-8c39-92529f7911a4",
+  "serialNumber": "urn:uuid:27b8134a-4922-43d8-b51d-79a477b9f6d0",
   "metadata": {
-    "timestamp": "2026-11-12T07:12:08.422114800Z",
+    "timestamp": "2026-11-14T09:03:21.065021900Z",
     "tools": [
       {
         "vendor": "CycloneDX",
@@ -14,23 +14,23 @@
     ],
     "component": {
       "type": "library",
-      "bom-ref": "path+file:///C:/Users/stephanie.huang/Desktop/%E6%96%B0%E4%BA%BA%E8%A8%93%E7%B7%B4/Projects/2026/Dev/core#auxbridge_core@0.0.1",
+      "bom-ref": "path+file:///C:/Users/stephanie.huang/Desktop/%E6%96%B0%E4%BA%BA%E8%A8%93%E7%B7%B4/Projects/2026/Dev/core#auxbridge_core@0.2.0",
       "name": "auxbridge_core",
-      "version": "0.0.1",
+      "version": "0.2.0",
       "scope": "required",
       "licenses": [
         {
           "expression": "LicenseRef-Proprietary"
         }
       ],
-      "purl": "pkg:cargo/auxbridge_core@0.0.1?download_url=file://.",
+      "purl": "pkg:cargo/auxbridge_core@0.2.0?download_url=file://.",
       "components": [
         {
           "type": "library",
-          "bom-ref": "path+file:///C:/Users/stephanie.huang/Desktop/%E6%96%B0%E4%BA%BA%E8%A8%93%E7%B7%B4/Projects/2026/Dev/core#auxbridge_core@0.0.1 bin-target-0",
+          "bom-ref": "path+file:///C:/Users/stephanie.huang/Desktop/%E6%96%B0%E4%BA%BA%E8%A8%93%E7%B7%B4/Projects/2026/Dev/core#auxbridge_core@0.2.0 bin-target-0",
           "name": "auxbridge_core",
-          "version": "0.0.1",
-          "purl": "pkg:cargo/auxbridge_core@0.0.1?download_url=file://.#src/lib.rs"
+          "version": "0.2.0",
+          "purl": "pkg:cargo/auxbridge_core@0.2.0?download_url=file://.#src/lib.rs"
         }
       ]
     },
@@ -4466,7 +4466,7 @@
   ],
   "dependencies": [
     {
-      "ref": "path+file:///C:/Users/stephanie.huang/Desktop/%E6%96%B0%E4%BA%BA%E8%A8%93%E7%B7%B4/Projects/2026/Dev/core#auxbridge_core@0.0.1",
+      "ref": "path+file:///C:/Users/stephanie.huang/Desktop/%E6%96%B0%E4%BA%BA%E8%A8%93%E7%B7%B4/Projects/2026/Dev/core#auxbridge_core@0.2.0",
       "dependsOn": [
         "registry+https://github.com/rust-lang/crates.io-index#chrono@0.4.45",
         "registry+https://github.com/rust-lang/crates.io-index#serde@1.0.229",

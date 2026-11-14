@@ -2122,6 +2122,29 @@ html {
   }
 }
 
+/* G4.10 (D3-05): 320px-class phones — the smallest breakpoint the app must
+   support without horizontal scrolling. */
+@media (max-width: 360px) {
+  .container { padding: 0 var(--space-3); }
+  .kpi-grid { grid-template-columns: 1fr; }
+  .kpi dd { font-size: var(--font-size-2xl); }
+  .btn { width: 100%; }
+  .table-wrap { font-size: var(--font-size-xs); }
+  .app-header .container { flex-direction: column; align-items: flex-start; }
+}
+
+/* G4.10 (D3-05): container query — components adapt to their own width, not
+   only the viewport (useful for narrow panes and print/preview surfaces). */
+.container {
+  container-type: inline-size;
+  container-name: page;
+}
+
+@container page (max-width: 480px) {
+  .kpi-grid { grid-template-columns: 1fr; }
+  .grid-2, .grid-3, .grid-4, .grid-5, .grid-6 { grid-template-columns: 1fr; }
+}
+
 /* ============================================================
    Print Styles
    ============================================================ */

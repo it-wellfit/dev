@@ -2,9 +2,9 @@
   "bomFormat": "CycloneDX",
   "specVersion": "1.5",
   "version": 1,
-  "serialNumber": "urn:uuid:abc99912-a624-4a5f-93bc-0adc0f5b9b6b",
+  "serialNumber": "urn:uuid:9adb452a-9d13-41fb-bd79-d59af8cff4ac",
   "metadata": {
-    "timestamp": "2026-11-12T10:55:58.794083900Z",
+    "timestamp": "2026-11-14T09:03:24.478798100Z",
     "tools": [
       {
         "vendor": "CycloneDX",
@@ -14,9 +14,9 @@
     ],
     "component": {
       "type": "library",
-      "bom-ref": "path+file:///C:/Users/stephanie.huang/Desktop/%E6%96%B0%E4%BA%BA%E8%A8%93%E7%B7%B4/Projects/2026/Dev/crates/console_manifest#0.1.0",
+      "bom-ref": "path+file:///C:/Users/stephanie.huang/Desktop/%E6%96%B0%E4%BA%BA%E8%A8%93%E7%B7%B4/Projects/2026/Dev/crates/console_manifest#0.2.0",
       "name": "console_manifest",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "description": "Unified ops console manifest: single page/registry SSOT consumed by the platform dynamic renderer and the KEM static renderer",
       "scope": "required",
       "licenses": [
@@ -24,14 +24,14 @@
           "expression": "LicenseRef-Proprietary"
         }
       ],
-      "purl": "pkg:cargo/console_manifest@0.1.0?download_url=file://.",
+      "purl": "pkg:cargo/console_manifest@0.2.0?download_url=file://.",
       "components": [
         {
           "type": "library",
-          "bom-ref": "path+file:///C:/Users/stephanie.huang/Desktop/%E6%96%B0%E4%BA%BA%E8%A8%93%E7%B7%B4/Projects/2026/Dev/crates/console_manifest#0.1.0 bin-target-0",
+          "bom-ref": "path+file:///C:/Users/stephanie.huang/Desktop/%E6%96%B0%E4%BA%BA%E8%A8%93%E7%B7%B4/Projects/2026/Dev/crates/console_manifest#0.2.0 bin-target-0",
           "name": "console_manifest",
-          "version": "0.1.0",
-          "purl": "pkg:cargo/console_manifest@0.1.0?download_url=file://.#src/lib.rs"
+          "version": "0.2.0",
+          "purl": "pkg:cargo/console_manifest@0.2.0?download_url=file://.#src/lib.rs"
         }
       ]
     },
@@ -45,7 +45,7 @@
   "components": [],
   "dependencies": [
     {
-      "ref": "path+file:///C:/Users/stephanie.huang/Desktop/%E6%96%B0%E4%BA%BA%E8%A8%93%E7%B7%B4/Projects/2026/Dev/crates/console_manifest#0.1.0"
+      "ref": "path+file:///C:/Users/stephanie.huang/Desktop/%E6%96%B0%E4%BA%BA%E8%A8%93%E7%B7%B4/Projects/2026/Dev/crates/console_manifest#0.2.0"
     }
   ]
 }

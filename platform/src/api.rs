@@ -69,12 +69,16 @@ pub struct AppState {
     /// Login lockout tracker (P1-7). Cloned per handle; the inner Mutex makes
     /// every clone share one counter map.
     pub(crate) rate_limiter: std::sync::Arc<auth::LoginRateLimiter>,
+    /// `/api/search` per-session sliding-window limiter (G4.11 / D4-03).
+    pub(crate) search_limiter: std::sync::Arc<crate::ratelimit::SearchRateLimiter>,
     /// Full-text search engine (Slice 13).
     pub(crate) search: crate::search::SearchEngine,
     /// E.Sun BankPay 配置（可變，供管理員於執行時切換模擬/生產模式）。
     /// 以 `erp_config` 為持久層 SSOT，啟動時載入。
     pub(crate) bankpay_config:
         std::sync::Arc<tokio::sync::Mutex<crate::bankpay::model::EsunConfig>>,
+    /// G4.9 (D3-04) runtime feature flags (env-driven; defaults ON).
+    pub flags: crate::flags::Flags,
 }
 
 impl AppState {
@@ -89,13 +93,20 @@ impl AppState {
         let engine = LedgerEngine::with_pool(pool.clone()).await?;
         // BankPay 設定以 erp_config 為持久層 SSOT，啟動時載入。
         let bankpay_config = crate::bankpay::load_config(&pool).await;
+        let flags = crate::flags::Flags::from_env();
+        let search = crate::search::SearchEngine::new();
+        // G4.9: propagate flags to the search engine.
+        search.set_hybrid(flags.search_hybrid);
+        search.set_rrf(flags.search_rrf);
         let state = Self {
             pool,
             engine,
             permissions,
             rate_limiter: std::sync::Arc::new(auth::LoginRateLimiter::new()),
-            search: crate::search::SearchEngine::new(),
+            search_limiter: std::sync::Arc::new(crate::ratelimit::SearchRateLimiter::new()),
+            search,
             bankpay_config: std::sync::Arc::new(tokio::sync::Mutex::new(bankpay_config)),
+            flags,
         };
         // 自愈搜尋索引（2026-11-12）：啟動即從 DB 填充——重啟後 /search 立即
         // 可用，無需人工 reindex；嵌入腿為 best-effort（無 embedder → BM25-only）。
@@ -610,9 +621,20 @@ pub fn router(state: AppState) -> Router {
         // /api/modules/health 由 cross_module_api 提供（與 /api/status 同源
         // probe_modules，SSOT 不重複——2026-11-12 並行收斂裁定）。
         .route_layer(axum::extract::DefaultBodyLimit::max(IMPORT_MAX_BYTES))
+        // G4.11: idempotency runs after session auth (needs the Session
+        // extension) and before the handler.
+        .route_layer(axum::middleware::from_fn_with_state(
+            state.clone(),
+            crate::idempotency::middleware,
+        ))
         .route_layer(axum::middleware::from_fn_with_state(
             state.clone(),
             auth::require_session_api,
+        ))
+        // G4.11: request id outermost — extension available to auth/handlers,
+        // header echoed on every API response.
+        .route_layer(axum::middleware::from_fn(
+            crate::api_error::request_id_middleware,
         ));
 
     let protected = protected
@@ -3527,11 +3549,24 @@ async fn admin_ccm_indicators(
         "登入尚未寫入稽核事件（已知缺口 GAP-CCM-M2）；實作後本指標改為 LOGIN_FAILED 事件數。";
 
     // M3 簽名完整性違反: audit rows without an actor signature.
-    let m3: i64 =
-        sqlx::query_scalar("SELECT COUNT(*) FROM audit_log WHERE COALESCE(performed_by, '') = ''")
-            .fetch_one(&state.pool)
-            .await
-            .unwrap_or(-1);
+    // G4.9 (D3-04): `ccm_chain_verify=off` → value null + explicit note; never
+    // a fake zero that would fake a green control.
+    let (m3, m3_note): (serde_json::Value, Option<&str>) = if state.flags.ccm_chain_verify {
+        let count: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM audit_log WHERE COALESCE(performed_by, '') = ''",
+        )
+        .fetch_one(&state.pool)
+        .await
+        .unwrap_or(-1);
+        (serde_json::Value::from(count), None)
+    } else {
+        (
+            serde_json::Value::Null,
+            Some(
+                "鏈/簽名驗證已由旗標 ccm_chain_verify=off 停用；本指標不計算（不以 0 冒充綠燈）。",
+            ),
+        )
+    };
 
     let body = serde_json::json!({
         "indicators": [
@@ -3561,6 +3596,7 @@ async fn admin_ccm_indicators(
                 "definition": "performed_by 為空的稽核列數",
                 "timepoint": "查詢當下",
                 "source": "audit_log",
+                "note": m3_note,
             },
         ]
     });
@@ -3979,7 +4015,7 @@ async fn load_batch_view(state: &AppState, batch_id: &str) -> Option<ImportBatch
 }
 
 /// 格式中立欄位驗證（CSV 與 XLSX 轉接器共用同一契約；規則＝表單同款）。
-pub(crate) fn validate_fields(
+pub fn validate_fields(
     date_raw: &str,
     debit_raw: &str,
     credit_raw: &str,
@@ -3997,17 +4033,17 @@ pub(crate) fn validate_fields(
     }
     let debit_account = debit_raw.trim().to_string();
     if debit_account.is_empty() || debit_account.len() > MAX_ACCOUNT_ID_LEN {
-        return Err("借方科目空白或過長".to_string());
+        return Err(format!("借方科目空白或過長（收到：{debit_raw}）"));
     }
     let credit_account = credit_raw.trim().to_string();
     if credit_account.is_empty() || credit_account.len() > MAX_ACCOUNT_ID_LEN {
-        return Err("貸方科目空白或過長".to_string());
+        return Err(format!("貸方科目空白或過長（收到：{credit_raw}）"));
     }
     if debit_account.eq_ignore_ascii_case(&credit_account) {
         return Err("借貸科目相同".to_string());
     }
     let amount_minor = auxbridge_core::parse_decimal_to_minor(amount_raw.trim(), 2)
-        .map_err(|e| format!("金額錯誤：{e}"))?;
+        .map_err(|e| format!("金額錯誤（收到：{amount_raw}）：{e}"))?;
     if amount_minor <= 0 {
         return Err("金額必須大於 0".to_string());
     }
@@ -4017,7 +4053,7 @@ pub(crate) fn validate_fields(
     }
     let description = description_raw.trim().to_string();
     if description.is_empty() || description.len() > MAX_DESCRIPTION_LEN {
-        return Err("摘要空白或過長".to_string());
+        return Err(format!("摘要空白或過長（收到：{description_raw}）"));
     }
     Ok(ImportRowDraft {
         date,
@@ -4372,6 +4408,12 @@ async fn import_preview(
     use sha2::Digest;
     let sha = sha2::Sha256::digest(&data);
     let sha_hex = format!("{sha:x}");
+    // 2026-11-13（W1）：UTF-8 BOM 污染首欄（"日期"→"\u{feff}日期"），致表頭
+    // 對映與首列解析全錯（實證：BOM 檔兩列皆 error）。解析前剝除；無 BOM 檔不受影響。
+    let data = match data.strip_prefix(&[0xEF, 0xBB, 0xBF][..]) {
+        Some(stripped) => stripped.to_vec(),
+        None => data,
+    };
 
     let batch_id = uuid::Uuid::new_v4().to_string();
     let mut drafts: Vec<(usize, ImportRowDraft)> = Vec::new();
@@ -5352,6 +5394,27 @@ async fn import_confirm(
             Ok(()) => posted += 1,
             Err(e) => failed.push(format!("列 {row_no}：{e}")),
         }
+    }
+
+    // 2026-11-13（W3 修正）：0 筆登帳不得「看起來成功」——但也不得破壞
+    // PRG 模式回裸文字頁（憲章 UI 標準：錯誤須為樣式化頁面，含 問題＋原因＋處理方式）。
+    // 依既有部分成功路徑：303 回 /import?batch&notice=，頁面「匯入結果」區塊
+    // 以明確「匯入失敗」文案呈現（非成功語義）。
+    if posted == 0 {
+        let reason = if failed.is_empty() {
+            "批次內無有效資料列（欄位映射後皆未通過驗證）".to_string()
+        } else {
+            failed.join("；")
+        };
+        return Redirect::to(&format!(
+            "/import?batch={}&notice={}",
+            form.batch_id,
+            crate::api::urlencoding_lite(&format!(
+                "匯入失敗：0 筆登帳（{} 筆無效或失敗）。原因：{reason}。請於映射頁修正欄位後重新匯入。",
+                failed.len()
+            ))
+        ))
+        .into_response();
     }
 
     // Batch-level audit trail (transaction_id NULL is allowed by the schema).
@@ -9606,6 +9669,36 @@ mod tests {
         assert!(
             body.contains("\"value\":null") && body.contains("已知缺口"),
             "M2 must be honest null with the gap note, never a fake zero"
+        );
+    }
+
+    /// G4.9 (D3-04): `ccm_chain_verify=off` → M3 is null + note (not a fake zero).
+    #[tokio::test]
+    async fn ccm_chain_verify_flag_off_reports_disabled() {
+        let pool = in_memory_pool().await;
+        let mut state = AppState::new(pool.clone()).await.expect("state");
+        state.flags.ccm_chain_verify = false;
+        let app = router(state);
+        let hash = auth::hash_password(TEST_ADMIN_PASSWORD).expect("hash");
+        sqlx::query(
+            "INSERT OR IGNORE INTO users (user_id, username, password_hash, is_active) \
+             VALUES ('user-admin', 'admin', ?, 1)",
+        )
+        .bind(&hash)
+        .execute(&pool)
+        .await
+        .expect("seed admin");
+        let (cookie, _csrf) = login(&app, &pool, "admin", TEST_ADMIN_PASSWORD).await;
+        let (status, body, _) = get_with_location(&app, "/admin/ccm.json", &cookie).await;
+        assert_eq!(status, StatusCode::OK);
+        let json: serde_json::Value = serde_json::from_str(&body).expect("json");
+        let m3 = &json["indicators"][2];
+        assert_eq!(m3["value"], serde_json::Value::Null, "M3 must be null");
+        assert!(
+            m3["note"]
+                .as_str()
+                .is_some_and(|n| n.contains("ccm_chain_verify=off")),
+            "M3 note must name the disabled flag: {m3}"
         );
     }
 

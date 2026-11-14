@@ -1,6 +1,6 @@
 [package]
 name = "platform"
-version = "0.0.1"
+version = "0.2.0"
 edition = "2024"
 rust-version = "1.99"
 license = "LicenseRef-Proprietary"
@@ -39,15 +39,15 @@ pdf-extract = "0.12"
 sha2 = "0.10"
 
 # Core crate dependency
-auxbridge_core = { path = "../core", version = "0.0.1" }
+auxbridge_core = { path = "../core", version = "0.2.0" }
 
 # Unified ops console manifest (single page/registry SSOT; plan 1793033568961 §3)
-console_manifest = { path = "../crates/console_manifest", version = "0.1.0" }
+console_manifest = { path = "../crates/console_manifest", version = "0.2.0" }
 
 # PHASE-R (RAG-S2): reuse the proven embedder pool + cosine from the
 # knowledge module. Path dependency — zero new external crates (kem's deps
 # are a subset of platform's).
-kem = { path = "../crates/kem", version = "0.1.0" }
+kem = { path = "../crates/kem", version = "0.2.0" }
 
 # Database
 sqlx = { version = "0.9", features = ["runtime-tokio", "macros", "sqlite", "chrono"] }
