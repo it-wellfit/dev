@@ -399,6 +399,8 @@ const NON_PAGE_ROUTES: [&str; 34] = [
     "/logout",
     "/assets/design-system.css",
     "/assets/legacy-1420.css",
+    // UI v2 佈局樣式（2026-11-13 側欄 grid 佈局；靜態資產非頁面）。
+    "/assets/ui-v2.css",
     "/assets/fonts/:file",
     "/console",
     "/console/",
@@ -413,8 +415,6 @@ const NON_PAGE_ROUTES: [&str; 34] = [
     // 管理員切換 AI 旗標＝表單動作（非頁面）。
     "/admin/system/ai_flag",
     // 管理員設定 AI 模型＝表單動作（非頁面）。
-    "/admin/system/ai_model",
-    // AI 模型切換（並行流整合；表單動作，非頁面）。
     "/admin/system/ai_model",
     "/import/preview",
     "/import/confirm",

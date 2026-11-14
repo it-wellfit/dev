@@ -15,15 +15,24 @@
     <label for="nav-toggle" class="nav-drawer-summary">☰ 選單</label>
     <div class="container">
         <a href="{{ nav.home.href }}"{% if nav.home.active %} aria-current="page"{% endif %}>{{ nav.home.label }}</a>
+        {% if let Some(sec) = nav.section %}
+        <div class="nav-breadcrumb" aria-label="麵包屑">
+            <a href="/">總覽</a>
+            <span aria-hidden="true">›</span>
+            <span>{{ sec.studio_label }}</span>
+            <span aria-hidden="true">›</span>
+            <span>{{ sec.group_label }}</span>
+        </div>
+        {% endif %}
         {% for it in nav.top %}
         <a href="{{ it.href }}"{% if it.active %} aria-current="page"{% endif %}>{{ it.label }}</a>
         {% endfor %}
         {% for s in nav.studios %}
-        <div class="nav-studio-header">{{ s.label }}</div>
+        <div class="nav-studio-header"><span class="ico-slot">{{ s.icon_svg|safe }}</span>{{ s.label }}</div>
         {% for g in s.groups %}
         {% if g.is_menu %}
         <details class="nav-menu">
-            <summary>{{ g.label }}</summary>
+            <summary><span class="ico-slot">{{ g.icon_svg|safe }}</span>{{ g.label }}</summary>
             <div class="nav-menu-items">
                 {% for it in g.items %}
                 <a href="{{ it.href }}"{% if it.active %} aria-current="page"{% endif %}>{{ it.label }}</a>

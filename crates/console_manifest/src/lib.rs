@@ -110,13 +110,15 @@ pub const STATIC_ROOT: &str = "/console";
 #[derive(Debug, Clone, Copy)]
 pub struct NavGroup {
     pub id: &'static str,
-    /// zh-Hant 顯示名。
+    /// zh-Hant 顯示名（無 emoji；圖標由 `icon` key 決定）。
     pub label: &'static str,
     pub kind: NavKind,
     /// 群組內容的典型最低閘（advisory；實際可見性＝任一項目通過其頁面閘）。
     pub gate: Gate,
     /// 所屬工作室 id（STUDIOS 封閉集合；""＝置頂首頁群組，不入工作室）。
     pub studio: &'static str,
+    /// 圖標 key（Lucide；見 `platform/src/icons.rs`）。
+    pub icon: &'static str,
 }
 
 /// 工作室（Studio）：導覽 IA 第一層（使用者裁定：studio + section 兩層式；
@@ -126,6 +128,8 @@ pub struct Studio {
     pub id: &'static str,
     /// zh-Hant 顯示名（側欄區段標頭）。
     pub label: &'static str,
+    /// 圖標 key（Lucide；見 `platform/src/icons.rs`）。
+    pub icon: &'static str,
 }
 
 /// 工作室封閉集合（渲染順序＝宣告順序；overview 為置頂首頁不入工作室）。
@@ -133,18 +137,22 @@ pub const STUDIOS: &[Studio] = &[
     Studio {
         id: "biz",
         label: "業務工作室",
+        icon: "briefcase",
     },
     Studio {
         id: "bank",
         label: "銀行支付",
+        icon: "building",
     },
     Studio {
         id: "gov",
         label: "治理與管理",
+        icon: "shield",
     },
     Studio {
         id: "ops",
         label: "系統與知識",
+        icon: "monitor",
     },
 ];
 
@@ -156,76 +164,87 @@ pub const NAV_GROUPS: &[NavGroup] = &[
         kind: NavKind::Flat,
         gate: Gate::All,
         studio: "",
+        icon: "home",
     },
     NavGroup {
         id: "ledger",
-        label: "📒 帳務作業",
+        label: "帳務作業",
         kind: NavKind::Menu,
         gate: Gate::Read,
         studio: "biz",
+        icon: "book-open",
     },
     NavGroup {
         id: "capture",
-        label: "📥 匯入與草稿",
+        label: "匯入與草稿",
         kind: NavKind::Menu,
         gate: Gate::Write,
         studio: "biz",
+        icon: "inbox",
     },
     NavGroup {
         id: "bankpay",
-        label: "🏦 銀行支付",
+        label: "銀行支付",
         kind: NavKind::Menu,
         gate: Gate::Read,
         studio: "bank",
+        icon: "building",
     },
     NavGroup {
         id: "reports",
-        label: "📈 報表分析",
+        label: "報表分析",
         kind: NavKind::Menu,
         gate: Gate::Read,
         studio: "biz",
+        icon: "chart",
     },
     NavGroup {
         id: "query",
-        label: "🔍 檢索",
+        label: "檢索",
         kind: NavKind::Flat,
         gate: Gate::All,
         studio: "biz",
+        icon: "search",
     },
     NavGroup {
         id: "governance",
-        label: "🛡️ 治理稽核",
+        label: "治理稽核",
         kind: NavKind::Menu,
         gate: Gate::Manage,
         studio: "gov",
+        icon: "shield",
     },
     NavGroup {
         id: "admin",
-        label: "⚙️ 管理",
+        label: "管理",
         kind: NavKind::Menu,
         gate: Gate::Manage,
         studio: "gov",
+        icon: "settings",
     },
     NavGroup {
         id: "apihub",
-        label: "🔌 API 中樞",
+        label: "API 中樞",
         kind: NavKind::Menu,
         gate: Gate::Manage,
         studio: "gov",
+        icon: "plug",
     },
     NavGroup {
         id: "system",
-        label: "🖥️ 系統",
+        label: "系統",
         kind: NavKind::Flat,
         gate: Gate::All,
         studio: "ops",
+        icon: "monitor",
     },
     NavGroup {
         id: "knowledge",
-        label: "📚 知識治理",
+        label: "知識治理",
         kind: NavKind::Flat,
         gate: Gate::All,
         studio: "ops",
+        icon: "book",
     },
 ];
 

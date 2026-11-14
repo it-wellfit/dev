@@ -319,6 +319,20 @@ body:has(.login-panel) .site-nav { display: none; }
 /* ── 無導航頁（稽核/狀態/設定等單欄頁）：排除 Grid 側欄，避免空白 220px ── */
 body:not(:has(.site-nav)) { display: block; }
 
+/* ── 麵包屑（2026-11-13 UI-4）：目前位置三級錨點，深層逃生通道 ── */
+.nav-breadcrumb {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+}
+.nav-breadcrumb a { color: var(--color-text-secondary); }
+.nav-breadcrumb a:hover { color: var(--color-text-primary); }
+
 /* ── 響應式漢堡抽屜（2026-11-13 方案 A：≤900px 頂部 ☰ 選單，零 JS checkbox hack） ── */
 .nav-toggle { display: none; }
 .nav-drawer-summary { display: none; }
@@ -328,7 +342,7 @@ body:not(:has(.site-nav)) { display: block; }
   body { display: block; background: var(--color-background); }
 
   /* ☰ 選單鈕（全寬列，可點擊區域 ≥44px） */
-  .nav-drawer-summary {
+  .site-nav .nav-drawer-summary {
     display: flex;
     align-items: center;
     gap: var(--space-2);
@@ -342,13 +356,14 @@ body:not(:has(.site-nav)) { display: block; }
     user-select: none;
     -webkit-tap-highlight-color: transparent;
   }
-  .nav-drawer-summary:hover { background: var(--color-surface-raised); }
-  .nav-drawer-summary:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: -2px; }
-  .nav-toggle:checked + .nav-drawer-summary { background: var(--color-primary-subtle); }
+  .site-nav .nav-drawer-summary:hover { background: var(--color-surface-raised); }
+  .site-nav .nav-drawer-summary:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: -2px; }
+  .site-nav .nav-toggle:checked + .nav-drawer-summary { background: var(--color-primary-subtle); }
 
   /* 抽屜本體：預設摺疊，勾選後展開（單欄縱向） */
+  /* 抽屜本體：預設摺疊，勾選後展開（單欄縱向） */
   .site-nav .container { display: none; }
-  .nav-toggle:checked ~ .container {
+  .site-nav .nav-toggle:checked ~ .container {
     display: flex;
     flex-direction: column;
     flex-wrap: nowrap;
@@ -503,6 +518,38 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--color-primary)
 
 @media (prefers-reduced-motion: no-preference) {
   html { scroll-behavior: smooth; }
+}
+
+/* ── 狀態詳情面板（2026-11-14 W11b 根因修復）：#status-panel 是 body grid
+   的自動放置項，:target 展開時被塞進錯誤窄格（60px 直條實證）。面板
+   role="dialog" 語義本就是浮層 → 改 position:fixed 對話框，脫離 grid 流，
+   主內容不再受影響；Esc 不可用時以「✕ 關閉」連結（href="#main"）離開。 ── */
+#status-panel:target {
+  position: fixed;
+  top: 12vh;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(760px, 92vw);
+  max-height: 78vh;
+  overflow-y: auto;
+  z-index: 60;
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xl);
+  padding: var(--space-5);
+}
+
+/* ── Lucide stroke 圖標（2026-11-14 UI-1）：與文字基線對齊、間距一致 ── */
+.ico {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  vertical-align: -3px;
+}
+.site-nav details.nav-menu > summary .ico,
+.site-nav .container > a .ico {
+  margin-right: var(--space-2);
 }
 
 /* ── 微細節 P0（2026-11-13 演化參考點兌現，來自 UI_DESIGN_DECONSTRUCTION）：
