@@ -227,7 +227,7 @@ checksum = "f2032f911046de80f0a198e0901378627c33f59ea0ac00e363d481118bd70a53"
 
 [[package]]
 name = "auxbridge_core"
-version = "0.0.1"
+version = "0.2.0"
 dependencies = [
  "chrono",
  "proptest",
@@ -610,7 +610,7 @@ checksum = "3d7b894f5411737b7867f4827955924d7c254fc9f4d91a6aad6b097804b1018b"
 
 [[package]]
 name = "console_manifest"
-version = "0.1.0"
+version = "0.2.0"
 
 [[package]]
 name = "constant_time_eq"
@@ -996,7 +996,7 @@ checksum = "1c66915cc5391097de7a2b0b972e8505aa33c0df401fd3a6811dbdb32881ba48"
 
 [[package]]
 name = "flaps_bridge"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "thiserror 1.0.69",
 ]
@@ -1810,7 +1810,7 @@ dependencies = [
 
 [[package]]
 name = "kem"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "chrono",
  "console_manifest",
@@ -2497,7 +2497,7 @@ checksum = "f6b464fbc74e149a392436b17d523f769e057cb6877f6a5c4618bc6f11800548"
 
 [[package]]
 name = "platform"
-version = "0.0.1"
+version = "0.2.0"
 dependencies = [
  "argon2",
  "askama",
@@ -4153,7 +4153,7 @@ dependencies = [
 
 [[package]]
 name = "web"
-version = "0.0.1"
+version = "0.2.0"
 dependencies = [
  "serde",
 ]

@@ -2,9 +2,9 @@
   "bomFormat": "CycloneDX",
   "specVersion": "1.5",
   "version": 1,
-  "serialNumber": "urn:uuid:1f4b1882-1f48-48f1-8a1c-087bb86da519",
+  "serialNumber": "urn:uuid:82ccae42-1a30-4c4d-b1f6-9536fb94d453",
   "metadata": {
-    "timestamp": "2026-11-12T10:56:00.617241300Z",
+    "timestamp": "2026-11-14T09:03:23.008091500Z",
     "tools": [
       {
         "vendor": "CycloneDX",
@@ -14,23 +14,23 @@
     ],
     "component": {
       "type": "library",
-      "bom-ref": "path+file:///C:/Users/stephanie.huang/Desktop/%E6%96%B0%E4%BA%BA%E8%A8%93%E7%B7%B4/Projects/2026/Dev/web#0.0.1",
+      "bom-ref": "path+file:///C:/Users/stephanie.huang/Desktop/%E6%96%B0%E4%BA%BA%E8%A8%93%E7%B7%B4/Projects/2026/Dev/web#0.2.0",
       "name": "web",
-      "version": "0.0.1",
+      "version": "0.2.0",
       "scope": "required",
       "licenses": [
         {
           "expression": "LicenseRef-Proprietary"
         }
       ],
-      "purl": "pkg:cargo/web@0.0.1?download_url=file://.",
+      "purl": "pkg:cargo/web@0.2.0?download_url=file://.",
       "components": [
         {
           "type": "library",
-          "bom-ref": "path+file:///C:/Users/stephanie.huang/Desktop/%E6%96%B0%E4%BA%BA%E8%A8%93%E7%B7%B4/Projects/2026/Dev/web#0.0.1 bin-target-0",
+          "bom-ref": "path+file:///C:/Users/stephanie.huang/Desktop/%E6%96%B0%E4%BA%BA%E8%A8%93%E7%B7%B4/Projects/2026/Dev/web#0.2.0 bin-target-0",
           "name": "web",
-          "version": "0.0.1",
-          "purl": "pkg:cargo/web@0.0.1?download_url=file://.#src/lib.rs"
+          "version": "0.2.0",
+          "purl": "pkg:cargo/web@0.2.0?download_url=file://.#src/lib.rs"
         }
       ]
     },
@@ -274,7 +274,7 @@
   ],
   "dependencies": [
     {
-      "ref": "path+file:///C:/Users/stephanie.huang/Desktop/%E6%96%B0%E4%BA%BA%E8%A8%93%E7%B7%B4/Projects/2026/Dev/web#0.0.1",
+      "ref": "path+file:///C:/Users/stephanie.huang/Desktop/%E6%96%B0%E4%BA%BA%E8%A8%93%E7%B7%B4/Projects/2026/Dev/web#0.2.0",
       "dependsOn": [
         "registry+https://github.com/rust-lang/crates.io-index#serde@1.0.229"
       ]

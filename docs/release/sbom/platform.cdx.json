@@ -2,9 +2,9 @@
   "bomFormat": "CycloneDX",
   "specVersion": "1.5",
   "version": 1,
-  "serialNumber": "urn:uuid:cf106af7-459e-4488-bddb-7bddd55c8d0f",
+  "serialNumber": "urn:uuid:190b9b58-6ffc-4b10-94dc-9c236add8229",
   "metadata": {
-    "timestamp": "2026-11-12T07:11:32.052774100Z",
+    "timestamp": "2026-11-14T09:03:22.014192800Z",
     "tools": [
       {
         "vendor": "CycloneDX",
@@ -14,30 +14,37 @@
     ],
     "component": {
       "type": "application",
-      "bom-ref": "path+file:///C:/Users/stephanie.huang/Desktop/%E6%96%B0%E4%BA%BA%E8%A8%93%E7%B7%B4/Projects/2026/Dev/platform#0.0.1",
+      "bom-ref": "path+file:///C:/Users/stephanie.huang/Desktop/%E6%96%B0%E4%BA%BA%E8%A8%93%E7%B7%B4/Projects/2026/Dev/platform#0.2.0",
       "name": "platform",
-      "version": "0.0.1",
+      "version": "0.2.0",
       "scope": "required",
       "licenses": [
         {
           "expression": "LicenseRef-Proprietary"
         }
       ],
-      "purl": "pkg:cargo/platform@0.0.1?download_url=file://.",
+      "purl": "pkg:cargo/platform@0.2.0?download_url=file://.",
       "components": [
         {
           "type": "library",
-          "bom-ref": "path+file:///C:/Users/stephanie.huang/Desktop/%E6%96%B0%E4%BA%BA%E8%A8%93%E7%B7%B4/Projects/2026/Dev/platform#0.0.1 bin-target-0",
+          "bom-ref": "path+file:///C:/Users/stephanie.huang/Desktop/%E6%96%B0%E4%BA%BA%E8%A8%93%E7%B7%B4/Projects/2026/Dev/platform#0.2.0 bin-target-0",
           "name": "platform",
-          "version": "0.0.1",
-          "purl": "pkg:cargo/platform@0.0.1?download_url=file://.#src/lib.rs"
+          "version": "0.2.0",
+          "purl": "pkg:cargo/platform@0.2.0?download_url=file://.#src/lib.rs"
         },
         {
           "type": "application",
-          "bom-ref": "path+file:///C:/Users/stephanie.huang/Desktop/%E6%96%B0%E4%BA%BA%E8%A8%93%E7%B7%B4/Projects/2026/Dev/platform#0.0.1 bin-target-1",
+          "bom-ref": "path+file:///C:/Users/stephanie.huang/Desktop/%E6%96%B0%E4%BA%BA%E8%A8%93%E7%B7%B4/Projects/2026/Dev/platform#0.2.0 bin-target-1",
+          "name": "auxbridge-backup",
+          "version": "0.2.0",
+          "purl": "pkg:cargo/platform@0.2.0?download_url=file://.#src/bin/auxbridge-backup.rs"
+        },
+        {
+          "type": "application",
+          "bom-ref": "path+file:///C:/Users/stephanie.huang/Desktop/%E6%96%B0%E4%BA%BA%E8%A8%93%E7%B7%B4/Projects/2026/Dev/platform#0.2.0 bin-target-2",
           "name": "auxbridge-server",
-          "version": "0.0.1",
-          "purl": "pkg:cargo/platform@0.0.1?download_url=file://.#src/bin/auxbridge-server.rs"
+          "version": "0.2.0",
+          "purl": "pkg:cargo/platform@0.2.0?download_url=file://.#src/bin/auxbridge-server.rs"
         }
       ]
     },
@@ -51,22 +58,22 @@
   "components": [
     {
       "type": "library",
-      "bom-ref": "path+file:///C:/Users/stephanie.huang/Desktop/%E6%96%B0%E4%BA%BA%E8%A8%93%E7%B7%B4/Projects/2026/Dev/core#auxbridge_core@0.0.1",
+      "bom-ref": "path+file:///C:/Users/stephanie.huang/Desktop/%E6%96%B0%E4%BA%BA%E8%A8%93%E7%B7%B4/Projects/2026/Dev/core#auxbridge_core@0.2.0",
       "name": "auxbridge_core",
-      "version": "0.0.1",
+      "version": "0.2.0",
       "scope": "required",
       "licenses": [
         {
           "expression": "LicenseRef-Proprietary"
         }
       ],
-      "purl": "pkg:cargo/auxbridge_core@0.0.1?download_url=file://..\\core"
+      "purl": "pkg:cargo/auxbridge_core@0.2.0?download_url=file://..\\core"
     },
     {
       "type": "library",
-      "bom-ref": "path+file:///C:/Users/stephanie.huang/Desktop/%E6%96%B0%E4%BA%BA%E8%A8%93%E7%B7%B4/Projects/2026/Dev/crates/console_manifest#0.1.0",
+      "bom-ref": "path+file:///C:/Users/stephanie.huang/Desktop/%E6%96%B0%E4%BA%BA%E8%A8%93%E7%B7%B4/Projects/2026/Dev/crates/console_manifest#0.2.0",
       "name": "console_manifest",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "description": "Unified ops console manifest: single page/registry SSOT consumed by the platform dynamic renderer and the KEM static renderer",
       "scope": "required",
       "licenses": [
@@ -74,13 +81,13 @@
           "expression": "LicenseRef-Proprietary"
         }
       ],
-      "purl": "pkg:cargo/console_manifest@0.1.0?download_url=file://..\\crates\\console_manifest"
+      "purl": "pkg:cargo/console_manifest@0.2.0?download_url=file://..\\crates\\console_manifest"
     },
     {
       "type": "library",
-      "bom-ref": "path+file:///C:/Users/stephanie.huang/Desktop/%E6%96%B0%E4%BA%BA%E8%A8%93%E7%B7%B4/Projects/2026/Dev/crates/kem#0.1.0",
+      "bom-ref": "path+file:///C:/Users/stephanie.huang/Desktop/%E6%96%B0%E4%BA%BA%E8%A8%93%E7%B7%B4/Projects/2026/Dev/crates/kem#0.2.0",
       "name": "kem",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "description": "Knowledge Evolution Module: immutable capture, atomic claims, rule vetting, hash-chained ledger, BM25 retrieval, evolution and governance",
       "scope": "required",
       "licenses": [
@@ -88,7 +95,7 @@
           "expression": "LicenseRef-Proprietary"
         }
       ],
-      "purl": "pkg:cargo/kem@0.1.0?download_url=file://..\\crates\\kem"
+      "purl": "pkg:cargo/kem@0.2.0?download_url=file://..\\crates\\kem"
     },
     {
       "type": "library",
@@ -11695,7 +11702,7 @@
   ],
   "dependencies": [
     {
-      "ref": "path+file:///C:/Users/stephanie.huang/Desktop/%E6%96%B0%E4%BA%BA%E8%A8%93%E7%B7%B4/Projects/2026/Dev/core#auxbridge_core@0.0.1",
+      "ref": "path+file:///C:/Users/stephanie.huang/Desktop/%E6%96%B0%E4%BA%BA%E8%A8%93%E7%B7%B4/Projects/2026/Dev/core#auxbridge_core@0.2.0",
       "dependsOn": [
         "registry+https://github.com/rust-lang/crates.io-index#chrono@0.4.45",
         "registry+https://github.com/rust-lang/crates.io-index#serde@1.0.229",
@@ -11705,13 +11712,13 @@
       ]
     },
     {
-      "ref": "path+file:///C:/Users/stephanie.huang/Desktop/%E6%96%B0%E4%BA%BA%E8%A8%93%E7%B7%B4/Projects/2026/Dev/crates/console_manifest#0.1.0"
+      "ref": "path+file:///C:/Users/stephanie.huang/Desktop/%E6%96%B0%E4%BA%BA%E8%A8%93%E7%B7%B4/Projects/2026/Dev/crates/console_manifest#0.2.0"
     },
     {
-      "ref": "path+file:///C:/Users/stephanie.huang/Desktop/%E6%96%B0%E4%BA%BA%E8%A8%93%E7%B7%B4/Projects/2026/Dev/crates/kem#0.1.0",
+      "ref": "path+file:///C:/Users/stephanie.huang/Desktop/%E6%96%B0%E4%BA%BA%E8%A8%93%E7%B7%B4/Projects/2026/Dev/crates/kem#0.2.0",
       "dependsOn": [
         "registry+https://github.com/rust-lang/crates.io-index#chrono@0.4.45",
-        "path+file:///C:/Users/stephanie.huang/Desktop/%E6%96%B0%E4%BA%BA%E8%A8%93%E7%B7%B4/Projects/2026/Dev/crates/console_manifest#0.1.0",
+        "path+file:///C:/Users/stephanie.huang/Desktop/%E6%96%B0%E4%BA%BA%E8%A8%93%E7%B7%B4/Projects/2026/Dev/crates/console_manifest#0.2.0",
         "registry+https://github.com/rust-lang/crates.io-index#reqwest@0.12.28",
         "registry+https://github.com/rust-lang/crates.io-index#serde@1.0.229",
         "registry+https://github.com/rust-lang/crates.io-index#serde_json@1.0.154",
@@ -11721,18 +11728,18 @@
       ]
     },
     {
-      "ref": "path+file:///C:/Users/stephanie.huang/Desktop/%E6%96%B0%E4%BA%BA%E8%A8%93%E7%B7%B4/Projects/2026/Dev/platform#0.0.1",
+      "ref": "path+file:///C:/Users/stephanie.huang/Desktop/%E6%96%B0%E4%BA%BA%E8%A8%93%E7%B7%B4/Projects/2026/Dev/platform#0.2.0",
       "dependsOn": [
         "registry+https://github.com/rust-lang/crates.io-index#argon2@0.5.3",
         "registry+https://github.com/rust-lang/crates.io-index#askama@0.16.1",
-        "path+file:///C:/Users/stephanie.huang/Desktop/%E6%96%B0%E4%BA%BA%E8%A8%93%E7%B7%B4/Projects/2026/Dev/core#auxbridge_core@0.0.1",
+        "path+file:///C:/Users/stephanie.huang/Desktop/%E6%96%B0%E4%BA%BA%E8%A8%93%E7%B7%B4/Projects/2026/Dev/core#auxbridge_core@0.2.0",
         "registry+https://github.com/rust-lang/crates.io-index#axum@0.7.9",
         "registry+https://github.com/rust-lang/crates.io-index#calamine@0.38.0",
         "registry+https://github.com/rust-lang/crates.io-index#chrono@0.4.45",
-        "path+file:///C:/Users/stephanie.huang/Desktop/%E6%96%B0%E4%BA%BA%E8%A8%93%E7%B7%B4/Projects/2026/Dev/crates/console_manifest#0.1.0",
+        "path+file:///C:/Users/stephanie.huang/Desktop/%E6%96%B0%E4%BA%BA%E8%A8%93%E7%B7%B4/Projects/2026/Dev/crates/console_manifest#0.2.0",
         "registry+https://github.com/rust-lang/crates.io-index#csv@1.4.0",
         "registry+https://github.com/rust-lang/crates.io-index#image@0.25.10",
-        "path+file:///C:/Users/stephanie.huang/Desktop/%E6%96%B0%E4%BA%BA%E8%A8%93%E7%B7%B4/Projects/2026/Dev/crates/kem#0.1.0",
+        "path+file:///C:/Users/stephanie.huang/Desktop/%E6%96%B0%E4%BA%BA%E8%A8%93%E7%B7%B4/Projects/2026/Dev/crates/kem#0.2.0",
         "registry+https://github.com/rust-lang/crates.io-index#mail-parser@1.0.1",
         "registry+https://github.com/rust-lang/crates.io-index#paddleocr_rs_onnx@0.2.8",
         "registry+https://github.com/rust-lang/crates.io-index#pdf-extract@0.12.1",
@@ -11744,7 +11751,6 @@
         "registry+https://github.com/rust-lang/crates.io-index#sqlx@0.9.0",
         "registry+https://github.com/rust-lang/crates.io-index#thiserror@2.0.21",
         "registry+https://github.com/rust-lang/crates.io-index#tokio@1.54.1",
-        "registry+https://github.com/rust-lang/crates.io-index#tracing@0.1.44",
         "registry+https://github.com/rust-lang/crates.io-index#uuid@1.29.2",
         "registry+https://github.com/rust-lang/crates.io-index#zip@9.5.1"
       ]

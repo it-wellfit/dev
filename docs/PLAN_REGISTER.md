@@ -683,6 +683,20 @@ This addendum records execution facts only; it does not approve product scope, c
 
 This addendum records execution facts only; it does not approve product scope, certification, or release.
 
+## 2026-11-14 addendum #48 (v0.2.0 發布收斂：版本統一＋tag＋GitHub Release＋分支對齊)
+
+| Item | Disposition | Evidence |
+|---|---|---|
+| **版本號統一** | root workspace 六 crate（core/platform/web/kem/console_manifest/flaps_bridge）0.0.1/0.1.0 → **0.2.0**（對齊桌面殼與安裝包）；path-dep 釘選同步（auxbridge_core/console_manifest/kem）；Cargo.lock 6 套件更新 | git diff Cargo.lock：6 處 0.2.0 |
+| **SBOM 重產** | 6 份（runbook §108 程序：crate 目錄 CWD＋crate 目錄雜散清理） | sbom_freshness 3/3 綠 |
+| **tag v0.2.0** | 附註標籤 → `4c29a1e`（0.2.0 產物對應樹：sidecar 重建＋安裝包重產）；標註含產物尺寸與 sha256；其後 main 變更屬下一版 | tag show |
+| **GitHub Release** | `gh release create v0.2.0`：附加安裝器＋.sig＋latest.json 三件產物＋sha256＋release notes（SHARED_STANDARDS §5.3） | gh release view |
+| **推送合規** | SHARED_STANDARDS §5.1「main 受保護禁止直接推送」→ 以 `release/v0.2.0` 分支承載本地 3 commits 推送＋PR 合併（非直接 push main）；issue 追蹤單建檔並於 commit 引用 | PR 編號 |
+| **分支對齊（不得落後）** | develop/release/test（本地與遠端皆 ba9123c，落後 main 70、零分歧）→ 全數 fast-forward 至對齊後之 main 並推送 | ls-remote 四分支同點 |
+| 驗證 | cargo check/test（sbom_freshness/guards/secret_scan 全綠）＋fmt 0 | 本節 |
+| 未竟 | Authenticode 購證（OV-EV）與 updates.auxbridge.internal 主機＝既有 BLOCKED，不在本收斂範圍 | UPDATER_RUNBOOK §5 |
+
+This addendum records execution facts only; it does not approve product scope, certification, or release.
 ## Consolidation rules
 
 1. Keep one current navigation register and one acceptance/evidence ledger per project. Detailed requirements belong in their project documents.

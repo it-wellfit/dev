@@ -2,9 +2,9 @@
   "bomFormat": "CycloneDX",
   "specVersion": "1.5",
   "version": 1,
-  "serialNumber": "urn:uuid:d82ca160-bc92-4ffa-a5e4-b2876f60b679",
+  "serialNumber": "urn:uuid:7b5d4a46-5c72-4cff-ac86-390c2a450536",
   "metadata": {
-    "timestamp": "2026-11-12T07:29:24.315812100Z",
+    "timestamp": "2026-11-14T09:03:23.757148700Z",
     "tools": [
       {
         "vendor": "CycloneDX",
@@ -14,9 +14,9 @@
     ],
     "component": {
       "type": "application",
-      "bom-ref": "path+file:///C:/Users/stephanie.huang/Desktop/%E6%96%B0%E4%BA%BA%E8%A8%93%E7%B7%B4/Projects/2026/Dev/crates/kem#0.1.0",
+      "bom-ref": "path+file:///C:/Users/stephanie.huang/Desktop/%E6%96%B0%E4%BA%BA%E8%A8%93%E7%B7%B4/Projects/2026/Dev/crates/kem#0.2.0",
       "name": "kem",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "description": "Knowledge Evolution Module: immutable capture, atomic claims, rule vetting, hash-chained ledger, BM25 retrieval, evolution and governance",
       "scope": "required",
       "licenses": [
@@ -24,21 +24,21 @@
           "expression": "LicenseRef-Proprietary"
         }
       ],
-      "purl": "pkg:cargo/kem@0.1.0?download_url=file://.",
+      "purl": "pkg:cargo/kem@0.2.0?download_url=file://.",
       "components": [
         {
           "type": "library",
-          "bom-ref": "path+file:///C:/Users/stephanie.huang/Desktop/%E6%96%B0%E4%BA%BA%E8%A8%93%E7%B7%B4/Projects/2026/Dev/crates/kem#0.1.0 bin-target-0",
+          "bom-ref": "path+file:///C:/Users/stephanie.huang/Desktop/%E6%96%B0%E4%BA%BA%E8%A8%93%E7%B7%B4/Projects/2026/Dev/crates/kem#0.2.0 bin-target-0",
           "name": "kem",
-          "version": "0.1.0",
-          "purl": "pkg:cargo/kem@0.1.0?download_url=file://.#src/lib.rs"
+          "version": "0.2.0",
+          "purl": "pkg:cargo/kem@0.2.0?download_url=file://.#src/lib.rs"
         },
         {
           "type": "application",
-          "bom-ref": "path+file:///C:/Users/stephanie.huang/Desktop/%E6%96%B0%E4%BA%BA%E8%A8%93%E7%B7%B4/Projects/2026/Dev/crates/kem#0.1.0 bin-target-1",
+          "bom-ref": "path+file:///C:/Users/stephanie.huang/Desktop/%E6%96%B0%E4%BA%BA%E8%A8%93%E7%B7%B4/Projects/2026/Dev/crates/kem#0.2.0 bin-target-1",
           "name": "kem",
-          "version": "0.1.0",
-          "purl": "pkg:cargo/kem@0.1.0?download_url=file://.#src/main.rs"
+          "version": "0.2.0",
+          "purl": "pkg:cargo/kem@0.2.0?download_url=file://.#src/main.rs"
         }
       ]
     },
@@ -52,9 +52,9 @@
   "components": [
     {
       "type": "library",
-      "bom-ref": "path+file:///C:/Users/stephanie.huang/Desktop/%E6%96%B0%E4%BA%BA%E8%A8%93%E7%B7%B4/Projects/2026/Dev/crates/console_manifest#0.1.0",
+      "bom-ref": "path+file:///C:/Users/stephanie.huang/Desktop/%E6%96%B0%E4%BA%BA%E8%A8%93%E7%B7%B4/Projects/2026/Dev/crates/console_manifest#0.2.0",
       "name": "console_manifest",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "description": "Unified ops console manifest: single page/registry SSOT consumed by the platform dynamic renderer and the KEM static renderer",
       "scope": "required",
       "licenses": [
@@ -62,7 +62,7 @@
           "expression": "LicenseRef-Proprietary"
         }
       ],
-      "purl": "pkg:cargo/console_manifest@0.1.0?download_url=file://..\\console_manifest"
+      "purl": "pkg:cargo/console_manifest@0.2.0?download_url=file://..\\console_manifest"
     },
     {
       "type": "library",
@@ -4370,13 +4370,13 @@
   ],
   "dependencies": [
     {
-      "ref": "path+file:///C:/Users/stephanie.huang/Desktop/%E6%96%B0%E4%BA%BA%E8%A8%93%E7%B7%B4/Projects/2026/Dev/crates/console_manifest#0.1.0"
+      "ref": "path+file:///C:/Users/stephanie.huang/Desktop/%E6%96%B0%E4%BA%BA%E8%A8%93%E7%B7%B4/Projects/2026/Dev/crates/console_manifest#0.2.0"
     },
     {
-      "ref": "path+file:///C:/Users/stephanie.huang/Desktop/%E6%96%B0%E4%BA%BA%E8%A8%93%E7%B7%B4/Projects/2026/Dev/crates/kem#0.1.0",
+      "ref": "path+file:///C:/Users/stephanie.huang/Desktop/%E6%96%B0%E4%BA%BA%E8%A8%93%E7%B7%B4/Projects/2026/Dev/crates/kem#0.2.0",
       "dependsOn": [
         "registry+https://github.com/rust-lang/crates.io-index#chrono@0.4.45",
-        "path+file:///C:/Users/stephanie.huang/Desktop/%E6%96%B0%E4%BA%BA%E8%A8%93%E7%B7%B4/Projects/2026/Dev/crates/console_manifest#0.1.0",
+        "path+file:///C:/Users/stephanie.huang/Desktop/%E6%96%B0%E4%BA%BA%E8%A8%93%E7%B7%B4/Projects/2026/Dev/crates/console_manifest#0.2.0",
         "registry+https://github.com/rust-lang/crates.io-index#reqwest@0.12.28",
         "registry+https://github.com/rust-lang/crates.io-index#serde@1.0.229",
         "registry+https://github.com/rust-lang/crates.io-index#serde_json@1.0.154",

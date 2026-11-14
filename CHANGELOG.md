@@ -3,6 +3,25 @@
 本檔記錄根 workspace（`core/`、`platform/`、`web/`、`crates/flaps_bridge`）的實際變更。格式參考 Keep a Changelog。子專案（ekpi-platform、Wellfit、SyncMesh）各自有變更記錄。
 
 
+## [0.2.0] — 2026-11-13
+
+首次標籤發布（tag `v0.2.0` → commit `4c29a1e`）。產物：`AuxBridge_0.2.0_x64-setup.exe`（12,897,555 bytes；含 OCR sidecar 34.5 MB）＋`.sig`＋`latest.json`（minisign 驗簽通過）；GitHub Release 附三件產物與 sha256。
+
+**範圍界線**：本版產物建自 `4c29a1e`（sidecar 重建＋安裝包重產）；其後 `main` 之變更（G4 治理強化、備份工具、UX 修復、Lucide 圖標等）屬下一版（見 [Unreleased]）。版本號自此統一：root workspace 六 crate 與桌面殼皆為 `0.2.0`。
+
+## [Unreleased] — 2026-11-14（UI-1 Lucide 圖標系統：emoji → stroke SVG）
+
+### Added
+- **Lucide stroke 圖標系統**（`platform/src/icons.rs`，零依賴）：15 個 key 的 SVG path 表（24×24、stroke 1.5、fill none、currentColor、aria-hidden），取代全部 emoji——跨平台渲染一致、可繼承 token 色、可縮放。
+- **manifest 圖標 SSOT**：`NavGroup`/`Studio` 加 `icon` 欄位（10 群組 + 4 工作室 + overview=home）；label 移除全部 emoji。
+- **導覽渲染**：`NavGroupView`/`StudioView` 加 `icon`＋`icon_svg`（建構時預渲染，模板零過濾器）；`studio_nav.html` 渲染 inline SVG；`ui-v2.css` 加 `.ico` 樣式（18px/基線對齊）。
+- **麵包屑**：`nav-breadcrumb`（總覽 › 工作室 › 群組）渲染驗證。
+
+### 驗證（2026-11-14 實測）
+- 12 個 SVG 圖標渲染、emoji 殘留 0、麵包屑 True
+- 32/32 頁掃描 200；**162 tests / 0 failed**；fmt/clippy PASS
+- demo 8090 運行中（39 筆交易、admin/Admin1234）
+
 ## [Unreleased] — 2026-11-13（PHASE-G4 深度稽核修復：測試/角色/單位/API 契約/旗標/響應式）
 
 ### Added

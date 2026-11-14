@@ -2,9 +2,9 @@
   "bomFormat": "CycloneDX",
   "specVersion": "1.5",
   "version": 1,
-  "serialNumber": "urn:uuid:363bb2f4-6416-408b-8929-615db750626c",
+  "serialNumber": "urn:uuid:1475cf3b-e3d5-4479-8fb7-35f9f1f553eb",
   "metadata": {
-    "timestamp": "2026-11-12T10:55:59.804277200Z",
+    "timestamp": "2026-11-14T09:03:25.316072500Z",
     "tools": [
       {
         "vendor": "CycloneDX",
@@ -14,9 +14,9 @@
     ],
     "component": {
       "type": "library",
-      "bom-ref": "path+file:///C:/Users/stephanie.huang/Desktop/%E6%96%B0%E4%BA%BA%E8%A8%93%E7%B7%B4/Projects/2026/Dev/crates/flaps_bridge#0.1.0",
+      "bom-ref": "path+file:///C:/Users/stephanie.huang/Desktop/%E6%96%B0%E4%BA%BA%E8%A8%93%E7%B7%B4/Projects/2026/Dev/crates/flaps_bridge#0.2.0",
       "name": "flaps_bridge",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "description": "COM batching bridge for FlapsErp (FLAPSConsoleCOM) - T-102/T-301",
       "scope": "required",
       "licenses": [
@@ -24,14 +24,14 @@
           "expression": "LicenseRef-Proprietary"
         }
       ],
-      "purl": "pkg:cargo/flaps_bridge@0.1.0?download_url=file://.",
+      "purl": "pkg:cargo/flaps_bridge@0.2.0?download_url=file://.",
       "components": [
         {
           "type": "library",
-          "bom-ref": "path+file:///C:/Users/stephanie.huang/Desktop/%E6%96%B0%E4%BA%BA%E8%A8%93%E7%B7%B4/Projects/2026/Dev/crates/flaps_bridge#0.1.0 bin-target-0",
+          "bom-ref": "path+file:///C:/Users/stephanie.huang/Desktop/%E6%96%B0%E4%BA%BA%E8%A8%93%E7%B7%B4/Projects/2026/Dev/crates/flaps_bridge#0.2.0 bin-target-0",
           "name": "flaps_bridge",
-          "version": "0.1.0",
-          "purl": "pkg:cargo/flaps_bridge@0.1.0?download_url=file://.#src/lib.rs"
+          "version": "0.2.0",
+          "purl": "pkg:cargo/flaps_bridge@0.2.0?download_url=file://.#src/lib.rs"
         }
       ]
     },
@@ -228,7 +228,7 @@
   ],
   "dependencies": [
     {
-      "ref": "path+file:///C:/Users/stephanie.huang/Desktop/%E6%96%B0%E4%BA%BA%E8%A8%93%E7%B7%B4/Projects/2026/Dev/crates/flaps_bridge#0.1.0",
+      "ref": "path+file:///C:/Users/stephanie.huang/Desktop/%E6%96%B0%E4%BA%BA%E8%A8%93%E7%B7%B4/Projects/2026/Dev/crates/flaps_bridge#0.2.0",
       "dependsOn": [
         "registry+https://github.com/rust-lang/crates.io-index#thiserror@1.0.69"
       ]

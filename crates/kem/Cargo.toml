@@ -1,6 +1,6 @@
 [package]
 name = "kem"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 rust-version = "1.99"
 description = "Knowledge Evolution Module: immutable capture, atomic claims, rule vetting, hash-chained ledger, BM25 retrieval, evolution and governance"
@@ -8,7 +8,7 @@ license = "LicenseRef-Proprietary"
 publish = false
 
 [dependencies]
-console_manifest = { path = "../console_manifest", version = "0.1.0" }
+console_manifest = { path = "../console_manifest", version = "0.2.0" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 thiserror = "2.0"
