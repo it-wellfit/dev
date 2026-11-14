@@ -697,6 +697,20 @@ This addendum records execution facts only; it does not approve product scope, c
 | 未竟 | Authenticode 購證（OV-EV）與 updates.auxbridge.internal 主機＝既有 BLOCKED，不在本收斂範圍 | UPDATER_RUNBOOK §5 |
 
 This addendum records execution facts only; it does not approve product scope, certification, or release.
+### 2026-11-14 addendum #48 完成實績（全項落實）
+
+| 項目 | 實績 | 證據 |
+|---|---|---|
+| 版本統一 | commit `abf8794`（15 檔；6 crate→0.2.0＋lock＋6 SBOM＋CHANGELOG [0.2.0] 段） | git show abf8794 |
+| 推送合規 | branch `feature/1-v0.2.0-release` → PR #2 → merge commit `54123fb`（非直接 push main；§5.1） | gh pr view 2：MERGED |
+| tag v0.2.0 | 附註標籤 → 4c29a1e，已推送遠端 | ls-remote refs/tags/v0.2.0 = 657847c |
+| GitHub Release | https://github.com/it-wellfit/dev/releases/tag/v0.2.0（安裝器＋.sig＋latest.json 三件＋sha256＋notes） | gh release view |
+| 分支對齊 | develop/release/test：ba9123c → 54123fb（FF 70 commits，零分歧；工作樹 .github 殘留清理後 checkout）| ls-remote 四分支同 54123fb |
+| 追蹤單 | issue #1 建檔；PR #2/#3 引用 | github issues |
+| 後續提交 | `4703c66`（Lucide 圖標＋麵包屑）經 PR #3 合併（57057f8）——全頁面稽核通過後入冊 | gh pr view 3 |
+| 全頁面稽核 | 37 頁：0 PUA/0 模板殘留/37 頁 SVG/渲染零錯誤；試算表 165,750=165,750 平衡；月報含首日（11-01）邊界正確；稽核軌跡 5×交易過帳＋LOGIN_SUCCEEDED；搜尋/草稿/體驗室全通 | 本節（實測腳本輸出） |
+| 教訓 | 測試腳本 cookie 檔尾 CRLF 污染 header（POST 帶 body 時 415；GET 不受影響）——Trim 後全通；產品無 bug | 本節 |
+
 ## Consolidation rules
 
 1. Keep one current navigation register and one acceptance/evidence ledger per project. Detailed requirements belong in their project documents.
