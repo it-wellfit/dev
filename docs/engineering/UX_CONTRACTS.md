@@ -4,6 +4,7 @@
 > 定義「全端 UI/UX 觀念」為**可稽核的體驗契約**，不是「多做幾頁應付了事」。
 > 每條契約：REQ（需求）→ DEC（決策）→ IMPL（實作位置）→ TEST（測試）→ EVID（證據）。
 > 自動校驗：`platform/tests/interaction_audit.rs`（TT-1..TT-5）＋ `web_crawl.rs`（6 閘門）＋ `password_reset.rs`（重設全鏈）。
+> **文件 metadata：** 文件 ID: DOC-UX-CONTRACT-001｜受眾: 管理者／技術者｜版本: v1.0｜最後驗證日期: 2026-11-15｜證據連結: commit 4b47c3f｜owner: 設計線
 
 ## 體驗契約（Experience Contracts）
 

@@ -2,6 +2,7 @@
 
 > 日期：2026-11-12｜狀態：Active｜用途：未來 UI 演進的重要參考依據（使用者指示持久化）
 > 對照三方：`web/legacy-1420.html`（歷史快照）｜`platform/templates` + `web/assets/ui-v2.css`（現行）｜Linear / Vercel / Stripe / Notion（校準基準，記憶 product_calibration_flaps_erp）
+> **文件 metadata：** 文件 ID: DOC-UI-DECONSTR-001｜受眾: 設計者／技術者｜版本: v1.0｜最後驗證日期: 2026-11-15｜證據連結: commit 4b47c3f｜owner: 設計線
 
 ## 0. 方法論：五層解剖模型
 

@@ -3,6 +3,7 @@
 > 版本 v1.0｜方法：C-03「先量測後動刀」；證據綁定（命令＋exit＋日期＋修訂版）｜範圍：S1–S9 表面 × EC-1..EC-10 契約 × 資料八態 × 問題來源清單
 > 關聯文件：`docs/design/EXPERIENCE_SPEC.md`（規格 SSOT）、`docs/design/EXPERIENCE_SURFACE_MATRIX.md`、`docs/design/EXPERIENCE_SCENARIO_MATRIX.md`、`docs/design/EXPERIENCE_PROBLEM_REGISTER.md`、`docs/engineering/UX_CONTRACTS.md`（互動層 TT-1..TT-8）、`docs/standards/REQUIREMENTS_TRACEABILITY.md`
 > 判定用語：符合／部分／N/A（附理由）／UNKNOWN（解鎖條件）；**UNKNOWN ≠ PASS**。
+> **文件 metadata：** 文件 ID: DOC-EXP-AUDIT-001｜受眾: 管理者／技術者／稽核｜版本: v1.0｜最後驗證日期: 2026-11-15｜證據連結: commit 4b47c3f｜owner: 驗證線
 
 ---
 

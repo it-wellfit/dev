@@ -3,6 +3,7 @@
 > 判定用語：● 符合／◐ 部分／— 不適用（理由見表後）／？ UNKNOWN（須附解鎖條件）｜**本表零空格**（自動校驗：`platform/tests/experience_traceability.rs`）
 > 本表與產品內體驗室（`/design/matrices`）同步；不一致時以本檔為 SSOT，修完再同步體驗室。
 > 來源：`docs/design/EXPERIENCE_AUDIT_v1.md`；缺口：`docs/design/EXPERIENCE_PROBLEM_REGISTER.md`。
+> **文件 metadata：** 文件 ID: DOC-EXP-SURF-001｜受眾: 管理者／技術者｜版本: v1.0｜最後驗證日期: 2026-11-15｜證據連結: commit 4b47c3f｜owner: 設計線
 
 ## 矩陣
 

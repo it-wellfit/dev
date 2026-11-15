@@ -3,6 +3,7 @@
 > 版本 v1.0｜生效日期 2026-11-13｜狀態 Active｜適用範圍：S1–S9 全表面、EC-1..EC-10 契約、TC-1..TC-5 工具組契約
 > 上位：使用者指令（零 JS／效能／安全／穩定／易維護；全端 UI/UX；可追溯可驗證）→ 本規格 → 體驗室（`/design`，產品內標本館）→ 逐頁驗收（R0–R9）。
 > 文件關係：互動層 TT-1..TT-8 見 `docs/engineering/UX_CONTRACTS.md`；需求追溯見 `docs/design/EXPERIENCE_TRACEABILITY.md`；稽核見 `docs/design/EXPERIENCE_AUDIT_v1.md`；矩陣見 `docs/design/EXPERIENCE_SURFACE_MATRIX.md` 與 `docs/design/EXPERIENCE_SCENARIO_MATRIX.md`。
+> **文件 metadata：** 文件 ID: DOC-EXP-SPEC-001｜受眾: 操作者／管理者／技術者／稽核｜版本: v1.0｜最後驗證日期: 2026-11-15｜證據連結: commit 4b47c3f｜owner: 產品線
 
 ## §1 目的與範圍
 
@@ -114,7 +115,7 @@
 ## §12 跨表面規則（S1–S9）
 
 - S1：響應式 4 尺寸（1280/1024/768/390）；900px 折疊；觸控目標 ≥44px。
-- S2：首啟/更新/錯誤態規格化（XP-001；解鎖：A-2 演練）。
+- S2：首啟（whitelisted URL http://127.0.0.1:8090/，登入頁 200，CSP default-src 'self'／style-src 'self'／img-src 'self' data:，零 JS 指令）；passive 更新（installMode=passive，requireSignedVersion=true，endpoints 內部端點 https://updates.auxbridge.internal/erp/latest.json）；錯誤態（DB 損毀/啟動失敗顯示錯誤頁＋問題／原因／處理方式，不空白）（XP-001；解鎖：A-2 演練）。
 - S3：靜態頁與平台同 token/密度；唯讀。
 - S4：列印＝頁首（公司/報表名/期間/產出時間）＋頁尾（頁碼/版本/內部使用）；分頁不截斷；黑白可讀（XP-002）。
 - S5：匯出＝檔名含報表名＋日期；欄序穩定；UTF-8；金額原樣（未知「—」）。

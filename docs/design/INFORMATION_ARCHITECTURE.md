@@ -1,6 +1,7 @@
 # INFORMATION ARCHITECTURE — 資訊架構
 
 > SSOT：`platform/src/api.rs`（48 條）＋ `platform/src/cross_module_api.rs`（12 條）＝**60 條路由**（2026-11-09 計數）。本文件為路由的使用者視角組織；新增路由必同步本文件（見各分組）。
+> **文件 metadata：** 文件 ID: DOC-IA-001｜受眾: 管理者／技術者｜版本: v1.0｜最後驗證日期: 2026-11-15｜證據連結: commit 4b47c3f｜owner: 架構線
 
 ## Sitemap（頁面層級，2026-11-09 現況）
 
