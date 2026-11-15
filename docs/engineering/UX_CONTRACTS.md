@@ -3,7 +3,7 @@
 > 版本：v1.0｜日期：2026-11-13｜狀態：Active
 > 定義「全端 UI/UX 觀念」為**可稽核的體驗契約**，不是「多做幾頁應付了事」。
 > 每條契約：REQ（需求）→ DEC（決策）→ IMPL（實作位置）→ TEST（測試）→ EVID（證據）。
-> 自動校驗：`platform/tests/interaction_audit.rs`（TT-1..TT-5）＋ `web_crawl.rs`（6 閘門）＋ `password_reset.rs`（重設全鏈）。
+> 自動校驗：`platform/tests/interaction_audit.rs`（TT-1..TT-5）＋ `web_crawl.rs`（7 閘門）＋ `password_reset.rs`（重設全鏈）＋ `auth.rs` 單元測試（管理員密碼同步 5 項）。
 > **文件 metadata：** 文件 ID: DOC-UX-CONTRACT-001｜受眾: 管理者／技術者｜版本: v1.0｜最後驗證日期: 2026-11-15｜證據連結: commit 4b47c3f｜owner: 設計線
 
 ## 體驗契約（Experience Contracts）
@@ -15,7 +15,7 @@
 | TT-3 | `:target` 面板：狀態詳情以 hash 開關（CSS display 切換） | `:target` 偽類 | 詳情面板零 JS 開關 | `#status-panel:target` 規則 | `design-system.css` L1001+ | tt3 | panel id＋:target 規則＋toggle 連結齊 |
 | TT-4 | 多步流程：精靈三步（模板→細節→確認），錯誤帶規則標籤回渲染 | Form POST 鏈 | 引導式登帳可用且錯誤可修 | stage=choose 分支＋R-BALANCE 回饋 | `api.rs::wizard_step2` | tt4 | 三步全通；借貸同科目→R-BALANCE 顯示 |
 | TT-5 | 搜尋回填：GET 查詢後輸入值保留 | GET form | 送出後輸入不消失 | value 屬性回填 | `search.html` | tt5 | q=cash → value="cash" |
-| TT-6 | 忘記密碼全鏈：請求（無帳號列舉）→管理員核發一次性 token（僅存 SHA-256、30 分鐘、用後即焚）→自設新密碼（撤銷全 session） | 多步公開流程 | 無自助重設＝登入死路 | 本地部署無郵件→token 交付制 | `0010_password_reset.sql`＋`api.rs` 3 路由＋2 模板 | password_reset 2 測試 | 全鏈 curl 實證：請求→核發（64 字元 token）→重設→新密碼登入 303 |
+| TT-6 | 忘記密碼全鏈：請求（無帳號列舉）→管理員核發一次性 token（僅存 SHA-256、30 分鐘、用後即焚）→自設新密碼（撤銷全 session） | 多步公開流程 | 無自助重設＝登入死路 | 本地部署無郵件→token 交付制 | `0010_password_reset.sql`＋`api.rs` 3 路由＋2 模板 | password_reset 2 測試＋`web_crawl::password_reset_family_is_reachable_and_zero_js` | 全鏈 curl 實證：請求→核發（64 字元 token）→重設→新密碼登入 303；**2026-11-15 部署面復驗**：重建執行檔後 `/forgot-password` 200、Playwright 表單可用、scripts=0 |
 | TT-7 | 死連結免疫：全站內部連結逐一可達（nav/頁尾/麵包屑任一錯字即 FAIL） | 全站連結圖 | 任何連結點開必須有頁 | BFS 爬取≥30 連結 | `web_crawl::every_internal_link_resolves` | crawl | 0 死連結 |
 | TT-8 | 404 契約：未知路徑＝品牌頁（識別＋問題/原因/處理方式＋返回連結＋零 JS） | fallback handler | 空白 404＝體驗不良 | 品牌 fallback 頁 | `api.rs::not_found_page` | web_crawl unknown_path | 404＋返回連結＋CSS＋scripts=0 |
 
@@ -24,6 +24,8 @@
 | 來源 | 問題 | 級別 | 狀態 |
 |------|------|------|------|
 | 使用者回報 | 登入缺忘記密碼/重設 | P1 | ✅ 修復（TT-6 全鏈） |
+| 使用者回報 | 「無法登入」：部署端跑舊 release 執行檔（`/forgot-password` 404）＋`AUXBRIDGE_ADMIN_PASSWORD` 於首次啟動後失效 | P0（可及性） | ✅ 修復（重建執行檔 34,874,368 bytes＋環境變數密碼同步＋撤銷舊 session）；Playwright/curl 雙證 |
+| 部署面實證 | Desktop 啟動器因 cmd 編碼把中文路徑寫成 `????`，雙擊無法 cd 到 repo | P0（可及性） | ✅ 修復（ASCII-only 啟動器，執行期解析 repo 路徑） |
 | 使用者回報 | 草稿→登帳資訊漏傳 | P0（財務數據） | ✅ 修復（amount plain 格式＋「元：」清理＋description 帶證據） |
 | 使用者回報 | AI 建議畫面錯誤無法開啟 | P1 | ✅ 修復（旗標治理 UI＋llama3→qwen3.5:4b＋think:false＋混合解析金額 88,500.00 ✓＋幣別正規化） |
 | 使用者回報 | 缺 AI 操作教學 | P2 | ⏳ 設計中（help 頁已有 AI 段落；互動教學列 P2 路線） |
@@ -45,6 +47,7 @@
 - rerank/HyDE 需 Ollama 運行（不可用→誠實降級，已測）。
 - 互動教學（TT-9 候選）與工作流設計器（TT-10 候選）列 P2 演進路線，尚未實作。
 - 瀏覽器實證（Playwright）為人工/半自動；自動化瀏覽器閘門列 P2。
+- 管理員密碼來源：`AUXBRIDGE_ADMIN_PASSWORD` 為部署端權威（設定即生效，會旋轉資料庫雜湊並撤銷該帳號 session）；不設定時維持首次啟動隨機密碼。此為刻取捨，見 PLAN_REGISTER addendum #49。
 
 ## 驗收判定
 

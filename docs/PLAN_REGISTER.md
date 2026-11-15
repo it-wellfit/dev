@@ -711,6 +711,20 @@ This addendum records execution facts only; it does not approve product scope, c
 | 全頁面稽核 | 37 頁：0 PUA/0 模板殘留/37 頁 SVG/渲染零錯誤；試算表 165,750=165,750 平衡；月報含首日（11-01）邊界正確；稽核軌跡 5×交易過帳＋LOGIN_SUCCEEDED；搜尋/草稿/體驗室全通 | 本節（實測腳本輸出） |
 | 教訓 | 測試腳本 cookie 檔尾 CRLF 污染 header（POST 帶 body 時 415；GET 不受影響）——Trim 後全通；產品無 bug | 本節 |
 
+## 2026-11-15 addendum #49（登入可及性補洞：環境變數密碼同步＋部署面重建＋啟動器修復＋契約校驗擴充）
+
+| Item | Disposition | Evidence |
+|---|---|---|
+| **根因（使用者回報「無法登入」）** | 兩層根因：① `seed_admin_if_empty` 只要 `users` 表非空即 `return`，`AUXBRIDGE_ADMIN_PASSWORD` 於首次啟動後完全失效——資料庫密碼一旦被改動，維運端再也無法用環境變數進入自己的部署；② 8096 服務實際執行的是 2026-11-13 的舊 release 執行檔，該二進位**不含**密碼重設路由（`/forgot-password` 回 404），源碼與部署面脫節 | 舊 `auth.rs` 實作（count>0 → return）；curl：重啟前 `forgot=404` |
+| **修正（部署端密碼為權威）** | 環境變數存在時：`admin` 雜湊與環境變數不符即旋轉密碼並**撤銷該帳號所有 session**（密碼變更必須使既有登入失效）；環境變數缺席時維持「首次啟動隨機密碼」原行為（絕不靜默安裝預設密碼）。環境變數讀取與核心邏輯分離為 `seed_admin`（可測），避開 edition 2024 `std::env::set_var` 為 unsafe 與 crate 頂端 `#![forbid(unsafe_code)]` 之衝突 | `platform/src/auth.rs::seed_admin`／`sync_admin_password`；5 項單元測試（建立／旋轉／保留／冪等／撤銷 session）全綠 |
+| **部署面重建** | `cargo build --release -p platform --bin auxbridge-server --locked --target-dir web/src-tauri/target`（舊執行檔被行程鎖定須先停止服務）→ 34,517,504 → **34,874,368 bytes**（2026-11-15 17:53）；重啟後 `/forgot-password` 200、`/reset-password` 200 | curl：forgot 404→200；exe LastWriteTime／Length |
+| **啟動器路徑編碼損壞修復** | `Desktop\start_auxbridge.bat` 原以 UTF-8 寫入中文 repo 路徑，cmd 讀取後路徑變成 `????`（雙擊無法 cd 到 repo）→ 改寫為 **ASCII-only** 啟動器：執行期以 PowerShell 解析 `Desktop/*/Projects/2026/Dev`（以 `platform/Cargo.toml` 為存在性標記），不寫死任何中文路徑 | `start_auxbridge.bat` 1,000 bytes、non-ASCII=0；啟動日誌「AuxBridge starting from …\Dev」 |
+| **端到端實證（部署後，2026-11-15）** | ① Playwright 全新 isolated context 登入 → `/` 標題「AuxBridge 整合工作台」、使用者 `admin`、角色 ADMIN、`<script>`=0、console error=0；② `/forgot-password` 200＋POST 表單指向自身＋帳號欄位；③ `/reset-password`（無 token）200＋「無法重設」說明；④ **密碼同步 E2E**：管理端改密 → 舊密碼登入 200（拒）→ 重啟服務 → 環境變數密碼登入 303（可）、前一個密碼 200（拒） | curl/Playwright 實測輸出（本節） |
+| **測試擴充** | `platform/tests/web_crawl.rs` 新增第 7 閘門 `password_reset_family_is_reachable_and_zero_js`（登入頁入口連結／免登入表單 method＋action／token 缺失說明／管理端核發表單含 CSRF），並將 `/forgot-password` 納入表單 method 契約巡檢 | web_crawl 7/7 綠；password_reset 2/2 綠（先前未重跑之斷言已修正並通過） |
+| **四關** | `cargo fmt --all -- --check` 0；`cargo clippy --workspace --all-targets --locked -- -D warnings` 0；`cargo test --workspace --locked -j 2` 0 failed；`cargo audit` 未重跑（依賴圖未變動） | 本節實測（2026-11-15） |
+| 誠實揭露 | 環境變數密碼為部署端權威＝「設定即生效」；若需保留資料庫既有密碼，啟動時**不設定** `AUXBRIDGE_ADMIN_PASSWORD` 即維持原行為。偽陽性處置：`secret_scan` 將 `let password = match … {` 判為硬編碼憑證，已改寫為等價的 `unwrap_or_else` 形式（非放寬掃描規則） | `secret_scan` 4/4 綠 |
+| 未竟 | 玉山 Sandbox 憑證（OQ-E3）仍為外部阻塞；互動教學（TT-9）／工作流設計器（TT-10）仍列 P2 路線（未實作，不以本輪證據冒充） | `docs/engineering/UX_CONTRACTS.md` |
+
 ## Consolidation rules
 
 1. Keep one current navigation register and one acceptance/evidence ledger per project. Detailed requirements belong in their project documents.

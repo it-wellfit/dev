@@ -300,28 +300,56 @@ pub async fn security_headers(mut response: axum::response::Response) -> axum::r
 // Administrator bootstrap
 // ---------------------------------------------------------------------------
 
-/// Seed the initial administrator account exactly once (when no users exist).
+/// Bootstrap the administrator account at startup.
 ///
 /// Password source: `AUXBRIDGE_ADMIN_PASSWORD`; when absent, a random password is
 /// generated and printed ONCE to stdout for the operator to store. Default
 /// credentials are never silently installed.
+///
+/// 2026-11-15（登入可及性補洞，TT-1）：舊實作只要 `users` 表非空就直接 return，
+/// 導致環境變數設定的密碼在第一次啟動後完全失效——資料庫一旦被其他流程改過密碼，
+/// 維運端就再也無法用 `AUXBRIDGE_ADMIN_PASSWORD` 進入自己的部署（實測：登入頁
+/// 持續回「帳號或密碼不正確」）。現行為：環境變數視為部署端密碼的權威來源，
+/// 已存在但雜湊不符時旋轉密碼並撤銷該帳號所有 session。
+///
+/// 環境變數讀取與核心邏輯分離（`seed_admin`），使測試可在不動用行程全域環境
+/// 變數的前提下驗證同步行為（edition 2024 的 `std::env::set_var` 為 unsafe，
+/// 與 crate 頂端 `#![forbid(unsafe_code)]` 衝突，不得於測試中使用）。
 pub async fn seed_admin_if_empty(pool: &SqlitePool) -> Result<(), Box<dyn std::error::Error>> {
+    let configured = std::env::var("AUXBRIDGE_ADMIN_PASSWORD")
+        .ok()
+        .map(|p| p.trim().to_string())
+        .filter(|p| !p.is_empty());
+    seed_admin(pool, configured).await
+}
+
+/// Core bootstrap logic (testable): `configured` is the operator-provided
+/// password; `None` means "first run, generate a random password once".
+///
+/// - `users` 表為空：以 `configured`（或隨機密碼）建立 `admin`。
+/// - `users` 表非空且 `configured = None`：保持既有密碼不動（原行為）。
+/// - `users` 表非空且 `configured = Some(p)`：若 `admin` 的雜湊無法通過 `p`
+///   驗證，則旋轉密碼並撤銷該帳號所有 session（密碼變更必須使既有登入失效）。
+pub async fn seed_admin(
+    pool: &SqlitePool,
+    configured: Option<String>,
+) -> Result<(), Box<dyn std::error::Error>> {
     let (count,): (i64,) = sqlx::query_as("SELECT COUNT(*) FROM users")
         .fetch_one(pool)
         .await?;
     if count > 0 {
+        if let Some(password) = configured.as_deref() {
+            sync_admin_password(pool, "admin", password).await?;
+        }
         return Ok(());
     }
 
-    let password = match std::env::var("AUXBRIDGE_ADMIN_PASSWORD") {
-        Ok(p) if !p.trim().is_empty() => p.trim().to_string(),
-        _ => {
-            let random = uuid::Uuid::new_v4().to_string().replace('-', "");
-            let random = random[..16].to_string();
-            println!("=== 首次啟動：已建立管理員帳號 admin，密碼（僅顯示這一次）：{random} ===");
-            random
-        }
-    };
+    let password = configured.unwrap_or_else(|| {
+        let random = uuid::Uuid::new_v4().to_string().replace('-', "");
+        let random = random[..16].to_string();
+        println!("=== 首次啟動：已建立管理員帳號 admin，密碼（僅顯示這一次）：{random} ===");
+        random
+    });
 
     let hash = hash_password(&password)?;
     sqlx::query(
@@ -333,6 +361,41 @@ pub async fn seed_admin_if_empty(pool: &SqlitePool) -> Result<(), Box<dyn std::e
     .await?;
     println!("管理員帳號就緒：admin（user_id=user-admin，RBAC 種子角色 role-admin）");
     Ok(())
+}
+
+/// Align the stored `admin` credential with the operator-configured password.
+///
+/// Returns `true` when the hash was rotated. Sessions of that account are
+/// revoked on rotation: a password change must invalidate existing sessions
+/// (same rule as `POST /admin/users/reset_password`).
+async fn sync_admin_password(
+    pool: &SqlitePool,
+    username: &str,
+    password: &str,
+) -> Result<bool, Box<dyn std::error::Error>> {
+    let row: Option<(String, String)> =
+        sqlx::query_as("SELECT user_id, password_hash FROM users WHERE username = ?")
+            .bind(username)
+            .fetch_optional(pool)
+            .await?;
+    let Some((user_id, stored_hash)) = row else {
+        return Ok(false);
+    };
+    if verify_password(password, &stored_hash) {
+        return Ok(false);
+    }
+    let hash = hash_password(password)?;
+    sqlx::query("UPDATE users SET password_hash = ? WHERE user_id = ?")
+        .bind(&hash)
+        .bind(&user_id)
+        .execute(pool)
+        .await?;
+    let _ = sqlx::query("DELETE FROM sessions WHERE user_id = ?")
+        .bind(&user_id)
+        .execute(pool)
+        .await;
+    println!("管理員密碼已依環境變數同步（user_id={user_id}）；既有登入階段已撤銷。");
+    Ok(true)
 }
 
 /// Validate credentials; returns the user_id when valid and active.
@@ -749,5 +812,124 @@ mod tests {
         .execute(pool)
         .await
         .expect("seed");
+    }
+
+    /// In-memory pool with all migrations applied (test helper).
+    async fn migrated_pool() -> SqlitePool {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .expect("pool");
+        crate::db::DatabaseManager::new(pool.clone())
+            .initialize()
+            .await
+            .expect("migrations");
+        pool
+    }
+
+    #[tokio::test]
+    async fn seed_admin_creates_admin_with_configured_password() {
+        let pool = migrated_pool().await;
+        seed_admin(&pool, Some("configured-pass-123".to_string()))
+            .await
+            .expect("seed");
+        assert_eq!(
+            authenticate(&pool, "admin", "configured-pass-123").await,
+            Some("user-admin".to_string()),
+            "the configured password must authenticate right after the first bootstrap"
+        );
+        assert!(
+            authenticate(&pool, "admin", "wrong-password")
+                .await
+                .is_none(),
+            "a wrong password must still be rejected"
+        );
+    }
+
+    #[tokio::test]
+    async fn seed_admin_rotates_password_when_configured_password_changed() {
+        let pool = migrated_pool().await;
+        seed_admin(&pool, Some("old-pass-123".to_string()))
+            .await
+            .expect("seed");
+        seed_admin(&pool, Some("new-pass-456".to_string()))
+            .await
+            .expect("reseed");
+        assert_eq!(
+            authenticate(&pool, "admin", "new-pass-456").await,
+            Some("user-admin".to_string()),
+            "the newly configured password must work after rotation"
+        );
+        assert!(
+            authenticate(&pool, "admin", "old-pass-123").await.is_none(),
+            "the previous password must stop working after rotation"
+        );
+    }
+
+    #[tokio::test]
+    async fn seed_admin_keeps_existing_password_when_none_configured() {
+        let pool = migrated_pool().await;
+        seed_admin(&pool, Some("kept-pass-123".to_string()))
+            .await
+            .expect("seed");
+        seed_admin(&pool, None).await.expect("reseed");
+        assert_eq!(
+            authenticate(&pool, "admin", "kept-pass-123").await,
+            Some("user-admin".to_string()),
+            "without a configured password the stored hash must be preserved"
+        );
+    }
+
+    #[tokio::test]
+    async fn seed_admin_is_idempotent_when_password_already_matches() {
+        let pool = migrated_pool().await;
+        seed_admin(&pool, Some("same-pass-123".to_string()))
+            .await
+            .expect("seed");
+        let (before,): (String,) =
+            sqlx::query_as("SELECT password_hash FROM users WHERE username = 'admin'")
+                .fetch_one(&pool)
+                .await
+                .expect("hash");
+        seed_admin(&pool, Some("same-pass-123".to_string()))
+            .await
+            .expect("reseed");
+        let (after,): (String,) =
+            sqlx::query_as("SELECT password_hash FROM users WHERE username = 'admin'")
+                .fetch_one(&pool)
+                .await
+                .expect("hash");
+        assert_eq!(
+            before, after,
+            "a matching configured password must not rewrite the stored hash"
+        );
+    }
+
+    #[tokio::test]
+    async fn seed_admin_revokes_sessions_when_password_rotated() {
+        let pool = migrated_pool().await;
+        seed_admin(&pool, Some("old-pass-123".to_string()))
+            .await
+            .expect("seed");
+        create_session(&pool, "user-admin").await.expect("session");
+        let (before,): (i64,) =
+            sqlx::query_as("SELECT COUNT(*) FROM sessions WHERE user_id = 'user-admin'")
+                .fetch_one(&pool)
+                .await
+                .expect("count");
+        assert_eq!(before, 1, "a session row must exist before the rotation");
+        seed_admin(&pool, Some("new-pass-456".to_string()))
+            .await
+            .expect("reseed");
+        let (after,): (i64,) =
+            sqlx::query_as("SELECT COUNT(*) FROM sessions WHERE user_id = 'user-admin'")
+                .fetch_one(&pool)
+                .await
+                .expect("count");
+        assert_eq!(
+            after, 0,
+            "rotating the password must revoke every session of that account"
+        );
     }
 }
