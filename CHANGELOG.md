@@ -9,6 +9,20 @@
 
 **範圍界線**：本版產物建自 `4c29a1e`（sidecar 重建＋安裝包重產）；其後 `main` 之變更（G4 治理強化、備份工具、UX 修復、Lucide 圖標等）屬下一版（見 [Unreleased]）。版本號自此統一：root workspace 六 crate 與桌面殼皆為 `0.2.0`。
 
+## [Unreleased] — 2026-11-15（工作平台全面對齊玉山 V2.9）
+
+### Changed
+- **API 中樞升級 V2.9**（`platform/src/apihub.rs`＋`api_catalog.html`/`api_codes.html`）：`esun_endpoints()` 8→**9** 支（新增 `/payment/downloadFxRemittanceVoucher` 外幣憑證下載，V2.9 §4.(九)）；contract_ref 對齊 V2.9 章節與 `V29.txt` 行號；錯誤碼對照頁由僅 910000 擴至 **V2.9 附錄全表 11 碼**（910068 RetryableLater、910069/910093/910094 欄位級、910073 查詢上限、999999）；Release checklist RC-01/RC-02/RC-04 更新（9 端點、UAT 冒煙取代 mTLS 憑證）。
+- **BankPay 連線檢查升級 V2.9**（`apihub.rs::apihub_net`＋`bankpay.html`）：URL 檢查改為 V2.9 規則（`http://IP:port` 指向元件安裝機器，UAT 8443／營運 8080 對調；https 亦接受）；連線完整度不再要求 `source_system_id`（**V2.9 已移除 SourceSystemId**，保留為選填僅供 V2.8 舊元件回測）；「V2.8 規格埠」改「V2.9 規格埠」（元件 8443/8080、外部 9443、eospt DEV 移除）；mTLS 字樣全面改為「TLS 材料三件套（opt-in）」。
+- **BankPay mock 客戶端與模型**（`bankpay/client.rs`、`model.rs`）：fail-closed 訊息與文件對齊 V2.9（9 端點、UAT 冒煙腳本已備未執行）；config 文件改 V2.9 URL 規則與 TLS 材料三件套 opt-in。
+- **Tauri 桌面殼**（`web/src-tauri/src/state.rs`）：預設 `ESUN_BASE_URL` 改 `http://127.0.0.1:8443`（V2.9 UAT 元件埠）、外部端點預設 `eospu.testesunbank.com.tw:9443`（eospt 移除）；`two_way_ssl` 標註為相容位（V2.9 已移除強制）；型別鏡射註記 V2.8→V2.9。
+- **活文件同步**：`docs/knowledge-hub/手冊-A-F.md`（架構圖/安全機制表/銀行環境表改 V2.9）、`docs/PLAN_REGISTER.md`（V2.9 文件與 9 端點目錄行）、`docs/management/營運治理機制.md`（釘選規格 V2.8→V2.9）。
+
+### Verified — 2026-11-15 實測
+- `cargo check -p platform --all-targets`（dev-target）**零錯誤**（askama 模板含 V2.9 文案編譯通過）。
+- 權威契約 `Wellfit/crates/wellfit_bankpay`（V2.9）：clippy 零警告＋`test --workspace --no-fail-fast` **484 passed / 0 failed / 19 ignored**（含 9 支 UAT 冒煙 opt-in 腳本）；UAT 連線實測**未執行＝未驗證**（`docs/bankpay/10-uat-smoke-runbook.md`）。
+- 註：平台**測試二進位連結**在本機 dev-target 對 ONNX 原生庫（paddleocr）失敗，屬既有環境限制（10 個未更動測試目標同樣失敗；`cargo check` 全綠佐證非本次變更所致）。
+
 ## [Unreleased] — 2026-11-14（UI-1 Lucide 圖標系統：emoji → stroke SVG）
 
 ### Added

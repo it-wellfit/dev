@@ -549,6 +549,7 @@ pub fn router(state: AppState) -> Router {
         )
         .route("/import/history", get(crate::pages::import_history_page))
         .route("/help", get(crate::pages::help_page))
+    .route("/help/tutorial", get(crate::tutorial::tutorial_page))
         .route(
             "/bankpay/batches/:batch_id",
             get(crate::pages::bankpay_batch_detail),

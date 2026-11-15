@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+{% import "partials/studio_nav.html" as studio_nav %}
+<html lang="zh-Hant-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>互動教學 — AuxBridge 整合工作台</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%232563eb'/%3E%3Ctext x='8' y='12' font-size='10' font-family='sans-serif' fill='white' text-anchor='middle' font-weight='bold'%3EA%3C/text%3E%3C/svg%3E">
+    <link rel="stylesheet" href="/assets/design-system.css">
+</head>
+<body>
+    <a class="skip-link" href="#main">跳至主要內容</a>
+
+    <header class="app-header">
+        <div class="container">
+            <div>
+                <h1>互動教學</h1>
+                <p class="app-subtitle">七步上手：從登入到稽核追溯（零 JavaScript）</p>
+            </div>
+            <p class="app-subtitle">
+                使用者：<strong>{{ acting_user }}</strong>
+                ｜
+                <a class="btn btn-secondary" href="/">返回工作台</a>
+            </p>
+        </div>
+    </header>
+    {{ studio_nav::site_nav(nav) }}
+
+    <main id="main" class="container">
+        <section class="panel" aria-labelledby="tut-intro-title">
+            <h2 id="tut-intro-title">這份教學怎麼用</h2>
+            <p>依序完成 7 個步驟。每一步都有<strong>目標</strong>、<strong>怎麼做</strong>（含直接前往的按鈕）、<strong>成功判準</strong>（如何確認自己做對了）與<strong>常見錯誤</strong>（卡住時先看這裡）。點開步驟即可開始，全部約 10 分鐘。</p>
+            <nav aria-label="教學步驟快速跳轉" class="form-actions">
+                <a class="btn btn-secondary" href="#step-1">1 登入</a>
+                <a class="btn btn-secondary" href="#step-2">2 總覽</a>
+                <a class="btn btn-secondary" href="#step-3">3 建立交易</a>
+                <a class="btn btn-secondary" href="#step-4">4 匯入</a>
+                <a class="btn btn-secondary" href="#step-5">5 報表</a>
+                <a class="btn btn-secondary" href="#step-6">6 稽核</a>
+                <a class="btn btn-secondary" href="#step-7">7 進階</a>
+            </nav>
+            <p class="section-note">本頁所有連結都是真實路由；任何連結失效會先被全站連結圖測試（TT-7）抓到，而不是等使用者點到 404。</p>
+        </section>
+
+        <details class="panel" id="step-1" open>
+            <summary><strong>步驟 1 · 登入與導覽</strong></summary>
+            <p><strong>目標：</strong>成功登入，並認識左側五大工作室導覽。</p>
+            <p><strong>怎麼做：</strong>前往<a href="/login">登入頁</a>輸入帳號與密碼後送出；成功後自動回到總覽。 <a class="btn btn-primary" href="/login">前往登入頁</a></p>
+            <p><strong>成功判準：</strong>右上顯示「使用者：<em>你的帳號</em>」，左側可見帳務作業、匯入與草稿、報表分析等工作室分區。</p>
+            <p><strong>常見錯誤：</strong>密碼錯誤→由<a href="/forgot-password">忘記密碼</a>登記重設請求，系統管理員核發一次性連結後即可自設新密碼；連續失敗 5 次會鎖定 15 分鐘，畫面會顯示剩餘秒數。</p>
+        </details>
+
+        <details class="panel" id="step-2">
+            <summary><strong>步驟 2 · 讀懂總覽與服務狀態</strong></summary>
+            <p><strong>目標：</strong>看懂總覽的 KPI 卡與服務狀態列，知道「降級」不代表系統故障。</p>
+            <p><strong>怎麼做：</strong>前往<a href="/">總覽</a>，閱讀交易總數、待覆核等 KPI，以及「系統狀態」面板。 <a class="btn btn-primary" href="/">前往總覽</a></p>
+            <p><strong>成功判準：</strong>能看到「資料庫已連線」等狀態卡；整體狀態的詳情面板可用「查看詳情」展開（零 JS 的 :target 開合）。</p>
+            <p><strong>常見錯誤：</strong>整體狀態顯示「降級」時，先看詳情——常見原因是銀行支付尚未設定正式憑證（此時以 Mock 模式誠實標示），並非系統不可用。</p>
+        </details>
+
+        <details class="panel" id="step-3">
+            <summary><strong>步驟 3 · 建立第一筆交易（三步精靈）</strong></summary>
+            <p><strong>目標：</strong>用引導式精靈建立一筆借貸平衡的交易。</p>
+            <p><strong>怎麼做：</strong>前往<a href="/new">新增交易</a>，依精靈三步（模板→分錄→確認）填寫後送出。 <a class="btn btn-primary" href="/new">前往新增交易</a></p>
+            <p><strong>成功判準：</strong>畫面出現建立成功訊息，且<a href="/transactions">交易清單</a>中能看到這筆交易。</p>
+            <p><strong>常見錯誤：</strong>借貸不平衡時，頁面會停留在原步驟並顯示規則名稱（R-BALANCE）與修正提示；已填寫的資料不會遺失，修正金額後重新送出即可。</p>
+        </details>
+
+        <details class="panel" id="step-4">
+            <summary><strong>步驟 4 · 匯入 CSV 批次（兩段式）</strong></summary>
+            <p><strong>目標：</strong>把一批 CSV 交易安全地帶入系統。</p>
+            <p><strong>怎麼做：</strong>前往<a href="/import">快速匯入</a>上傳檔案，先看逐列「合格／錯誤」的預檢報告，確認無誤後再按確認登帳。 <a class="btn btn-primary" href="/import">前往快速匯入</a></p>
+            <p><strong>成功判準：</strong>預檢報告顯示合格列；確認後<a href="/import/history">匯入歷史</a>出現本批次的稽核紀錄。</p>
+            <p><strong>常見錯誤：</strong>預檢有錯誤列時不會入帳（兩段式設計：確認前一律安全）；修正來源檔後重新上傳即可。</p>
+        </details>
+
+        <details class="panel" id="step-5">
+            <summary><strong>步驟 5 · 讀報表並驗證平衡</strong></summary>
+            <p><strong>目標：</strong>用月報表與試算表驗證帳務正確性。</p>
+            <p><strong>怎麼做：</strong>前往<a href="/reports/monthly">月報表</a>（可下載 CSV），再到<a href="/reports/trial-balance">試算表</a>核對借貸合計。 <a class="btn btn-primary" href="/reports/monthly">前往月報表</a></p>
+            <p><strong>成功判準：</strong>試算表的借方合計與貸方合計相等；月報表金額與你登帳的內容一致。</p>
+            <p><strong>常見錯誤：</strong>金額顯示以「元」為單位的精確小數（不以浮點近似）；若與預期不符，回到<a href="/transactions">交易清單</a>核對原始分錄。</p>
+        </details>
+
+        <details class="panel" id="step-6">
+            <summary><strong>步驟 6 · 查稽核軌跡（治理）</strong></summary>
+            <p><strong>目標：</strong>確認每筆操作都有紀錄、可追溯（管理員）。</p>
+            <p><strong>怎麼做：</strong>前往<a href="/audit">稽核軌跡</a>，依使用者／事件／期間過濾。 <a class="btn btn-primary" href="/audit">前往稽核軌跡</a></p>
+            <p><strong>成功判準：</strong>能看到你剛才的登入成功（LOGIN_SUCCEEDED）與交易過帳紀錄，含操作者與時間。</p>
+            <p><strong>常見錯誤：</strong>此頁需要管理員權限（ROLE_MANAGE）；一般使用者將看到權限說明而非資料。</p>
+        </details>
+
+        <details class="panel" id="step-7">
+            <summary><strong>步驟 7 · 進階：檢索、草稿與 AI 建議、銀行支付</strong></summary>
+            <p><strong>目標：</strong>認識三個進階能力與其誠實邊界。</p>
+            <p><strong>怎麼做：</strong>①<a href="/search">全文檢索</a>：以關鍵字搜尋交易；②<a href="/drafts">草稿解析</a>：貼上文字產生草稿與依據卡，AI 建議為實驗性（需人工採納、永不自動登帳）；③<a href="/bankpay">銀行支付</a>：玉山 BankPay 工作室。 <a class="btn btn-primary" href="/search">前往檢索</a></p>
+            <p><strong>成功判準：</strong>檢索有結果或誠實的空狀態；草稿頁可看到解析依據；銀行支付頁清楚標示 Mock／未串接狀態。</p>
+            <p><strong>常見錯誤：</strong>AI 建議預設關閉（治理頁可開）；銀行支付正式模式需玉山 Sandbox 憑證（未取得前顯示模擬狀態，不虛構串接成功）。</p>
+        </details>
+
+        <section class="panel" aria-labelledby="tut-done-title">
+            <h2 id="tut-done-title">完成檢核表</h2>
+            <table>
+                <thead>
+                    <tr><th>你學會了</th><th>去哪裡驗證</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>登入／登出、忘記密碼自助流程</td><td><a href="/profile">個人設定</a>（變更密碼）、頂欄「登出」</td></tr>
+                    <tr><td>建立平衡交易（三步精靈）</td><td><a href="/transactions">交易清單</a>搜尋你的交易碼</td></tr>
+                    <tr><td>兩段式批次匯入</td><td><a href="/import/history">匯入歷史</a></td></tr>
+                    <tr><td>讀月報與驗證平衡</td><td><a href="/reports/monthly">月報表</a>、<a href="/reports/trial-balance">試算表</a></td></tr>
+                    <tr><td>稽核追溯</td><td><a href="/audit">稽核軌跡</a>（管理員）</td></tr>
+                </tbody>
+            </table>
+            <p class="section-note">需要完整欄位規格時，見<a href="/help">操作指引</a>；介面狀態矩陣見<a href="/states">介面狀態</a>。</p>
+        </section>
+    </main>
+
+    <footer class="site-footer">
+        <div class="container">
+            <p>AuxBridge 整合工作台 · 互動教學（零 JavaScript，WCAG 2.2 AA 方向）</p>
+        </div>
+    </footer>
+</body>
+</html>

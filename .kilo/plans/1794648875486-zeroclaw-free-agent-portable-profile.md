@@ -156,3 +156,49 @@ OpenClaw（Node）安裝；Telegram／Slack／Discord 等通道；常駐服務�
 - Q1：是否允許 `ollama pull nomic-embed-text`（約 274 MB）以啟用記憶檢索？預設**不 pull**，改用 `markdown` memory。
 - Q2：是否允許 agent 寫入 workspace 以外的暫存路徑？預設**僅 workspace**。
 - Q3：Phase 2（Telegram＋常駐）是否要另外開立計畫？預設**是**，本計畫不涵蓋。
+
+## 11. 實作紀錄（2026-11-15）
+
+**已交付**：`agents/zeroclaw/` 的 `README.md`、`.gitignore`、`config/zeroclaw.toml.tmpl`、
+`scripts/install.ps1`、`scripts/install.sh`、`scripts/verify.ps1`、`scripts/verify.sh`、
+`scripts/uninstall.ps1`、`scripts/measure-models.ps1`（模型選型量測）。
+
+**安裝（Windows，實際執行）**
+
+| 步驟 | 結果 |
+|---|---|
+| 下載 `zeroclaw-x86_64-pc-windows-msvc.zip` | 32.7 MiB |
+| SHA-256 vs pinned 值 | 相符（`f81fd10b…2afd6d`），且與 release `SHA256SUMS` 一致 |
+| 解壓／PATH／config | `%USERPROFILE%\.zeroclaw\bin`、使用者 PATH、config.toml 就位 |
+| `zeroclaw --version` | `0.9.0 (6c78ba5)` |
+| `config migrate --json` | `valid: true`（schema_version 4） |
+| `security status --agent assistant` | supervised；high-risk blocked；sandbox none（如預期）；`workspace-only: true`、`rw roots: 0`、`public bind: false`、`pairing required: true` |
+| `verify.ps1 -Full` | V1–V10 全 PASS（gateway 啟動時 V8 亦 PASS：`/health` 200、`/` 200） |
+| `uninstall.ps1` | 乾淨主機上空跑：PATH 未誤改、無殘留 |
+
+**模型選型實測（同一 prompt＋`list_directory` 工具，每模型獨立子行程）**
+
+| 模型 | 工具呼叫 | 冷 | 暖 | tokens |
+|---|---|---|---|---|
+| qwen3.5:4b | 是 | 10.4 s | ~2.1 s | 87 |
+| llama3.1:8b | 是 | 11.9 s | ~11.7 s | 21 |
+| qwen2.5:7b-instruct | 是 | 11.3 s | ~11.3 s | 24 |
+
+→ 探用 `qwen3.5:4b`（唯一暖啟動 <3 s）。
+
+**過程中修掉的問題（已回寫腳本／模板）**
+
+1. 渲染 config 時 Windows 路徑被多重轉義（`C:\\\\Users`）→ 改為正確的 TOML `\\`。
+2. `fallback` 指向沒有金鑰的 provider 會**啟動即失敗**（fail-closed）→ 模板改為預設註解，金鑰備妥後再開。
+3. `allowed_roots` 原本指向不存在的 `~/.zeroclaw/workspace`；實際 workspace 為
+   `~/.zeroclaw/agents/<alias>/workspace`（永遠可寫）→ 改為 `[]`。
+4. 版本遷移會注入 `[tools] optional = ["*"]`（等於開啟所有選配工具）→ 模板顯式設為 `[]`。
+5. `measure-models.ps1` 在同一長連線下連發工具請求會遇 Ollama 400 → 改為每模型獨立子行程＋
+   每請求獨立 HttpClient。
+
+**未完成（標 UNKNOWN，不得視為 PASS）**
+
+- Gemini 免費層：無 `GEMINI_API_KEY` → `fallback` 維持關閉，免費層回退未實測。
+- 工作區政策人工測試（V5–V8 行為面）：需互動式審核，尚未執行。
+- LAN 綁定外部實測：無第二台機器；目前只有 `security status` 的 `public bind: false` 佐證。
+- 常駐（Phase 2）未安裝，符合第一階段預期。

@@ -5,11 +5,12 @@
 //! - **模擬模式（Mock，預設）**：確定性模擬器——無網路、無隨機、無合成金額。
 //!   `esun_ref` 由 `batch_id` 決定性推導（可重放、可測試）；匯入仍真實解析
 //!   檔案內容並回報實際筆數，不虛構匹配數。
-//! - **生產模式**：明確 fail-closed。E.Sun V2.8 契約（`rqHeader`/`rqData`
-//!   信封、mTLS、CP950/Big5 媒體編碼、`rsStatus` 代碼語意）之權威實作位於
-//!   `Wellfit/crates/wellfit_bankpay`（8 端點、17 測試、冪等帳本、ReleaseGate）。
-//!   本平台在取得經驗證的端點規格與憑證前，不得自行猜測端點或信封——
-//!   因此生產模式回傳明確錯誤，而非向虛構端點發送請求。
+//! - **生產模式**：明確 fail-closed。E.Sun V2.9 契約（`rqHeader`/`rqData`
+//!   信封、TLS 1.2+、CP950/Big5 媒體編碼、`rsStatus` 代碼語意）之權威實作位於
+//!   `Wellfit/crates/wellfit_bankpay`（9 端點、V2.9 對齊、101＋18 測試、
+//!   冪等帳本、ReleaseGate、UAT 冒煙腳本已備未執行）。本平台在完成 UAT
+//!   連線實證前，不得自行猜測端點或信封——因此生產模式回傳明確錯誤，
+//!   而非向虛構端點發送請求。
 
 use crate::bankpay::model::{
     EsunConfig, ExportRequest, ExportResponse, ImportRequest, ImportResponse, QueryRequest,
@@ -17,7 +18,7 @@ use crate::bankpay::model::{
 };
 
 /// 生產模式未啟用的統一說明（問題＋原因＋處理方式）。
-const PRODUCTION_UNAVAILABLE: &str = "生產模式尚未啟用。問題：平台內建 E.Sun 客戶端僅含模擬器，未串接真實銀行通道；可能原因：E.Sun V2.8 契約需 mTLS 憑證與經驗證端點規格，權威實作位於 Wellfit/crates/wellfit_bankpay；處理方式：請保持模擬模式作業，或改用 wellfit bankpay CLI（export/import/query）執行真實支付，並由系統管理員完成憑證設定後再切換。";
+const PRODUCTION_UNAVAILABLE: &str = "生產模式尚未啟用。問題：平台內建 E.Sun 客戶端僅含模擬器，未串接真實銀行通道；可能原因：V2.9 契約（9 端點、UAT 8443／營運 8080）之 UAT 連線實證與約定帳號尚未完成，權威實作位於 Wellfit/crates/wellfit_bankpay（V2.9 已對齊，UAT 冒煙腳本已備）；處理方式：請保持模擬模式作業，或改用 wellfit bankpay CLI（export/import/query）執行真實支付，並依 docs/bankpay/10-uat-smoke-runbook.md 完成 UAT 冒煙後再切換。";
 
 /// E.Sun BankPay 客戶端。
 ///

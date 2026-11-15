@@ -56,9 +56,12 @@ if [ -f "$CONFIG_PATH" ]; then pass V2 "config at $CONFIG_PATH"; else fail V2 "m
 if [ -n "$CLI" ] && [ -f "$CONFIG_PATH" ]; then
   JSON="$("$CLI" config migrate --json 2>&1 || true)"
   case "$JSON" in
-    *'"valid":true'*)  pass V3 "config validates" ;;
-    *'"valid":false'*) fail V3 "config invalid: $JSON" ;;
-    *)                 unknown V3 "could not read validity: $JSON" ;;
+    *'"valid":true'*)   pass V3 "config validates (valid: true)" ;;
+    *'"error":null'*'"migrated"'*|*'"migrated"'*'"error":null'*)
+      pass V3 "config loads (error: null)" ;;
+    *'"error":"'*)       fail V3 "config error: $JSON" ;;
+    *'"valid":false'*)   fail V3 "config invalid: $JSON" ;;
+    *)                  unknown V3 "could not read validity: $JSON" ;;
   esac
 else
   unknown V3 "skipped (need CLI and config)"

@@ -600,6 +600,18 @@ pub const PAGES: &[PageSpec] = &[
         workflows: &[WF_AUTH],
     },
     PageSpec {
+        id: "help.tutorial",
+        path: "/help/tutorial",
+        method: Method::Get,
+        title: "互動教學",
+        nav_group: Some("system"),
+        nav_href: None,
+        renderer: Renderer::Dynamic,
+        tier: Tier::Operator,
+        gate: Gate::All,
+        workflows: &[WF_AUTH, WF_TX_CREATE, WF_IMPORT_PARSE, WF_REPORTS, WF_BANKPAY],
+    },
+    PageSpec {
         id: "profile.page",
         path: "/profile",
         method: Method::Get,
@@ -1446,6 +1458,8 @@ mod tests {
         // （/design 系列；Technical／Manage）→ Dynamic 53。
         // 〔修訂 2026-11-13，並行線整合收斂〕＋密碼重設 2 頁
         // （/forgot-password、/reset-password；Public）→ Dynamic 55。
+        // 〔修訂 2026-11-15，TT-9 互動教學〕＋/help/tutorial（system；All）
+        // → Dynamic 56。
         let dynamic = PAGES
             .iter()
             .filter(|p| p.renderer == Renderer::Dynamic)
@@ -1454,7 +1468,7 @@ mod tests {
             .iter()
             .filter(|p| p.renderer == Renderer::Static)
             .count();
-        assert_eq!(dynamic, 55);
+        assert_eq!(dynamic, 56);
         assert_eq!(static_html, 23);
     }
 

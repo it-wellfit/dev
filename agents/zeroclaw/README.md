@@ -45,6 +45,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\install.ps1
 ```
 -Force            重新下載／重新渲染（會覆寫同版本執行檔與 config）
 -SkipConfig       只裝執行檔，不產生 config
+-RenderOnly       只由模板產生 config（不下載、不改 PATH），供換機或修正設定後重用
 -PrimaryModel     本機模型標籤（預設 qwen3.5:4b，實測後再改）
 -FallbackModel    免費層模型 ID（預設 gemini-3.8-flash）
 ```
@@ -92,16 +93,27 @@ zeroclaw config set providers.models.gemini.free.api_key      # 遮罩輸入
 
 ## 4. 模型選型（實測，不憑印象）
 
-對候選模型各跑同一組 3 個工具任務（讀檔、寫檔、列目錄），記錄：
+工具：
 
-| 模型 | 工具呼叫成功率 | 首次回應 | 同時載入 | `ollama ps` 配置 | 判定 |
-|---|---|---|---|---|---|
-| `qwen3.5:4b` | | | | | |
-| `llama3.1:8b` | | | | | |
-| `qwen2.5:7b-instruct` | | | | | |
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\measure-models.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\measure-models.ps1 -NoTools   # 只測延遲
+```
 
-預設序位：`qwen3.5:4b` → `llama3.1:8b` → `qwen2.5:7b-instruct`。
-選定後改 config 的 `providers.models.ollama.local.model`，並把上表填完（含量測日期）。
+每個模型以**獨立子行程**跑（同一個長連線下，某些 Ollama build 會對第二個工具請求回 400）。
+
+**實測紀錄（2026-11-15，本機 Ollama，同一 prompt：以 `list_directory` 工具列出 `C:\Windows\Temp`）**
+
+| 模型 | 工具呼叫 | 首次回應（冷） | 暖啟動 | 生成 tokens |
+|---|---|---|---|---|
+| `qwen3.5:4b` | 是 | 10.4 s | ~2.1 s | 87 |
+| `llama3.1:8b` | 是 | 11.9 s | ~11.7 s | 21 |
+| `qwen2.5:7b-instruct` | 是 | 11.3 s | ~11.3 s | 24 |
+
+判定：目前 config 採 **`qwen3.5:4b`**（唯一暖啟動後仍在 2 秒內、且工具呼叫穩定）。
+配額或行為改變時，重跑上表並更新此段（含量測日期）。
+
+另案：`ollama ps` 可確認模型實際落在 CPU 或 GPU；若全部落在 CPU，先別換大模型。
 
 ---
 
@@ -132,11 +144,30 @@ powershell -ExecutionPolicy Bypass -File .\scripts\verify.ps1 -Full   # 加跑 c
 ./scripts/verify.sh --full
 ```
 
+**實測紀錄（2026-11-15，Windows，daemon 啟動中）**
+
+```
+[PASS] V1  zeroclaw 0.9.0 (6c78ba5)
+[PASS] V2  config at %USERPROFILE%\.zeroclaw\config.toml
+[PASS] V3  config validates (valid: true)
+[PASS] V4  no inline api_key in config.toml
+[PASS] V5  bin on user PATH
+[PASS] V6  ollama reachable, 4 model(s)
+[PASS] V7  primary model present: qwen3.5:4b
+[PASS] V8  gateway health OK (/health → 200; / → 200)
+[PASS] V9  no 'ZeroClaw Daemon' scheduled task
+[PASS] V10 completion via local model → "Ready"
+```
+
+額外人工檢查：`zeroclaw security status --agent assistant` →
+`public bind: false`、`pairing required: true`、`workspace-only: true`、`rw roots: 0`、
+`Sandbox: requested none, active none`（Windows 無 OS 沙箱，如預期）。
+
 | ID | 檢查 | 通過條件 |
 |---|---|---|
 | V1 | 版本 | `0.9.0` |
 | V2 | config 存在 | 檔案在 `%USERPROFILE%\.zeroclaw\config.toml` |
-| V3 | config 合法 | `config migrate --json` 回報 `valid: true` |
+| V3 | config 合法 | `config migrate --json` 回報 `valid: true`，或 `migrated: true` 且 `error: null` |
 | V4 | 無內嵌金鑰 | config 內沒有 `api_key = "..."` |
 | V5 | PATH | bin 在使用者 PATH |
 | V6 | Ollama | `/api/tags` 可回 |
@@ -180,6 +211,8 @@ PowerShell 政策只接受**有限語法**。以下都被歸類為高風險（�
 | 常駐（Phase 2）會附一個空 console 視窗 | 已知問題；若要用常駐，保留該視窗，且重裝前必須先 Disable 排程器並重開機 |
 | `ollama` 誤寫 `/v1` | 工具呼叫不可靠；config 內只准原生路徑 |
 | 模型較弱 | 多步工具鏈易誤判；由 V10 與 §4 實測把關，必要時才評估較大模型 |
+| `fallback` 指向沒有金鑰的 provider 時**啟動即失敗** | fail-closed 設計；金鑰備妥後再取消註解 `fallback`（實測訊息：`no profile-resolved credential exists`） |
+| 同一長連線連發多個工具請求，Ollama 可能回 400 | 每個模型用獨立子行程量測（`measure-models.ps1` 已內建） |
 
 ---
 

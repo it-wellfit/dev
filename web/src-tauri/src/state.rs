@@ -1,7 +1,9 @@
 #![allow(dead_code)]
 // Application State for AuxBridge
 // INV-01 對齊（2026-11-09）：金額一律 i64 minor（整數分），禁用浮點；
-// 資料鏡射自 V2.8／domain 模型，供作者面工具使用（UI SSOT 為 platform 伺服器）。 Web
+// 資料鏡射自 V2.9／domain 模型（2026-11-15 更新：sourceSystem 移除為選填、
+// eospt DEV 移除、元件埠 UAT 8443／營運 8080 對調），供作者面工具使用
+// （UI SSOT 為 platform 伺服器）。 Web
 // Tauri 2.0 State Management
 
 use serde::{Deserialize, Serialize};
@@ -26,9 +28,9 @@ impl AppState {
             mock_mode: std::env::var("ESUN_MOCK_MODE").unwrap_or_else(|_| "true".to_string())
                 == "true",
             esun_base_url: std::env::var("ESUN_BASE_URL")
-                .unwrap_or_else(|_| "https://127.0.0.1:8443".to_string()),
+                .unwrap_or_else(|_| "http://127.0.0.1:8443".to_string()),
             esun_external_url: std::env::var("ESUN_EXTERNAL_URL")
-                .unwrap_or_else(|_| "https://eospt.testesunbank.com.tw:9443".to_string()),
+                .unwrap_or_else(|_| "https://eospu.testesunbank.com.tw:9443".to_string()),
             source_system_id: std::env::var("ESUN_SOURCE_SYSTEM_ID").unwrap_or_default(),
             client_cert_path: std::env::var("ESUN_CLIENT_CERT").ok(),
             client_key_path: std::env::var("ESUN_CLIENT_KEY").ok(),
@@ -79,6 +81,7 @@ pub struct ApiStatus {
 pub struct ConnectionStatus {
     pub tls_version: String,
     pub tls_ok: bool,
+    /// V2.9 已移除 2-Way SSL 強制；此欄保留為殼端相容位（對映 opt-in 憑證）。
     pub two_way_ssl: bool,
     pub cert_status: String,
     pub cert_expiry: Option<String>,

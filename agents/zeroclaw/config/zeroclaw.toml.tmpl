@@ -18,6 +18,11 @@ schema_version = 4
 shell = "powershell"
 # kind = "native"
 
+[tools]
+# No optional tools: on a host without an OS sandbox the default tool surface is
+# kept as small as possible. Add single names here once measured and needed.
+optional = []
+
 # ---------------------------------------------------------------------------
 # Model providers
 # ---------------------------------------------------------------------------
@@ -29,8 +34,9 @@ model = "__PRIMARY_MODEL__"
 uri = "http://127.0.0.1:11434"
 num_ctx = 8192
 num_predict = 1024
-# Local failure falls through to the free hosted tier.
-fallback = ["gemini.free"]
+# Free-tier fallover. Keep this commented until the Gemini credential exists:
+# ZeroClaw refuses to start when a configured fallback has no usable credential.
+# fallback = ["gemini.free"]
 
 # Secondary: Google Gemini API free tier.
 # "gemini" is the canonical slot; "google" is only an alias.
@@ -74,7 +80,9 @@ max_context_tokens = 32000
 [risk_profiles.local]
 level = "supervised"
 workspace_only = true
-allowed_roots = ["__WORKSPACE__"]
+# The agent workspace (<data_dir>/agents/<alias>/workspace) is always writable.
+# allowed_roots would grant access outside it: keep it empty.
+allowed_roots = []
 forbidden_paths = [
 __FORBIDDEN__
 ]

@@ -69,10 +69,17 @@ else { Fail "V2" "missing $ConfigPath (run install.ps1 or zeroclaw quickstart)" 
 if ($cli -and (Test-Path -LiteralPath $ConfigPath)) {
     try {
         $json = (& $cli config migrate --json 2>&1) -join "`n"
-        if ($json -match '"valid"\s*:\s*true') {
-            Pass "V3" "config validates"
-        } elseif ($json -match '"valid"\s*:\s*false') {
-            Fail "V3" "config invalid: $json"
+        $obj = $null
+        try { $obj = $json | ConvertFrom-Json } catch { $obj = $null }
+        $names = @()
+        if ($obj) { $names = @($obj.PSObject.Properties.Name) }
+
+        if ($names -contains "valid") {
+            if ($obj.valid -eq $true) { Pass "V3" "config validates (valid: true)" }
+            else { Fail "V3" "config invalid: $json" }
+        } elseif (($names -contains "error") -and ($names -contains "migrated")) {
+            if ($obj.error -eq $null) { Pass "V3" "config loads (migrated: $($obj.migrated))" }
+            else { Fail "V3" "config error: $($obj.error)" }
         } else {
             Unknown "V3" "could not read validity from output: $json"
         }

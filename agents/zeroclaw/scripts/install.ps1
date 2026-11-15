@@ -170,7 +170,6 @@ if ($SkipConfig) {
             New-Item -ItemType Directory -Force -Path $ConfigDir | Out-Null
         }
 
-        $Workspace = Join-Path $ConfigDir "workspace"
         $Forbidden = @(
             (Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSScriptRoot))),
             (Join-Path $Home0 "Documents"),
@@ -183,7 +182,6 @@ if ($SkipConfig) {
 
         $TomlList = ($Forbidden | ForEach-Object { '    "' + ($_ -replace "\\", "\\") + '",' }) -join "`r`n"
         $Body = Get-Content -LiteralPath $Template -Raw -Encoding UTF8
-        $Body = $Body.Replace("__WORKSPACE__", ($Workspace -replace "\\", "\\"))
         $Body = $Body.Replace("__FORBIDDEN__", $TomlList)
         $Body = $Body.Replace("__PRIMARY_MODEL__", $PrimaryModel)
         $Body = $Body.Replace("__FALLBACK_MODEL__", $FallbackModel)

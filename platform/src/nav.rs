@@ -170,6 +170,9 @@ impl NavModel {
             if view.is_some()
                 && let Some(v) = view
                 && v.items.iter().any(|it| it.active)
+                // W12（2026-11-15）：home 頁已有置頂「總覽」，再設 section 會
+                // 渲染「總覽 › 總覽」重複麵包屑（瀏覽器實證）——home 頁不設。
+                && !home.active
             {
                 let studio_label = STUDIOS
                     .iter()

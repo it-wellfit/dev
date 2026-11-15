@@ -149,7 +149,7 @@ fn ensure_platform_server() {
     tracing::warn!("platform 伺服器埠未於 6 秒內就緒；WebView 可能顯示連線錯誤，請稍後重新整理");
 }
 
-/// 保留：殼端狀態鏡像（V2.8 型別參照；金額一律 i64 minor，INV-01）。
+/// 保留：殼端狀態鏡像（V2.9 型別參照；金額一律 i64 minor，INV-01）。
 #[allow(dead_code)]
 fn _state_mirror(_s: &AppState) {}
 

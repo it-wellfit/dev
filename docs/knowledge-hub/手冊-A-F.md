@@ -102,7 +102,7 @@ Dev/
       │                    ▼
       │              SQLite (WAL 模式)
       │                    │
-      └─(TLS 1.2, 2-Way SSL)─> 玉山銀行安控元件 (Wellfit/bankpay)
+      └─(TLS 1.2+；V2.9 移除 2-Way SSL，憑證 opt-in)─> 玉山銀行安控元件 (Wellfit/bankpay)
 ```
 
 ### C3 主要元件與依賴方向
@@ -276,7 +276,7 @@ Infrastructure (platform/migrations/, SQLite)
 | 小數單位 | Minor units | 金額以 10^-dp 整數儲存（dp=2 為分） | INV-01；禁止浮點 | `money.rs` |
 | Idempotency | 冪等 | 相同輸入重複執行結果相同 | txSeq 重複 POST 拒絕 | `bankpay.rs` |
 | PRG | Post/Redirect/Get | 建立／修改／刪除用 POST；成功後重導向 | 表單提交模式 | `api.rs` |
-| 2-Way SSL | Mutual TLS | 客戶端與伺服器互驗證 | E.Sun 安控元件 | `http.rs` |
+| TLS 1.2+（V2.9：2-Way SSL 移除，憑證 opt-in） | Transport security | 元件端加密傳輸；憑證釘固保留為 opt-in 能力 | E.Sun 安控元件 | `http.rs` |
 | Certificate Pinning | 憑證釘固 | 僅信任特定 SHA-256 憑證 | 防止中間人攻擊 | `http.rs` |
 | Argon2id | Argon2id | 記憶體硬雜湊演算法 | 密碼雜湊 | `auth.rs` |
 | CSRF | Cross-Site Request Forgery | 跨站請求偽造；同步化權杖防護 | 表單 `csrf_token` | `auth.rs` |
@@ -300,7 +300,7 @@ Infrastructure (platform/migrations/, SQLite)
 - **會計科目類型**：ASSETS（資產）、LIABILITIES（負債）、EQUITY（權益）、REVENUE（收入）、EXPENSE（支出）。
 - **借貸方向**：資產／支出類借方增加；負債／權益／收入類貸方增加。
 - **交易狀態**：0000 成功；1000–1008 待處理；1030–1032 外匯相關；3000/3001 外匯預檢；4000 失敗；9999 無資料。
-- **銀行環境**：DEV/Test `http://IP:8080`；UAT `eospu.testesunbank.com.tw:9443`；Prod `eosp.esunbank.com.tw:9443`；內部安全元件 `:8443`（TLS 1.2+，2-Way SSL）。
+- **銀行環境（V2.9）**：UAT 元件 `http://219.87.16.166:8443`（`eospu.testesunbank.com.tw`）；營運元件 `http://61.220.45.177:8080` 等（`eosp.esunbank.com.tw`）；銀行端防火牆外部 `:9443`；eospt DEV 已移除（V29.txt:85-89；TLS 1.2+，2-Way SSL 已移除）。
 
 ---
 
