@@ -316,7 +316,10 @@ async fn tt9_tutorial_steps_structure_and_links() {
 
     // 七個步驟：summary 標題與 id 齊備；首步預設展開（漸進披露）。
     for n in 1..=7 {
-        assert!(body.contains(&format!("步驟 {n}")), "step {n} title missing");
+        assert!(
+            body.contains(&format!("步驟 {n}")),
+            "step {n} title missing"
+        );
         assert!(
             body.contains(&format!("id=\"step-{n}\"")),
             "step {n} target id missing"

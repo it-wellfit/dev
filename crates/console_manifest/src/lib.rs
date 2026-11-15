@@ -212,7 +212,9 @@ pub const NAV_GROUPS: &[NavGroup] = &[
         kind: NavKind::Menu,
         gate: Gate::Manage,
         studio: "gov",
-        icon: "shield",
+        // W12b（2026-11-15）：原 "shield" 與所屬工作室 gov（治理與管理）同圖示
+        // 相鄰重複（瀏覽器實證截圖）——改 "landmark"（治理機構意象）。
+        icon: "landmark",
     },
     NavGroup {
         id: "admin",
@@ -609,7 +611,13 @@ pub const PAGES: &[PageSpec] = &[
         renderer: Renderer::Dynamic,
         tier: Tier::Operator,
         gate: Gate::All,
-        workflows: &[WF_AUTH, WF_TX_CREATE, WF_IMPORT_PARSE, WF_REPORTS, WF_BANKPAY],
+        workflows: &[
+            WF_AUTH,
+            WF_TX_CREATE,
+            WF_IMPORT_PARSE,
+            WF_REPORTS,
+            WF_BANKPAY,
+        ],
     },
     PageSpec {
         id: "profile.page",

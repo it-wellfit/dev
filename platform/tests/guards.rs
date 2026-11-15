@@ -160,6 +160,52 @@ fn templates_have_no_inline_styles() {
     );
 }
 
+/// 盲區補洞（2026-11-15 瀏覽器實證）：`templates_have_no_inline_styles` 只掃
+/// platform/templates，但品牌 404 頁等「內聯 HTML 字串」住在 platform/src 的
+/// .rs 常數裡（not_found_page 的 `style="text-align:center"` 曾漏網，瀏覽器
+/// 以 CSP 錯誤實證）。本測試把同一契約延伸到 .rs 內聯 HTML：
+/// 排除註解行與測試斷言行（`contains(` 之 needle 非屬性）。
+#[test]
+fn rust_inline_html_has_no_inline_styles() {
+    let root = repo_root();
+    let mut files = Vec::new();
+    collect_text_files(&root.join("platform/src"), &mut files);
+    collect_text_files(&root.join("web/src-tauri/src"), &mut files);
+    assert!(
+        files.len() >= 20,
+        "guard must scan the real tree (found {} files)",
+        files.len()
+    );
+    let mut problems = Vec::new();
+    for file in &files {
+        if file.extension().and_then(|e| e.to_str()) != Some("rs") {
+            continue;
+        }
+        let text = fs::read_to_string(file).unwrap_or_default();
+        for (idx, line) in text.lines().enumerate() {
+            let trimmed = line.trim();
+            if trimmed.starts_with("//") || trimmed.starts_with("///") {
+                continue; // 註解散文不計
+            }
+            if trimmed.contains("contains(") {
+                continue; // 測試斷言之 needle，非 HTML 屬性
+            }
+            if trimmed.contains("style=\"") {
+                problems.push(format!(
+                    "{}:{} inline style attribute (use a design-system class)",
+                    file.strip_prefix(&root).unwrap_or(file).display(),
+                    idx + 1
+                ));
+            }
+        }
+    }
+    assert!(
+        problems.is_empty(),
+        "inline style in .rs HTML strings violates CSP style-src 'self':\n{}",
+        problems.join("\n")
+    );
+}
+
 // ---------------------------------------------------------------------------
 // W6/W7（計畫 1793033568961）：KEM 控制台生成物護欄＋設計 token 收斂檢查。
 // ---------------------------------------------------------------------------

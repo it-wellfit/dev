@@ -549,7 +549,7 @@ pub fn router(state: AppState) -> Router {
         )
         .route("/import/history", get(crate::pages::import_history_page))
         .route("/help", get(crate::pages::help_page))
-    .route("/help/tutorial", get(crate::tutorial::tutorial_page))
+        .route("/help/tutorial", get(crate::tutorial::tutorial_page))
         .route(
             "/bankpay/batches/:batch_id",
             get(crate::pages::bankpay_batch_detail),
@@ -671,7 +671,7 @@ async fn not_found_page() -> Response {
 <link rel="stylesheet" href="/assets/design-system.css">
 </head>
 <body>
-<main class="container login-panel" style="text-align:center">
+<main class="container login-panel text-center">
 <h1>404・找不到頁面</h1>
 <p class="app-subtitle">問題：此網址不存在或已移動。可能原因：連結過期或輸入錯誤。處理方式：返回工作台首頁重新導航。</p>
 <p><a class="btn btn-primary" href="/">返回工作台</a></p>

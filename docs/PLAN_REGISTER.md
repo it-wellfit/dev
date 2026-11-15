@@ -725,6 +725,17 @@ This addendum records execution facts only; it does not approve product scope, c
 | 誠實揭露 | 環境變數密碼為部署端權威＝「設定即生效」；若需保留資料庫既有密碼，啟動時**不設定** `AUXBRIDGE_ADMIN_PASSWORD` 即維持原行為。偽陽性處置：`secret_scan` 將 `let password = match … {` 判為硬編碼憑證，已改寫為等價的 `unwrap_or_else` 形式（非放寬掃描規則） | `secret_scan` 4/4 綠 |
 | 未竟 | 玉山 Sandbox 憑證（OQ-E3）仍為外部阻塞；互動教學（TT-9）／工作流設計器（TT-10）仍列 P2 路線（未實作，不以本輪證據冒充） | `docs/engineering/UX_CONTRACTS.md` |
 
+## 2026-11-15 addendum #50（TT-9 互動教學落地＋404 內聯樣式 CSP 違規修復＋測試盲區補洞）
+
+| Item | Disposition | Evidence |
+|---|---|---|
+| **TT-9 互動教學（使用者明示 P2：缺 AI 操作教學）** | 新頁 `/help/tutorial`（manifest `help.tutorial`；system 群組；Gate::All）：七步引導（登入→總覽→建立交易→匯入→報表→稽核→進階），每步「目標／怎麼做／成功判準／常見錯誤」四欄＋真實頁面深連結；互動原語＝原生 `<details>`＋頁內錨點（TT-1/TT-2 同族，零 JS、零新 CSS） | `platform/src/tutorial.rs`＋`platform/templates/help_tutorial.html`＋`console_manifest` PAGES（Dynamic 55→56） |
+| **自動校驗** | `interaction_audit::tt9_tutorial_steps_structure_and_links`：7 步結構＋四欄 marker ≥7＋錨點→同頁目標（TT-1 同律）＋全部深連結可達（不得教使用者撞 404）＋零 JS＋首步預設展開 | interaction_audit 6/6 綠；web_crawl 7/7；page_matrix 4/4；platform lib 167/167（`all_manifest_pages_render_under_contract` 自動涵蓋新頁） |
+| **瀏覽器實證（部署面）** | 重建 `auxbridge-server.exe`（34,890,240 bytes，2026-11-15 20:10）並重啟：`/help/tutorial` 200、7 步渲染、導覽入口存在、`#step-3` 錨點命中、scripts=0 | curl＋Playwright 實測（isolated context） |
+| **缺陷：404 頁 CSP 違規（瀏覽器實證抓到）** | 品牌 404 頁（`api.rs::not_found_page` 內聯 HTML）含 `style="text-align:center"`，被 CSP `style-src 'self'` 阻擋（瀏覽器 console 實證）→ 改用既有 token class `.text-center`（design-system.css:1901 已存在，零新規則） | Playwright：`inlineStyleAttr=false`、`textAlign=center`、CSP 錯誤消失 |
+| **測試盲區補洞** | `guards::templates_have_no_inline_styles` 只掃 `platform/templates`，.rs 內聯 HTML 字串漏網 → 新增 `guards::rust_inline_html_has_no_inline_styles`（掃 platform/src＋web/src-tauri/src 的 .rs；排除註解行與 `contains(` 斷言行） | guards 7/7 綠 |
+| **四關** | fmt 0；clippy -D warnings 0；`cargo test --workspace --locked -j 2` 0 failed；experience_traceability/trace_guard/design_lab 全綠（文件與實作不脫鉤） | 本節實測（2026-11-15） |
+| 未竟 | 工作流設計器（TT-10）維持 P2 路線；OQ-E3 玉山 Sandbox 憑證外部阻塞 | `docs/engineering/UX_CONTRACTS.md`；XP-006 |
 ## Consolidation rules
 
 1. Keep one current navigation register and one acceptance/evidence ledger per project. Detailed requirements belong in their project documents.

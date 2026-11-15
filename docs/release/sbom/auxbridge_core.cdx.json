@@ -2,9 +2,9 @@
   "bomFormat": "CycloneDX",
   "specVersion": "1.5",
   "version": 1,
-  "serialNumber": "urn:uuid:27b8134a-4922-43d8-b51d-79a477b9f6d0",
+  "serialNumber": "urn:uuid:35eed318-b53e-41a0-8c91-268c98608aa1",
   "metadata": {
-    "timestamp": "2026-11-14T09:03:21.065021900Z",
+    "timestamp": "2026-11-15T12:42:35.373409900Z",
     "tools": [
       {
         "vendor": "CycloneDX",
@@ -483,6 +483,41 @@
         {
           "type": "vcs",
           "url": "https://github.com/RustCrypto/utils"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "registry+https://github.com/rust-lang/crates.io-index#const-oid@0.10.3",
+      "author": "RustCrypto Developers",
+      "name": "const-oid",
+      "version": "0.10.3",
+      "description": "Const-friendly implementation of the ISO/IEC Object Identifier (OID) standard as defined in ITU X.660, with support for BER/DER encoding/decoding as well as no_std + no_alloc (i.e. embedded) support ",
+      "scope": "required",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "be95d4a884358a21a199689323c29e9256b4a1b315e22f183d155422041d3a9a"
+        }
+      ],
+      "licenses": [
+        {
+          "expression": "Apache-2.0 OR MIT"
+        }
+      ],
+      "purl": "pkg:cargo/const-oid@0.10.3",
+      "externalReferences": [
+        {
+          "type": "documentation",
+          "url": "https://docs.rs/const-oid"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/RustCrypto/formats/tree/master/const-oid"
+        },
+        {
+          "type": "vcs",
+          "url": "https://github.com/RustCrypto/formats"
         }
       ]
     },
@@ -1259,6 +1294,36 @@
         }
       ],
       "purl": "pkg:cargo/futures-io@0.3.34",
+      "externalReferences": [
+        {
+          "type": "website",
+          "url": "https://rust-lang.github.io/futures-rs"
+        },
+        {
+          "type": "vcs",
+          "url": "https://github.com/rust-lang/futures-rs"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "registry+https://github.com/rust-lang/crates.io-index#futures-macro@0.3.34",
+      "name": "futures-macro",
+      "version": "0.3.34",
+      "description": "The futures-rs procedural macro implementations. ",
+      "scope": "required",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "9fb9654ba8355388abeb8dcb4fc62f511300867002afc858860463bdd9fe0c44"
+        }
+      ],
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "purl": "pkg:cargo/futures-macro@0.3.34",
       "externalReferences": [
         {
           "type": "website",
@@ -4512,7 +4577,10 @@
       "ref": "registry+https://github.com/rust-lang/crates.io-index#byteorder@1.5.0"
     },
     {
-      "ref": "registry+https://github.com/rust-lang/crates.io-index#bytes@1.12.1"
+      "ref": "registry+https://github.com/rust-lang/crates.io-index#bytes@1.12.1",
+      "dependsOn": [
+        "registry+https://github.com/rust-lang/crates.io-index#serde@1.0.229"
+      ]
     },
     {
       "ref": "registry+https://github.com/rust-lang/crates.io-index#cc@1.11.1",
@@ -4543,6 +4611,9 @@
     },
     {
       "ref": "registry+https://github.com/rust-lang/crates.io-index#cmov@0.5.4"
+    },
+    {
+      "ref": "registry+https://github.com/rust-lang/crates.io-index#const-oid@0.10.3"
     },
     {
       "ref": "registry+https://github.com/rust-lang/crates.io-index#cpufeatures@0.2.17"
@@ -4599,6 +4670,7 @@
       "ref": "registry+https://github.com/rust-lang/crates.io-index#digest@0.11.3",
       "dependsOn": [
         "registry+https://github.com/rust-lang/crates.io-index#block-buffer@0.12.1",
+        "registry+https://github.com/rust-lang/crates.io-index#const-oid@0.10.3",
         "registry+https://github.com/rust-lang/crates.io-index#crypto-common@0.2.2",
         "registry+https://github.com/rust-lang/crates.io-index#ctutils@0.4.8"
       ]
@@ -4687,6 +4759,14 @@
       "ref": "registry+https://github.com/rust-lang/crates.io-index#futures-io@0.3.34"
     },
     {
+      "ref": "registry+https://github.com/rust-lang/crates.io-index#futures-macro@0.3.34",
+      "dependsOn": [
+        "registry+https://github.com/rust-lang/crates.io-index#proc-macro2@1.0.107",
+        "registry+https://github.com/rust-lang/crates.io-index#quote@1.0.47",
+        "registry+https://github.com/rust-lang/crates.io-index#syn@3.0.10"
+      ]
+    },
+    {
       "ref": "registry+https://github.com/rust-lang/crates.io-index#futures-sink@0.3.34"
     },
     {
@@ -4695,8 +4775,10 @@
     {
       "ref": "registry+https://github.com/rust-lang/crates.io-index#futures-util@0.3.34",
       "dependsOn": [
+        "registry+https://github.com/rust-lang/crates.io-index#futures-channel@0.3.34",
         "registry+https://github.com/rust-lang/crates.io-index#futures-core@0.3.34",
         "registry+https://github.com/rust-lang/crates.io-index#futures-io@0.3.34",
+        "registry+https://github.com/rust-lang/crates.io-index#futures-macro@0.3.34",
         "registry+https://github.com/rust-lang/crates.io-index#futures-sink@0.3.34",
         "registry+https://github.com/rust-lang/crates.io-index#futures-task@0.3.34",
         "registry+https://github.com/rust-lang/crates.io-index#memchr@2.8.3",
@@ -4840,7 +4922,8 @@
       "ref": "registry+https://github.com/rust-lang/crates.io-index#indexmap@2.14.2",
       "dependsOn": [
         "registry+https://github.com/rust-lang/crates.io-index#equivalent@1.0.3",
-        "registry+https://github.com/rust-lang/crates.io-index#hashbrown@0.17.1"
+        "registry+https://github.com/rust-lang/crates.io-index#hashbrown@0.17.1",
+        "registry+https://github.com/rust-lang/crates.io-index#serde_core@1.0.229"
       ]
     },
     {

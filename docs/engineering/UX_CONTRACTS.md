@@ -3,7 +3,7 @@
 > 版本：v1.0｜日期：2026-11-13｜狀態：Active
 > 定義「全端 UI/UX 觀念」為**可稽核的體驗契約**，不是「多做幾頁應付了事」。
 > 每條契約：REQ（需求）→ DEC（決策）→ IMPL（實作位置）→ TEST（測試）→ EVID（證據）。
-> 自動校驗：`platform/tests/interaction_audit.rs`（TT-1..TT-5）＋ `web_crawl.rs`（7 閘門）＋ `password_reset.rs`（重設全鏈）＋ `auth.rs` 單元測試（管理員密碼同步 5 項）。
+> 自動校驗：`platform/tests/interaction_audit.rs`（TT-1..TT-5＋tt9）＋ `web_crawl.rs`（7 閘門）＋ `password_reset.rs`（重設全鏈）＋ `guards.rs`（零 JS／內聯樣式，含 .rs 內聯 HTML 盲區閘）＋ `auth.rs` 單元測試（管理員密碼同步 5 項）。
 > **文件 metadata：** 文件 ID: DOC-UX-CONTRACT-001｜受眾: 管理者／技術者｜版本: v1.0｜最後驗證日期: 2026-11-15｜證據連結: commit 4b47c3f｜owner: 設計線
 
 ## 體驗契約（Experience Contracts）
@@ -17,7 +17,8 @@
 | TT-5 | 搜尋回填：GET 查詢後輸入值保留 | GET form | 送出後輸入不消失 | value 屬性回填 | `search.html` | tt5 | q=cash → value="cash" |
 | TT-6 | 忘記密碼全鏈：請求（無帳號列舉）→管理員核發一次性 token（僅存 SHA-256、30 分鐘、用後即焚）→自設新密碼（撤銷全 session） | 多步公開流程 | 無自助重設＝登入死路 | 本地部署無郵件→token 交付制 | `0010_password_reset.sql`＋`api.rs` 3 路由＋2 模板 | password_reset 2 測試＋`web_crawl::password_reset_family_is_reachable_and_zero_js` | 全鏈 curl 實證：請求→核發（64 字元 token）→重設→新密碼登入 303；**2026-11-15 部署面復驗**：重建執行檔後 `/forgot-password` 200、Playwright 表單可用、scripts=0 |
 | TT-7 | 死連結免疫：全站內部連結逐一可達（nav/頁尾/麵包屑任一錯字即 FAIL） | 全站連結圖 | 任何連結點開必須有頁 | BFS 爬取≥30 連結 | `web_crawl::every_internal_link_resolves` | crawl | 0 死連結 |
-| TT-8 | 404 契約：未知路徑＝品牌頁（識別＋問題/原因/處理方式＋返回連結＋零 JS） | fallback handler | 空白 404＝體驗不良 | 品牌 fallback 頁 | `api.rs::not_found_page` | web_crawl unknown_path | 404＋返回連結＋CSS＋scripts=0 |
+| TT-8 | 404 契約：未知路徑＝品牌頁（識別＋問題/原因/處理方式＋返回連結＋零 JS） | fallback handler | 空白 404＝體驗不良 | 品牌 fallback 頁 | `api.rs::not_found_page` | web_crawl unknown_path | 404＋返回連結＋CSS＋scripts=0；**2026-11-15**：內聯 `style=` CSP 違規經瀏覽器實證後修復（改 token class `text-center`），並新增 `rust_inline_html_has_no_inline_styles` 盲區閘（.rs 內聯 HTML 同律） |
+| TT-9 | 互動教學：`/help/tutorial` 七步引導（每步＝目標/怎麼做/成功判準/常見錯誤四欄＋真實頁面深連結），原生 `<details>` 折疊＋錨點跳轉（TT-1/TT-2 同族原語） | `<details>`＋錨點 | 使用者回報「缺 AI 操作教學」＝新手無路可循 | 每步四欄結構＋深連結由 TT-7 連結圖保證不指向 404 | `help_tutorial.html`＋`tutorial.rs`＋manifest `help.tutorial` | `interaction_audit::tt9`（結構/錨點/深連結/零 JS/首步展開） | Playwright 實證：7 步渲染、導覽入口存在、scripts=0、#step-3 錨點命中；部署面 200（34,890,240 bytes，2026-11-15） |
 
 ## 問題來源清單 → 分級（2026-11-12..13 瀏覽器實證輪）
 
@@ -28,7 +29,7 @@
 | 部署面實證 | Desktop 啟動器因 cmd 編碼把中文路徑寫成 `????`，雙擊無法 cd 到 repo | P0（可及性） | ✅ 修復（ASCII-only 啟動器，執行期解析 repo 路徑） |
 | 使用者回報 | 草稿→登帳資訊漏傳 | P0（財務數據） | ✅ 修復（amount plain 格式＋「元：」清理＋description 帶證據） |
 | 使用者回報 | AI 建議畫面錯誤無法開啟 | P1 | ✅ 修復（旗標治理 UI＋llama3→qwen3.5:4b＋think:false＋混合解析金額 88,500.00 ✓＋幣別正規化） |
-| 使用者回報 | 缺 AI 操作教學 | P2 | ⏳ 設計中（help 頁已有 AI 段落；互動教學列 P2 路線） |
+| 使用者回報 | 缺 AI 操作教學 | P2 | ✅ 修復（TT-9 互動教學：`/help/tutorial` 七步，含草稿/AI 建議步驟的誠實邊界說明；2026-11-15 部署實證） |
 | 使用者回報 | 自訂工作流程治理介面 | P2 | ⏳ 第一片落地（AI 旗標治理 UI）；完整工作流設計器列 P2 路線 |
 | 瀏覽器實證 | 子導覽被側欄蓋住不可點擊 | P0 | ✅ 修復（ui-v2 grid col 2） |
 | 瀏覽器實證 | 精靈第一步 422 | P0 | ✅ 修復（stage 分支） |
@@ -45,10 +46,10 @@
 - OQ-E3：玉山 Sandbox 憑證未得——BankPay 正式模式阻塞（外部）。
 - perf.rs 延遲為機器相依（非閘門，僅趨勢證據）。
 - rerank/HyDE 需 Ollama 運行（不可用→誠實降級，已測）。
-- 互動教學（TT-9 候選）與工作流設計器（TT-10 候選）列 P2 演進路線，尚未實作。
+- 工作流設計器（TT-10 候選）列 P2 演進路線，尚未實作；互動教學（TT-9）已於 2026-11-15 落地（見 TT-9 列）。
 - 瀏覽器實證（Playwright）為人工/半自動；自動化瀏覽器閘門列 P2。
 - 管理員密碼來源：`AUXBRIDGE_ADMIN_PASSWORD` 為部署端權威（設定即生效，會旋轉資料庫雜湊並撤銷該帳號 session）；不設定時維持首次啟動隨機密碼。此為刻取捨，見 PLAN_REGISTER addendum #49。
 
 ## 驗收判定
 
-**PASS（條件式）**：TT-1..TT-8 全部有 TEST＋EVID；已知限制如上揭露；P0/P1 全數關閉；P2 兩項（教學、工作流設計器）列路線未實作——不影響現有功能正確性，但屬使用者明示需求，列為下一切片。
+**PASS（條件式）**：TT-1..TT-9 全部有 TEST＋EVID；已知限制如上揭露；P0/P1 全數關閉；P2 剩工作流設計器（TT-10）列路線未實作——不影響現有功能正確性，但屬使用者明示需求，列為下一切片。
