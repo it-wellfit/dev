@@ -92,9 +92,16 @@ if ($cli -and (Test-Path -LiteralPath $ConfigPath)) {
 
 # V4 config hygiene: no inline secrets -------------------------------------
 if (Test-Path -LiteralPath $ConfigPath) {
-    $hits = Select-String -LiteralPath $ConfigPath -Pattern '^\s*api_key\s*=\s*"' -AllMatches
-    if ($hits) { Fail "V4" "inline api_key found in config.toml (use env override or config set)" }
-    else { Pass "V4" "no inline api_key in config.toml" }
+    # The literal "anonymous" placeholder is a documented exception: the Kilo
+    # gateway serves free models without auth and ZeroClaw's local credential
+    # gate needs a non-empty value. Anything else inline is treated as a leak.
+    $hits = @(Select-String -LiteralPath $ConfigPath -Pattern '^\s*api_key\s*=\s*"([^"]*)"' -AllMatches |
+        Where-Object { $_.Matches[0].Groups[1].Value -ne "anonymous" })
+    if ($hits.Count -gt 0) {
+        Fail "V4" "inline api_key found in config.toml (use env override or config set)"
+    } else {
+        Pass "V4" "no inline api_key in config.toml (only the documented placeholder, if any)"
+    }
 } else {
     Unknown "V4" "skipped (no config)"
 }

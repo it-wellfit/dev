@@ -116,6 +116,48 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\measure-models.ps1
 
 另案：`ollama ps` 可確認模型實際落在 CPU 或 GPU；若全部落在 CPU，先別換大模型。
 
+### 免費雲端路線（實測，2026-11-16）
+
+已接線：`[providers.models.kilo.free]`（Kilo AI Gateway 免費層），並設為本機模型的 `fallback`。
+
+| 驗證項 | 結果 |
+|---|---|
+| 公開模型清單 | `https://api.kilo.ai/api/gateway/models` → 469 個模型，**13 個免費**（含 `kilo-auto/free`、`nvidia/nemotron-3-ultra-550b-a55b:free`、`inclusionai/ling-3.2-flash:free`、`baidu/ernie-5.5-flash-preview:free`、`openrouter/free`…） |
+| 無金鑰呼叫 | HTTP 200、`cost: 0`（4 s） |
+| 工具呼叫 | 支援；`nemotron-3-ultra-550b:free` 3 s 回正確 `tool_calls` |
+| 經 ZeroClaw 端到端 | 通過（agent 回 `Ready`） |
+| 被拒絕後的行為 | **最佳**：明確說明「被政策拒絕、非操作員決定」並提供替代方案（不編造、不空回應） |
+
+注意：
+- ZeroClaw 的本機憑證閘門要求 alias 有非空 `api_key`，免費模型卻是免認證 → 模板用
+  `api_key = "anonymous"` 佔位（上游忽略；實測 200）。要付費層時再換真鑰匙（用 env 注入）。
+- 免費層官方數字：**200 次/小時/IP**（超過 429）。免費模型 ID 會輪替、隨時可能消失。
+- 內容會離開本機；免費層條款可能拿你的 prompt 訓練。**敏感內容只走本機模型。**
+
+其他仍存活、可加開的免費路線（2026-11 查核）：
+
+| 路線 | 免費額度 | 備註 |
+|---|---|---|
+| Google Gemini API | 3.8/3.6 Flash、Flash-Lite、Gemma 4 免費層 | 需金鑰；額度僅在 AI Studio 顯示；內容用於改進 Google 產品 |
+| Groq | gpt-oss-120b/20b、qwen3.8-27b：30 RPM／1,000 次/日 | 免卡；速度最快之一 |
+| OpenRouter `:free` | 20 RPM；50 次/日（一次性買 $10 後 1,000/日） | 與 Kilo 免費集重疊 |
+| SambaNova Cloud | 20 RPM／20 次/日／200K tokens/日 | 需以 `custom` slot 接 |
+| NVIDIA NIM | 預設 40 RPM | 需 `nvidia` slot 與金鑰 |
+| Cloudflare Workers AI | 10,000 neurons/日 | 額度小 |
+| Cohere trial | 1,000 次/月 | 非生產用 |
+| Vercel AI Gateway | 每月 $5 額度 | 免費層無公開速率 |
+| Kilo AI Gateway | **200 次/小時/IP（免費模型）** | **已採用**，免金鑰 |
+
+已消失／不再免費（避免再被舊文章誤導）：
+
+- **GitHub Models：2026-07-30 已全面退役**（playground、catalog、inference API、BYOK）。
+- **Cerebras：已無永久免費層**（僅 $5 試用額度、需驗證付款方式、30 天到期）。
+- **Mistral La Plateforme：免費模式已不含 API**（建立 API key 需開啟計費）。
+- **Hugging Face Inference Providers：免費帳號已無每月額度**（PRO 才有 $2/月）。
+
+現實提醒：對 agent 這種多步工具鏈，免費層大約**一天只夠 3 個任務**（Requesty 2026-11 估算）；
+要長期用就維持「本機為主、免費層為輔」的分工。
+
 ### 被拒絕後的行為（實測，2026-11-15，重要）
 
 同一 prompt（叫它跑 `Get-Date`，屬中風險 → 需審核；非互動環境無審核者 → runtime 直接拒絕）：
@@ -263,6 +305,8 @@ PowerShell 政策只接受**有限語法**。以下都被歸類為高風險（�
 | `qwen3.5:4b` 在被拒絕後會吐空回應，重試 3 次後回合以 `invalid semantic completion` 失敗 | 已知模型缺陷；失敗是「可見的失敗」，不會謊報成功。需要連續工具鏈時改用互動模式或較大模型 |
 | 小模型可能**編造**工具輸出（llama3.1 未加身分檔前實測） | 一律加 `identity/` 護欄檔（已內建）；關鍵步驟不要無人監督執行 |
 | `config patch` 成功訊息會把陣列印成字串 | 顯示問題而已；用 `config list`／直接看 `config.toml` 確認實際值 |
+| `config set` 偶爾報 `config lifecycle is already owned`（殘留鎖） | 確認沒有 daemon／agent 在跑後，刪 `%USERPROFILE%\.zeroclaw\data\.lifecycle\config-lifecycle.lock` 再重試 |
+| 免費模型 ID 會輪替、免費路線會消失 | 定期重跑本節驗證；至少保留本機模型這條永遠可用的路線 |
 
 ---
 

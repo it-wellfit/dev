@@ -231,3 +231,25 @@ OpenClaw（Node）安裝；Telegram／Slack／Discord 等通道；常駐服務�
 
 - `verify.ps1`／`verify.sh` 的 V3 放寬為 `valid: true` **或** `migrated: true` 且 `error: null`
   （0.9.0 的實際輸出格式）。
+
+## 13. 免費雲端路線（第三輪，2026-11-16）
+
+**已採用**：Kilo AI Gateway 免費層（`[providers.models.kilo.free]`，`kilo-auto/free`），設為
+`ollama.local` 的 `fallback`。
+
+驗證（全部可重跑）：
+
+- `GET https://api.kilo.ai/api/gateway/models` → 469 模型、13 免費（`kilo-auto/free`、
+  `nvidia/nemotron-3-ultra-550b-a55b:free`、`inclusionai/ling-3.2-flash:free`、`openrouter/free` 等）。
+- 無金鑰 `POST /v1/chat/completions` → 200、`cost: 0`；帶 tool schema → 正確回 `tool_calls`
+  （`nemotron-3-ultra-550b:free` 3.0 s）。
+- 經 ZeroClaw 端到端（暫時 `agents.assistant.model_provider = kilo.free`）：回覆正常；被政策拒絕時
+  回「被政策拒絕、非操作員決定」＋替代方案（三種模型中被拒絕後行為最佳）。
+- 本地憑證閘門需非空 `api_key` → 以 `api_key = "anonymous"` 佔位（上游忽略，實測 200）。
+
+**研究結論（附出處，2026-11 查核）**：仍免費——Gemini 免費層、Groq（30 RPM/1K 日）、
+OpenRouter `:free`（20 RPM/50 日）、SambaNova（20 RPD）、NVIDIA NIM（40 RPM）、Cloudflare（1 萬 neurons/日）、
+Cohere trial、Vercel（$5/月）、Kilo gateway（200 次/時/IP）。
+**已消失**——GitHub Models（2026-07-30 退役）、Cerebras 永久免費層、Mistral API 免費模式、
+Hugging Face 免費額度。
+現實：agent 工作負載下免費層約 3 任務/日；維持「本機為主、免費層為輔」。

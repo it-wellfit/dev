@@ -40,17 +40,32 @@ model = "__PRIMARY_MODEL__"
 uri = "http://127.0.0.1:11434"
 num_ctx = 8192
 num_predict = 1024
-# Free-tier fallover. Keep this commented until the Gemini credential exists:
-# ZeroClaw refuses to start when a configured fallback has no usable credential.
-# fallback = ["gemini.free"]
+# Free hosted fallover, no credential required (verified 2026-11-16).
+fallback = ["kilo.free"]
 
-# Secondary: Google Gemini API free tier.
-# "gemini" is the canonical slot; "google" is only an alias.
-# Requires GEMINI_API_KEY or GOOGLE_API_KEY in the environment.
-[providers.models.gemini.free]
-model = "__FALLBACK_MODEL__"
-fallback_models = ["gemini-3.5-flash-lite"]
-timeout_secs = 60
+# Free hosted fallback: Kilo AI Gateway, free model tier.
+# Verified 2026-11-16: /v1/chat/completions answers WITHOUT an api_key
+# (200, cost: 0, tool calls supported). Free models are shared with OpenRouter's
+# ":free" set plus kilo-auto/free and reflection/beam-free.
+# Documented limit for free models: 200 requests/hour per IP (429 beyond).
+# Add api_key only if you want the paid/balanced tiers as well.
+[providers.models.kilo.free]
+model = "kilo-auto/free"
+timeout_secs = 120
+# The gateway serves free models without auth, but ZeroClaw's local credential
+# gate requires a non-empty api_key before it will use (or fall back to) the
+# alias. A placeholder satisfies the local gate and is ignored upstream
+# (verified 2026-11-16: HTTP 200, cost 0). Replace with a real key only when you
+# want the paid tiers, and inject it from the env instead of committing it.
+api_key = "anonymous"
+
+# Optional: Google Gemini API free tier (needs a key; content may be used by
+# Google to improve their products). Enable only after the key exists:
+# ZeroClaw refuses to start when a configured fallback has no usable credential.
+# [providers.models.gemini.free]
+# model = "__FALLBACK_MODEL__"
+# fallback_models = ["gemini-3.5-flash-lite"]
+# timeout_secs = 60
 
 # ---------------------------------------------------------------------------
 # Agent: the join between provider, risk profile and runtime profile

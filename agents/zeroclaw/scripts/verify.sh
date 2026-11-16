@@ -69,10 +69,14 @@ fi
 
 # V4 config hygiene: no inline secrets ---------------------------------------
 if [ -f "$CONFIG_PATH" ]; then
-  if grep -Eq '^[[:space:]]*api_key[[:space:]]*=[[:space:]]*"' "$CONFIG_PATH"; then
+  # The literal "anonymous" placeholder is a documented exception (Kilo gateway
+  # serves free models without auth; the local credential gate needs a value).
+  LEAK="$(grep -E '^[[:space:]]*api_key[[:space:]]*=[[:space:]]*"' "$CONFIG_PATH" \
+    | grep -v '"anonymous"' | head -n1)"
+  if [ -n "$LEAK" ]; then
     fail V4 "inline api_key found in config.toml"
   else
-    pass V4 "no inline api_key in config.toml"
+    pass V4 "no inline api_key in config.toml (only the documented placeholder, if any)"
   fi
 else
   unknown V4 "skipped (no config)"
