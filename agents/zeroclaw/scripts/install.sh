@@ -12,16 +12,20 @@ set -euo pipefail
 VERSION="0.9.0"
 PRIMARY_MODEL="qwen3.5:4b"
 FALLBACK_MODEL="gemini-3.8-flash"
+AGENT_ALIAS="assistant"
 FORCE=0
 SKIP_CONFIG=0
+SKIP_IDENTITY=0
 
 while [ $# -gt 0 ]; do
   case "$1" in
     --version)         VERSION="$2"; shift 2 ;;
     --primary-model)   PRIMARY_MODEL="$2"; shift 2 ;;
     --fallback-model)  FALLBACK_MODEL="$2"; shift 2 ;;
+    --agent)           AGENT_ALIAS="$2"; shift 2 ;;
     --force)           FORCE=1; shift ;;
     --skip-config)     SKIP_CONFIG=1; shift ;;
+    --skip-identity)   SKIP_IDENTITY=1; shift ;;
     -h|--help)
       sed -n '2,12p' "$0"; exit 0 ;;
     *) echo "unknown argument: $1" >&2; exit 2 ;;
@@ -138,6 +142,28 @@ $HOME/.aws"
     rm -f "$TMP_CFG"
     ok "wrote $CONFIG_PATH"
   fi
+fi
+
+# --- identity / guardrail files ---------------------------------------------
+# The runtime loads AGENTS.md, TOOLS.md, SOUL.md, IDENTITY.md and USER.md from
+# the agent workspace into every system prompt.
+IDENTITY_SRC="$(cd "$(dirname "$0")/.." && pwd)/identity"
+WORKSPACE_DIR="$CONFIG_DIR/agents/$AGENT_ALIAS/workspace"
+if [ "$SKIP_IDENTITY" -eq 1 ]; then
+  warn "skipped identity files (--skip-identity)"
+elif [ -d "$IDENTITY_SRC" ]; then
+  say "Installing identity files into $WORKSPACE_DIR"
+  mkdir -p "$WORKSPACE_DIR"
+  for f in "$IDENTITY_SRC"/*.md; do
+    [ -f "$f" ] || continue
+    name="$(basename "$f")"
+    if [ -f "$WORKSPACE_DIR/$name" ] && [ "$FORCE" -eq 0 ]; then
+      warn "$name exists and was left untouched (use --force to overwrite)"
+    else
+      cp "$f" "$WORKSPACE_DIR/$name"
+      ok "$name"
+    fi
+  done
 fi
 
 cat <<EOF

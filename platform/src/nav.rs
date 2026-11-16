@@ -20,6 +20,8 @@ pub struct NavItem {
     pub label: &'static str,
     /// 目前路徑比對命中時為 true（模板輸出 `aria-current="page"`）。
     pub active: bool,
+    /// 頂層/扁平項預渲染圖標（`nav_item_icon` 封閉映射；空字串＝不渲染）。
+    pub icon_svg: String,
 }
 
 /// 導覽群組檢視（`is_menu`＝`<details>` 下拉；否則頂層連結）。
@@ -32,6 +34,9 @@ pub struct NavGroupView {
     /// 預渲染 SVG（`icons::svg`；建構時一次，模板零過濾器）。
     pub icon_svg: String,
     pub is_menu: bool,
+    /// 含當前頁時 true（模板輸出 `<details open>`——頁面重載後活動項
+    /// 不再藏於摺疊組內；2026-11-15 瀏覽器實證之往返體驗根因）。
+    pub contains_active: bool,
     pub items: Vec<NavItem>,
 }
 
@@ -44,6 +49,9 @@ pub struct StudioView {
     pub icon: &'static str,
     /// 預渲染 SVG（`icons::svg`；建構時一次，模板零過濾器）。
     pub icon_svg: String,
+    /// 單一群組且群名＝室名（如 銀行支付）→ 模板跳過群組層直接列項，
+    /// 消除「室名＋群名＋頁名」同名三連發（2026-11-15 瀏覽器實證）。
+    pub flatten_solo: bool,
     pub groups: Vec<NavGroupView>,
 }
 /// 完整導覽模型（每請求一份；Askama 模板直接迭代）。
@@ -89,6 +97,7 @@ impl NavModel {
                         href,
                         label: p.title,
                         active,
+                        icon_svg: nav_item_icon_svg(p.id),
                     });
                 }
                 // 群組內所有項目皆被過濾 → 整組不渲染（連空 dropdown 都不出現）。
@@ -101,6 +110,7 @@ impl NavModel {
                         icon: g.icon,
                         icon_svg: crate::icons::svg(g.icon, "ico"),
                         is_menu: g.kind == NavKind::Menu,
+                        contains_active: items.iter().any(|it| it.active),
                         items,
                     })
                 };
@@ -115,6 +125,7 @@ impl NavModel {
             href: "/".to_string(),
             label: "總覽",
             active: current_path == "/",
+            icon_svg: crate::icons::svg("home", "ico"),
         };
         let mut top: Vec<NavItem> = Vec::new();
         let mut studios: Vec<StudioView> = Vec::new();
@@ -135,6 +146,7 @@ impl NavModel {
                     label: s.label,
                     icon: s.icon,
                     icon_svg: crate::icons::svg(s.icon, "ico"),
+                    flatten_solo: groups.len() == 1 && groups[0].label == s.label,
                     groups,
                 });
             }
@@ -161,6 +173,7 @@ impl NavModel {
                 href: "/".to_string(),
                 label: "總覽",
                 active: current_path == "/",
+                icon_svg: crate::icons::svg("home", "ico"),
             };
         }
 
@@ -194,6 +207,34 @@ impl NavModel {
             section,
             role_code: flags.role_code.clone(),
         }
+    }
+}
+
+/// 頂層/扁平導覽項圖標（封閉映射）。
+///
+/// 群組與工作室圖標以 `console_manifest` 為 SSOT（`NavGroup.icon` /
+/// `Studio.icon`）；`PageSpec` 無 icon 欄位，頂層自我服務頁的圖標
+/// 由本封閉映射維護（新頁入導覽時同步更新；未映射頁＝無圖標）。
+fn nav_item_icon(page_id: &str) -> &'static str {
+    match page_id {
+        "home.index" => "home",
+        "my.decisions" => "scale",
+        "search.page" => "search",
+        "status.page" => "activity",
+        "help.page" => "help-circle",
+        "help.tutorial" => "book",
+        "profile.page" => "user",
+        "design.lab" => "flask-conical",
+        "console.index" => "library",
+        _ => "",
+    }
+}
+
+/// `nav_item_icon` → 預渲染 SVG；未映射頁回空字串（模板跳過 ico-slot）。
+fn nav_item_icon_svg(page_id: &str) -> String {
+    match nav_item_icon(page_id) {
+        "" => String::new(),
+        key => crate::icons::svg(key, "ico"),
     }
 }
 

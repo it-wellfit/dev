@@ -1,6 +1,6 @@
 # 啟用瀏覽器自動化 — 純 Rust MCP 伺服器（路徑 C）v3
 
-## 狀態：實作就緒（規劃完成，尚未實作）
+## 狀態：已實作並通過閘門（2026-11-15）
 
 ## 目標
 
@@ -159,6 +159,30 @@ C-01 不亂覆蓋亂刪（編輯前備份）；C-03 先量測後動刀；C-04 �
 - deny/audit 政策：工作區 `deny.toml`／`.cargo/audit.toml`（2026-11-15 讀取）。
 - 內建服務硬編碼 npx：`Kilo-Org/kilocode` `browser-automation-service.ts`（2026-11-15 查證）。
 
-## 實作交接
+## 實作完成紀錄（2026-11-15；C-13 證據）
 
-本計畫完成後，請切換至可執行原始碼變更的代理（實作階段）執行 §有序任務清單。規劃代理不進行原始碼變更。
+| 項目 | 證據 |
+|---|---|
+| Crate | `crates/browser_mcp`（bin `browser-mcp`；edition 2024／rust-version 1.99／`#![forbid(unsafe_code)]`；已加入根 `Cargo.toml` members） |
+| 依賴治理 | `cargo deny check`：**advisories ok, bans ok, licenses ok, sources ok**；`cargo audit`：EXIT=0（掃描 500 依賴） |
+| 測試 | 單元 13（cli／snapshot／server）＋整合 3（MCP 交握、stdout 純淨、Chrome 全流程）**16 passed / 0 failed / 0 ignored** |
+| Chrome 全流程 | `chrome_roundtrip`：navigate→snapshot（含 "Hello"）→click→screenshot（非空 PNG）→close，實機通過 |
+| stdout 純淨（D-10） | `stdout_purity`：實際二進位 initialize 首行即純 JSON-RPC |
+| 部署（D-9） | `cargo install --path crates/browser_mcp --locked` → `C:\Users\stephanie.huang\.cargo\bin\browser-mcp.exe`（6,482,432 bytes） |
+| 註冊 | `.kilo/kilo.jsonc` 新增 `browser` 條目（絕對路徑、`timeout: 60000`）；`playwright`（bunx）設 `enabled: false`；設定驗證通過；備份 `.kilo/kilo.jsonc.bak` |
+| 全工作區閘門 | `cargo fmt -- --check`=0；`cargo clippy --all-targets -- -D warnings`=0；`cargo test --locked` EXIT=0（全成員 0 failed／0 ignored） |
+| 文件同步 | `AGENTS.md` §5、`docs/engineering/SKILL_INVENTORY.md`、`docs/management/營運治理機制.md`、`docs/testing/MVP_TEST_PLAN.md`／`MVP_TEST_REPORT.md`（原 playwright 記載以 SUPERSEDED 就地保留） |
+
+## 待使用者完成的互動步驟（D-7）
+
+1. VS Code → Settings → Web Tools → **關閉**「Browser Automation」（消除內建 `kilo-playwright` 的 npx 連線錯誤）。
+2. 重啟 Kilo 客戶端，使 `.kilo/kilo.jsonc` 的 `browser` 條目生效（工具將以 `browser_*` 命名出現）。
+
+## 已知偏離計畫事項
+
+- 工具名以方法名生成：`browser_type_text`（計畫表原列 `type`；避免依賴巨集未驗證的 `name` 覆寫參數）。
+- `cat`/`git` 等閘門未含提交：依規則**未執行 `git commit`**（僅於使用者明確要求時提交）。
+
+## 交接
+
+實作已完成；剩餘為上節使用者互動步驟。規劃代理於實作階段後不再變更原始碼。

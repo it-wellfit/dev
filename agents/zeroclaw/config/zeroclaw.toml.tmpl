@@ -23,6 +23,12 @@ shell = "powershell"
 # kept as small as possible. Add single names here once measured and needed.
 optional = []
 
+[memory]
+# No embedding provider is configured (free/local decision), so hybrid search
+# cannot do vector recall. Keyword-only matches reality and drops the startup
+# warning. Change this only together with a real embedding provider.
+search_mode = "bm25"
+
 # ---------------------------------------------------------------------------
 # Model providers
 # ---------------------------------------------------------------------------

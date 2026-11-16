@@ -199,6 +199,35 @@ OpenClaw（Node）安裝；Telegram／Slack／Discord 等通道；常駐服務�
 **未完成（標 UNKNOWN，不得視為 PASS）**
 
 - Gemini 免費層：無 `GEMINI_API_KEY` → `fallback` 維持關閉，免費層回退未實測。
-- 工作區政策人工測試（V5–V8 行為面）：需互動式審核，尚未執行。
 - LAN 綁定外部實測：無第二台機器；目前只有 `security status` 的 `public bind: false` 佐證。
 - 常駐（Phase 2）未安裝，符合第一階段預期。
+
+## 12. 實作紀錄（第二輪，2026-11-15）
+
+**政策行為實測（非互動 CLI；全部以 runtime log 佐證）**
+
+| 情境 | 結果 |
+|---|---|
+| 讀工作區外（Documents） | 模型自我節制拒絕；未執行 |
+| 寫工作區外（Desktop） | 跳審核 → 無審核者 → **runtime 拒絕**（`denied_by_runtime: true`）；目標檔不存在 |
+| `shell` 執行 `Get-Date` | 跳審核 → **runtime 拒絕**；trace 明載 `Tool call not executed` |
+| 讀工作區內 `hello.txt` | 低風險自動執行，回覆逐字正確 |
+| 寫工作區內（暫時 `auto_approve=["file_write"]`） | 成功寫入且內容相符；隨後還原 `auto_approve=[]` |
+
+**模型行為（關鍵發現）**
+
+- `qwen3.5:4b` 被拒絕後吐空回應 → 重試 3 次 → 回合失敗（`invalid semantic completion`）。失敗可見、不謊報。
+- `llama3.1:8b` 未加身分檔前，**編造** `Get-Date` 的成功輸出（年份 2023）；加護欄後降為
+  `No results found.`（不再編造）。
+
+**新增交付**
+
+- `agents/zeroclaw/identity/{AGENTS,TOOLS,SOUL,IDENTITY,USER}.md`：護欄與人格檔（禁編造工具輸出、
+  拒絕要據實回報、僅限工作區、敏感內容不送雲端），由安裝腳本複製到 agent 工作區（不覆寫既有檔）。
+- 模板新增 `[memory] search_mode = "bm25"`（無 embedding provider 的正確設定，消除啟動警告）。
+- `install.ps1`／`install.sh`：新增身分檔安裝步驟與 `-AgentAlias`／`--agent`、`-SkipIdentity` 開關。
+
+**修正**
+
+- `verify.ps1`／`verify.sh` 的 V3 放寬為 `valid: true` **或** `migrated: true` 且 `error: null`
+  （0.9.0 的實際輸出格式）。

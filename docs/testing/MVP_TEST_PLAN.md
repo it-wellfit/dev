@@ -34,6 +34,6 @@
 
 | 項目 | 理由 | 後續 |
 |------|------|------|
-| 瀏覽器 E2E（真實瀏覽器自動化） | 零 JS 伺服器渲染＋本機驗證已由煙霧涵蓋；瀏覽器自動化工具（Playwright MCP）於 Phase 2 導入 | Stage 2 |
+| 瀏覽器 E2E（真實瀏覽器自動化） | 零 JS 伺服器渲染＋本機驗證已由煙霧涵蓋；瀏覽器自動化工具採純 Rust `browser-mcp`（CDP；2026-11-15 取代 Playwright MCP，見 `crates/browser_mcp`） | Stage 2 |
 | 負載測試（k6） | 無真實流量數據；效能預算已由 2k 交易測試涵蓋 | Stage 3 |
 | DAST | 部署後（Stage 2） | Stage 2 |
