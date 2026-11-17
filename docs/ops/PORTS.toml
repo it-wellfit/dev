@@ -1,0 +1,51 @@
+# 埠號登記表 SSOT（計畫 1793782615513 §4.1）
+# 規則：任何新增服務/埠號必須先登記於此表（PR + port-check.ps1 驗證），後碼先註冊。
+# 慣例：prod=8090 / dev=8091 / staging=8092 / ephemeral=8093-8099。
+# 2026-11-17：canonical 命名 data/<env>.db 已於停機窗口落地（原 demo-auxbridge.db
+# 保留為遷移來源備份；staging 為其副本＋匿名化）。
+
+[[service]]
+name = "auxbridge-prod"
+port = 8090
+env = "prod"
+owner = "platform-team"
+health = "/api/health"
+db_path = "data/prod.db"
+notes = "正式版（39 筆交易遷自 demo-auxbridge.db）；/health 為 /api/health 別名"
+
+[[service]]
+name = "auxbridge-dev"
+port = 8091
+env = "dev"
+owner = "platform-team"
+health = "/api/health"
+db_path = "data/dev.db"
+notes = "開發者/AI 日常驗證；種子資料 scripts/seed-dev.sql 已套用（5 筆樣本交易）"
+
+[[service]]
+name = "auxbridge-staging"
+port = 8092
+env = "staging"
+owner = "platform-team"
+health = "/api/health"
+db_path = "data/staging.db"
+notes = "prod 副本＋匿名化（auxbridge-anonymize：描述/稽核/敏感配置遮罩、sessions 清除）"
+
+[[service]]
+name = "auxbridge-ephemeral"
+port_range = "8093-8099"
+env = "ephemeral"
+owner = "agent-manager"
+health = "/api/health"
+db_path = "data/eph-<id>.db"
+notes = "Agent worktree 隔離；配置決策=方案 A 固定範圍（計畫 §4.3.1）"
+
+[[retired]]
+name = "auxbridge-tauri-shell"
+port = 8096
+notes = "2026-11-15 平行流以 Tauri release 殼帶起之舊版（W12 無 W12b）；2026-11-17 退役，殼改連 8090"
+
+[[retired]]
+name = "auxbridge-parallel"
+port = 8095
+notes = "平行流空 DB 測試實例；已無人監聽，歷史遺跡"

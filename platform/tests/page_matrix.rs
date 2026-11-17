@@ -395,7 +395,7 @@ async fn w2_w6_nav_matrix_headers_anchors_console() {
 
 /// 非頁面路由窮舉清單（資產、下載、表單動作、中間態、靜態主控台託管）。
 /// 每筆都必須在 `api.rs` 實際註冊，否則清單過期（測試會失敗）。
-const NON_PAGE_ROUTES: [&str; 34] = [
+const NON_PAGE_ROUTES: [&str; 36] = [
     "/logout",
     "/assets/design-system.css",
     "/assets/legacy-1420.css",
@@ -435,6 +435,10 @@ const NON_PAGE_ROUTES: [&str; 34] = [
     "/bankpay/config",
     "/profile/password",
     "/admin/audit",
+    // 部署探針別名（計畫 1793782615513 §4.4，2026-11-17）：/health＝liveness、
+    // /ready＝readiness；與 /api/health 同源 handler（DB 可達＋migrations 即就緒）。
+    "/health",
+    "/ready",
 ];
 
 /// 從 Rust 原始碼抽出 `.route("…")` 註冊：(路徑, 含 GET, 含 POST)。

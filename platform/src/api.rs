@@ -79,6 +79,8 @@ pub struct AppState {
         std::sync::Arc<tokio::sync::Mutex<crate::bankpay::model::EsunConfig>>,
     /// G4.9 (D3-04) runtime feature flags (env-driven; defaults ON).
     pub flags: crate::flags::Flags,
+    /// Process start time（可觀測性 §8.2）：`/api/health` 回報 `uptime_s`。
+    pub(crate) started_at: std::time::Instant,
 }
 
 impl AppState {
@@ -107,6 +109,7 @@ impl AppState {
             search,
             bankpay_config: std::sync::Arc::new(tokio::sync::Mutex::new(bankpay_config)),
             flags,
+            started_at: std::time::Instant::now(),
         };
         // 自愈搜尋索引（2026-11-12）：啟動即從 DB 填充——重啟後 /search 立即
         // 可用，無需人工 reindex；嵌入腿為 best-effort（無 embedder → BM25-only）。
@@ -463,6 +466,11 @@ pub fn router(state: AppState) -> Router {
         )
         .route("/assets/design-system.css", get(design_system_css))
         .route("/api/health", get(health))
+        // 部署探針別名（計畫 1793782615513 §4.4）：deploy.ps1 以 /health 判定
+        // 就緒（liveness）；/ready 為 readiness 語義別名——單二進位 SQLite
+        // 應用中兩者同源（同 probe：DB 可達＋migrations 已套用即就緒）。
+        .route("/health", get(health))
+        .route("/ready", get(health))
         // 桌面版（Tauri）UI 對照：純靜態設計文件，無任何資料，公開供比對。
         .route("/tauri-preview", get(tauri_preview))
         .route("/assets/legacy-1420.css", get(legacy_1420_css))
@@ -963,6 +971,11 @@ async fn health(State(state): State<AppState>) -> Response {
             "transactions": transactions,
             "service": "auxbridge-server",
             "version": env!("CARGO_PKG_VERSION"),
+            // 部署溯源（計畫 1793782615513 §8.2）：BUILD_COMMIT/BUILD_TIME 由
+            // platform/build.rs 注入；uptime 由 AppState.started_at 起算。
+            "commit": env!("BUILD_COMMIT"),
+            "build_time": env!("BUILD_TIME"),
+            "uptime_s": state.started_at.elapsed().as_secs(),
         })),
     )
         .into_response()

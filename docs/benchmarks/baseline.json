@@ -1,0 +1,12 @@
+{
+    "samples":  42,
+    "total_ms":  7021,
+    "date":  "2026-11-17",
+    "sla_ms":  650,
+    "max_ms":  508,
+    "commit":  "ec3a380",
+    "test":  "stress_10000_transactions_p95_under_500ms",
+    "env":  "Windows dev host, idle, single run",
+    "p95_ms":  504,
+    "regression_threshold_pct":  5
+}
