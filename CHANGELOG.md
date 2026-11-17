@@ -60,7 +60,7 @@
 - 環境：8090 prod（0.0.0.0 跨裝置）/ 8092 staging persistent 上線，/health 雙 200
 
 ### Known limitations
-- NSIS updater 簽名工件停用（createUpdaterArtifacts=false）——待 TAURI_SIGNING_PRIVATE_KEY 備妥
+- NSIS updater 簽名工件已啟用：金鑰輪換（tauri signer generate）＋config pubkey 同步，setup.exe＋.sig 已產出；私鑰本機保管、密碼已記錄於 INVENTORY（內部部署裁定）
 - GitHub main 分支保護：操作指引 `docs/ops/BRANCH_PROTECTION.md`（需 Repo Admin）
 - criterion 效能基線以 stress test 代理（p95 量測已入 baseline.json）
 ## [Unreleased] — 2026-11-15（工作平台全面對齊玉山 V2.9）

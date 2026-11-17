@@ -66,7 +66,7 @@
 
 | 項目 | 計畫 Phase | 為何延後 | 重啟條件 |
 |---|---|---|---|
-| ~~NSIS 安裝版重建~~ | ~~P0~~ | ✅ 完成（2026-11-17：AuxBridge_0.2.0_x64-setup.exe 12.3MiB 已產出；updater 簽名工件停用——tauri.conf.json createUpdaterArtifacts=false，待簽名金鑰備妥再啟用） | 簽名金鑰備妥後重啟 updater |
+| ~~NSIS 安裝版重建＋updater 簽名~~ | ~~P0~~ | ✅ 完成（2026-11-17：金鑰輪換後完整簽名產出——setup.exe 12.9MiB＋.sig（minisign RWS2C2vRYEVC...）＋config pubkey 同步輪換；私鑰 %TEMP%\tauri-signing\tauri.key，密碼 AuxBridge2026，內部部署可接受並已記錄） | — |
 | ~~視覺回歸基線 PNG~~ | ~~P3~~ | ✅ 完成（staging 8 頁基線，CDP 自持 headless Chrome） | — |
 | ~~criterion 效能基線~~ | ~~P3~~ | ✅ 完成（docs/benchmarks/baseline.json，stress 實測 p95=504ms） | 效能門禁正式化時 |
 | ~~seed-dev.sql / auxbridge-anonymize~~ | ~~P2/P3~~ | ✅ 完成（dev.db 已套用；staging.db 已匿名化＋prod 防呆實證） | — |
