@@ -3,8 +3,8 @@
  * 零 JavaScript；深色 prefers-color-scheme；列印；reduced-motion。
  * 對比實算見 docs/design/LIVING_LEDGER_DESIGN_LANGUAGE.md §2（全 AA）。*/
 :root{
-  --bg:#f1f5f9;--surface:#fff;--ink:#0f172a;--muted:#64748b;--accent:#0d9488;
-  --ok:#15803d;--warn:#b45309;--err:#b91c1c;--border:#cbd5e1;--chip:#f0fdf4;
+  --bg:#f4f6f2;--surface:#fff;--ink:#1b2733;--muted:#5c6b7a;--accent:#0a7a4f;
+  --ok:#177245;--warn:#9a5b00;--err:#b3261e;--border:#d8dee2;--chip:#eef2ee;
   --s1:4px;--s2:8px;--s3:12px;--s4:16px;--s5:24px;--s6:32px;
   --radius:10px;--mono:Consolas,"Cascadia Mono",monospace;
   --font-display:"Noto Serif TC","Songti TC",serif;
@@ -13,8 +13,8 @@
   font-variant-numeric:tabular-nums;
 }
 @media (prefers-color-scheme:dark){
-  :root{--bg:#020617;--surface:#1e293b;--ink:#e2e8f0;--muted:#94a3b8;--accent:#22c55e;
-  --ok:#22c55e;--warn:#fbbf24;--err:#f87171;--border:#334155;--chip:#1e293b;
+  :root{--bg:#0e141b;--surface:#182029;--ink:#e8edf3;--muted:#9db0c2;--accent:#35c78a;
+  --ok:#5cd6a2;--warn:#f0b45c;--err:#ff8f86;--border:#2c3947;--chip:#212c2a;
   --shadow:0 1px 3px rgba(0,0,0,.45)}
 }
 *{box-sizing:border-box}

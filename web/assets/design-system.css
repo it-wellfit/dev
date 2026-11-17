@@ -2180,6 +2180,65 @@ html {
 }
 
 /* ============================================================
+   Print Styles — XP-002 (G4.12): page headers/footers + pagination
+   ============================================================ */
+@page {
+  size: A4;
+  margin: 12mm;
+}
+
+@page :first {
+  margin-top: 18mm;
+}
+
+.print-header {
+  display: none;
+}
+
+.print-footer {
+  display: none;
+}
+
+@media print {
+  .print-header {
+    display: block;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    font-size: var(--font-size-xs);
+    color: var(--color-text-secondary);
+    border-bottom: 1px solid var(--color-border);
+    padding-bottom: var(--space-1);
+    margin-bottom: var(--space-2);
+  }
+
+  .print-footer {
+    display: block;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    font-size: var(--font-size-xs);
+    color: var(--color-text-tertiary);
+    border-top: 1px solid var(--color-border);
+    padding-top: var(--space-1);
+    text-align: center;
+  }
+
+  .card,
+  .kpi,
+  table,
+  .table-wrap {
+    break-inside: avoid;
+  }
+
+  a[href]::after {
+    content: "";
+  }
+}
+
+/* ============================================================
    Print Styles
    ============================================================ */
 @media print {
