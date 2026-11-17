@@ -9,6 +9,19 @@
 
 **範圍界線**：本版產物建自 `4c29a1e`（sidecar 重建＋安裝包重產）；其後 `main` 之變更（G4 治理強化、備份工具、UX 修復、Lucide 圖標等）屬下一版（見 [Unreleased]）。版本號自此統一：root workspace 六 crate 與桌面殼皆為 `0.2.0`。
 
+## [Unreleased] — 2026-11-17（整合計畫執行：axum 0.8＋列印閘＋整合報告）
+
+### Changed
+- **axum 0.7 → 0.8**：`platform/Cargo.toml` 升 0.8.9；6 處路由語法遷移（`:id`→`{id}`、`/console/*path`→`/console/{*path}`）；axum 0.8 移除 `OptionalFromRequestParts` → 新增 `auth::ClientPeer`（自 `extensions` 提取 connect-info，無者回 `None`），維持 0.7 行為。
+
+### Added
+- `guards.rs::design_system_has_print_header_footer_and_pagination`（XP-002：列印頁首頁尾／分頁樣式＋文件快照同步）。
+- `docs/engineering/INTEGRATED_COMPLETION_REPORT_2026-11-17.md`（整合計畫 A–L 執行報告與任務狀態對帳）。
+- `docs/README.md` §6.3（登記根 `README.md` 為工作區入口，非 docs 文件）。
+
+### Verified（2026-11-17 實測）
+- 根測試 390 passed／0 failed（排除環境敏感效能斷言）；BankPay §9 之 18 測試＋匯出契約 3 測試＋列印閘 1 測試全綠；fmt 0／clippy `-D warnings` 0／audit 0／deny 四層 ok；`sbom_freshness` 3 tests 綠（platform SBOM 已因 axum 重產）。
+- 已知紅燈：`guards::console_css_tokens_are_canonical_design_system_values`（`design-system.css` token 變更未同步 `console.css`）→ 屬並行設計工作未收尾，非本輪變更。
 ## [Unreleased] — 2026-11-17（W11d 根因修復＋W12 精品化＋W12b/W12d 導覽修＋CI/CD 生產級架構落地）
 
 ### Added

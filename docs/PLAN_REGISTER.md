@@ -736,6 +736,21 @@ This addendum records execution facts only; it does not approve product scope, c
 | **測試盲區補洞** | `guards::templates_have_no_inline_styles` 只掃 `platform/templates`，.rs 內聯 HTML 字串漏網 → 新增 `guards::rust_inline_html_has_no_inline_styles`（掃 platform/src＋web/src-tauri/src 的 .rs；排除註解行與 `contains(` 斷言行） | guards 7/7 綠 |
 | **四關** | fmt 0；clippy -D warnings 0；`cargo test --workspace --locked -j 2` 0 failed；experience_traceability/trace_guard/design_lab 全綠（文件與實作不脫鉤） | 本節實測（2026-11-15） |
 | 未竟 | 工作流設計器（TT-10）維持 P2 路線；OQ-E3 玉山 Sandbox 憑證外部阻塞 | `docs/engineering/UX_CONTRACTS.md`；XP-006 |
+## 2026-11-17 addendum #51 (最佳整合計畫執行：狀態對帳＋可完成項落地；含 axum 0.8)
+
+承接整合計畫 `1794810000000`（執行期間該檔被並行流移除；任務清單與狀態見 `docs/engineering/INTEGRATED_COMPLETION_REPORT_2026-11-17.md`）。
+
+| Item | Disposition | Evidence |
+|---|---|---|
+| axum 0.7 → 0.8 | **完成**：`platform/Cargo.toml` 升 0.8.9；6 處路由語法遷移；axum 0.8 移除 `OptionalFromRequestParts` → 新增 `auth::ClientPeer`（自 extensions 提取，無者回 None） | `cargo check -p platform --all-targets` EXIT=0；根測試 390 passed／0 failed |
+| SBOM 同步 | **完成**：重產 `docs/release/sbom/platform.cdx.json` | `sbom_freshness` 3 tests 全綠 |
+| XP-002 列印閘（III-2） | **完成**：`guards.rs::design_system_has_print_header_footer_and_pagination` | 1 passed |
+| XP-003 匯出（III-3） | **驗證完成**：3 tests（`Content-Disposition`、角色門禁、必要欄位） | 3 tests ok |
+| BankPay §9（I-2） | **PASS** | `bankpay_api` 16＋`bankpay_persistence` 1＋具名 2 測試 ok |
+| docs/README 稽核（II-3） | **完成**：§6.3 登記根 `README.md`（工作區入口） | `docs/README.md` §6.3 |
+| 未竟 | **NOT DONE／UNKNOWN（誠實）**：II-1、II-2、III-1（`api.rs` 並行活躍）、IV（需 :8090） | 見報告 §I／§K |
+
+This addendum records execution facts only; it does not approve product scope, certification, or release.
 ## Consolidation rules
 
 1. Keep one current navigation register and one acceptance/evidence ledger per project. Detailed requirements belong in their project documents.

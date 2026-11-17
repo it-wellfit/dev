@@ -2,9 +2,9 @@
   "bomFormat": "CycloneDX",
   "specVersion": "1.5",
   "version": 1,
-  "serialNumber": "urn:uuid:c25842ae-146c-4943-b751-8d3207866920",
+  "serialNumber": "urn:uuid:423d22ec-d21b-4364-8421-18a37b0815bf",
   "metadata": {
-    "timestamp": "2026-11-15T12:42:36.226957200Z",
+    "timestamp": "2026-11-17T12:20:38.192780000Z",
     "tools": [
       {
         "vendor": "CycloneDX",
@@ -35,13 +35,20 @@
         {
           "type": "application",
           "bom-ref": "path+file:///C:/Users/stephanie.huang/Desktop/%E6%96%B0%E4%BA%BA%E8%A8%93%E7%B7%B4/Projects/2026/Dev/platform#0.2.0 bin-target-1",
+          "name": "auxbridge-anonymize",
+          "version": "0.2.0",
+          "purl": "pkg:cargo/platform@0.2.0?download_url=file://.#src/bin/auxbridge-anonymize.rs"
+        },
+        {
+          "type": "application",
+          "bom-ref": "path+file:///C:/Users/stephanie.huang/Desktop/%E6%96%B0%E4%BA%BA%E8%A8%93%E7%B7%B4/Projects/2026/Dev/platform#0.2.0 bin-target-2",
           "name": "auxbridge-backup",
           "version": "0.2.0",
           "purl": "pkg:cargo/platform@0.2.0?download_url=file://.#src/bin/auxbridge-backup.rs"
         },
         {
           "type": "application",
-          "bom-ref": "path+file:///C:/Users/stephanie.huang/Desktop/%E6%96%B0%E4%BA%BA%E8%A8%93%E7%B7%B4/Projects/2026/Dev/platform#0.2.0 bin-target-2",
+          "bom-ref": "path+file:///C:/Users/stephanie.huang/Desktop/%E6%96%B0%E4%BA%BA%E8%A8%93%E7%B7%B4/Projects/2026/Dev/platform#0.2.0 bin-target-3",
           "name": "auxbridge-server",
           "version": "0.2.0",
           "purl": "pkg:cargo/platform@0.2.0?download_url=file://.#src/bin/auxbridge-server.rs"

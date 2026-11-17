@@ -38,6 +38,7 @@
 | 檔案路徑 | 定位 | 目標讀者 | 摘要 |
 | :--- | :--- | :--- | :--- |
 | [`PROJECT_STATUS.md`](PROJECT_STATUS.md) | **專案現況快照** | 所有人 | 當前基線、品質門檻結果、版本事實 |
+| [`../README.md`](../README.md) | **工作區入口（非 docs 文件；RP-6④ 登記 2026-11-17）** | 所有人 | repo 根入口：專案簡介、建置命令、快速命令與硬性規則速查 |
 | [`NEXT_ACTIONS.md`](NEXT_ACTIONS.md) | **下一步行動清單** | 所有人 | 已排序之待辦與負責歸屬 |
 | [`GAPS_AND_RISKS.md`](GAPS_AND_RISKS.md) | **存證與風險清單** | PM / 審查者 | `[FACT:CODE]` 實相依據、`[GAP]` 缺口與技術債 |
 | [`PLAN_REGISTER.md`](PLAN_REGISTER.md) | **計畫登記冊（SSOT）** | PM / 架構師 | 所有計畫文件之 ID、狀態與效力位階 |
@@ -203,3 +204,8 @@
 ### 6.2 其他專案計畫
 
 其他專案計畫（ISMS／ekpi-platform／MTRIX／Wellfit／ARES／KNB 等 ~50 份）見 Kilo 快照區；**歸各專案 SSOT，不複製不搬移**。
+### 6.3 工作區入口（非 docs 文件）
+
+| 文件 | 位置 | 說明 |
+|---|---|---|
+| `README.md`（工作區入口） | 根目錄（4,693 B，2026-11-11） | FlapsErp / Wellfit 整合工作區之入口說明；屬**工作區入口文件**，非 `docs/` 索引文件，故不列入本索引之文件分類（整合計畫 II-3 裁定：登記為工作區入口）。 |

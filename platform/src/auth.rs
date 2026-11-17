@@ -475,10 +475,36 @@ async fn primary_role_code(pool: &SqlitePool, user_id: &str) -> Option<String> {
 }
 
 /// POST /login — rate-limit check, authenticate, create a session (303 PRG).
+/// 用戶端位址（可選）。
+///
+/// 為何需要：axum 0.8 移除 OptionalFromRequestParts，Option<ConnectInfo<..>>
+/// 不再是合法 extractor；此型別自 extensions 提取，未經 connect-info 的測試
+/// 環境（oneshot）仍可回 None，行為與 0.7 相同。
+#[derive(Clone, Copy, Debug)]
+pub struct ClientPeer(pub Option<std::net::SocketAddr>);
+
+impl<S> axum::extract::FromRequestParts<S> for ClientPeer
+where
+    S: Send + Sync,
+{
+    type Rejection = std::convert::Infallible;
+
+    async fn from_request_parts(
+        parts: &mut axum::http::request::Parts,
+        _state: &S,
+    ) -> Result<Self, Self::Rejection> {
+        Ok(ClientPeer(
+            parts
+                .extensions
+                .get::<ConnectInfo<std::net::SocketAddr>>()
+                .map(|info| info.0),
+        ))
+    }
+}
 pub async fn post_login(
     State(state): State<AppState>,
     headers: HeaderMap,
-    peer: Option<ConnectInfo<std::net::SocketAddr>>,
+    peer: ClientPeer,
     Form(form): Form<LoginForm>,
 ) -> Response {
     // P1-7: consecutive-failure lockout per username (checked BEFORE any
@@ -499,7 +525,7 @@ pub async fn post_login(
             // rows are purged whenever a new session is created.
             let _ = purge_expired_sessions(&state.pool).await;
             // 稽核：登入成功必可溯源（2026-11-12 規格補洞）。
-            let (ip, ua) = request_context_with_peer(&headers, peer.map(|p| p.0));
+            let (ip, ua) = request_context_with_peer(&headers, peer.0);
             crate::pages::write_event_ctx(
                 &state.pool,
                 "LOGIN_SUCCEEDED",
@@ -545,7 +571,7 @@ pub async fn post_login(
                 Duration::from_secs(LOGIN_LOCKOUT_SECS),
             );
             // 稽核：登入失敗（含嘗試帳號）必可溯源——暴力破解調查的基本資料。
-            let (ip, ua) = request_context_with_peer(&headers, peer.map(|c| c.0));
+            let (ip, ua) = request_context_with_peer(&headers, peer.0);
             crate::pages::write_event_ctx(
                 &state.pool,
                 "LOGIN_FAILED",
@@ -594,7 +620,7 @@ pub struct LogoutForm {
 pub async fn post_logout(
     State(state): State<AppState>,
     headers: HeaderMap,
-    peer: Option<ConnectInfo<std::net::SocketAddr>>,
+    peer: ClientPeer,
     Form(form): Form<LogoutForm>,
 ) -> Response {
     if let Some(session) = current_session(&state, &headers).await
@@ -602,7 +628,7 @@ pub async fn post_logout(
     {
         let _ = delete_session(&state.pool, &session.session_id).await;
         // 稽核：登出（工作階段撤銷）可溯源（2026-11-12 規格補洞）。
-        let (ip, ua) = request_context_with_peer(&headers, peer.map(|p| p.0));
+        let (ip, ua) = request_context_with_peer(&headers, peer.0);
         crate::pages::write_event_ctx(
             &state.pool,
             "LOGOUT",
@@ -777,7 +803,7 @@ mod tests {
             post_login(
                 State(state.clone()),
                 HeaderMap::new(),
-                None,
+                ClientPeer(None),
                 Form(form("wrong")),
             )
             .await;
@@ -787,7 +813,7 @@ mod tests {
         let response = post_login(
             State(state.clone()),
             HeaderMap::new(),
-            None,
+            ClientPeer(None),
             Form(form("correct-horse")),
         )
         .await;

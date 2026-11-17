@@ -475,7 +475,7 @@ pub fn router(state: AppState) -> Router {
         .route("/tauri-preview", get(tauri_preview))
         .route("/assets/legacy-1420.css", get(legacy_1420_css))
         .route("/assets/ui-v2.css", get(UI_V2_CSS))
-        .route("/assets/fonts/:file", get(serve_font))
+        .route("/assets/fonts/{file}", get(serve_font))
         // 公開路由 body 上限（2026-11-12 規格補洞）：登入表單僅需數百 bytes；
         // 未設限時任意大小 POST 可被用來消耗記憶體（DefaultBodyLimit 僅掛在
         // protected 群組）。64KiB 為寬裕且安全之上界。
@@ -486,12 +486,12 @@ pub fn router(state: AppState) -> Router {
         // W6：知識控制台靜態伺服（session 保護；grill-A 多候選根解析）。
         .route("/console", get(console_index))
         .route("/console/", get(console_files))
-        .route("/console/*path", get(console_files))
+        .route("/console/{*path}", get(console_files))
         .route(
             "/transactions",
             get(transactions_page).post(create_transaction),
         )
-        .route("/transactions/:id", get(transaction_detail_page))
+        .route("/transactions/{id}", get(transaction_detail_page))
         .route("/reviews/bulk", post(reviews_bulk))
         .route("/admin/users", get(admin_users).post(admin_create_user))
         .route("/admin/audit_evidence.csv", get(admin_audit_evidence_csv))
@@ -524,7 +524,7 @@ pub fn router(state: AppState) -> Router {
         .route("/accounts", get(accounts_page).post(accounts_create))
         .route("/accounts/toggle", post(accounts_toggle))
         // F4 收斂（計畫 1793033568961 W3）：科目詳情快照頁（LEDGER_READ 閘於 handler）。
-        .route("/accounts/:id", get(crate::pages::account_detail_page))
+        .route("/accounts/{id}", get(crate::pages::account_detail_page))
         .route("/ai-decisions", get(ai_decisions_page))
         .route("/ai-decisions/reject", post(ai_decisions_reject))
         // ── 工作室頁面批次（27+ 頁；零 JS，session 保護）──
@@ -559,7 +559,7 @@ pub fn router(state: AppState) -> Router {
         .route("/help", get(crate::pages::help_page))
         .route("/help/tutorial", get(crate::tutorial::tutorial_page))
         .route(
-            "/bankpay/batches/:batch_id",
+            "/bankpay/batches/{batch_id}",
             get(crate::pages::bankpay_batch_detail),
         )
         .route("/status", get(crate::pages::status_page))

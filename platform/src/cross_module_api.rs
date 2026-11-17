@@ -463,7 +463,10 @@ pub fn router(state: AppState) -> Router<AppState> {
     Router::new()
         // ── Search API ──
         .route("/api/search", get(search_query).post(search_index))
-        .route("/api/search/:doc_id", get(search_get).delete(search_delete))
+        .route(
+            "/api/search/{doc_id}",
+            get(search_get).delete(search_delete),
+        )
         // ── Sync API ──
         .route("/api/sync/status", get(sync_status))
         .route("/api/sync/config", post(sync_config))

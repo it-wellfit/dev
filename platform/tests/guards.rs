@@ -371,3 +371,34 @@ fn unsafe_code_is_absent_and_forbidden_at_crate_roots() {
         problems.join("\n")
     );
 }
+
+/// XP-002（G4.12）列印樣式閘：`design-system.css` 必須具備列印頁首頁尾與分頁樣式
+/// （`@page`、列印頁首/頁尾、`.print-header`/`.print-footer`、`@media print`），
+/// 否則報表列印會缺頁首頁尾或分頁資訊（整合計畫 III-2）。
+#[test]
+fn design_system_has_print_header_footer_and_pagination() {
+    let root = repo_root();
+    let css_path = root.join("web/assets/design-system.css");
+    let text = std::fs::read_to_string(&css_path)
+        .unwrap_or_else(|e| panic!("read {}: {e}", css_path.display()));
+    let mut problems = Vec::new();
+    for needle in ["@page", "@media print", ".print-header", ".print-footer"] {
+        if !text.contains(needle) {
+            problems.push(format!("缺少 {needle}"));
+        }
+    }
+    // 文件快照必須與正式資產同步（single source of truth）。
+    let doc_snapshot = root.join("docs/design-system.css");
+    if doc_snapshot.is_file() {
+        let doc = std::fs::read_to_string(&doc_snapshot).expect("read docs snapshot");
+        if doc != text {
+            problems
+                .push("docs/design-system.css 與 web/assets/design-system.css 未同步".to_string());
+        }
+    }
+    assert!(
+        problems.is_empty(),
+        "列印樣式閘失敗：{}",
+        problems.join("；")
+    );
+}
