@@ -253,3 +253,14 @@ Cohere trial、Vercel（$5/月）、Kilo gateway（200 次/時/IP）。
 **已消失**——GitHub Models（2026-07-30 退役）、Cerebras 永久免費層、Mistral API 免費模式、
 Hugging Face 免費額度。
 現實：agent 工作負載下免費層約 3 任務/日；維持「本機為主、免費層為輔」。
+
+## 14. Fallback 韌性實測（第四輪，2026-11-17）
+
+同一情境（叫 agent 跑 `Get-Date` → 中風險需審核 → 非互動被拒）在 fallback 接線後重跑：
+
+- trace：qwen3.5 空回應 ×3 → `Exhausted retries, trying next model_provider/model` →
+  `ModelProvider recovered (failover/retry)`（`kilo.free`／`kilo-auto/free`，`original_model=qwen3.5:4b`）
+  → 免費模型完成回合（`cost_usd: 0.0`），回覆誠實說明「被政策拒絕、命令未執行」。
+- 結論：**qwen3.5 的空回應缺陷已被 fallback 補償**；「本機為主、免費層為輔」架構的韌性成立。
+- 附帶觀察：身分檔注入後 system prompt 由 9,404 字元增至 13,212 字元（`num_ctx=8192` 下仍正常運作；
+  若未來加長身分檔或長對話，優先把 `num_ctx` 上調）。

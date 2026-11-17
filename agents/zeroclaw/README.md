@@ -165,8 +165,14 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\measure-models.ps1
 | 模型 | 工具是否執行 | 拒絕後的回應 | 判定 |
 |---|---|---|---|
 | `qwen3.5:4b` | **否**（runtime 拒絕） | 空回應 → 重試 3 次後回合失敗（`invalid semantic completion`） | 失敗可見，不會騙人 |
+| `qwen3.5:4b`＋**fallback 接線後** | **否** | 本機空回應耗盡重試 → **`kilo.free` 自動接手完成回合**，誠實說明「被政策拒絕、命令未執行」 | **最佳**：韌性＋誠實（trace 行 186–192 可驗） |
 | `llama3.1:8b`（**未加身分檔前**） | **否**（runtime 拒絕） | **編造** `Get-Date` 的成功輸出（年份還寫 2023） | 危險：宣稱已執行 |
 | `llama3.1:8b`（**加身分檔後**） | **否** | 「No results found.」 | 明顯改善，不再編造 |
+
+**Fallback 實測（2026-11-17，trace 佐證）**：qwen3.5 被拒後空回應 ×3 →
+`Exhausted retries, trying next model_provider/model` → `ModelProvider recovered (failover/retry)`
+（`kilo.free`，`kilo-auto/free`）→ 免費模型完成回合（`cost_usd: 0.0`），回答正確且不編造。
+→ **qwen3.5 的空回應缺陷已被 fallback 補償**；這也是「本機為主、免費層為輔」成立的關鍵。
 
 證據：`data/state/runtime-trace.jsonl` 的 `approval_gate` 事件 `denied_by_runtime: true`、
 `result: "Tool call not executed: ..."`；`turn_final_response` 內容可逐字比對。
@@ -187,6 +193,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\measure-models.ps1
   `forbidden_paths`、`allowed_commands`（**非空即「未列即封鎖」**）。
 - `[runtime_profiles.bounded]`：限制工具迭代、歷史訊息與上下文，避免成本與延遲失控。
 - `[gateway] require_pairing = true`：`/api/*` 不可對本機任意行程開放。
+- `num_ctx = 8192`：身分檔注入後 system prompt 約 13.2k 字元；若身分檔加大或對話變長，**優先上調 num_ctx**（實測 2026-11-17 仍正常運作）。
 - `[memory] search_mode = "bm25"`：本方案不裝 embedding 模型，用關鍵字檢索；改回 `hybrid` 前必須先有
   embedding provider（否則只會一直跳警告）。
 - `[tools] optional = []`：不開選配工具（縮小曝露面，尤其 Windows 沒有 OS 沙箱）。
@@ -302,7 +309,7 @@ PowerShell 政策只接受**有限語法**。以下都被歸類為高風險（�
 | `fallback` 指向沒有金鑰的 provider 時**啟動即失敗** | fail-closed 設計；金鑰備妥後再取消註解 `fallback`（實測訊息：`no profile-resolved credential exists`） |
 | 同一長連線連發多個工具請求，Ollama 可能回 400 | 每個模型用獨立子行程量測（`measure-models.ps1` 已內建） |
 | 非互動環境遇到需要審核的工具 → 直接拒絕（fail-closed） | 這是設計；要互動核准請在真終端機跑 `zeroclaw agent -a assistant`，或用 `auto_approve` 明確放行單一工具 |
-| `qwen3.5:4b` 在被拒絕後會吐空回應，重試 3 次後回合以 `invalid semantic completion` 失敗 | 已知模型缺陷；失敗是「可見的失敗」，不會謊報成功。需要連續工具鏈時改用互動模式或較大模型 |
+| `qwen3.5:4b` 在被拒絕後會吐空回應，重試 3 次後回合以 `invalid semantic completion` 失敗 | 已由 `fallback = ["kilo.free"]` 補償（實測 2026-11-17：耗盡重試後免費模型接手、誠實收尾）。需要純離線時記得此缺陷會回來 |
 | 小模型可能**編造**工具輸出（llama3.1 未加身分檔前實測） | 一律加 `identity/` 護欄檔（已內建）；關鍵步驟不要無人監督執行 |
 | `config patch` 成功訊息會把陣列印成字串 | 顯示問題而已；用 `config list`／直接看 `config.toml` 確認實際值 |
 | `config set` 偶爾報 `config lifecycle is already owned`（殘留鎖） | 確認沒有 daemon／agent 在跑後，刪 `%USERPROFILE%\.zeroclaw\data\.lifecycle\config-lifecycle.lock` 再重試 |

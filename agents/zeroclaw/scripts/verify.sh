@@ -134,8 +134,8 @@ if [ "$FULL" -eq 1 ]; then
   if [ -n "$CLI" ]; then
     ANSWER="$("$CLI" agent -a assistant -m "Reply with the single word Ready. Do not use tools." 2>&1 || true)"
     case "$ANSWER" in
-      *[Rr]eady*) pass V9 "completion via configured model" ;;
-      *)          fail V9 "unexpected answer: $ANSWER" ;;
+      *[Rr]eady*|*就緒*) pass V9 "completion via configured model" ;;
+      *)                 fail V9 "unexpected answer: $ANSWER" ;;
     esac
   else
     unknown V9 "skipped (no CLI)"

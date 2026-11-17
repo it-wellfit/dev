@@ -159,7 +159,8 @@ if ($Full) {
     if ($cli) {
         try {
             $answer = (& $cli agent -a assistant -m "Reply with the single word Ready. Do not use tools." 2>&1) -join "`n"
-            if ($answer -match "(?i)ready") { Pass "V10" "completion via local model" }
+            # SOUL.md instructs Traditional Chinese, so accept both forms.
+            if ($answer -match "(?i)ready" -or $answer -match "就緒") { Pass "V10" "completion via local model" }
             else { Fail "V10" "unexpected answer: $answer" }
         } catch {
             Fail "V10" "agent call failed: $($_.Exception.Message)"
