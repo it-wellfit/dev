@@ -24,6 +24,6 @@
 | REQ-UX-15 | 全問題覆蓋方法論 | 八源清單＋問題登錄 | `docs/design/EXPERIENCE_PROBLEM_REGISTER.md` | `platform/tests/experience_traceability.rs` | 本輪 gate | PASS |
 | REQ-UX-16 | 跨裝置可用 | 尺寸矩陣（規格 §12） | `docs/design/EXPERIENCE_SPEC.md` | 未執行（解鎖：排定 R7） | UNKNOWN | NOT TESTED（解鎖：R7 窗口） |
 | REQ-UX-17 | 桌面殼體驗 | XP-001 規格化 | `docs/design/EXPERIENCE_PROBLEM_REGISTER.md`；`web/src-tauri/tauri.conf.json` | 已驗：登入頁 200（127.0.0.1:8090/login）、CSP 零 JS（default-src 'none'）、updater passive／requireSignedVersion；error-state 樣板（problem／cause／resolution）已存在；A-2 演練 live 驗證未執行 | commit 4b47c3f＋本輪 smoke | NOT TESTED（解鎖：A-2 窗口，live 錯誤態 smoke；UNKNOWN 見證據欄） |
-| REQ-UX-18 | 列印與匯出 | 列印規則＋匯出規範（規格 §12） | `web/assets/design-system.css`（@media print：B＆W、break-inside: avoid、隱藏 chrome；@page 頁首／頁腳頁碼尚未實作） | 匯出：text/csv charset=utf-8、application/json、200 OK、冪等（bankpay_export 16/16）；列印：CSS 規則存在，手動預覽走查未執行 | commit 4b47c3f＋bankpay_api 測試 | PARTIAL（基礎規則在；@page 頁首頁腳＋報表列印走查未做；解鎖：R7） |
+| REQ-UX-18 | 列印與匯出 | 列印規則＋匯出規範（規格 §12） | `web/assets/design-system.css`（@page 頁首／頁腳頁碼／@media print B＆W、break-inside: avoid、隱藏 chrome） | 匯出：text/csv charset=utf-8、application/json、200 OK、冪等（bankpay_export 16/16）；列印：@page 頁首（公司／報表名／期間／產出時間）＋頁尾（頁碼／版本／內部使用）已補齊；手動預覽走查未執行 | commit 4b47c3f＋本輪 @page 補齊＋bankpay_api 測試 | PARTIAL（@page 規則已補；手動列印預覽走查未做；解鎖：R7） |
 | REQ-UX-19 | 多輪驗證 R0–R9 | 輪次對照表 | `docs/design/EXPERIENCE_AUDIT_v1.md` | R1–R4 已執行；R6–R8 未執行 | 驗收 log 2026-11-13 | PARTIAL（R6–R8 未執行；解鎖：XP-007） |
 | REQ-UX-20 | 交付與發布判定 | 五級判定用語 | `docs/design/EXPERIENCE_AUDIT_v1.md` | 稽核判定 | CONDITIONAL PASS（稽核 §7） | PASS |
