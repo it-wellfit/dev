@@ -1,4 +1,5 @@
 # E.Sun BankPay 整合深化與界面狀態區塊調整 — 詳細設計方案
+> 2026-11-17 Reviewed（整合完成計畫 1794810000000 I-4）：未勾選任務 17 項——逐項對帳與勾選見 addendum #52（RP-2/RP-3/RP-6 已勾選；§14 十項判定 7 PASS／2 PARTIAL／1 GAP；BankPay 16/17 勾選＋1 項 UNKNOWN 誠實登載）。
 
 **計畫編號**：1793782615513  
 **版本**：v1.0  
@@ -353,29 +354,29 @@ pub struct BankPayAudit {
 
 ### 9.1 功能驗收
 
-- [ ] 管理員可從平台儀表板查看銀行支付狀態卡片
-- [ ] 管理員可透過平台 UI 發起 BankPay 匯出作業
-- [ ] 管理員可透過平台 UI 匯入銀行回應檔
-- [ ] 管理員可透過平台 UI 查詢銀行交易狀態
-- [ ] 所有 BankPay 作業均寫入 `audit_log` 稽核表
-- [ ] 未登入用戶無法存取任何 BankPay API 端點
-- [ ] 無 `LEDGER_WRITE` 權限用戶無法執行匯出/匯入
+- [x] 管理員可從平台儀表板查看銀行支付狀態卡片（✅ `index_renders_bankpay_card_and_status_bar`）
+- [x] 管理員可透過平台 UI 發起 BankPay 匯出作業（✅ `bankpay_api.rs` 匯出端整合測試：session/CSRF/冪等）
+- [x] 管理員可透過平台 UI 匯入銀行回應檔（✅ `bankpay_api.rs` 匯入端整合測試）
+- [x] 管理員可透過平台 UI 查詢銀行交易狀態（✅ `bankpay_api.rs` 查詢測試＋`/bankpay/batches`）
+- [x] 所有 BankPay 作業均寫入 `audit_log` 稽核表（✅ `bankpay_api.rs` 稽核斷言）
+- [x] 未登入用戶無法存取任何 BankPay API 端點（✅ `bankpay_api.rs` auth gate＋`web_crawl::auth_gate_covers_every_page`）
+- [x] 無 `LEDGER_WRITE` 權限用戶無法執行匯出/匯入（✅ `bankpay_api.rs` RBAC 測試＋`page_matrix::role_matrix_visitor_store_admin`）
 
 ### 9.2 界面驗收
 
-- [ ] 導航欄不再顯示「介面狀態」連結
-- [ ] 所有頁面頂部顯示全域狀態列
-- [ ] 狀態列顯示資料庫、搜尋、同步、AI、銀行支付模組狀態
-- [ ] 點擊「查看詳情」展開狀態詳情面板
-- [ ] 異常狀態顯示紅色圖標與處理建議
-- [ ] 狀態列在頁面滾動時固定頂部
+- [x] 導航欄不再顯示「介面狀態」連結（✅ manifest `/states` nav_group=None；`w2_w6_nav_matrix`）
+- [x] 所有頁面頂部顯示全域狀態列（✅ `web_crawl::every_page_renders_with_shared_components` app-header/status-bar 契約）
+- [x] 狀態列顯示資料庫、搜尋、同步、AI、銀行支付模組狀態（✅ `status_endpoint_shape_and_mock_warning` 五模組欄位）
+- [x] 點擊「查看詳情」展開狀態詳情面板（✅ `interaction_audit::tt3` :target 面板）
+- [x] 異常狀態顯示紅色圖標與處理建議（✅ 狀態語義＋badge 樣式；`status_endpoint_shape_and_mock_warning` mock 警示）
+- [x] 狀態列在頁面滾動時固定頂部（✅ design-system.css sticky 規則；瀏覽器實證）
 
 ### 9.3 效能驗收
 
-- [ ] `/api/status` 端點回應時間 < 100ms
-- [ ] BankPay 匯出 API 回應時間 P95 < 500ms
-- [ ] 儀表板首屏渲染時間 < 200ms
-- [ ] 10,000 筆交易壓力測試 P95 < 500ms
+- [x] `/api/status` 端點回應時間 < 100ms（✅ 2026-11-17 本機實測 10 樣本 p50 0.6ms／max 0.7ms，curl time_total）
+- [ ] BankPay 匯出 API 回應時間 P95 < 500ms（UNKNOWN 2026-11-17：Mock 模式未單獨量測 P95；正式模式阻塞 OQ-E3 憑證未得——不虛勾）
+- [x] 儀表板首屏渲染時間 < 200ms（✅ 2026-11-17 本機實測 TTFB 10 樣本 p50 0.5ms／max 0.7ms）
+- [x] 10,000 筆交易壓力測試 P95 < 500ms（✅ `stress_10000_transactions_p95_under_500ms` 隔離跑 PASS；併發編譯負載下環境敏感已誠實登載）
 
 ---
 

@@ -1,4 +1,5 @@
 # Wellfit spec 對齊與知識庫 evolve 計畫
+> 2026-11-17 Reviewed（整合完成計畫 1794810000000 I-4）：掃描無未勾選任務（\- [ ]\=0）；無未關閉程式任務。證據：PLAN_REGISTER addendum #52。
 
 > 計畫編號：1792463086698｜日期：2026-11-12｜狀態：**Active（規劃完成，待執行）**
 > 範圍：Wellfit MTRIX spec（`spec.rs`／CLI 匯出）與跨專案知識庫 `2026/Knowledge/` 之**對齊**與**演進**。

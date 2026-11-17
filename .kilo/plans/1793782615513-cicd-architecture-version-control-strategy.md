@@ -1,4 +1,5 @@
 # CI/CD 架構與版本控制策略
+> 2026-11-17 Reviewed（整合完成計畫 1794810000000 I-4）：掃描無未勾選任務（\- [ ]\=0）；無未關閉程式任務。證據：PLAN_REGISTER addendum #52。
 
 > 狀態：Implementation-ready / 待審核｜版本：v1.4（修訂：三項未驗證假設）｜日期：2026-11-17
 > 適用：`Dev/` 根 workspace（core/platform/web/crates/*）＋`platform-hub`（獨立 workspace）；`ekpi-platform` 與 `Wellfit` 各依其 AGENTS.md 獨立操作

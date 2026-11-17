@@ -1,4 +1,5 @@
 # E.Sun UAT 9 支 API 全數串接成功計畫（裝置身份對齊：改名 WELLFITCOMPANY）
+> 2026-11-17 Reviewed（整合完成計畫 1794810000000 I-4）：掃描無未勾選任務（\- [ ]\=0）；無未關閉程式任務。證據：PLAN_REGISTER addendum #52。
 
 ## 1. 目標與成功定義（兩級制，均已裁定納入）
 - **Stage 1（安控層冒煙）**：9/9 支 API `outcome=envelope_received` 且結果碼形狀合法（`910ddd`/`999999`），付款探測被元件正確拒絕（`10-uat-smoke-runbook.md` §5 PASS）。

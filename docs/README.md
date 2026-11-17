@@ -1,5 +1,4 @@
 # FlapsErp / Wellfit 智慧自動化平台 — 工程知識體系導覽總綱
-## Engineering Knowledge Hub & Diátaxis Navigation Map
 
 > **文件路徑**: `docs/README.md`｜**版本**: v3.0（2026-11-07 索引重整：修死鏈、收錄新文件、標記 superseded）
 > **所屬專案**: FlapsErp / Wellfit 輔翼 ERP 智慧自動化與微服務平台
@@ -190,6 +189,10 @@
 ## 6. Kilo 快照區追溯（工作區外；RP-6②）
 
 > Kilo 計畫快照區位於使用者 profile（`~/.local/share/kilo/plans/`，**工作區外**），由 Kilo 管理——**不搬移、不刪除**；此處僅登錄位置與版本鏈供追溯。SSOT 為 `docs/` 內文件。
+
+### 6.2 根工作區入口（RP-6④）
+
+| [`../README.md`](../README.md) | 工作區總覽、技術棧、快速命令、硬性規則速查（AGENTS.md §2-§7 摘要版） | 現行（根入口，非 docs 文件；非 docs/ 內文件） |
 
 ### 6.1 效能家族演化鏈（已核實）
 

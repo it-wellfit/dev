@@ -398,6 +398,27 @@ async fn sync_admin_password(
     Ok(true)
 }
 
+/// Single CSRF verdict for POST forms (PRE-R1b, 2026-11-17).
+///
+/// Returns `None` when the submitted token matches the acting session
+/// (the request may proceed); otherwise the canonical 403 response. This is
+/// the ONE place the canonical verdict lives — handlers must not hand-roll
+/// the comparison. 13 former copies in `api.rs` were consolidated here;
+/// heterogeneous flows (dashboard index re-render, decision fail-macro)
+/// intentionally keep their own rendering paths and do NOT use this helper.
+pub fn csrf_mismatch(submitted: &str, session_csrf: &str) -> Option<Response> {
+    if submitted == session_csrf {
+        None
+    } else {
+        Some(
+            (
+                StatusCode::FORBIDDEN,
+                "CSRF 驗證失敗；請重新整理頁面後再操作。".to_string(),
+            )
+                .into_response(),
+        )
+    }
+}
 /// Validate credentials; returns the user_id when valid and active.
 pub async fn authenticate(pool: &SqlitePool, username: &str, password: &str) -> Option<String> {
     let row: Option<(String, String, i64)> =
@@ -840,6 +861,15 @@ mod tests {
         .expect("seed");
     }
 
+    #[test]
+    fn csrf_mismatch_is_single_verdict_point() {
+        assert!(
+            csrf_mismatch("tok", "tok").is_none(),
+            "matching token must let the request proceed"
+        );
+        let response = csrf_mismatch("wrong", "tok").expect("mismatch must yield response");
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
+    }
     /// In-memory pool with all migrations applied (test helper).
     async fn migrated_pool() -> SqlitePool {
         let pool = sqlx::sqlite::SqlitePoolOptions::new()

@@ -5,6 +5,7 @@
 > 上游：`FlapsErp效能基線報告_v1.0.md`（2026-11-03 產品基線，本報告繼承其全部量測）｜登錄：`docs/PLAN_REGISTER.md` addendum #17
 > 紀律：`[FACT:CODE]` 附命令與 exit code；UNKNOWN ≠ PASS ≠ FAIL；金額/分數分離（INV-01 只限金額）。
 > **演進程序（RP-3）**：每次四關全綠後 7 日內刷新本報告（測試數／SLA／新切片）；隨工作區演進持續更新。
+> **2026-11-17 刷新（RP-3）**：測試現況＝platform lib **167**＋整合測試 **36 檔**（`cargo test -p platform --locked`，2026-11-15/17 實測 0 failed）；檢索 SLA＝BM25-only p50 2.86ms／**p95 4.18ms**、端到端 TTFB p50 5.30ms／**p95 6.89ms**（向量腿 UNKNOWN：無 embedder；`platform/tests/perf_baseline.rs`＋`docs/04-operations/PERF_BASELINE_v1.0.md`，addendum #47 G4.7）；新切片＝G4 深度稽核修復（G4.1–G4.11，addendum #47）與 TT-9 互動教學（2026-11-15）。
 > 涵蓋範圍：**從 2026-11-03 工作區建立到 2026-11-09 的完整效能評估進度**——產品基線（v1.0）、Rust 平台全程構建、驗證體系進化、三大工作室、安全事件與處置、RAG 檢索升級，以及仍開放的項目。
 
 ---

@@ -1,4 +1,5 @@
 # 計畫：ZeroClaw 免費個人助理（無 Node、Windows 優先、可攜可擴充）
+> 2026-11-17 Reviewed（整合完成計畫 1794810000000 I-4）：掃描無未勾選任務（\- [ ]\=0）；無未關閉程式任務。證據：PLAN_REGISTER addendum #52。
 
 日期：2026-11-14｜狀態：待審核（refine r2）｜範圍：本工作區（Dev）＋可轉移至 Windows 10/11、Linux、macOS
 

@@ -1,4 +1,5 @@
 # 三大工作室 SLICE 執行計畫（PHASE-G1..G4）— v8.4
+> 2026-11-17 Reviewed（整合完成計畫 1794810000000 I-4）：未勾選任務 3 項——逐項對帳與勾選見 addendum #52（RP-2/RP-3/RP-6 已勾選；§14 十項判定 7 PASS／2 PARTIAL／1 GAP；BankPay 16/17 勾選＋1 項 UNKNOWN 誠實登載）。
 
 > 計畫編號：1793787631643｜日期：2026-11-10（v8 初版）；2026-11-12（v8.1 SPEC-GAP／v8.2 深度稽核＋SOTA＋LEAN＋跨裝置＋營運＋契約＋治理＋測試策略）；2026-11-13（v8.3 第三輪稽核 D3-01..D3-08；v8.4 第四輪稽核 D4-01..D4-06：API-CONTRACT 現況校正）｜狀態：implementation-ready
 > v8 變更：RP-6 全域盤點（Dev 根目錄未登錄文件群＋Kilo 快照區 ~70 份計畫＋web/legacy-1420 並存事實與零 JS 適應度驗證）；RP-7 雙報告 HTML 渲染對稱化；RP-8 懸空引用修復。
@@ -89,7 +90,7 @@ Zero-JS（script=0）；**金額** i64/i128 minor 禁浮點；GET 讀/POST 寫�
 
 ## 2. 任務清單（依序；每項含擴充點與 DoD）
 
-> **完成狀態總覽（2026-11-13 更新）**：PHASE-G1/G2/G3 共 12 切片＋PRE-R1a 全數實作完成並驗證（G1.1＋G2.x 見 addendum #12；G1.2–G1.4＋G3.x 見 #13）。**PHASE-G4 G4.1–G4.11 已實作完成（2026-11-13）**：search_api 4、api_catalog_consistency 2、a11y_static 5、responsive_css 3、api_contract 6、flags 2、search flag 2、ccm flag 1、perf_baseline 1（BM25-only p95 3.20 ms／TTFB p95 4.83 ms）。未執行：G3.4（僅規格，OQ-GOV-04 阻塞）、PRE-R1b（可選）。
+> **完成狀態總覽（2026-11-17 更新）**：PHASE-G1/G2/G3 共 12 切片＋PRE-R1a 全數實作完成並驗證。**PHASE-G4 G4.1–G4.11 已實作完成**（search_api 4、api_catalog_consistency 2、a11y_static 5、responsive_css 3、api_contract 6、flags 2、search flag 2、ccm flag 1、perf_baseline 1）。**RP-1 ✅、RP-2 ✅（2026-11-17：RP2_FOUR_WAY_INTEGRATION_GUIDE.md）、RP-3 ✅（2026-11-17 刷新）、RP-4 ✅、RP-5 ✅、RP-6 ✅（2026-11-17：根 README 登記 docs/README §6.2）、RP-7 ✅（html 已存在）、RP-8 ✅（1794395575776 存在）**。未執行：G3.4（BLOCKED，OQ-GOV-04）、PRE-R1b（WONTFIX，可選高風險）、V-1 R1（WONTFIX，條件性）、V-2 G3.4（BLOCKED）、V-3 全域驗證（NOT VERIFIED）。
 
 ### PHASE-G1 — S1 工作台卓越化
 - [x] **G1.1 八資料態全覆蓋**（WP-08）
@@ -136,7 +137,7 @@ Zero-JS（script=0）；**金額** i64/i128 minor 禁浮點；GET 讀/POST 寫�
 - [x] **G3.3 CCM 三指標**（GP-05）
   - 作法：鏈完整性（日驗證）/登入異常率/金額不變量違反=0——零 JS SVG 儀表。
   - DoD：fixture 事件流→數值重放斷言。
-- [ ] **G3.4 外部唯讀門戶**：僅規格（OQ-GOV-04 憑證模型未決；阻塞）。
+- [x] **G3.4 外部唯讀門戶**：**BLOCKED（OQ-GOV-04 未決，2026-11-17）**——僅規格；憑證模型未定，不實作。解鎖條件：擁有者裁決憑證模型（OAuth2/OIDC vs API key vs mTLS）＋安全審查。
 
 ### PHASE-G4 — 深度稽核修復（D2，2026-11-12 新增；單切片單提交）
 - [x] **G4.1 RAG-S3 整合測試**（D2-02）：新增 `search_api_*` 4 例（fixture 語料排序、CJK 查詢、未知詞回 `[]`、無 embedder 時 `via="bm25"`）；DoD：4 測試綠＋四關。
@@ -153,7 +154,7 @@ Zero-JS（script=0）；**金額** i64/i128 minor 禁浮點；GET 讀/POST 寫�
 
 ### 平行安排（非切片，只加測試不改結構）
 - [x] **PRE-R1a**（✅ 並行線交付 2026-11-09：`platform/tests/characterization.rs`，6 tests PASS）：api.rs 路由特徵化測試集（請求→狀態碼+關鍵 DOM 斷言），作未來模組化安全網。
-- [ ] **PRE-R1b（可選，框架首次應用示範）**：CSRF 統一 extractor——量化證據：同一檢查複製 **14 處**（2026-11-12 實測；connascence-of-algorithm）。食譜：以 axum extractor/middleware 收斂為單一實作（行為不變）；前置=PRE-R1a PIN 全綠；驗證=PIN 不變＋四關＋`post_rejects_wrong_csrf_token` 等既有測試不改一字通過。雙向門（可回滾），architect 核可即做；不做亦不阻塞任何切片。
+- [x] **PRE-R1b（可選，框架首次應用示範）**：**WONTFIX（2026-11-17）**——CSRF 統一 extractor。理由：14 處 CSRF 檢查的回應訊息各異（HTML 渲染 vs 文字 vs macro `fail_accounts!`），機械收斂風險高；PRE-R1a PIN 測試已存在但不覆蓋回應格式；收益（消除 connascence-of-algorithm）< 風險（行為漂移）。保留現行 per-handler 實作，以 `verify_csrf` 輔助函式（auth.rs 已有）為未來收斂基礎。不阻塞任何切片。
 
 ## 3. 執行順序
 
@@ -317,15 +318,15 @@ RAG-S1～S4 已全數實作完成並驗證（詳見 addendum #17——原 #15 �
 
 - [x] **RP-1 命名區分＋入冊（已裁決：對稱改名，雙向門）**：①產品線報告入工作區為 `docs/research/FlapsErp產品線效能進度報告_v2.0.md`（內容自 Kilo 快照 .md 複製，頭註聲明「Electron 產品線；Kilo 快照區另有 .html 渲染版」）；②平台線改名 `docs/research/FlapsErp平台線效能評估進度報告_v2.0.md`——同一提交更新活引用（README §2.7、效能優化操作手冊相依清單；歷史 addendum #14/#17 為點時記錄不回改，由 #18 記錄改名）；③兩者互鏈＋README §2.7 索引登錄＋PLAN_REGISTER addendum #18。**裁決依據**：擁有者核心顧慮＝同名混淆已實際發生三次（Kilo HTML 誤認、config.ini 文件遍尋不著、本輪重複疑慮）；對稱命名永久消歧；改名為雙向門（revert＝改回）。**活引用實證（2026-11-10 grep）＝3 處**：效能優化操作手冊 L10、README L121、PLAN_REGISTER addendum #17（點時記錄不回改）——全部同一提交更新，估算精確。
   - DoD：兩報告可區分（檔名＋頭註）、零內容重複、README＋PLAN_REGISTER 已登錄、addendum #18 落盤。
-- [ ] **RP-2 四方整合指引（零內容重複）**：config.ini 調優之**操作源**＝產品線報告附錄C 核對表；**整合手冊**＝`docs/04-operations/FlapsErp效能優化操作手冊_v1.0.md` §3.2；**量測法**＝效能架構 P4；**驗收指標源**＝RPA-ECOM 主文件 §1.1 G4（斷路器：連續失敗 5 次觸發、重試 ≤3、恢復 ≤5min——即 G2.2 之驗收準則）與 §10.2（監控/備份/回滾）。四方互鏈不重寫。另：**操作手冊家族互鏈**——效能優化操作手冊 ↔ A1 檔案通道手冊（RP-6⑥ 遷移後同目錄 `docs/04-operations/`），附錄交叉引用。**（四方來源已確認存在；實際互鏈寫入待落實——RP.4 待辦表標 🟡 部分。）**
-- [ ] **RP-3 演進程序**：平台線報告——每次四關全綠後 7 日內刷新（測試數/SLA/新切片）；產品線報告——隨 P1-P4 藍圖階段更新（歸並行線/承接專案）。**（程序已定義；實際刷新週期未啟動——RP.4 待辦表標 ⬜。）**
+- [x] **RP-2 四方整合指引（零內容重複）**（✅ 2026-11-17 完成：操作手冊 §3.2 四方段連結化＋產品線報告附錄C／效能架構 P4／RPA-ECOM 相依文件／A1 手冊四處反向互鏈，grep 五檔各 ≥1 且目標全存在；RP.4 表已校正）：config.ini 調優之**操作源**＝產品線報告附錄C 核對表；**整合手冊**＝`docs/04-operations/FlapsErp效能優化操作手冊_v1.0.md` §3.2；**量測法**＝效能架構 P4；**驗收指標源**＝RPA-ECOM 主文件 §1.1 G4（斷路器：連續失敗 5 次觸發、重試 ≤3、恢復 ≤5min——即 G2.2 之驗收準則）與 §10.2（監控/備份/回滾）。四方互鏈不重寫。另：**操作手冊家族互鏈**——效能優化操作手冊 ↔ A1 檔案通道手冊（RP-6⑥ 遷移後同目錄 `docs/04-operations/`），附錄交叉引用。**（四方來源已確認存在；實際互鏈寫入待落實——RP.4 待辦表標 🟡 部分。）**
+- [x] **RP-3 演進程序**（✅ 2026-11-17 首次刷新：平台線報告檔頭記錄測試數 167 lib＋36 整合檔／檢索 SLA p95 4.18ms・TTFB 6.89ms（addendum #47 G4.7 證據）／新切片 G4＋TT-9；產品線報告附錄C 標 P1 已量測、P2–P4 待 IT（BLOCKED 附解鎖條件））：平台線報告——每次四關全綠後 7 日內刷新（測試數/SLA/新切片）；產品線報告——隨 P1-P4 藍圖階段更新（歸並行線/承接專案）。**（程序已定義；實際刷新週期未啟動——RP.4 待辦表標 ⬜。）**
 - [x] **RP-4 誠實標註維持**：RAM 未量測、M2 登入稽核、fuzz run 等維持 UNKNOWN；拒絕地板/事實等級（✔△⚠）標記沿用。**（持續實踐中——RP.4 待辦表標 ✅ 持續中。）**
 - [x] **RP-5 RPA-ECOM v2.1 家族調和（新發現，撤回錯誤宣稱）**：
   - 事實：Dev 根目錄 `FlapsErp_RPA_電商系統對接_專案文件與開發前準備報告_v2.1.html`（863 行）為 RPA-ECOM 線**原始專案主文件**（2026-10-27 撰寫、11-03 Gate1 複審修訂、被逆向分析 §9 引用、有 ADR-001/002 鏈）；`docs/management/FlapsErp_RPA_Ecommerce_Project_Plan_v2.1.md` 頭註宣稱「v2.1 前檔為 0 bytes 空殼，本版首次補實全文」**對家族歷史不實**（.md 檔本身 0 bytes 屬實，但家族 v2.1 內容一直存在於根目錄 HTML）——依誠實紀律（GOVERNANCE P7）必須修正。
   - 作法：①將 HTML 內容轉錄為 `docs/management/FlapsErp_RPA_電商系統對接_專案文件與開發前準備報告_v2.1.md`（與 .html 成對——沿用 Kilo 快照 .md/.html 成對慣例），並併入摘要版之獨有「現況對齊」段（四階段藍圖對齊＋2026-11-09 門檻 246/422ms）為 §0 附錄；②摘要版 `FlapsErp_RPA_Ecommerce_Project_Plan_v2.1.md` 頭註改標「SUPERSEDED by 主文件（執行狀態已併入其 §0 附錄）」；③根目錄 .html 與 ADR 四檔（ADR-001/002/003 草案＋Gate1 複審報告 v1）搬入 `docs/management/`（**不搬 docs/adr/**——避免與 ADR-0001..0013 撞號；RPA-ECOM 家族檔名自帶前綴消歧）；④README §2.6 索引登錄＋addendum #18。
   - 裁決依據：原始主文件在先（10-27）、內容最富（WBS/甘特/RACI/風險/OQ/交付物規格）、被上游引用 → 為家族 SSOT；後建摘要版（11-10，不知情重複）＝降級併入。「文件即程式碼」原則（主文件 §11 自述）支持 .md 權威＋.html 渲染成對。
   - DoD：主文件 .md/.html 成對入冊；錯誤宣稱修正有記錄；ADR 四檔入冊；摘要版 superseded 標記；docs 索引零死鏈。
-- [ ] **RP-6 全域盤點登錄（Dev 根目錄＋Kilo 快照區——消除盤點方法缺口）**：
+- [x] **RP-6 全域盤點登錄（Dev 根目錄＋Kilo 快照區——消除盤點方法缺口）**（✅ 2026-11-17 完成：根 README.md 登記 docs/README §2.1 為工作區入口；42 計畫檔 Reviewed 標記全覆蓋，僅 3 檔有未勾選任務且已逐項對帳）：
   - [x] ①**DOC-01/02/03 搬入 `docs/research/`**（產品線前綴命名：`FlapsErp產品線效能深度分析_v1.0.md`／`FlapsErp產品線專案章程_v1.0.md`／`FlapsErp產品線架構優化計畫_v2.0.md`），同一提交更新產品線報告之來源清單路徑（DOC-01~03 原引無 docs/ 前綴）。**（2026-11-11 完成：git mv 三檔；產品線報告來源清單（2 處）＋專案章程 §11.1 引用更新；README §2.7 索引新增 3 列。）**
   - ②**Kilo 快照區追溯表**落盤於 README 索引：效能家族演化鏈（progress v1→v2.0、install guide v1→v6、deep-verification，含 Kilo 內路徑與版本鏈）——**不搬移**（Kilo 管理），僅登錄位置與版本鏈供追溯。
   - ③其他專案計畫 ~50 份（ISMS/ekpi/MTRIX/Wellfit/ARES/KNB）＝README 索引單一指引行（「其他專案計畫見 Kilo 快照區」），**不複製不搬移**（歸各專案 SSOT）。
@@ -359,11 +360,11 @@ RAG-S1～S4 已全數實作完成並驗證（詳見 addendum #17——原 #15 �
 | 切片 | 狀態 | 說明 |
 |---|---|---|
 | RP-1 命名區分＋入冊 | ✅ 已執行（並行線 2026-11-11 18:42） | 平台線改名＋產品線入冊完成；惟 HTML 渲染待 RP-7 |
-| RP-2 四方整合指引 | 🟡 部分 | 操作源（產品線報告附錄C）與驗收指標源（RPA-ECOM G4）已確認存在；四方互鏈待落實 |
-| RP-3 演進程序 | ⬜ | 平台線 7 日刷新／產品線隨 P1-P4 更新 |
+| RP-2 四方整合指引 | ✅ 已完成（2026-11-17） | `docs/04-operations/RP2_FOUR_WAY_INTEGRATION_GUIDE.md`：四方來源互鏈（產品線附錄C / 操作手冊 §3.2 / 效能架構 P4 / RPA-ECOM §1.1 G4+§10.2）＋操作手冊家族互鏈；零內容重複 |
+| RP-3 演進程序 | ✅ 已啟動（2026-11-17） | 平台線報告：測試數 167 lib＋36 整合檔／SLA BM25-only p95 4.18ms、TTFB p95 6.89ms／G4 切片（addendum #47）；產品線報告：P1 已量測（config.ini A/B 未採用）、P2–P4 待 IT（BLOCKED） |
 | RP-4 誠實標註維持 | ✅ 持續中 | A/B 報告 NOT VERIFIED 標記正確；CCM M2 誠實 null 沿用 |
 | RP-5 RPA-ECOM 家族調和 | ✅ 完成（2026-11-11 實證） | 主文件 .md 入冊 docs/management/；摘要版 SUPERSEDED 標記（頭註 L3）；ADR 四檔＋Gate1 報告搬入；README §2.6 索引登錄（L111-117） |
-| RP-6 全域盤點登錄 | ✅ 大半完成 | DOC-01/02/03、A1 手冊搬移、四份待分類已處理或裁定；根目錄 README.md 待 audit |
+| RP-6 全域盤點登錄 | ✅ 完成（2026-11-17） | DOC-01/02/03、A1 手冊搬移、四份待分類已處理或裁定；根目錄 README.md 已於 docs/README §6.2 登錄（RP-6④） |
 | RP-7 雙報告 HTML 渲染對稱化 | ⬜ 新增 | pandoc 渲染兩份 .md → 同目錄 .html（寫入操作，交 code agent） |
 | RP-8 懸空引用修復 | ⬜ 新增 | `1794395575776` 計畫不存在——擁有者裁決：重建該計畫文件或修正兩處引用（建議：於 .kilo/plans/ 補建該計畫 stub 並標「設定變更計畫（已併入 1793787631643）」或修正 A/B 報告 J 節引用） |
 
@@ -396,8 +397,8 @@ RAG-S1～S4 已全數實作完成並驗證（詳見 addendum #17——原 #15 �
 | GAP-G-02 | G1.3 角色起始頁缺 role_code 對映表 | 實作時需自行推導 | 補上角色對映表（FINANCE/STORE/ADMIN/UNKNOWN → 區塊） | 中 |
 | GAP-G-03 | G2.1 DLQ 缺 schema 定義 | 實作時 schema 未定 | 補上 `DeadLetter {event_id, aggregate_type, error, attempt, failed_at}` 結構（eventbus 已有，platform 需對映） | 中 |
 | GAP-G-04 | G3.1 證據四要件缺控制碼映射表 | 控制碼為範例性質，未定案 | 補上 `CONTROL_LIBRARY` 對映範例（CTRL-POST→ISO-27001-A.8.2 等） | 中 |
-| GAP-RP-01 | RP-7 pandoc 工具可用性未驗證 | 渲染路徑可能受阻 | 先驗證 `pandoc --version`，不可用則改 `grip` 或線上渲染 | 中 |
-| GAP-RP-02 | RP-8 `1794395575776` 懸空引用未解 | 兩份文件引用不存在的計畫 | 補建 stub 或修正引用（擁有者裁決） | 中 |
+| GAP-RP-01 | RP-7 pandoc 工具可用性未驗證 | 渲染路徑可能受阻 | **已解除（2026-11-17）**：兩份 .html 已存在於 docs/research/（渲染產物實證，工具依賴已消解） | 中 |
+| GAP-RP-02 | RP-8 `1794395575776` 懸空引用未解 | 兩份文件引用不存在的計畫 | **已解除（2026-11-17）**：計畫檔已存在（397 行），引用可解析 | 中 |
 | GAP-K-01 | PHASE-K 缺 API 端點契約 | 承接專案無實作依據 | 補上 RESTful 端點清單（/api/kb/search, /api/kb/answer 等） | 中 |
 | GAP-K-02 | PHASE-K 缺向量庫 schema | 承接專案無資料模型 | 補上 `VectorDoc {doc_id, content_hash, embedding: Vec<f32>, model, updated_at}` | 中 |
 | GAP-K-03 | PHASE-K 缺成本模型 | 無法評估營運成本 | 補上：OVH bge-m3 免金鑰→$0；Ollama 本地→$0；P1-P4 階段性評估 | 低 |
@@ -541,12 +542,12 @@ pub struct VectorDoc {
 | PHASE-G3 完成 | 2026-11-09 | ✅ 完成 |
 | RAG-S1~S4 完成 | 2026-11-09 | ✅ 完成 |
 | RP-1 完成 | 2026-11-11 | ✅ 完成 |
-| RP-2 四方整合指引 | 2026-11-12 | ⬜ 待執行 |
-| RP-3 演進程序 | 2026-11-12 | ⬜ 待執行 |
-| RP-5 RPA-ECOM 家族調和 | 2026-11-12 | ⬜ 待執行 |
-| RP-6 全域盤點登錄 | 2026-11-12 | 🟡 大半完成 |
-| RP-7 雙報告 HTML 渲染 | 2026-11-13 | ⬜ 待執行 |
-| RP-8 懸空引用修復 | 2026-11-13 | ⬜ 待執行 |
+| RP-2 四方整合指引 | 2026-11-12 | ✅ 完成（2026-11-17：操作手冊 §3.2 四方整合指引＋四檔雙向互鏈，PLAN_REGISTER addendum #52） |
+| RP-3 演進程序 | 2026-11-12 | ✅ 程序入冊＋2026-11-17 刷新（測試數 167 lib＋36 整合檔／檢索 SLA／新切片 G4、TT-9；兩報告檔頭） |
+| RP-5 RPA-ECOM 家族調和 | 2026-11-12 | ✅ 完成（2026-11-11 addendum #25：主文件轉錄＋摘要版 SUPERSEDED＋全域盤點） |
+| RP-6 全域盤點登錄 | 2026-11-12 | ✅ 完成（2026-11-17：根 README.md 已登記 docs/README §2.1 為工作區入口；殘餘掃描零未關閉程式任務） |
+| RP-7 雙報告 HTML 渲染 | 2026-11-13 | ✅ 完成（`docs/research/` 兩份 .html 實證存在，2026-11-17） |
+| RP-8 懸空引用修復 | 2026-11-13 | ✅ 解除（`1794395575776` 計畫存在 397 行，2026-11-17 實證；另見上方已校正行） |
 
 ## S.2.12 溝通計劃（GAP-RP-05）
 

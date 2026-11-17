@@ -1,4 +1,5 @@
 # E.Sun V2.9 UAT 冒煙測試執行計畫（uat_smoke）
+> 2026-11-17 Reviewed（整合完成計畫 1794810000000 I-4）：掃描無未勾選任務（\- [ ]\=0）；無未關閉程式任務。證據：PLAN_REGISTER addendum #52。
 
 **文件編號：** 1794646951923-esun-v2-9-uat-smoke-execution  
 **版本：** 1.0  

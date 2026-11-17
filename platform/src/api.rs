@@ -1353,12 +1353,8 @@ async fn admin_create_user(
     if !can_manage_users(&state, &session.user_id).await {
         return render_admin_forbidden(&state, &session).await;
     }
-    if form.csrf_token != session.csrf_token {
-        return (
-            StatusCode::FORBIDDEN,
-            "CSRF 驗證失敗；請重新整理頁面後再操作。".to_string(),
-        )
-            .into_response();
+    if let Some(response) = auth::csrf_mismatch(&form.csrf_token, &session.csrf_token) {
+        return response;
     }
 
     match admin_create_user_validated(&state, &form, &session).await {
@@ -1478,12 +1474,8 @@ async fn admin_toggle_user(
     if !can_manage_users(&state, &session.user_id).await {
         return render_admin_forbidden(&state, &session).await;
     }
-    if form.csrf_token != session.csrf_token {
-        return (
-            StatusCode::FORBIDDEN,
-            "CSRF 驗證失敗；請重新整理頁面後再操作。".to_string(),
-        )
-            .into_response();
+    if let Some(response) = auth::csrf_mismatch(&form.csrf_token, &session.csrf_token) {
+        return response;
     }
     if form.user_id == session.user_id {
         return (
@@ -1766,12 +1758,8 @@ async fn admin_issue_reset(
     if !can_manage_users(&state, &session.user_id).await {
         return render_admin_forbidden(&state, &session).await;
     }
-    if form.csrf_token != session.csrf_token {
-        return (
-            StatusCode::FORBIDDEN,
-            "CSRF 驗證失敗；請重新整理頁面後再操作。".to_string(),
-        )
-            .into_response();
+    if let Some(response) = auth::csrf_mismatch(&form.csrf_token, &session.csrf_token) {
+        return response;
     }
     let request: Option<(String, String)> =
         sqlx::query_as("SELECT username, status FROM password_reset_requests WHERE request_id = ?")
@@ -1865,12 +1853,8 @@ async fn admin_reset_password(
     if !can_manage_users(&state, &session.user_id).await {
         return render_admin_forbidden(&state, &session).await;
     }
-    if form.csrf_token != session.csrf_token {
-        return (
-            StatusCode::FORBIDDEN,
-            "CSRF 驗證失敗；請重新整理頁面後再操作。".to_string(),
-        )
-            .into_response();
+    if let Some(response) = auth::csrf_mismatch(&form.csrf_token, &session.csrf_token) {
+        return response;
     }
     let (exists, existing_username): (i64, Option<String>) =
         sqlx::query_as("SELECT COUNT(*), MAX(username) FROM users WHERE user_id = ?")
@@ -2063,12 +2047,8 @@ async fn ai_suggest(
     Form(form): Form<DraftParseForm>,
 ) -> Response {
     // CSRF (T-08): synchronizer token check before any work.
-    if form.csrf_token != session.csrf_token {
-        return (
-            StatusCode::FORBIDDEN,
-            "CSRF 驗證失敗；請重新整理頁面後再操作。".to_string(),
-        )
-            .into_response();
+    if let Some(response) = auth::csrf_mismatch(&form.csrf_token, &session.csrf_token) {
+        return response;
     }
     // AIS-001: flag gate (default OFF) - 503 with enablement guidance.
     if !ai_suggest_enabled(&state).await {
@@ -2221,12 +2201,8 @@ async fn drafts_adopt(
     session: Extension<Session>,
     Form(form): Form<DraftAdoptForm>,
 ) -> Response {
-    if form.csrf_token != session.csrf_token {
-        return (
-            StatusCode::FORBIDDEN,
-            "CSRF 驗證失敗；請重新整理頁面後再操作。".to_string(),
-        )
-            .into_response();
+    if let Some(response) = auth::csrf_mismatch(&form.csrf_token, &session.csrf_token) {
+        return response;
     }
     let amount_minor = match auxbridge_core::parse_decimal_to_minor(&form.amount, 2) {
         Ok(v) => v,
@@ -2809,12 +2785,8 @@ async fn ai_decisions_reject(
     session: Extension<Session>,
     Form(form): Form<DraftRejectForm>,
 ) -> Response {
-    if form.csrf_token != session.csrf_token {
-        return (
-            StatusCode::FORBIDDEN,
-            "CSRF 驗證失敗；請重新整理頁面後再操作。".to_string(),
-        )
-            .into_response();
+    if let Some(response) = auth::csrf_mismatch(&form.csrf_token, &session.csrf_token) {
+        return response;
     }
     let deleted = sqlx::query("DELETE FROM drafts WHERE draft_id = ?")
         .bind(&form.draft_id)
@@ -2842,12 +2814,8 @@ async fn accounts_toggle(
     if !can_manage_users(&state, &session.user_id).await {
         return render_admin_forbidden(&state, &session).await;
     }
-    if form.csrf_token != session.csrf_token {
-        return (
-            StatusCode::FORBIDDEN,
-            "CSRF 驗證失敗；請重新整理頁面後再操作。".to_string(),
-        )
-            .into_response();
+    if let Some(response) = auth::csrf_mismatch(&form.csrf_token, &session.csrf_token) {
+        return response;
     }
     let result = sqlx::query(
         "UPDATE accounts SET is_active = CASE WHEN is_active THEN 0 ELSE 1 END WHERE account_id = ?",
@@ -3196,12 +3164,8 @@ async fn reviews_bulk(
         )
             .into_response();
     }
-    if form.csrf_token != session.csrf_token {
-        return (
-            StatusCode::FORBIDDEN,
-            "CSRF 驗證失敗；請重新整理頁面後再操作。".to_string(),
-        )
-            .into_response();
+    if let Some(response) = auth::csrf_mismatch(&form.csrf_token, &session.csrf_token) {
+        return response;
     }
     let (new_status, decision_label) = match form.decision.as_str() {
         "approve" => ("POSTED", "核准"),
@@ -5176,12 +5140,8 @@ async fn mapping_apply(
         )
             .into_response();
     }
-    if form.csrf_token != session.csrf_token {
-        return (
-            StatusCode::FORBIDDEN,
-            "CSRF 驗證失敗；請重新整理頁面後再操作。".to_string(),
-        )
-            .into_response();
+    if let Some(response) = auth::csrf_mismatch(&form.csrf_token, &session.csrf_token) {
+        return response;
     }
     let parse_col = |s: &str| -> Option<usize> { s.trim().parse::<usize>().ok() };
     let mapping: Vec<Option<usize>> = vec![
@@ -5318,12 +5278,8 @@ async fn import_confirm(
         )
             .into_response();
     }
-    if form.csrf_token != session.csrf_token {
-        return (
-            StatusCode::FORBIDDEN,
-            "CSRF 驗證失敗；請重新整理頁面後再操作。".to_string(),
-        )
-            .into_response();
+    if let Some(response) = auth::csrf_mismatch(&form.csrf_token, &session.csrf_token) {
+        return response;
     }
 
     // IMP-003: mechanical guard against double-confirmation.
@@ -5621,12 +5577,8 @@ async fn drafts_parse(
     session: Extension<Session>,
     Form(form): Form<DraftParseForm>,
 ) -> Response {
-    if form.csrf_token != session.csrf_token {
-        return (
-            StatusCode::FORBIDDEN,
-            "CSRF 驗證失敗；請重新整理頁面後再操作。".to_string(),
-        )
-            .into_response();
+    if let Some(response) = auth::csrf_mismatch(&form.csrf_token, &session.csrf_token) {
+        return response;
     }
     let text = form.text.trim().to_string();
     if text.is_empty() || text.len() > 10_000 {
@@ -5856,12 +5808,8 @@ async fn wizard_step2(
     nav: Extension<crate::nav::NavModel>,
     Form(form): Form<WizardStep2Form>,
 ) -> Response {
-    if form.csrf_token != session.csrf_token {
-        return (
-            StatusCode::FORBIDDEN,
-            "CSRF 驗證失敗；請重新整理頁面後再操作。".to_string(),
-        )
-            .into_response();
+    if let Some(response) = auth::csrf_mismatch(&form.csrf_token, &session.csrf_token) {
+        return response;
     }
 
     // 步驟 1 → 步驟 2：使用者已選模板，渲染細節表單（借貸欄位尚未填，
@@ -7108,8 +7056,11 @@ mod tests {
         let (app, _pool, cookie, _csrf) = seeded_app_with_admin().await;
         let mut checked = 0usize;
         for page in console_manifest::PAGES.iter() {
-            if page.method != console_manifest::Method::Get || page.path.contains(':') {
-                continue; // POST-only 與模板路徑（:id/:batch_id）不在此契約內
+            if page.method != console_manifest::Method::Get
+                || page.path.contains(':')
+                || page.path.contains('{')
+            {
+                continue; // POST-only 與模板路徑（axum 0.7 `:id`／0.8 `{id}`）不在此契約內
             }
             let (status, body, _) = send(
                 app.clone(),

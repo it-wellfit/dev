@@ -1,4 +1,5 @@
 # 統一營運控制台：單一 Console Manifest 雙渲染器交付計畫
+> 2026-11-17 Reviewed（整合完成計畫 1794810000000 I-4）：掃描無未勾選任務（\- [ ]\=0）；無未關閉程式任務。證據：PLAN_REGISTER addendum #52。
 
 > 計畫編號：1793033568961-unified-ops-console-manifest｜版本 v1.5｜日期：2026-11-10｜狀態：**implementation-ready（grill-me 全分支走完：A/發行鏈/B/C/D/E 已裁定）**
 > v1.5 變更：grill-E 裁定 token **全收斂（名稱＋值）**——W7 昇格為完整映射表＋色差記錄；grill-B 裁定 NavModel middleware 注入（W2）；grill-C 消歧 POST 頁口徑（§3.2 分工原則）；grill-D 增 bootstrap admin 閘校準（W0）；W10 發行鏈現代化（v1.4）。

@@ -751,6 +751,23 @@ This addendum records execution facts only; it does not approve product scope, c
 | 未竟 | **NOT DONE／UNKNOWN（誠實）**：II-1、II-2、III-1（`api.rs` 並行活躍）、IV（需 :8090） | 見報告 §I／§K |
 
 This addendum records execution facts only; it does not approve product scope, certification, or release.
+## 2026-11-17 addendum #52（整合計畫第二輪：II-1/II-2/III-1/IV 落地＋CSRF 13 處收斂＋匯出契約測試）
+
+承 addendum #51 未竟欄——II-1、II-2、III-1、IV 已於第二輪執行；判定細節見 `docs/engineering/INTEGRATED_COMPLETION_REPORT_2026-11-17.md` §M。
+
+| Item | Disposition | Evidence |
+|---|---|---|
+| I-1 RP.4 校正 | 完成 | RP-2/3/5/6/7/8 全部改 ✅（實證：兩份 .html 存在、`1794395575776` 計畫 397 行）；GAP-RP-01/02 解除 |
+| I-3 §14 自我驗證 | 完成 | 10 項判定（7 PASS／2 PARTIAL／1 GAP——§5.3 證據路徑過期誠實登載，替代鏈＝PLAN_REGISTER addenda） |
+| I-4 Reviewed 標記 | 完成 | 42 計畫檔檔頭 Reviewed 標記；僅 3 檔曾有未勾選任務且已逐項對帳（RP-2/3/6 勾選、§14 判定、BankPay 16/17） |
+| II-1 四方互鏈 | 完成（互鏈不重寫） | 操作手冊 §3.2 連結化＋產品線報告附錄C／效能架構 P4／RPA-ECOM／A1 手冊反向互鏈；五檔 grep 各 ≥1、目標全存在 |
+| II-2 RP-3 刷新 | 完成 | 平台線報告檔頭刷新（167 lib＋36 整合檔／p95 4.18ms／TTFB 6.89ms，證據源 addendum #47 G4.7）；產品線報告 P1–P4 階段狀態（P2–P4 BLOCKED 附解鎖條件） |
+| III-1 CSRF 收斂 | 完成 | 13 處同構區塊 → `auth::csrf_mismatch` 單一判定（2 異構流程保留）；PIN `authenticated_posts_reject_bad_csrf` 零修改 6/6；新增單元測試 1 項（auth lib 11 passed） |
+| III-3 匯出契約 | 完成 | `export_contract::monthly_csv_export_contract`（檔名＝報表名＋期間／欄序穩定／金額 minor 與 DB 對帳／無浮點）1 passed |
+| IV-1 E2E 全走查 | PASS（HTTP 層）＋瀏覽器截圖 | :8091 拋棄式實例（臨時 DB 已清）：錯密碼 200＋訊息／登入 303／預覽 303／確認 303／**重複確認 409**／缺 CSRF 422／錯 CSRF 403／月報借貸平衡 net=0／稽核 LOGIN+IMPORT；儀表板／交易／稽核截圖 |
+| IV-2／IV-3 | PARTIAL | 瀏覽器 MCP 無 resize／printToPDF → 視覺矩陣與 PDF UNKNOWN；替代證據＝responsive_css 3 綠（360/640/768/1024）＋@page 規則＋print 閘測試 |
+| 四關 | PASS | fmt 0／clippy workspace --all-targets -D warnings 0／test workspace 0 failed（60 suites，含 export_contract、characterization PIN）／audit 0（1 allowed unmaintained warning） |
+| 誠實揭露 | — | 整合計畫檔 `1794810000000` 已被並行流移除（見 #51），本輪以報告 §M 為任務對帳 SSOT；docs/README 根 README 登記同時存在 §2.1 索引列（本輪）與 §6.3 稽核注記（#51），兩者互補不衝突。V-1..V-3 維持 WONTFIX／BLOCKED／NOT VERIFIED。 |
 ## Consolidation rules
 
 1. Keep one current navigation register and one acceptance/evidence ledger per project. Detailed requirements belong in their project documents.

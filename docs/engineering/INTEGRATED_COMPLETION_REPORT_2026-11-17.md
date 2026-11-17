@@ -110,3 +110,21 @@
 ## L. 結論（Conclusion）
 
 **CONDITIONAL PASS**。整合計畫中「可於本機證據完成」之項已執行並通過（I-2、II-3、III-2、III-3、VI-1~VI-3）；文件整合（II-1／II-2）、瀏覽器走查（IV）與 CSRF 重構（III-1）因並行編輯或環境需求列 NOT DONE／UNKNOWN（依 C-10 不得記 PASS）；大型項 R1／G3.4／全域 IT 依計畫標 WONTFIX／BLOCKED。**不宣稱**任何未驗證項為完成。
+
+---
+
+## M. 增補（2026-11-17 第二執行輪；測試工程線）
+
+在不覆寫 §I 判定的前提下，增補第二輪執行記錄（§I 所列 NOT DONE／UNKNOWN 項之後續）：
+
+| 項目 | 第二輪判定 | 證據 |
+|---|---|---|
+| II-1 RP-2 四方互鏈 | **PASS** | 操作手冊 §3.2 四方段連結化；產品線報告附錄C／效能架構 P4／RPA-ECOM 相依文件／A1 手冊反向互鏈；grep 五檔各 ≥1 且連結目標全存在（互鏈不重寫） |
+| II-2 RP-3 報告刷新 | **PASS** | 平台線報告檔頭 2026-11-17 刷新：測試數 167 lib＋36 整合檔／檢索 SLA p95 4.18ms・TTFB 6.89ms（addendum #47 G4.7 證據源）／新切片 G4＋TT-9；產品線報告附錄C 標 P1 已量測、P2–P4 待 IT（BLOCKED 附解鎖條件） |
+| III-1 PRE-R1b CSRF 收斂 | **PASS** | 13 處位元組相同之 403 區塊收斂為 `auth::csrf_mismatch`（單一判定點；2 處異構流程——總覽重渲染、決策 fail 巨集——保留並文件化）；單元測試 `csrf_mismatch_is_single_verdict_point`；PIN `authenticated_posts_reject_bad_csrf` 零修改通過（6/6） |
+| III-3 XP-003 匯出契約 | **補強 PASS** | 新增 `export_contract::monthly_csv_export_contract`：檔名＝報表名＋期間／欄序穩定／金額整數 minor 與 DB 對帳／無浮點洩漏——1 passed |
+| IV-1 R6 E2E 全走查 | **PASS（HTTP 層）＋瀏覽器 happy-path 截圖** | 拋棄式實例 :8091（臨時 DB，已清）：錯誤密碼 200＋「帳號或密碼不正確」；登入 303；預覽 303＋batch；確認 303；**重複確認 409（防重放）**；缺 CSRF 422；錯 CSRF 403（走 `csrf_mismatch`）；/transactions 2 筆；/reports/monthly.csv 借貸平衡（net 合計 0）；/audit 含 LOGIN/IMPORT 事件；儀表板／交易／稽核三張截圖 |
+| IV-2 R7 六寬度 | **PARTIAL** | 可用瀏覽器 MCP 無 viewport resize 能力 → 六寬度視覺矩陣 UNKNOWN；替代證據：`responsive_css` 3 tests（360/640/768/1024 媒體查詢斷言全綠）＋約 800px 實測（抽屜導覽渲染正常，見第二輪截圖） |
+| IV-3 列印預覽 | **PARTIAL** | 無 printToPDF／emulateMedia 工具 → UNKNOWN；替代證據：`design-system.css` @page 規則（L1590–1600）＋`guards::design_system_has_print_header_footer_and_pagination`（a5657f2）全綠 |
+
+**增補後總判定**：維持 **CONDITIONAL PASS**——第二輪關閉 II-1／II-2／III-1 與 IV-1；IV-2／IV-3 為 PARTIAL（工具限制＋替代證據，UNKNOWN 誠實登載）；V-1..V-3 維持原判定（WONTFIX／BLOCKED／NOT VERIFIED）。四關（fmt／clippy -D warnings／test workspace 0 failed 60 suites／audit 0）於第二輪末全綠。

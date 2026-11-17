@@ -1,4 +1,5 @@
 # Development Methodology Adoption Plan
+> 2026-11-17 Reviewed（整合完成計畫 1794810000000 I-4）：掃描無未勾選任務（\- [ ]\=0）；無未關閉程式任務。證據：PLAN_REGISTER addendum #52。
 
 Scope: Dev root workspace (Flaps ERP / ekpi-platform root workspace: core/, platform/, web/, crates/flaps_bridge).
 Current state: 98 tests passed / 0 failed; fmt/clippy/test/audit all EXIT=0; zero-JS invariant (script=0, inline-on=0) verified; audit has 1 pre-accepted warning (RUSTSEC-2026-0374).
