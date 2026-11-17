@@ -73,6 +73,7 @@
 | [`architecture/API_DESIGN.md`](architecture/API_DESIGN.md) | API 設計 | 路由與契約慣例 |
 | [`architecture/DATABASE_DESIGN.md`](architecture/DATABASE_DESIGN.md) | 資料庫設計 | SQLite schema 與索引 |
 | [`architecture/效能架構.md`](architecture/效能架構.md) | 效能架構 | 效能預算、基線與 SLA（100k tx p95 ≤500ms） |
+| [`design/LIVING_LEDGER_DESIGN_LANGUAGE.md`](design/LIVING_LEDGER_DESIGN_LANGUAGE.md) | **Living Ledger 設計語言** | Decision OS 產品面（dashboard／console）：三方向探索、WCAG 實算色彩、零 JS 元件規格、SSOT CSS 綁定 |
 | [`design/INFORMATION_ARCHITECTURE.md`](design/INFORMATION_ARCHITECTURE.md) | 資訊架構 | 22+ 路由使用者視角組織（SSOT 為 api.rs 路由表） |
 
 ### 2.4 測試與品質（testing/、quality/）

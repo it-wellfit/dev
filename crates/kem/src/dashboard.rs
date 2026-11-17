@@ -246,10 +246,7 @@ pub fn write_dashboard(
     if ledger_tail.is_empty() {
         h.push_str("<div class=\"empty\">帳本尚無條目——所有裁決與歸檔決策都會記入此處。</div>");
     } else {
-        h.push_str("<ul class=\"timeline\">") + 
-        h.push_str("<div class=\"type\">Action · Claim · Time (UTC)</div>") + 
-        if false { h.push_str(""); }
-        h.push_str("<!--<th scope=\"col\">動作</th><th scope=\"col\">主張</th><th scope=\"col\">時間 (UTC)</th></tr></thead><tbody>");
+        h.push_str("<ul class=\"timeline\">");
         for (seq, action, claim, ts) in ledger_tail.iter().take(12) {
             let _ = write!(
                 h,
