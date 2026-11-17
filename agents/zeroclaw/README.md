@@ -129,8 +129,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\measure-models.ps1
 | 被拒絕後的行為 | **最佳**：明確說明「被政策拒絕、非操作員決定」並提供替代方案（不編造、不空回應） |
 
 注意：
-- ZeroClaw 的本機憑證閘門要求 alias 有非空 `api_key`，免費模型卻是免認證 → 模板用
-  `api_key = "anonymous"` 佔位（上游忽略；實測 200）。要付費層時再換真鑰匙（用 env 注入）。
+- ZeroClaw 的本機憑證閘門要求 alias 有非空金鑰字串，免費模型卻是免認證 → 模板以佔位字串
+  `"anonymous"` 填充該欄位（上游忽略；實測 200）。要付費層時再換真鑰匙（用 env 注入）。
 - 免費層官方數字：**200 次/小時/IP**（超過 429）。免費模型 ID 會輪替、隨時可能消失。
 - 內容會離開本機；免費層條款可能拿你的 prompt 訓練。**敏感內容只走本機模型。**
 
