@@ -484,9 +484,6 @@ fn collect_rs_files(dir: &Path, out: &mut Vec<PathBuf>) {
     }
 }
 
-#[test]
-fn route_registry_matches_manifest_pages() {
-    let api_src = std::fs::read_to_string(platform_src_dir().join("api.rs")).expect("api.rs");
 /// axum 0.7→0.8 路徑語法正規化（2026-11-17 a5657f2 遷移）：
 /// `{param}`→`:param`、`{*wildcard}`→`:wildcard`。manifest SSOT 維持
 /// `:param` 慣例；對帳時將註冊路由正規化後比對（雙向語義等價）。
@@ -519,6 +516,9 @@ fn normalize_axum08(path: &str) -> String {
     }
     out
 }
+#[test]
+fn route_registry_matches_manifest_pages() {
+    let api_src = std::fs::read_to_string(platform_src_dir().join("api.rs")).expect("api.rs");
     let routes = extract_routes(&api_src);
     assert!(
         routes.len() >= 70,
@@ -569,7 +569,10 @@ fn normalize_axum08(path: &str) -> String {
         .iter()
         .filter(|p| p.renderer == console_manifest::Renderer::Dynamic)
     {
-        let Some((_, has_get, has_post)) = routes.iter().find(|(p, _, _)| normalize_axum08(p) == page.path) else {
+        let Some((_, has_get, has_post)) = routes
+            .iter()
+            .find(|(p, _, _)| normalize_axum08(p) == page.path)
+        else {
             continue;
         };
         match page.method {
