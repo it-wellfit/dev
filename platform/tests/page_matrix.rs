@@ -401,10 +401,10 @@ const NON_PAGE_ROUTES: [&str; 36] = [
     "/assets/legacy-1420.css",
     // UI v2 佈局樣式（2026-11-13 側欄 grid 佈局；靜態資產非頁面）。
     "/assets/ui-v2.css",
-    "/assets/fonts/:file",
+    "/assets/fonts/{file}",
     "/console",
     "/console/",
-    "/console/*path",
+    "/console/{*path}",
     "/admin/audit_evidence.csv",
     "/admin/control_coverage.json",
     "/admin/ccm.json",

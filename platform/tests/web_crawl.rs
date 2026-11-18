@@ -170,12 +170,12 @@ async fn every_page_renders_with_shared_components() {
             continue;
         }
         // Detail routes need a concrete id: accounts take an account id,
-        // transactions a transaction id.
-        let concrete = if uri.contains(":id") {
+        // transactions a transaction id. axum 0.8 語法為 `{id}`（0.7 為 `:id`）。
+        let concrete = if uri.contains(":id") || uri.contains("{id}") {
             if uri.starts_with("/accounts") {
-                uri.replace(":id", "ACC-A")
+                uri.replace(":id", "ACC-A").replace("{id}", "ACC-A")
             } else {
-                uri.replace(":id", "TX-1")
+                uri.replace(":id", "TX-1").replace("{id}", "TX-1")
             }
         } else {
             (*uri).to_string()
