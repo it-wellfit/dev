@@ -244,63 +244,25 @@ fn generated_console_has_zero_javascript_and_no_inline_styles() {
 }
 
 #[test]
-fn console_css_tokens_are_canonical_design_system_values() {
-    // W7（grill-E 全收斂）：console.css 的自造色值必須逐字存在於
-    // web/assets/design-system.css canonical 調色（漂移即攔截）。
+fn console_css_is_byte_identical_to_living_ledger_ssot() {
+    // W7（2026-11-17 修訂）：CSS 單一來源護欄——console.css 必須與
+    // docs/design/living-ledger.css 逐字一致（SSOT；取代舊 token 名稱
+    // 啟發式與 canonical 色值比對——Living Ledger 設計語言已將
+    // --bg/--accent/--ink 列為合法 token）。
+    // 〔C-01 舊規則歷史〕grill-E 全收斂的 token 名稱啟發式
+    // （console_css_tokens_are_canonical_design_system_values：自造色值
+    // 逐字存在於 design-system.css＋legacy 黑名單）於 2026-11-12 前有效，
+    // 由本規則（逐字 SSOT，強度更高）取代。
     let root = repo_root();
     let console_css = fs::read_to_string(root.join("knowledge/console/assets/console.css"))
         .expect("console.css must exist");
-    let design = fs::read_to_string(root.join("web/assets/design-system.css"))
-        .expect("design-system.css must exist");
-    // 抽取 console.css 的色值字面值（#rgb/#rrggbb）。
-    let mut problems = Vec::new();
-    let mut in_def = false;
-    for line in console_css.lines() {
-        let l = line.trim();
-        if l.starts_with(":root{") || l.starts_with("--color-") {
-            in_def = true;
-        }
-        if l.starts_with('}') {
-            in_def = false;
-        }
-        // 僅檢查 :root 定義區的色值（規則區的 color-mix 引用不受限）。
-        if !in_def {
-            continue;
-        }
-        for tok in l.split([';', '{', '}']) {
-            let tok = tok.trim();
-            if let Some(hash) = tok.find('#') {
-                let hex = &tok[hash..];
-                let hex = hex.split(' ').next().unwrap_or(hex);
-                let valid = hex.len() == 4 || hex.len() == 7;
-                if !valid {
-                    continue;
-                }
-                if !design.to_uppercase().contains(&hex.to_uppercase()) {
-                    problems.push(format!("non-canonical color {hex} (line: {tok})"));
-                }
-            }
-        }
-    }
-    assert!(
-        problems.is_empty(),
-        "console.css token drift (grill-E 全收斂違反):\n{}",
-        problems.join("\n")
+    let canonical = fs::read_to_string(root.join("docs/design/living-ledger.css"))
+        .expect("living-ledger.css must exist");
+    assert_eq!(
+        console_css, canonical,
+        "console.css 與 living-ledger.css 不一致（SSOT 漂移）——\
+         請執行 cargo run -p kem -- --root knowledge console 重新生成"
     );
-    // 舊詞彙 token 不得殘留（W7 收斂完成後的防回歸）。
-    for legacy in [
-        "--bg:",
-        "--accent:",
-        "--ink:",
-        "--muted:",
-        "--s1:",
-        "--font:",
-    ] {
-        assert!(
-            !console_css.contains(legacy),
-            "legacy token {legacy} survived convergence"
-        );
-    }
 }
 
 /// 憲章 §2.2（每個 .rs 第一行 `#![forbid(unsafe_code)]`）與 ADR-0014：
