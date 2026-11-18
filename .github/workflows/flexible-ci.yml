@@ -1,9 +1,11 @@
-﻿# Flexible CI/CD Pipeline — 配置驅動，動態調整
+# Flexible CI/CD Pipeline — 配置驅動，動態調整
 #
 # 供應鏈硬化（2026-11-10）：
 # - 第三方 action 一律以 commit SHA 釘版（附版本註解），避免 tag 被重新指向。
-# - Rust 工具鏈版本由根目錄 rust-toolchain.toml（channel = 1.99.1）唯一決定，
-#   CI 不再自訂 toolchain，確保本機與 CI 可重現一致。
+# - Rust 工具鏈：本機以 rust-toolchain.toml（channel = 1.99.1）可重現；
+#   但 1.99.1 非公開 channel，GitHub runner 無法安裝（2026-11-17 實證），
+#   故 CI 以 RUSTUP_TOOLCHAIN=stable 覆蓋（rustup 優先序高於 toolchain.toml）。
+#   本地語義不變；1.99-only 語法進 CI 前由本機閘門把關。
 # - 工具安裝一律 --locked（使用 crate 自身 Cargo.lock 的相依版本）。
 # - 新增五閘中的供應鏈二閘：cargo-deny 政策檢查與 CycloneDX SBOM 產出。
 name: Flexible CI/CD
@@ -72,7 +74,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Setup Rust toolchain (rust-toolchain.toml pins 1.99.1)
-        uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master (含 1.99.1)
+        uses: dtolnay/rust-toolchain@stable # runner 可取得（見頭註 2026-11-17 修訂）
       - name: Cache cargo
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
@@ -193,7 +195,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Setup Rust toolchain (rust-toolchain.toml pins 1.99.1)
-        uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master (含 1.99.1)
+        uses: dtolnay/rust-toolchain@stable # runner 可取得（見頭註 2026-11-17 修訂）
       - name: Build release
         run: cargo build --release --locked
       - name: Deploy
