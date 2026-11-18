@@ -497,7 +497,7 @@ fn normalize_axum08(path: &str) -> String {
     let mut out = String::with_capacity(path.len() + 8);
     let mut chars = path.chars().peekable();
     while let Some(c) = chars.next() {
-        if c == ':' && chars.peek().map_or(false, |n| n.is_ascii_alphanumeric()) {
+        if c == ':' && chars.peek().is_some_and(|n| n.is_ascii_alphanumeric()) {
             out.push('{');
             for inner in chars.by_ref() {
                 if inner == '/' || inner == '?' {
