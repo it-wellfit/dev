@@ -1,0 +1,25 @@
+name: Restore ONNX Runtime cache (ort-sys prebuilt)
+description: 從 Release 種子還原 ort.pyke.io 快取（CDN 對 runner 串流不穩的根治；360MB 靜態庫）
+runs:
+  using: composite
+  steps:
+    - name: Restore ort.pyke.io from release seed
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        $ErrorActionPreference = "Stop"
+        $hash = "f99aaef23f12986abb05924c944d8433521263ad756b462df762a5a982c98405"
+        $dst = "$env:LOCALAPPDATA\ort.pyke.io\dfbin\x86_64-pc-windows-msvc\$hash"
+        $lib = Join-Path $dst "onnxruntime.lib"
+        if ((Test-Path $lib) -and ((Get-Item $lib).Length -gt 300MB)) {
+          Write-Host "ort cache already present"
+          exit 0
+        }
+        New-Item -ItemType Directory -Force -Path $dst | Out-Null
+        $tag = "v0.2.0"
+        foreach ($f in @("DirectML.dll", "onnxruntime.lib")) {
+          $url = "https://github.com/it-wellfit/dev/releases/download/$tag/$f"
+          Write-Host "downloading $url"
+          Invoke-WebRequest -Uri $url -OutFile (Join-Path $dst $f) -TimeoutSec 900
+        }
+        Write-Host ("restored: " + (Get-ChildItem $dst | Measure-Object Length -Sum).Sum + " bytes")

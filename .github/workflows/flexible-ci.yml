@@ -73,6 +73,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Restore ONNX Runtime cache (ort-sys prebuilt)
+        uses: ./.github/actions/ort-restore
       - name: Setup Rust toolchain (rust-toolchain.toml pins 1.99.1)
         uses: dtolnay/rust-toolchain@stable # runner 可取得（見頭註 2026-11-17 修訂）
       - name: Cache cargo
@@ -196,6 +198,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Restore ONNX Runtime cache (ort-sys prebuilt)
+        uses: ./.github/actions/ort-restore
       - name: Setup Rust toolchain (rust-toolchain.toml pins 1.99.1)
         uses: dtolnay/rust-toolchain@stable # runner 可取得（見頭註 2026-11-17 修訂）
       - name: Build release
