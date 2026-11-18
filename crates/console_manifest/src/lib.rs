@@ -345,7 +345,7 @@ pub const PAGES: &[PageSpec] = &[
     },
     PageSpec {
         id: "tx.detail",
-        path: "/transactions/:id",
+        path: "/transactions/{id}",
         method: Method::Get,
         title: "交易詳情",
         nav_group: None,
@@ -381,7 +381,7 @@ pub const PAGES: &[PageSpec] = &[
     },
     PageSpec {
         id: "accounts.detail",
-        path: "/accounts/:id",
+        path: "/accounts/{id}",
         method: Method::Get,
         title: "科目詳情",
         nav_group: None,
@@ -467,7 +467,7 @@ pub const PAGES: &[PageSpec] = &[
     },
     PageSpec {
         id: "bankpay.batch-detail",
-        path: "/bankpay/batches/:batch_id",
+        path: "/bankpay/batches/{batch_id}",
         method: Method::Get,
         title: "批次詳情",
         nav_group: None,
