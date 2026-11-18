@@ -2,10 +2,9 @@
 #
 # 供應鏈硬化（2026-11-10）：
 # - 第三方 action 一律以 commit SHA 釘版（附版本註解），避免 tag 被重新指向。
-# - Rust 工具鏈：本機以 rust-toolchain.toml（channel = 1.99.1）可重現；
-#   但 1.99.1 非公開 channel，GitHub runner 無法安裝（2026-11-17 實證），
-#   故 CI 以 RUSTUP_TOOLCHAIN=stable 覆蓋（rustup 優先序高於 toolchain.toml）。
-#   本地語義不變；1.99-only 語法進 CI 前由本機閘門把關。
+# - Rust 工具鏈：rust-toolchain.toml（channel = 1.99.1）——2026-11-18 實證
+#   1.99.1 為公開版本（2026-10-15 發布），runner 的 rustup auto-install 成功
+#   （hub-check job 日誌），CI 與本機可重現一致（撤銷 2026-11-17 的 stable 覆蓋）。
 # - 工具安裝一律 --locked（使用 crate 自身 Cargo.lock 的相依版本）。
 # - 新增五閘中的供應鏈二閘：cargo-deny 政策檢查與 CycloneDX SBOM 產出。
 name: Flexible CI/CD
@@ -73,7 +72,16 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - name: Restore ONNX Runtime cache (ort-sys prebuilt)
+      - name: Warm cargo package cache（sbom_freshness --offline 測試需要）
+        shell: pwsh
+        run: |
+          Set-Location $env:GITHUB_WORKSPACE
+          cargo fetch --locked
+          if (Test-Path "web/src-tauri") {
+            Push-Location web/src-tauri
+            cargo fetch --locked
+            Pop-Location
+          }      - name: Restore ONNX Runtime cache (ort-sys prebuilt)
         uses: ./.github/actions/ort-restore
       - name: Setup Rust toolchain (rust-toolchain.toml pins 1.99.1)
         uses: dtolnay/rust-toolchain@stable # runner 可取得（見頭註 2026-11-17 修訂）
@@ -198,7 +206,16 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - name: Restore ONNX Runtime cache (ort-sys prebuilt)
+      - name: Warm cargo package cache（sbom_freshness --offline 測試需要）
+        shell: pwsh
+        run: |
+          Set-Location $env:GITHUB_WORKSPACE
+          cargo fetch --locked
+          if (Test-Path "web/src-tauri") {
+            Push-Location web/src-tauri
+            cargo fetch --locked
+            Pop-Location
+          }      - name: Restore ONNX Runtime cache (ort-sys prebuilt)
         uses: ./.github/actions/ort-restore
       - name: Setup Rust toolchain (rust-toolchain.toml pins 1.99.1)
         uses: dtolnay/rust-toolchain@stable # runner 可取得（見頭註 2026-11-17 修訂）
