@@ -487,6 +487,38 @@ fn collect_rs_files(dir: &Path, out: &mut Vec<PathBuf>) {
 #[test]
 fn route_registry_matches_manifest_pages() {
     let api_src = std::fs::read_to_string(platform_src_dir().join("api.rs")).expect("api.rs");
+/// axum 0.7→0.8 路徑語法正規化（2026-11-17 a5657f2 遷移）：
+/// `{param}`→`:param`、`{*wildcard}`→`:wildcard`。manifest SSOT 維持
+/// `:param` 慣例；對帳時將註冊路由正規化後比對（雙向語義等價）。
+fn normalize_axum08(path: &str) -> String {
+    // 統一到 axum 0.8 新語法（{param}／{*wildcard}）：
+    // manifest SSOT 與 NON_PAGE_ROUTES 白名單均已遷移（0ba4420／6b1d0f4），
+    // 此函式將任何殘留的 0.7 舊語法（:param）正規化為新語法後比對。
+    if !path.contains(':') || path.contains('{') {
+        return path.to_string();
+    }
+    let mut out = String::with_capacity(path.len() + 8);
+    let mut chars = path.chars().peekable();
+    while let Some(c) = chars.next() {
+        if c == ':' && chars.peek().map_or(false, |n| n.is_ascii_alphanumeric()) {
+            out.push('{');
+            for inner in chars.by_ref() {
+                if inner == '/' || inner == '?' {
+                    out.push('}');
+                    out.push(inner);
+                    break;
+                }
+                out.push(inner);
+            }
+            if !out.ends_with('}') {
+                out.push('}');
+            }
+        } else {
+            out.push(c);
+        }
+    }
+    out
+}
     let routes = extract_routes(&api_src);
     assert!(
         routes.len() >= 70,
@@ -504,13 +536,14 @@ fn route_registry_matches_manifest_pages() {
     let mut problems: Vec<String> = Vec::new();
     let mut seen: HashSet<String> = HashSet::new();
     for (path, _has_get, _has_post) in &routes {
-        if !seen.insert(path.clone()) {
+        if !seen.insert(normalize_axum08(path)) {
             problems.push(format!("duplicate route registration: {path}"));
         }
         if path.starts_with("/api/") {
             continue;
         }
-        if manifest_paths.contains(path.as_str()) || non_page.contains(path.as_str()) {
+        let normalized = normalize_axum08(path);
+        if manifest_paths.contains(normalized.as_str()) || non_page.contains(normalized.as_str()) {
             continue;
         }
         problems.push(format!(
@@ -536,7 +569,7 @@ fn route_registry_matches_manifest_pages() {
         .iter()
         .filter(|p| p.renderer == console_manifest::Renderer::Dynamic)
     {
-        let Some((_, has_get, has_post)) = routes.iter().find(|(p, _, _)| p == page.path) else {
+        let Some((_, has_get, has_post)) = routes.iter().find(|(p, _, _)| normalize_axum08(p) == page.path) else {
             continue;
         };
         match page.method {
