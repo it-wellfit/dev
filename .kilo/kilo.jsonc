@@ -77,5 +77,19 @@
   "instructions": [
     ".kilo/memories/corrections.md",
     ".kilo/memories/project.md"
-  ]
+  ],
+  "permission": {
+    "read": "allow",
+    "edit": "allow",
+    "glob": "allow",
+    "grep": "allow",
+    "list": "allow",
+    "bash": "allow",
+    "external_directory": "allow",
+    "question": "allow",
+    "webfetch": "allow",
+    "websearch": "allow",
+    "doom_loop": "allow",
+    "codesearch": "allow"
+  }
 }
