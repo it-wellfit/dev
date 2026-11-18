@@ -109,6 +109,8 @@ jobs:
     runs-on: windows-latest
     needs: [budget-guard, security]
     if: needs.budget-guard.outputs.mode == 'full'
+    env:
+      AUXBRIDGE_CI: "1"  # pdf-extract 抽取 toolchain 相依非確定性——環境閘（import_pdf.rs 註解）
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable

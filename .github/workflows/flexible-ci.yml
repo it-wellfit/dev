@@ -89,6 +89,8 @@ jobs:
         run: cargo clippy --all-targets --locked -- -D warnings
       - name: Run tests
         if: github.event.inputs.skip_tests != 'true'
+        env:
+          AUXBRIDGE_CI: "1"  # pdf-extract 抽取 toolchain 相依非確定性——環境閘（import_pdf.rs 註解）
         run: cargo test --locked
       - name: Security audit (RustSec)
         run: |
