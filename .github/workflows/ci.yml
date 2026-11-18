@@ -63,11 +63,16 @@ jobs:
     env:
       AUXBRIDGE_CI: "1"  # 與 integration 同：環境相依測試閘（pdf-extract toolchain 相依）
     steps:
-      - name: Warm cargo package cache (sbom_freshness --offline 測試需 minisign-verify 等 index/套件)
+      - name: Warm cargo package cache（web/src-tauri 存在時；sbom_freshness --offline 需其 index/套件）
         shell: pwsh
         run: |
-          Set-Location "$env:GITHUB_WORKSPACE/web/src-tauri"
-          cargo fetch --locked
+          $srcTauri = Join-Path $env:GITHUB_WORKSPACE "web\src-tauri"
+          if (Test-Path $srcTauri) {
+            Set-Location $srcTauri
+            cargo fetch --locked
+          } else {
+            Write-Host "SKIP warmup: web/src-tauri 不在此 checkout"
+          }
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
