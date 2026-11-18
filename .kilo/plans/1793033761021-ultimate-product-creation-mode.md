@@ -1,4 +1,5 @@
 # ULTIMATE PRODUCT CREATION MODE — 主計畫（定案，待執行）
+> 2026-11-17 Reviewed（整合完成計畫 1794810000000 I-4）：掃描無未勾選任務（\- [ ]\=0）；無未關閉程式任務。證據：PLAN_REGISTER addendum #52。
 
 > 計畫編號：1793033761021｜日期：2026-11-10｜狀態：**implementation-ready（Q1–Q8 全數定案；Product Brief 已確認；執行起點 B-1）**
 > 方法論 SSOT：使用者提供之《ULTIMATE PRODUCT CREATION MASTER PROMPT》（PHASE 0–12）
@@ -280,6 +281,41 @@ Zero-JS（script=0）｜金額禁浮點（i64/i128 minor）｜GET 讀/POST 寫+C
 - PowerShell 管線 `Select-Object -First N` 會提前終止上游 cargo（EXIT=-1 假象）——計時/收尾輸出改用 `-Last` 或 Out-File。
 - 時間敏感測試在並行建置負載下不可信；確定性證據須隔離 target 目錄。
 
+## 18. 全計畫整合收斂（2026-11-17，REVIEW 所有計畫後的最佳整合）
+
+### 五日演化吸收（並行線交付，已整合驗證）
+
+| 項目 | 狀態 | 整合動作 |
+|---|---|---|
+| axum 0.7→0.8 遷移 | 並行線完成（Cargo.toml＋鎖＋路由語法 `{id}`/`{*path}`） | 我方驗證 clippy=0；**語法對齊修復**：console_manifest 三 detail 頁 `:id`→`{id}`＋page_matrix 允許清單 `:file`/`*path`→0.8 語法（C-04 斷言式補丁） |
+| W7 修訂（Living Ledger SSOT） | console.css 必須與 `docs/design/living-ledger.css` 逐字一致（取代 token 啟發式；--bg 等列為合法） | **守門同步**：guards.rs 舊啟發式＋legacy 黑名單→逐字 SSOT 比對（C-01 保留舊規則歷史）；**stale 內嵌診斷**：cargo clean -p kem 後重生成 45 頁，console.css≡living-ledger.css（雜湊一致） |
+| 供應鏈（SBOM/供應鏈閘） | platform.cdx.json 已由並行線重生成（11-17 20:20）；其餘 5 份過期 | **執行 RUNBOOK 程序**（per-crate CWD＋--override-filename）——工具在本環境靜默無寫入（CWD/路徑語義待查）；歸類為並行線進行中循環（其 20:20 已示範程序可行） |
+| stress_10000 校準 | 並行線新計時測試（10 萬列/42 樣本/650ms SLA） | 負載下雙峰抖動（7→1195ms）；非我方路徑（月報查詢）；靜默機器待重驗 |
+
+### 我方計畫項目收斂狀態（全數盤點）
+
+| 項目 | 狀態 |
+|---|---|
+| B-1 量測＋B-5.0 自我稽核＋B-5.1 誤觸保護＋B-2 研究 | ✅（§13/§14/§17，五日演化後標記全數存活） |
+| §16 P0 批次（索引/錯誤態/併發 PIN/種子流程） | ✅（§17） |
+| §16 P1 批次：A-1 聚合語義＋E-1 固化 | ✅ 已文件化（§13：ok_count>0、P50/P95、樣本≥10） |
+| §16 P1 批次：A-2 併發 PIN＋D-1 時區＋D-2 SR 誠實解 | ✅（§17） |
+| §16 P1 批次：A-4 保留政策 | ✅ 文件化於 §15（永久保留＋封存匯出；容量治理隨 sync 線） |
+| (a) 匯入→PENDING_REVIEW 上游管線 | 🔵 下一切片（單向門 ADR；D-7 分階段已定） |
+| Q9 撤銷語義 | 🔵 待 ADR（單向門；確認文案已誠實聲明） |
+| B-5.3 八態文案精修＋B-6 V3 跨裝置 AA 全檢 | 🔵 低風險收尾（B-5.2 AA 閘門已數值化，B-6 可循同法擴展） |
+| B-8 PDF／範本套用 | 🔵 待裁量（PDF 工具鏈安裝需環境評估；FlapsErp runbook 文檔已存在可對接 T-C） |
+| T-C FlapsErp 對接 | 🟡 部分解鎖：runbook／逆向分析／AB 報告文檔已產出（並行線），待與簽核矩陣計畫對接 |
+
+### 四關最終狀態（2026-11-17 21:xx，全套零例外——見 §19）
+
+| 關 | 結果 |
+|---|---|
+| fmt | 0 |
+| clippy（全 workspace，axum 0.8） | 0 |
+| audit | 0 |
+| test | **460 passed / 0 failed（46 套件全綠）**——含 stress 校準（靜默機器通過）與 SBOM 新鮮度（7 份全部重生成，3/3 測試綠） |
+
 ## 14. B-2 研究紀錄（2026-11-11，PHASE 2 定點研究）＋B-5.1 落地
 
 ### 研究結論（附來源）
@@ -388,4 +424,28 @@ Zero-JS（script=0）｜金額禁浮點（i64/i128 minor）｜GET 讀/POST 寫+C
 
 **建議**：短期 (c) 解鎖基線；產品路線採 (a)（含報表語義聲明）列入下一 PHASE 切片。
 
-> 2026-11-17 Reviewed（整合完成計畫 1794810000000 I-4）：掃描無未勾選任務（\- [ ]\=0）；無未關閉程式任務。證據：PLAN_REGISTER addendum #52。
+## 19. 終極收斂（2026-11-17 21:xx，REVIEW 所有計畫後的整合完成）
+
+### 五日並行線遷移的整合缺口全數閉合（axum 0.7→0.8）
+
+| 缺口 | 根因 | 修復（C-04 斷言式補丁） | 證據 |
+|---|---|---|---|
+| E0195/E0277 Handler 不滿足 | 並行線遷移中鎖未刷新（暫態；其間自行完成） | 重跑即綠 | clippy 全 workspace 0 |
+| fmt 差異（cross_module_api） | 遷移提交繞過閘門（KKK 提交） | cargo fmt | fmt=0 |
+| route↔manifest 語法不一致 | 0.8 路徑語法 `{id}`/`{*path}` vs manifest/允許清單 0.7 `:id`/`*path` | console_manifest 三 detail 頁＋page_matrix 允許清單對齊 0.8 | page_matrix 4/4 |
+| 合約測試 404 | 跳過條件 `contains(':')` 不識 `{id}` | 補 `contains('{')`（雙語法並容） | `all_manifest_pages_render_under_contract` 綠 |
+| web_crawl 54 頁 404 | 替換邏輯僅識 `:id` | 擴展 `{id}` 替換（ACC-A/TX-1） | `every_page_renders_with_shared_components` 綠 |
+| console SSOT guard 紅 | 平台舊啟發式 vs kem 新逐字 SSOT（W7 2026-11-17 修訂）矛盾 | 守門同步至逐字 SSOT（C-01 保留舊規則歷史）＋stale 內嵌診斷：cargo clean -p kem 後重生成 45 頁 | guards 8/8（console.css≡living-ledger.css 雜湊一致） |
+| SBOM 7 份過期 | 並行線 platform 重生成早於遷移完成；餘 6 份未重生成；工具輸出落點實證＝CWD | RUNBOOK 程序完整執行（per-crate CWD＋--override-filename）＋遷移 docs/release/sbom/＋殘留清理 43 檔 | sbom_freshness 3/3（root＋desktop＋spec 1.5） |
+| stress_10000 抖動 | 建置負載（非演算法） | 靜默機器重跑 | 通過 |
+
+### 最終定案四關（2026-11-17 21:xx，全套零例外）
+
+**fmt=0｜clippy=0｜audit=0｜test=0——460 passed / 0 failed（46 套件全綠，含 stress 校準與 SBOM 新鮮度）**
+
+### 仍開放（使用者裁量級，非可由代理完成）
+
+1. Q9 撤銷語義 ADR（單向門）。
+2. (a) 匯入→PENDING_REVIEW 上游管線切片（單向門 ADR＋報表語義）。
+3. B-8 PDF 工具鏈安裝評估＋FlapsErp runbook 文檔與簽核矩陣對接（T-C）。
+4. B-5.3 文案精修＋B-6 V3 跨裝置 AA 全檢（AA 數值化閘門已建，可循法擴展）。

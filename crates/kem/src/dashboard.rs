@@ -63,6 +63,7 @@ fn type_label(t: ClaimType) -> &'static str {
 
 /// Render dashboard.html. `ensemble` = latest T2 verdict summary
 /// (models_used, agreement, top_score) for the governance panel.
+/// `latest_package` = latest O1 decision package (claim_id, sha) — O4 panel.
 pub fn write_dashboard(
     root: &Path,
     claims: &[Claim],
@@ -70,6 +71,7 @@ pub fn write_dashboard(
     queue_items: &[(String, Vec<String>)],
     ledger_tail: &[(u64, String, String, String)], // (seq, action, claim, ts)
     ensemble: Option<(Vec<String>, f64, Option<u8>)>,
+    latest_package: Option<(String, String)>,
 ) -> Result<(), KemError> {
     let mut h = String::with_capacity(32 * 1024);
     let now = Utc::now().to_rfc3339();
@@ -188,7 +190,9 @@ pub fn write_dashboard(
     h.push_str("</section>\n");
 
     // ── 治理 ──
-    h.push_str("<div><h2>模型聯合（T2 裁決）</h2>");
+    h.push_str(
+        "<section class=\"panel\" id=\"gov\" aria-labelledby=\"h-gv\"><div><h2 id=\"h-gv\">模型聯合（T2 裁決）</h2>",
+    );
     match &ensemble {
         Some((models, agreement, top)) => {
             let _ = write!(
@@ -214,8 +218,22 @@ pub fn write_dashboard(
             h.push_str("<div class=\"empty\">尚無 T2 聯合裁決記錄——執行 <code>kem vet2 --claim <id></code> 啟動跨模型投票。</div>");
         }
     }
+    h.push_str("</div><div><h2>最新決策包（O1）</h2>");
+    match latest_package {
+        Some((claim_id, sha)) => {
+            let short = &sha[..sha.len().min(12)];
+            let _ = write!(
+                h,
+                "<p><code>{}</code>｜sha <span class=\"mono\">{short}</span>…</p>\
+                 <p class=\"next\">完整內容：<code>.kem/packages/</code>；複核：<code>kem review --claim <id></code></p>",
+                esc(&claim_id)
+            );
+        }
+        None => h.push_str(
+            "<div class=\"empty\">尚無決策包——執行 <code>kem package --claim <id></code> 生成。</div>",
+        ),
+    }
     h.push_str("</div><div><h2>審查佇列</h2>");
-    h.push_str("<div><h2>審查佇列</h2>");
     if queue_items.is_empty() {
         h.push_str("<div class=\"empty\">佇列清空——無待複核項目。</div>");
     } else {
@@ -311,6 +329,7 @@ mod tests {
             &[],
             &[(1, "File".into(), "c".into(), "t".into())],
             Some((vec!["qwen3.5:4b".into()], 0.80, Some(4))),
+            Some(("claim-20261107-001".into(), "deadbeefcafe1234".into())),
         )
         .unwrap();
         let html = std::fs::read_to_string(dir.path().join("dashboard.html")).unwrap();
@@ -334,6 +353,7 @@ mod tests {
             0,
             &[("claim-20261107-009".into(), vec!["quote drifted".into()])],
             &[],
+            None,
             None,
         )
         .unwrap();

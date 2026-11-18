@@ -73,3 +73,9 @@
 | ~~data/env.db canonical 命名~~ | ~~P2~~ | ✅ 完成（prod.db/staging.db 落地，demo-auxbridge.db 保留為備份） | — |
 | ~~回滾演練 / SLO~~ | ~~P5/P6~~ | ✅ 完成（DRILL_LOG.md 演練 #1：RTO 1 分鐘/RPO 0，PASS；SLO 99.5% 裁定於 docs/standards/SLO_SERVICE_LEVEL_OBJECTIVES.md） | 營運 3 個月後複核 |
 | main 分支保護 | P1 | GitHub repo 設定（UI 操作，非檔案） | Repo Admin 依 docs/ops/DRILL_LOG.md 同目錄之操作指引執行 |
+
+## 7. 2026-11-18 增補（CI 健康＋秘密管理）
+
+- **Flexible CI/CD toolchain 修復**：RUSTUP_TOOLCHAIN=stable 覆蓋（1.99.1 非公開 channel，runner 實證裝不到；本地語義不變）——flexible-ci.yml 頭註修訂＋dtolnay@stable。
+- **updater 私鑰遷入 GitHub Secrets**：TAURI_SIGNING_PRIVATE_KEY / _PASSWORD 已設（2026-11-18）——CI 簽名就緒；本地私鑰保留於 %TEMP%\tauri-signing\tauri.key（內部部署）。
+- **guards.rs W7 修訂落地推送**：console.css 契約改 Living Ledger SSOT 逐字一致（d0ae14f）——PR #4 unit 閘重跑。

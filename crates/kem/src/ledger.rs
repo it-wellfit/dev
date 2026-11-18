@@ -32,6 +32,8 @@ pub enum LedgerAction {
     Retire,
     /// Re-verification of file-linked evidence against current files.
     Sync,
+    /// O1 決策包已生成（package_sha 歸因）。
+    Package,
     /// Review-queue disposition (accept/reject/supersede/defer).
     Review,
 }

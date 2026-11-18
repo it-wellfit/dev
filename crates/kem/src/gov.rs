@@ -171,6 +171,7 @@ pub fn record_disposition(
     disposition: Disposition,
     reviewer: &str,
     note: &str,
+    package_sha: &str,
     now: DateTime<Utc>,
 ) -> Result<(), KemError> {
     let item = serde_json::json!({
@@ -178,6 +179,7 @@ pub fn record_disposition(
         "disposition": disposition,
         "reviewer": reviewer,
         "note": note,
+        "package_sha": package_sha,
         "resolved_at": now.to_rfc3339(),
     });
     if let Some(parent) = queue_path.parent() {

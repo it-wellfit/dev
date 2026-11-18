@@ -12,6 +12,7 @@
 //! - the ledger is append-only with a SHA-256 hash chain
 //! - supersede, never delete: `retired` is the only terminal state
 
+pub mod benchmark;
 pub mod capture;
 pub mod console;
 // NOTE: `console` module source was removed 2026-11-09 (byte-signature
@@ -21,6 +22,7 @@ pub mod dashboard;
 pub mod embed;
 pub mod evolve;
 pub mod filing;
+pub mod package;
 pub mod gov;
 pub mod hyde;
 pub mod ledger;
@@ -29,6 +31,7 @@ pub mod schema;
 pub mod search;
 pub mod seed;
 pub mod vetting;
+pub mod views;
 
 pub const SCHEMA_VERSION: &str = "1";
 

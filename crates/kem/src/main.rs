@@ -313,9 +313,6 @@ fn cmd_ingest(root: &Path, ledger: &Path, batch_file: String) -> Result<(), KemE
     Ok(())
 }
 
-/// Shared view regeneration: index.md + log.md + dashboard.html.
-/// Returns (claims, findings, queue items) for reporting.
-#[allow(clippy::type_complexity)]
 /// Zip golden cases with their embeddings in input order.
 fn qs_zip_map(
     cases: &[kem::search::GoldenCase],
@@ -328,78 +325,9 @@ fn qs_zip_map(
         .collect()
 }
 
-/// finalize_views 的回傳：宣告、lint 發現數、待審佇列項目。
-pub struct FinalizedViews {
-    pub claims: Vec<Claim>,
-    pub findings: usize,
-    pub queue: Vec<(String, Vec<String>)>,
-}
-
-fn finalize_views(root: &Path, ledger: &Path) -> Result<FinalizedViews, KemError> {
-    let claims = load_claims(&root.join("claims"))?;
-    let findings = kem::gov::lint(&claims, Utc::now());
-    let findings_count = findings.len();
-    write_index(root, &claims)?;
-    write_log(root, ledger)?;
-    // Review queue: unresolved items only (shared reader — single source
-    // of truth with kem doctor; review defect #3 fix).
-    let queue_path = root.join(".kem/review-queue.jsonl");
-    let queue_items = kem::gov::pending_queue(&queue_path)?;
-    let ledger_entries = if ledger.exists() {
-        kem::ledger::read_all(ledger)?
-    } else {
-        Vec::new()
-    };
-    let ledger_tail: Vec<(u64, String, String, String)> = ledger_entries
-        .iter()
-        .rev()
-        .take(12)
-        .map(|e| {
-            (
-                e.seq,
-                format!("{:?}", e.action).to_lowercase(),
-                e.claim_id.clone(),
-                e.ts.to_rfc3339(),
-            )
-        })
-        .collect();
-    // Latest T2 ensemble verdict (actor kem-t2) for the governance panel.
-    let ensemble = ledger_entries
-        .iter()
-        .rev()
-        .find(|e| e.actor == "kem-t2")
-        .and_then(|e| {
-            let models: Vec<String> = e
-                .detail
-                .get("models_used")
-                .and_then(|m| m.as_array())
-                .map(|a| {
-                    a.iter()
-                        .filter_map(|x| x.as_str().map(String::from))
-                        .collect()
-                })
-                .unwrap_or_default();
-            let agreement = e.detail.get("agreement").and_then(|a| a.as_f64())?;
-            let top = e
-                .detail
-                .get("top_score")
-                .and_then(|t| t.as_u64())
-                .map(|t| t as u8);
-            (!models.is_empty()).then_some((models, agreement, top))
-        });
-    kem::dashboard::write_dashboard(
-        root,
-        &claims,
-        findings_count,
-        &queue_items,
-        &ledger_tail,
-        ensemble,
-    )?;
-    Ok(FinalizedViews {
-        claims,
-        findings: findings_count,
-        queue: queue_items,
-    })
+/// 視圖重生成（M4）：委派至函式庫 kem::views（benchmark／測試共用）。
+fn finalize_views(root: &Path, ledger: &Path) -> Result<kem::views::FinalizedViews, KemError> {
+    kem::views::finalize_views(root, ledger)
 }
 
 /// P1 M4: regenerate all views from the SSOT.

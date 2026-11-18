@@ -1,0 +1,12 @@
+HTTP/1.1 200 OK
+content-type: text/csv; charset=utf-8
+content-disposition: attachment; filename="monthly-2026-11.csv"
+content-security-policy: default-src 'none'; style-src 'self'; img-src 'self' data:; font-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'
+x-content-type-options: nosniff
+x-frame-options: DENY
+referrer-policy: no-referrer
+strict-transport-security: max-age=31536000; includeSubDomains
+cache-control: no-store
+content-length: 46
+date: Wed, 18 Nov 2026 07:16:09 GMT
+
