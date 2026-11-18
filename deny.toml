@@ -39,6 +39,10 @@ ignore = [
     # 逐條理由、緩解措施與複核觸發條件見 .cargo/audit.toml（處置 SSOT）。
     "RUSTSEC-2024-0370",
     "RUSTSEC-2024-0429",
+    # RUSTSEC-2026-0543 (chrono UNMAINTAINED, maintenance-status advisory)
+    # 書面處置見 .cargo/audit.toml（處置 SSOT）——11 檔 54+ 處核心用途、
+    # 內部工具零暴露；遷移 time crate 計畫已列 INVENTORY Pending。
+    "RUSTSEC-2026-0543",
 ]
 
 [licenses]
