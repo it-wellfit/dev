@@ -63,6 +63,10 @@ jobs:
     env:
       AUXBRIDGE_CI: "1"  # 與 integration 同：環境相依測試閘（pdf-extract toolchain 相依）
     steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: ./.github/actions/ort-restore
       - name: Warm cargo package cache（web/src-tauri 存在時；sbom_freshness --offline 需其 index/套件）
         shell: pwsh
         run: |
@@ -73,10 +77,6 @@ jobs:
           } else {
             Write-Host "SKIP warmup: web/src-tauri 不在此 checkout"
           }
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-      - uses: ./.github/actions/ort-restore
       - run: cargo test --locked
 
   # ── fast 模式（≥80% 預算）執行───────────────────────────────────
