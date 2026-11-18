@@ -287,14 +287,14 @@ pub struct ApiCatalogTemplate {
     pub acting_user: String,
     pub nav: crate::nav::NavModel,
     pub endpoints: Vec<CatalogRow>,
-    /// E.Sun BankPay V2.8 官方契約端點（8 個；權威規格：
-    /// `Wellfit/docs/bankpay/04-interface-specification.md`）。
+    /// E.Sun BankPay V2.9 官方契約端點（9 個；權威規格：
+    /// `Wellfit/docs/esun-bank-flaps-erp-integration/api-spec-v29.md`）。
     pub esun_endpoints: Vec<EsunEndpointView>,
     pub esun_total: usize,
     pub native_total: usize,
 }
 
-/// E.Sun V2.8 契約端點檢視（誠實標示平台對應與串接狀態）。
+/// E.Sun V2.9 契約端點檢視（誠實標示平台對應與串接狀態）。
 pub struct EsunEndpointView {
     /// 官方契約路徑。
     pub path: &'static str,
@@ -311,11 +311,13 @@ pub struct EsunEndpointView {
     pub mode_class: &'static str,
 }
 
-/// E.Sun BankPay V2.8 官方契約端點（8 個；單一事實來源為
-/// `Wellfit/docs/bankpay/04-interface-specification.md`）。
+/// E.Sun BankPay V2.9 官方契約端點（9 個；單一事實來源為
+/// `Wellfit/docs/esun-bank-flaps-erp-integration/api-spec-v29.md`，來源行號
+/// 慣例 `V29.txt:nnn` 見 `Dev/.kilo/plans/1794646196379-esun-v2-9-upgrade-plan.md` §1）。
 ///
 /// 誠實標示（治理 P7）：已由平台模擬器對應者標「模擬對應」；未串接者
-/// 如實標示，不得以本目錄偽稱可用（ADR-0012）。
+/// 如實標示，不得以本目錄偽稱可用（ADR-0012；UAT 連線冒煙腳本：
+/// `Wellfit/crates/wellfit_bankpay/tests/uat_smoke.rs`，尚未執行＝未驗證）。
 pub fn esun_endpoints() -> Vec<EsunEndpointView> {
     use EsunEndpointView as E;
     vec![
@@ -323,7 +325,7 @@ pub fn esun_endpoints() -> Vec<EsunEndpointView> {
             path: "/payment/createTwdPaymentInstruction",
             name: "建立台幣支付指示",
             description: "建立新台幣付款指示（批次付款核心；平台匯出作業的銀行端對應）。",
-            contract_ref: "§47",
+            contract_ref: "V2.9 §4.(一)（V29.txt 台幣放行節）",
             mapping: "/api/bankpay/export",
             mode: "模擬對應",
             mode_class: "badge-mock",
@@ -332,7 +334,7 @@ pub fn esun_endpoints() -> Vec<EsunEndpointView> {
             path: "/payment/retrieveTwdPaymentInstructionResult",
             name: "查詢台幣支付結果",
             description: "取得台幣付款指示處理結果（批次對帳與狀態機推進依據）。",
-            contract_ref: "§118",
+            contract_ref: "V2.9 §4.(二)（V29.txt:987-988）",
             mapping: "/api/bankpay/query",
             mode: "模擬對應",
             mode_class: "badge-mock",
@@ -341,7 +343,7 @@ pub fn esun_endpoints() -> Vec<EsunEndpointView> {
             path: "/account/retrieveStatements",
             name: "查詢交易明細（對帳單）",
             description: "下載帳戶交易明細；平台匯入作業以 CSV 真實解析對應。",
-            contract_ref: "§145",
+            contract_ref: "V2.9 §4.(三)（V29.txt 明細查詢節）",
             mapping: "/api/bankpay/import",
             mode: "模擬對應",
             mode_class: "badge-mock",
@@ -349,8 +351,8 @@ pub fn esun_endpoints() -> Vec<EsunEndpointView> {
         E {
             path: "/payment/validateFxPaymentInstruction",
             name: "驗證外幣支付指示",
-            description: "外幣付款指示送出前的格式與餘額驗證。",
-            contract_ref: "§194",
+            description: "外幣付款指示送出前的格式與餘額驗證（整批費用帳號/幣別須一致）。",
+            contract_ref: "V2.9 §4.(四)（V29.txt:2005-2074）",
             mapping: "",
             mode: "未串接",
             mode_class: "badge-info",
@@ -359,7 +361,7 @@ pub fn esun_endpoints() -> Vec<EsunEndpointView> {
             path: "/payment/createFxPaymentInstruction",
             name: "建立外幣支付指示",
             description: "建立外幣付款指示（跨幣別付款）。",
-            contract_ref: "§237",
+            contract_ref: "V2.9 §4.(五)（V29.txt:1615-1617）",
             mapping: "",
             mode: "未串接",
             mode_class: "badge-info",
@@ -368,7 +370,7 @@ pub fn esun_endpoints() -> Vec<EsunEndpointView> {
             path: "/payment/retrieveFxPaymentInstructionResult",
             name: "查詢外幣支付結果",
             description: "取得外幣付款指示處理結果。",
-            contract_ref: "§245",
+            contract_ref: "V2.9 §4.(六)（V29.txt:3135-3136）",
             mapping: "",
             mode: "未串接",
             mode_class: "badge-info",
@@ -377,7 +379,7 @@ pub fn esun_endpoints() -> Vec<EsunEndpointView> {
             path: "/account/retrieveAccountBalance",
             name: "查詢帳戶餘額",
             description: "即時帳戶餘額查詢（資金頭寸監控）。",
-            contract_ref: "§273",
+            contract_ref: "V2.9 §4.(七)（V29.txt 餘額查詢節）",
             mapping: "",
             mode: "未串接",
             mode_class: "badge-info",
@@ -386,7 +388,16 @@ pub fn esun_endpoints() -> Vec<EsunEndpointView> {
             path: "/payment/retrieveTwdPaymentInstructionPrintResult",
             name: "查詢台幣支付列印結果",
             description: "付款指示列印檔取得（紙本憑證流程）。",
-            contract_ref: "§299",
+            contract_ref: "V2.9 §4.(八)（V29.txt 列印節）",
+            mapping: "",
+            mode: "未串接",
+            mode_class: "badge-info",
+        },
+        E {
+            path: "/payment/downloadFxRemittanceVoucher",
+            name: "下載外幣交易憑證（V2.9 新增）",
+            description: "下載外幣匯款水單（Base64 PDF；fileInfo：fileType/fileName/fileBody）。",
+            contract_ref: "V2.9 §4.(九)（V29.txt:3475-3556）",
             mapping: "",
             mode: "未串接",
             mode_class: "badge-info",
@@ -1083,7 +1094,7 @@ pub async fn apihub_records(
     })
 }
 
-/// GET /admin/api/codes — V2.8 錯誤碼對照（僅列已驗證項；完整表見官方文件）。
+/// GET /admin/api/codes — V2.9 錯誤碼對照（V2.9 附錄六.(一)；完整表見官方文件）。
 pub async fn apihub_codes(
     State(state): State<AppState>,
     session: Extension<Session>,
@@ -1092,14 +1103,77 @@ pub async fn apihub_codes(
     if let Some(resp) = require_admin(&state, &session).await {
         return resp;
     }
-    let codes = vec![ErrorCodeRow {
-        code: "910000".to_string(),
-        meaning: "成功（Success）".to_string(),
-        semantics:
-            "rsStatus.code = 910000 時 rsData 才存在；逐筆錯誤細節於 rsStatus.moreInfo（分號分隔）"
+    let codes = vec![
+        ErrorCodeRow {
+            code: "910000".to_string(),
+            meaning: "訊息回覆成功".to_string(),
+            semantics:
+                "rsStatus.code = 910000 時 rsData 才存在；逐筆錯誤細節於 rsStatus.moreInfo（分號分隔）"
+                    .to_string(),
+            action: "正常處理".to_string(),
+        },
+        ErrorCodeRow {
+            code: "910068".to_string(),
+            meaning: "交易資料寫入銀行失敗".to_string(),
+            semantics: "唯一可重試類錯誤（V2.9 附錄：請稍後再試）".to_string(),
+            action: "延後重試（勿立即重打）".to_string(),
+        },
+        ErrorCodeRow {
+            code: "910069".to_string(),
+            meaning: "交易資料檢核有誤".to_string(),
+            semantics: "moreInfo 帶逐筆錯誤細節（分號分隔）".to_string(),
+            action: "依 moreInfo 逐筆修正後重送".to_string(),
+        },
+        ErrorCodeRow {
+            code: "910070".to_string(),
+            meaning: "外部系統串接約定資料有誤".to_string(),
+            semantics: "V2.8 查詢範例曾誤植此碼於查詢上限；V2.9 已修正".to_string(),
+            action: "檢查約定資料（統編／帳號）".to_string(),
+        },
+        ErrorCodeRow {
+            code: "910071".to_string(),
+            meaning: "約定業務尚未開啟".to_string(),
+            semantics: "需向銀行申請對應業務約定".to_string(),
+            action: "臨櫃洽詢／聯繫帳戶經理".to_string(),
+        },
+        ErrorCodeRow {
+            code: "910072".to_string(),
+            meaning: "查詢條件錯誤，無法查詢".to_string(),
+            semantics: "查詢條件不足或格式錯誤".to_string(),
+            action: "補齊查詢條件".to_string(),
+        },
+        ErrorCodeRow {
+            code: "910073".to_string(),
+            meaning: "超過查詢上限（至多 500 筆）".to_string(),
+            semantics: "V2.9 範例統一使用此碼（修正 V2.8 誤植之 910070）".to_string(),
+            action: "縮小查詢區間或分批查詢".to_string(),
+        },
+        ErrorCodeRow {
+            code: "910093".to_string(),
+            meaning: "{電文欄位} 為必填".to_string(),
+            semantics: "V2.9 新增；moreInfo 帶缺少之欄位名".to_string(),
+            action: "補上 moreInfo 所示欄位".to_string(),
+        },
+        ErrorCodeRow {
+            code: "910094".to_string(),
+            meaning: "{電文欄位} 不符".to_string(),
+            semantics: "V2.9 新增；moreInfo 帶不符之欄位名".to_string(),
+            action: "依 moreInfo 修正欄位值".to_string(),
+        },
+        ErrorCodeRow {
+            code: "910144".to_string(),
+            meaning: "電文異常".to_string(),
+            semantics: "910144 後接異常訊息".to_string(),
+            action: "記錄訊息並洽銀行資訊人員".to_string(),
+        },
+        ErrorCodeRow {
+            code: "999999".to_string(),
+            meaning: "未知錯誤".to_string(),
+            semantics: "V2.9 憑證下載範例亦以 999999＋moreInfo 回報欄位缺漏（applyDate 為必填欄位）"
                 .to_string(),
-        action: "正常處理".to_string(),
-    }];
+            action: "解析 moreInfo；無法歸類時洽銀行".to_string(),
+        },
+    ];
     render_or_500(ApiCodesTemplate {
         acting_user: session.username.clone(),
         nav: nav.0.clone(),
@@ -1120,15 +1194,17 @@ pub async fn apihub_release(
         ReleaseItemRow {
             id: "RC-01".to_string(),
             category: "規格".to_string(),
-            item: "V2.8 契約 8 端點盤點（rqHeader/rqData 信封、錯誤碼、mTLS）".to_string(),
-            evidence: "Wellfit/docs/bankpay/04-interface-specification.md".to_string(),
+            item: "V2.9 契約 9 端點盤點（rqHeader/rqData 信封、錯誤碼全表、TLS 1.2+；2-Way SSL 已移除）"
+                .to_string(),
+            evidence: "Wellfit/docs/esun-bank-flaps-erp-integration/api-spec-v29.md".to_string(),
             status: "已驗證".to_string(),
             status_class: "badge-success".to_string(),
         },
         ReleaseItemRow {
             id: "RC-02".to_string(),
             category: "實作".to_string(),
-            item: "權威實作 wellfit_bankpay（8 端點、測試覆蓋）".to_string(),
+            item: "權威實作 wellfit_bankpay（9 端點、V2.9 對齊；clippy 零警告＋484 passed/0 failed/19 ignored）"
+                .to_string(),
             evidence: "Wellfit/crates/wellfit_bankpay".to_string(),
             status: "已驗證".to_string(),
             status_class: "badge-success".to_string(),
@@ -1144,8 +1220,8 @@ pub async fn apihub_release(
         ReleaseItemRow {
             id: "RC-04".to_string(),
             category: "資安".to_string(),
-            item: "玉山 Sandbox mTLS 憑證申請與配置".to_string(),
-            evidence: "OQ-E3（待憑證）".to_string(),
+            item: "UAT 連線冒煙（V2.9：2-Way SSL 已移除；需 UAT 環境與約定帳號）".to_string(),
+            evidence: "uat_smoke.rs＋10-uat-smoke-runbook.md（已備未執行）".to_string(),
             status: "未驗證".to_string(),
             status_class: "badge-warning".to_string(),
         },
@@ -1201,7 +1277,9 @@ pub async fn apihub_net(
             note: "正式通道需 OQ-E3 憑證；未配置前呼叫將 fail-closed 回 500".to_string(),
         });
     }
-    let url_ok = config.esun_url.starts_with("https://");
+    // V2.9 URL 規則：元件端為 http://IP:port（UAT 8443／營運 8080）；
+    // https 亦接受（元件若配置 TLS）。僅拒絕空值與非 http(s) scheme。
+    let url_ok = config.esun_url.starts_with("http://") || config.esun_url.starts_with("https://");
     checks.push(NetCheckRow {
         item: "銀行端點 URL".to_string(),
         value: config.esun_url.clone(),
@@ -1212,15 +1290,15 @@ pub async fn apihub_net(
             "badge-error"
         }
         .to_string(),
-        note: "須為 https（V2.8 傳輸安全基線）".to_string(),
+        note: "V2.9 URL 規則：http://IP:port 指向元件安裝機器（UAT 8443／營運 8080）".to_string(),
     });
-    let configured = config.source_system_id.is_some() && config.customer_id.is_some();
+    let configured = config.customer_id.is_some();
     checks.push(NetCheckRow {
         item: "連線設定完整度".to_string(),
         value: if configured {
-            "來源系統＋客戶識別已配置".to_string()
+            "客戶識別已配置（來源系統 V2.9 已移除，選填僅供舊元件回測）".to_string()
         } else {
-            "未完整（缺來源系統或客戶識別）".to_string()
+            "未完整（缺客戶識別）".to_string()
         },
         status: if configured { "完整" } else { "未完整" }.to_string(),
         status_class: if configured {
@@ -1239,11 +1317,13 @@ pub async fn apihub_net(
         note: "證據：platform/tests/bankpay_api.rs（缺漏/錯誤皆 403 且不產生批次）".to_string(),
     });
     checks.push(NetCheckRow {
-        item: "mTLS 憑證".to_string(),
-        value: "本平台不持有憑證；協議層由 wellfit_bankpay 管理".to_string(),
+        item: "TLS 材料與憑證釘固".to_string(),
+        value: "本平台不持有憑證；協議層由 wellfit_bankpay 管理（V2.9：2-Way SSL 已移除，憑證為 opt-in）"
+            .to_string(),
         status: "未配置".to_string(),
-        status_class: "badge-warning".to_string(),
-        note: "OQ-E3：玉山 Sandbox 憑證申請中；取得前不猜測端點（ADR-0012 D1）".to_string(),
+        status_class: "badge-neutral".to_string(),
+        note: "V2.9 元件端僅要求 TLS 1.2+；憑證釘固保留為 opt-in 能力（ADR-0012 D1＋Addendum）"
+            .to_string(),
     });
     let ocr_state = crate::ocr::availability(&state.pool).await;
     checks.push(NetCheckRow {
@@ -1268,11 +1348,12 @@ pub async fn apihub_net(
             .unwrap_or_else(|| "未設定模型目錄".to_string()),
     });
     checks.push(NetCheckRow {
-        item: "V2.8 規格埠".to_string(),
-        value: "8443（內部）/ 9443（外部 eospt.testesunbank.com.tw）".to_string(),
+        item: "V2.9 規格埠".to_string(),
+        value: "元件：8443（UAT）/ 8080（營運，V2.9 對調）；銀行端防火牆外部 9443".to_string(),
         status: "規格值".to_string(),
         status_class: "badge-neutral".to_string(),
-        note: "遠端連通性測試需憑證；本頁不做網路探測（零副作用）".to_string(),
+        note: "UAT 219.87.16.166／營運 61.220.45.177 等（V29.txt:85-89）；eospt DEV 已移除；遠端連通性測試不做網路探測（零副作用）"
+            .to_string(),
     });
     render_or_500(ApiNetTemplate {
         acting_user: session.username.clone(),

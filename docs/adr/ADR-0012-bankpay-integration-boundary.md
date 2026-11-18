@@ -4,6 +4,7 @@
 - 日期：2026-11-09
 - 決策脈絡：計畫 `1793782615513-esun-bankpay-ui-optimization.md`（平台原生整合）、治理 P6（最小複製）/P7（反模擬）、§0.5 重構判定框架
 - 實作證據：`platform/src/bankpay/*`、`platform/src/status.rs`、`platform/migrations/0006_bankpay.sql`、`platform/tests/bankpay_api.rs`（11 tests PASS）
+- **Addendum（2026-11-15）— 規格基準升級 V2.8→V2.9**：玉山發布 V2.9 技術文件，權威契約實作 `Wellfit/crates/wellfit_bankpay` 已隨之升級（逐節差異與證據：`Wellfit/.kilo/plans/1794646196379-esun-v2-9-upgrade-plan.md` §1）。對本 ADR 之影響：D1/D4 所述「mTLS/2-Way SSL」前置在 V2.9 已由銀行移除（僅 TLS1.2+，憑證互傳刪除；訊息層安控 910067 保留），生產閘門的解鎖條件改為「經驗證端點規格（V2.9）＋UAT 實證」；端點清單 8→9（新增 `/payment/downloadFxRemittanceVoucher`）；本 ADR 其餘邊界（模擬誠實性、冪等、RBAC、平台不猜測契約）不變。
 
 ## 背景
 

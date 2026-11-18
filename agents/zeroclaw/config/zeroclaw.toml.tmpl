@@ -18,6 +18,17 @@ schema_version = 4
 shell = "powershell"
 # kind = "native"
 
+[tools]
+# No optional tools: on a host without an OS sandbox the default tool surface is
+# kept as small as possible. Add single names here once measured and needed.
+optional = []
+
+[memory]
+# No embedding provider is configured (free/local decision), so hybrid search
+# cannot do vector recall. Keyword-only matches reality and drops the startup
+# warning. Change this only together with a real embedding provider.
+search_mode = "bm25"
+
 # ---------------------------------------------------------------------------
 # Model providers
 # ---------------------------------------------------------------------------
@@ -29,16 +40,32 @@ model = "__PRIMARY_MODEL__"
 uri = "http://127.0.0.1:11434"
 num_ctx = 8192
 num_predict = 1024
-# Local failure falls through to the free hosted tier.
-fallback = ["gemini.free"]
+# Free hosted fallover, no credential required (verified 2026-11-16).
+fallback = ["kilo.free"]
 
-# Secondary: Google Gemini API free tier.
-# "gemini" is the canonical slot; "google" is only an alias.
-# Requires GEMINI_API_KEY or GOOGLE_API_KEY in the environment.
-[providers.models.gemini.free]
-model = "__FALLBACK_MODEL__"
-fallback_models = ["gemini-3.5-flash-lite"]
-timeout_secs = 60
+# Free hosted fallback: Kilo AI Gateway, free model tier.
+# Verified 2026-11-16: /v1/chat/completions answers WITHOUT an api_key
+# (200, cost: 0, tool calls supported). Free models are shared with OpenRouter's
+# ":free" set plus kilo-auto/free and reflection/beam-free.
+# Documented limit for free models: 200 requests/hour per IP (429 beyond).
+# Add api_key only if you want the paid/balanced tiers as well.
+[providers.models.kilo.free]
+model = "kilo-auto/free"
+timeout_secs = 120
+# The gateway serves free models without auth, but ZeroClaw's local credential
+# gate requires a non-empty api_key before it will use (or fall back to) the
+# alias. A placeholder satisfies the local gate and is ignored upstream
+# (verified 2026-11-16: HTTP 200, cost 0). Replace with a real key only when you
+# want the paid tiers, and inject it from the env instead of committing it.
+api_key = "anonymous"
+
+# Optional: Google Gemini API free tier (needs a key; content may be used by
+# Google to improve their products). Enable only after the key exists:
+# ZeroClaw refuses to start when a configured fallback has no usable credential.
+# [providers.models.gemini.free]
+# model = "__FALLBACK_MODEL__"
+# fallback_models = ["gemini-3.5-flash-lite"]
+# timeout_secs = 60
 
 # ---------------------------------------------------------------------------
 # Agent: the join between provider, risk profile and runtime profile
@@ -74,7 +101,9 @@ max_context_tokens = 32000
 [risk_profiles.local]
 level = "supervised"
 workspace_only = true
-allowed_roots = ["__WORKSPACE__"]
+# The agent workspace (<data_dir>/agents/<alias>/workspace) is always writable.
+# allowed_roots would grant access outside it: keep it empty.
+allowed_roots = []
 forbidden_paths = [
 __FORBIDDEN__
 ]

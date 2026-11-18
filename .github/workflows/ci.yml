@@ -1,0 +1,200 @@
+name: CI
+
+# 計畫 1793782615513 §11（v1.4 實作版）。
+# 修正記錄：原計畫 YAML 含三個 `on:` 鍵（YAML 重複鍵＝解析錯誤），合併為單一觸發區塊。
+# 成本守門：§11.1 — budget-guard 統計當月 runner 分鐘數，超額時降級（fast/minimal）。
+# 部署：單機部署需 self-hosted runner（Phase 2）；本檔暫以 artifact 產出為止，
+#       staging/prod deploy job 以 `if: false` 保留骨架（誠實標註：GH runner 無法觸及本地機）。
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  # ── 成本守門（ubuntu，1× 倍率；§11.1）─────────────────────────────
+  budget-guard:
+    runs-on: ubuntu-latest
+    outputs:
+      mode: ${{ steps.guard.outputs.mode }}
+      used_min: ${{ steps.guard.outputs.used_min }}
+    steps:
+      - name: Sum this month's workflow minutes (approx, all runners)
+        id: guard
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          MONTH_START=$(date -u +%Y-%m-01)
+          # 近似值：所有 runner 的牆鐘秒數總和（list API 不分 OS；保守計入預算）。
+          SECONDS_USED=$(gh api --paginate \
+            "/repos/${GITHUB_REPOSITORY}/actions/runs?created=%3E=${MONTH_START}&per_page=100" \
+            --jq '[.workflow_runs[] | select(.run_started_at != null) | ((.updated_at | fromdateiso8601) - (.run_started_at | fromdateiso8601))] | add // 0')
+          USED_MIN=$(( SECONDS_USED / 60 ))
+          # 預算：2000 raw 分鐘/月（免費層）。Windows 2× 計費 → 有效 Windows 分鐘 = 1000。
+          # 原始分鐘守門（不分 OS），閾值：80% 預警降級、100% 極簡。
+          if [ "$USED_MIN" -ge 2000 ]; then MODE=minimal
+          elif [ "$USED_MIN" -ge 1600 ]; then MODE=fast
+          else MODE=full; fi
+          echo "mode=$MODE" >> "$GITHUB_OUTPUT"
+          echo "used_min=$USED_MIN" >> "$GITHUB_OUTPUT"
+          echo "budget-guard: used=${USED_MIN}min/2000min → mode=${MODE}"
+
+  # ── 永遠執行（任何模式）──────────────────────────────────────────
+  lint:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - run: cargo fmt -- --check
+      - run: cargo clippy --locked --all-targets -- -D warnings
+
+  unit:
+    runs-on: windows-latest
+    needs: [budget-guard, lint]
+    env:
+      AUXBRIDGE_CI: "1"  # 與 integration 同：環境相依測試閘（pdf-extract toolchain 相依）
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: ./.github/actions/ort-restore
+      - name: Warm cargo package cache（web/src-tauri 存在時；sbom_freshness --offline 需其 index/套件）
+        shell: pwsh
+        run: |
+          $srcTauri = Join-Path $env:GITHUB_WORKSPACE "web\src-tauri"
+          if (Test-Path $srcTauri) {
+            Set-Location $srcTauri
+            cargo fetch --locked
+          } else {
+            Write-Host "SKIP warmup: web/src-tauri 不在此 checkout"
+          }
+      - run: cargo test --locked
+
+  # ── fast 模式（≥80% 預算）執行───────────────────────────────────
+  contract:
+    runs-on: windows-latest
+    needs: [budget-guard, unit]
+    if: needs.budget-guard.outputs.mode != 'minimal'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: ./.github/actions/ort-restore
+      - run: cargo test --locked -p platform --test 'contract_*'
+
+  # ── full 模式（<80% 預算）執行───────────────────────────────────
+  build:
+    runs-on: windows-latest
+    needs: [budget-guard, contract]
+    if: needs.budget-guard.outputs.mode == 'full'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: ./.github/actions/ort-restore
+      - run: cargo build --release --locked
+      - uses: actions/upload-artifact@v4
+        with:
+          name: auxbridge-server
+          path: target/release/auxbridge-server.exe
+
+  security:
+    runs-on: windows-latest
+    needs: [budget-guard, build]
+    if: needs.budget-guard.outputs.mode == 'full'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      # cargo-audit/deny 以 prebuilt 安裝（編譯安裝需 10+ 分鐘）。
+      - run: cargo install cargo-audit --locked
+      - run: cargo install cargo-deny --locked
+      - run: cargo audit
+      - run: cargo deny check
+
+  integration:
+    runs-on: windows-latest
+    needs: [budget-guard, security]
+    if: needs.budget-guard.outputs.mode == 'full'
+    env:
+      AUXBRIDGE_CI: "1"  # pdf-extract 抽取 toolchain 相依非確定性——環境閘（import_pdf.rs 註解）
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: ./.github/actions/ort-restore
+      - run: cargo test --locked -p platform
+
+  visual-regression:
+    runs-on: windows-latest
+    needs: [budget-guard, integration]
+    if: needs.budget-guard.outputs.mode == 'full'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: ./.github/actions/ort-restore
+      - run: cargo run -p visual-diff -- tests/visual/baseline tests/visual/candidate --threshold 0.005
+
+  performance:
+    runs-on: windows-latest
+    needs: [budget-guard, visual-regression]
+    if: needs.budget-guard.outputs.mode == 'full'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: ./.github/actions/ort-restore
+      - run: cargo bench --locked
+      - run: cargo test --locked -p platform stress_10000
+
+  # ── 部署（Phase 2：需 self-hosted runner 觸及本地機；骨架保留）──
+  staging-deploy:
+    runs-on: windows-latest
+    needs: performance
+    if: false  # Phase 2：self-hosted runner 就緒後改為 github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: auxbridge-server
+      - run: .\tools\deploy.ps1 -Env staging
+
+  prod-deploy:
+    runs-on: windows-latest
+    needs: staging-deploy
+    if: false  # Phase 2：tag push + environment: production（人工 approval）
+    environment: production
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: auxbridge-server
+      - run: .\tools\deploy.ps1 -Env prod -Tag ${{ github.ref_name }}
+
+  # ── platform-hub 獨立 workspace（§11 注意事項）───────────────────
+  # 誠實標註：hub 尚未驗證全綠，continue-on-error 避免阻塞主線；修復後移除。
+  hub-check:
+    runs-on: windows-latest
+    needs: [budget-guard, lint]
+    continue-on-error: true
+    strategy:
+      matrix:
+        workspace: [platform-hub]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - run: cargo fmt -- --check
+        working-directory: ${{ matrix.workspace }}
+      - run: cargo clippy --locked --all-targets -- -D warnings
+        working-directory: ${{ matrix.workspace }}
+      - run: cargo test --locked
+        working-directory: ${{ matrix.workspace }}

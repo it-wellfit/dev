@@ -1,5 +1,4 @@
 # FlapsErp / Wellfit 智慧自動化平台 — 工程知識體系導覽總綱
-## Engineering Knowledge Hub & Diátaxis Navigation Map
 
 > **文件路徑**: `docs/README.md`｜**版本**: v3.0（2026-11-07 索引重整：修死鏈、收錄新文件、標記 superseded）
 > **所屬專案**: FlapsErp / Wellfit 輔翼 ERP 智慧自動化與微服務平台
@@ -38,6 +37,7 @@
 | 檔案路徑 | 定位 | 目標讀者 | 摘要 |
 | :--- | :--- | :--- | :--- |
 | [`PROJECT_STATUS.md`](PROJECT_STATUS.md) | **專案現況快照** | 所有人 | 當前基線、品質門檻結果、版本事實 |
+| [`../README.md`](../README.md) | **工作區入口（非 docs 文件；RP-6④ 登記 2026-11-17）** | 所有人 | repo 根入口：專案簡介、建置命令、快速命令與硬性規則速查 |
 | [`NEXT_ACTIONS.md`](NEXT_ACTIONS.md) | **下一步行動清單** | 所有人 | 已排序之待辦與負責歸屬 |
 | [`GAPS_AND_RISKS.md`](GAPS_AND_RISKS.md) | **存證與風險清單** | PM / 審查者 | `[FACT:CODE]` 實相依據、`[GAP]` 缺口與技術債 |
 | [`PLAN_REGISTER.md`](PLAN_REGISTER.md) | **計畫登記冊（SSOT）** | PM / 架構師 | 所有計畫文件之 ID、狀態與效力位階 |
@@ -73,6 +73,7 @@
 | [`architecture/API_DESIGN.md`](architecture/API_DESIGN.md) | API 設計 | 路由與契約慣例 |
 | [`architecture/DATABASE_DESIGN.md`](architecture/DATABASE_DESIGN.md) | 資料庫設計 | SQLite schema 與索引 |
 | [`architecture/效能架構.md`](architecture/效能架構.md) | 效能架構 | 效能預算、基線與 SLA（100k tx p95 ≤500ms） |
+| [`design/LIVING_LEDGER_DESIGN_LANGUAGE.md`](design/LIVING_LEDGER_DESIGN_LANGUAGE.md) | **Living Ledger 設計語言** | Decision OS 產品面（dashboard／console）：三方向探索、WCAG 實算色彩、零 JS 元件規格、SSOT CSS 綁定 |
 | [`design/INFORMATION_ARCHITECTURE.md`](design/INFORMATION_ARCHITECTURE.md) | 資訊架構 | 22+ 路由使用者視角組織（SSOT 為 api.rs 路由表） |
 
 ### 2.4 測試與品質（testing/、quality/）
@@ -189,6 +190,10 @@
 
 > Kilo 計畫快照區位於使用者 profile（`~/.local/share/kilo/plans/`，**工作區外**），由 Kilo 管理——**不搬移、不刪除**；此處僅登錄位置與版本鏈供追溯。SSOT 為 `docs/` 內文件。
 
+### 6.2 根工作區入口（RP-6④）
+
+| [`../README.md`](../README.md) | 工作區總覽、技術棧、快速命令、硬性規則速查（AGENTS.md §2-§7 摘要版） | 現行（根入口，非 docs 文件；非 docs/ 內文件） |
+
 ### 6.1 效能家族演化鏈（已核實）
 
 | 家族 | 版本鏈 | Kilo 內路徑（`~/.local/share/kilo/plans/`） |
@@ -202,3 +207,8 @@
 ### 6.2 其他專案計畫
 
 其他專案計畫（ISMS／ekpi-platform／MTRIX／Wellfit／ARES／KNB 等 ~50 份）見 Kilo 快照區；**歸各專案 SSOT，不複製不搬移**。
+### 6.3 工作區入口（非 docs 文件）
+
+| 文件 | 位置 | 說明 |
+|---|---|---|
+| `README.md`（工作區入口） | 根目錄（4,693 B，2026-11-11） | FlapsErp / Wellfit 整合工作區之入口說明；屬**工作區入口文件**，非 `docs/` 索引文件，故不列入本索引之文件分類（整合計畫 II-3 裁定：登記為工作區入口）。 |

@@ -1587,6 +1587,40 @@ form[data-bulk-review]:has(#bulk-ids:not(:placeholder-shown)) .bulk-hint {
 /* ============================================================
    Print Styles
    ============================================================ */
+@page {
+  margin: 2cm 1.5cm;
+  size: A4;
+}
+
+@page :first {
+  margin-top: 1.5cm;
+}
+
+/* 頁首：公司／報表名／期間／產出時間 */
+@page {
+  @top-center {
+    content: "AuxBridge 整合工作台 — 報表列印";
+    font-size: 9pt;
+    color: #555;
+  }
+  @top-right {
+    content: "產出時間：" attr(data-print-time);
+    font-size: 9pt;
+    color: #555;
+  }
+  /* 頁尾：頁碼／版本／內部使用 */
+  @bottom-center {
+    content: "第 " counter(page) " 頁，共 " counter(pages) " 頁";
+    font-size: 9pt;
+    color: #555;
+  }
+  @bottom-left {
+    content: "v0.2.0｜內部使用";
+    font-size: 9pt;
+    color: #555;
+  }
+}
+
 @media print {
   .site-nav,
   .app-header .app-subtitle,
@@ -2143,6 +2177,65 @@ html {
 @container page (max-width: 480px) {
   .kpi-grid { grid-template-columns: 1fr; }
   .grid-2, .grid-3, .grid-4, .grid-5, .grid-6 { grid-template-columns: 1fr; }
+}
+
+/* ============================================================
+   Print Styles — XP-002 (G4.12): page headers/footers + pagination
+   ============================================================ */
+@page {
+  size: A4;
+  margin: 12mm;
+}
+
+@page :first {
+  margin-top: 18mm;
+}
+
+.print-header {
+  display: none;
+}
+
+.print-footer {
+  display: none;
+}
+
+@media print {
+  .print-header {
+    display: block;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    font-size: var(--font-size-xs);
+    color: var(--color-text-secondary);
+    border-bottom: 1px solid var(--color-border);
+    padding-bottom: var(--space-1);
+    margin-bottom: var(--space-2);
+  }
+
+  .print-footer {
+    display: block;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    font-size: var(--font-size-xs);
+    color: var(--color-text-tertiary);
+    border-top: 1px solid var(--color-border);
+    padding-top: var(--space-1);
+    text-align: center;
+  }
+
+  .card,
+  .kpi,
+  table,
+  .table-wrap {
+    break-inside: avoid;
+  }
+
+  a[href]::after {
+    content: "";
+  }
 }
 
 /* ============================================================

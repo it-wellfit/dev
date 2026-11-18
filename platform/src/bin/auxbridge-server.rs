@@ -3,7 +3,7 @@
 //! Zero-JS web tier over Axum 0.7:
 //! - GET  /                        server-rendered UI (Askama, auto-escaped)
 //! - GET  /assets/design-system.css  compile-time embedded stylesheet
-//! - GET  /api/health              JSON health probe
+//! - GET  /api/health              JSON health probe（別名：/health、/ready）
 //! - POST /transactions            form → validate → RBAC → ledger → 303 PRG
 //!
 //! Configuration (environment):

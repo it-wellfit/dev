@@ -1,0 +1,27 @@
+[package]
+name = "browser_mcp"
+version = "0.2.0"
+edition = "2024"
+rust-version = "1.99"
+description = "Pure-Rust MCP server exposing browser automation tools over Chrome DevTools Protocol (no Node.js dependency)"
+license = "LicenseRef-Proprietary"
+publish = false
+
+[[bin]]
+name = "browser-mcp"
+path = "src/main.rs"
+
+[dependencies]
+# 官方 Rust MCP SDK（stdio 伺服器；工具巨集與 JSON Schema 生成）。
+rmcp = { version = "3.10", default-features = false, features = ["server", "macros", "schemars", "transport-io"] }
+# 純 Rust Chrome DevTools Protocol 客戶端（pin 精確版本，見 plan D-3）。
+chromiumoxide = "=0.9.1"
+# 驅動 chromiumoxide 事件處理常式（Handler 實作 Stream）。
+futures = "0.3"
+tokio = { version = "1.0", features = ["rt-multi-thread", "macros", "time", "sync", "io-util"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "2.0"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["fmt", "env-filter"] }
+base64 = "0.22"

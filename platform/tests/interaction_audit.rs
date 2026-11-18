@@ -292,3 +292,101 @@ async fn tt5_search_roundtrip_with_query_preserved() {
         "search input must preserve the query: {tag}"
     );
 }
+
+/// TT-9（2026-11-15）：互動教學頁（/help/tutorial）契約——七步結構齊備、
+/// 每步四欄（目標/怎麼做/成功判準/常見錯誤）、頁內錨點皆命中同頁目標、
+/// 教學中的每個真實頁面深連結都可達（不得教使用者去撞 404）、零 JS、
+/// 首步預設展開。使用者回報「缺 AI 操作教學」的 P2 項目由此頁落地。
+#[tokio::test]
+async fn tt9_tutorial_steps_structure_and_links() {
+    let pool = in_memory_pool().await;
+    let state = platform::api::AppState::new(pool.clone())
+        .await
+        .expect("state");
+    seed(&pool).await;
+    let app = platform::api::router(state);
+    let cookie = login(&app, "admin", ADMIN_PASSWORD).await;
+
+    let (status, body) = get(&app, "/help/tutorial", Some(&cookie)).await;
+    assert_eq!(status, StatusCode::OK, "tutorial page must render");
+    assert!(
+        !body.contains("<script"),
+        "TT-9 must keep the zero-JS contract"
+    );
+
+    // 七個步驟：summary 標題與 id 齊備；首步預設展開（漸進披露）。
+    for n in 1..=7 {
+        assert!(
+            body.contains(&format!("步驟 {n}")),
+            "step {n} title missing"
+        );
+        assert!(
+            body.contains(&format!("id=\"step-{n}\"")),
+            "step {n} target id missing"
+        );
+    }
+    assert!(
+        body.matches("<details").count() >= 7,
+        "steps must use native <details>"
+    );
+    assert!(
+        body.contains("<details class=\"panel\" id=\"step-1\" open>"),
+        "first step must be open by default"
+    );
+
+    // 四欄結構：每步都必須有 目標／怎麼做／成功判準／常見錯誤。
+    for marker in [
+        "<strong>目標：</strong>",
+        "<strong>怎麼做：</strong>",
+        "<strong>成功判準：</strong>",
+        "<strong>常見錯誤：</strong>",
+    ] {
+        let count = body.matches(marker).count();
+        assert!(
+            count >= 7,
+            "structure marker {marker} appears {count} times (<7)"
+        );
+    }
+
+    // 頁內錨點皆命中同頁目標（TT-1 同律）。
+    for cap in body.match_indices("href=\"#") {
+        let start = cap.0 + "href=\"#".len();
+        let Some(end) = body[start..].find('"') else {
+            continue;
+        };
+        let id = &body[start..start + end];
+        assert!(
+            body.contains(&format!("id=\"{id}\"")),
+            "anchor #{id} has no target element"
+        );
+    }
+
+    // 教學中的每個真實頁面深連結都必須可達（not-found/500 即教學說謊）。
+    let mut broken = Vec::new();
+    let mut deep_links = 0usize;
+    for cap in body.match_indices("href=\"/") {
+        let start = cap.0 + "href=\"".len();
+        let Some(end) = body[start..].find('"') else {
+            continue;
+        };
+        let href = &body[start..start + end];
+        if href.starts_with("//") || href.contains("://") || href.starts_with("/assets/") {
+            continue;
+        }
+        deep_links += 1;
+        let (link_status, _) = get(&app, href, Some(&cookie)).await;
+        if link_status == StatusCode::NOT_FOUND || link_status == StatusCode::INTERNAL_SERVER_ERROR
+        {
+            broken.push(format!("{href}: {link_status}"));
+        }
+    }
+    assert!(
+        deep_links >= 10,
+        "tutorial must teach real destinations, found {deep_links} deep links"
+    );
+    assert!(
+        broken.is_empty(),
+        "TT-9 broken tutorial links: {:?}",
+        broken
+    );
+}

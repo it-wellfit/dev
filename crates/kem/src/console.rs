@@ -275,79 +275,7 @@ fn page(title: &str, active: &str, depth: usize, body: &str) -> String {
     h
 }
 
-pub const CONSOLE_CSS: &str = r#"/* 知識控制台樣式（W7 全收斂：token 名稱與值＝web/assets/design-system.css canonical；
-   色差屬 grill-E 裁定之收斂結果，映射表見 PLAN_REGISTER addendum #20）。
-   本檔為獨立部署工件：token 值複製自 canonical（漂移由 guards 測試比對攔截）。 */
-:root{
-  --color-surface:#ffffff;
-  --color-surface-sunken:#f8fafc;
-  --color-text-primary:#0f172a;
-  --color-text-secondary:#475569;
-  --color-border:#e2e8f0;
-  --color-neutral-100:#f1f5f9;
-  --color-primary:#2563eb;
-  --color-success:#16a34a;
-  --color-warning:#d97706;
-  --color-error:#dc2626;
-  --space-1:4px;--space-2:8px;--space-4:16px;--space-6:24px;
-  --radius-lg:12px;
-  --font-family-sans:"Inter","Noto Sans TC","Microsoft JhengHei","PingFang TC",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
-  --font-family-mono:"JetBrains Mono","Cascadia Mono","Fira Code",Consolas,"Liberation Mono",monospace}
-@media (prefers-color-scheme:dark){:root{
-  --color-surface:#0f172a;
-  --color-surface-sunken:#020617;
-  --color-text-primary:#f1f5f9;
-  --color-text-secondary:#cbd5e1;
-  --color-border:#334155;
-  --color-neutral-100:#1e293b;
-  --color-primary:#60a5fa;
-  --color-success:#22c55e;
-  --color-warning:#f59e0b;
-  --color-error:#f87171}}
-*{box-sizing:border-box}
-body{margin:0;background:var(--color-surface-sunken);color:var(--color-text-primary);font-family:var(--font-family-sans);line-height:1.65}
-header{background:var(--color-surface);border-bottom:1px solid var(--color-border);padding:var(--space-2) var(--space-4);position:sticky;top:0;z-index:2}
-h1{margin:0;font-size:1.25rem}.sub{margin:2px 0 0;color:var(--color-text-secondary);font-size:.8rem}
-nav{display:flex;gap:var(--space-1);margin-top:var(--space-2);flex-wrap:wrap}
-nav a{padding:5px 12px;border-radius:999px;text-decoration:none;color:var(--color-text-primary);border:1px solid var(--color-border);font-size:.85rem}
-nav a:hover{background:var(--color-neutral-100)}
-nav a.active,nav a:focus-visible{background:var(--color-neutral-100);border-color:var(--color-primary);color:var(--color-primary);font-weight:600}
-nav a:focus-visible{outline:3px solid var(--color-primary);outline-offset:2px}
-main{max-width:1100px;margin:0 auto;padding:var(--space-4)}
-.panel{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:var(--space-4);margin-bottom:var(--space-2)}
-h2{font-size:1rem;margin:0 0 var(--space-2)}
-h2 small{font-weight:400;color:var(--color-text-secondary)}
-h2.mt-4{margin-top:var(--space-6)}
-.mt-3{margin-top:var(--space-4)}
-.kpi-num{font-size:1.5rem;font-weight:700}
-.log-tail{white-space:pre-wrap}
-table{width:100%;border-collapse:collapse;font-size:.86rem}
-th{text-align:left;color:var(--color-text-secondary);border-bottom:2px solid var(--color-border);padding:6px var(--space-2);white-space:nowrap}
-td{padding:8px var(--space-2);border-bottom:1px solid var(--color-border);vertical-align:top}
-tbody tr:hover{background:color-mix(in srgb,var(--color-primary) 5%,transparent)}
-code,.mono{font-family:var(--font-family-mono);font-size:.82rem}
-code.cmd{background:var(--color-neutral-100);padding:2px 8px;border-radius:6px;display:inline-block}
-a{color:var(--color-primary)}
-a:focus-visible{outline:3px solid var(--color-primary);outline-offset:2px;border-radius:3px}
-.pill{display:inline-block;border-radius:999px;padding:1px 10px;font-size:.72rem;font-weight:600;background:var(--color-neutral-100);color:var(--color-text-secondary)}
-.pill.published{background:color-mix(in srgb,var(--color-success) 15%,var(--color-surface));color:var(--color-success)}
-.pill.superseded,.pill.deprecated{background:color-mix(in srgb,var(--color-warning) 16%,var(--color-surface));color:var(--color-warning)}
-.pill.draft,.pill.pending_review{background:var(--color-neutral-100);color:var(--color-text-secondary)}
-.pill.retired{background:color-mix(in srgb,var(--color-error) 12%,var(--color-surface));color:var(--color-error)}
-.bar{position:relative;height:8px;background:var(--color-neutral-100);border-radius:99px;min-width:80px;display:inline-block;vertical-align:middle}
-.bar i{position:absolute;inset:0 auto 0 0;border-radius:99px;background:var(--color-primary)}
-.bar.hi i{background:var(--color-success)}.bar.lo i{background:var(--color-warning)}
-.banner{border-left:4px solid var(--color-warning);background:color-mix(in srgb,var(--color-warning) 8%,var(--color-surface));padding:var(--space-2) var(--space-4);border-radius:var(--radius-lg);margin-bottom:var(--space-2)}
-.empty{color:var(--color-text-secondary);text-align:center;padding:var(--space-6)}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:var(--space-2)}
-.type{color:var(--color-text-secondary);font-size:.78rem}
-footer{color:var(--color-text-secondary);font-size:.74rem;padding:var(--space-4);max-width:1100px;margin:0 auto}
-@media print{header{position:static}nav{display:none}}
-@media (prefers-reduced-motion:reduce){*{transition:none!important}}
-/* 跨文件視圖轉場（零 JS：@view-transition；Chrome/Edge 126+、Safari 18.2+） */
-@media (prefers-reduced-motion:no-preference){@view-transition{navigation:auto}}
-header{view-transition-name:kem-console-header}
-"#;
+pub const CONSOLE_CSS: &str = include_str!("../../../docs/design/living-ledger.css");
 
 /// 工作流詳情頁本體。
 fn workflow_body(name: &str, depth: usize) -> String {
@@ -830,15 +758,16 @@ mod tests {
         // HTML 檔數＝回傳值 −1（console.css 計數）。
         let html_count = count_html(&root_tmp.join("console"));
         assert_eq!(html_count, pages - 1, "HTML 檔數應為回傳頁數減 CSS 計數");
-        // W7：生成 CSS 不得殘留舊詞彙 token（--bg/--accent 等自造名稱）。
+        // W7（2026-11-17 修訂）：CSS 單一來源護欄——console.css 必須與
+        // living-ledger.css 逐字一致（SSOT；取代舊 token 名稱啟發式——
+        // Living Ledger 設計語言已將 --bg/--accent/--ink 列為合法 token）。
         let css = std::fs::read_to_string(root_tmp.join("console/assets/console.css"))
             .expect("console.css");
-        for legacy in ["--bg:", "--accent:", "--ink:", "--s1:", "--font:"] {
-            assert!(
-                !css.contains(legacy),
-                "legacy token {legacy} survived W7 convergence"
-            );
-        }
+        let canonical = include_str!("../../../docs/design/living-ledger.css");
+        assert_eq!(
+            css, canonical,
+            "console.css 與 living-ledger.css 不一致（SSOT 漂移）"
+        );
         // W6：生成頁零內聯樣式（CSP 相容契約）。
         let index_html =
             std::fs::read_to_string(root_tmp.join("console/index.html")).expect("index.html");

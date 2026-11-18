@@ -92,4 +92,18 @@ ignore = [
     # is enabled for any build we distribute, or (c) a fixed glib release is
     # published and can be pinned.
     "RUSTSEC-2024-0429",
+    # RUSTSEC-2026-0543 (chrono declared UNMAINTAINED, 2026-11; all versions
+    # affected -- a maintenance-status advisory, NOT a vulnerability)
+    # chrono is used across 11 source files in platform/src (54+ call sites:
+    # obs.rs log timestamps, account_ledger date filters, sync scheduling,
+    # db.rs audit timestamps) AND transitively by sqlx (chrono feature) and kem.
+    # Scope: internal single-machine tool, no untrusted input reaches chrono
+    # parsing paths. Risk nature: future rustc-compat / unfixed bugs, zero
+    # current security exposure.
+    # Mitigation plan: migrate to the maintained `time` crate (54+ sites,
+    # est. 1-2 days) -- tracked in docs/ops/INVENTORY.md Pending.
+    # Disposition: accepted risk (maintenance-status only, zero exposure).
+    # Revisit if: (a) RUSTSEC upgrades this to a vulnerability advisory,
+    # (b) the time-crate migration lands, or (c) quarterly review.
+    "RUSTSEC-2026-0543",
 ]

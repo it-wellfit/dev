@@ -481,6 +481,14 @@ pub struct AccountLedgerTemplate {
     pub entries: Vec<LedgerEntryRow>,
     pub accounts: Vec<AccountPickRow>,
     pub selected: String,
+    pub date_from: String,
+    pub date_to: String,
+    pub quick_from: String,
+    pub quick_to: String,
+    /// 本月起（YYYY-MM）——「本月」快捷連結用（避免模板 slice filter）。
+    pub month_prefix: String,
+    /// 今年起（YYYY）——「今年」快捷連結用（審查 R1：硬編碼年份跨年失效）。
+    pub year_prefix: String,
 }
 
 #[derive(Debug, sqlx::FromRow, Clone)]
@@ -497,6 +505,34 @@ pub async fn account_ledger_page(
     nav: Extension<crate::nav::NavModel>,
     Query(q): Query<HashMap<String, String>>,
 ) -> Response {
+    // W-A (UI-3): date_from/date_to fail-safe
+    let today = chrono::Utc::now().date_naive();
+    let default_from = (today - chrono::Duration::days(30)).to_string();
+    let default_to = today.to_string();
+    let raw_from = q
+        .get("date_from")
+        .map(|v| v.trim().to_string())
+        .unwrap_or_default();
+    let raw_to = q
+        .get("date_to")
+        .map(|v| v.trim().to_string())
+        .unwrap_or_default();
+    let valid = |s: &str| !s.is_empty() && chrono::NaiveDate::parse_from_str(s, "%Y-%m-%d").is_ok();
+    let date_from = if valid(&raw_from) {
+        raw_from.clone()
+    } else {
+        default_from.clone()
+    };
+    let date_to = if valid(&raw_to) {
+        raw_to.clone()
+    } else {
+        default_to.clone()
+    };
+    let (date_from, date_to) = if date_from > date_to {
+        (date_to.clone(), date_from.clone())
+    } else {
+        (date_from.clone(), date_to.clone())
+    };
     let accounts: Vec<AccountPickRow> = sqlx::query_as(
         "SELECT account_id, account_code, account_name FROM accounts WHERE is_active = 1 ORDER BY account_code",
     )
@@ -505,19 +541,44 @@ pub async fn account_ledger_page(
     .unwrap_or_default();
     let selected = q.get("account").cloned().unwrap_or_default();
     let account = accounts.iter().find(|a| a.account_id == selected).cloned();
-    let entries: Vec<LedgerEntryRow> = if account.is_some() {
+    let raw_entries: Vec<(String, String, String, i64)> = if account.is_some() {
         sqlx::query_as(
             "SELECT t.transaction_date, t.description, ti.item_type, ti.amount_minor \
              FROM transaction_items ti JOIN transactions t ON ti.transaction_id = t.transaction_id \
-             WHERE ti.account_id = ? ORDER BY t.transaction_date, t.transaction_code LIMIT 500",
+             WHERE ti.account_id = ? AND t.transaction_date >= ? AND t.transaction_date <= ? ORDER BY t.transaction_date, t.transaction_code LIMIT 500",
         )
         .bind(&selected)
+        .bind(&date_from)
+        .bind(&date_to)
         .fetch_all(&state.pool)
         .await
         .unwrap_or_default()
     } else {
         vec![]
     };
+    let entries: Vec<LedgerEntryRow> = raw_entries
+        .into_iter()
+        .map(|(date, desc, item_type, amount_minor)| LedgerEntryRow {
+            transaction_date: date,
+            description: desc,
+            item_type,
+            amount_display: auxbridge_core::format_minor(amount_minor, 2),
+        })
+        .collect();
+    // quick prefill
+    let quick_from = if raw_from.is_empty() {
+        default_from.clone()
+    } else {
+        date_from.clone()
+    };
+    let quick_to = if raw_to.is_empty() {
+        default_to.clone()
+    } else {
+        date_to.clone()
+    };
+    let month_prefix = date_to[..7].to_string();
+    // 審查 R1：year_prefix 供「今年」快捷連結使用（硬編碼 2026-01-01 跨年即失效）。
+    let year_prefix = date_to[..4].to_string();
     render(AccountLedgerTemplate {
         acting_user: session.username.clone(),
         nav: nav.0.clone(),
@@ -526,6 +587,12 @@ pub async fn account_ledger_page(
         entries,
         accounts,
         selected,
+        date_from,
+        date_to,
+        quick_from,
+        quick_to,
+        month_prefix,
+        year_prefix,
     })
 }
 

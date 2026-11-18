@@ -23,6 +23,7 @@ pub mod ratelimit;
 pub mod search;
 pub mod status;
 pub mod sync;
+pub mod tutorial;
 pub mod workbench;
 
 // AI Integration Module

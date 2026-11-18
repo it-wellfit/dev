@@ -108,7 +108,7 @@
             </p>
             <div class="table-wrap">
                 <table>
-                    <caption>E.Sun V2.8 連線就緒檢查（依實際設定狀態推導）</caption>
+                    <caption>E.Sun V2.9 連線就緒檢查（依實際設定狀態推導）</caption>
                     <thead>
                         <tr>
                             <th scope="col">檢查項</th>
@@ -120,7 +120,7 @@
                         <tr>
                             <th scope="row">契約版本</th>
                             <td><span class="badge badge-success">已鎖定</span></td>
-                            <td>E.Sun 技術文件 V2.8（8 端點）；權威實作 <code>Wellfit/crates/wellfit_bankpay</code>。</td>
+                            <td>E.Sun 技術文件 V2.9（9 端點，含外幣憑證下載）；權威實作 <code>Wellfit/crates/wellfit_bankpay</code>。</td>
                         </tr>
                         <tr>
                             <th scope="row">內部端點（esun_url）</th>
@@ -130,12 +130,12 @@
                         <tr>
                             <th scope="row">外部沙盒端點（esun_external_url）</th>
                             <td>{% if !config.esun_external_url.is_empty() %}<span class="badge badge-success">已設定</span>{% else %}<span class="badge badge-info">未設定</span>{% endif %}</td>
-                            <td>外部沙盒參考 <code>https://eospt.testesunbank.com.tw:9443</code>；須為 https://。</td>
+                            <td>外部連線防火牆埠 <code>9443</code>（UAT 219.87.16.166／營運 61.220.45.177 等；V29.txt:85-89；eospt DEV 已移除）。</td>
                         </tr>
                         <tr>
-                            <th scope="row">SourceSystemId</th>
-                            <td>{% if let Some(v) = config.source_system_id %}<span class="badge badge-success">已設定（{{ v }}）</span>{% else %}<span class="badge badge-warning">未設定</span>{% endif %}</td>
-                            <td>V2.8 要求每請求附 <code>Source-System</code> 標頭。</td>
+                            <th scope="row">SourceSystemId（V2.9 已移除）</th>
+                            <td>{% if let Some(v) = config.source_system_id %}<span class="badge badge-info">選填（{{ v }}；僅供 V2.8 舊元件回測）</span>{% else %}<span class="badge badge-success">未設定（V2.9 預設）</span>{% endif %}</td>
+                            <td>V2.9 已移除 <code>Source-System</code> 標頭與 <code>rqHeader.sourceSystem</code> 欄位；設定值僅供舊元件回測。</td>
                         </tr>
                         <tr>
                             <th scope="row">customerIxd（企業集團統編）</th>
@@ -143,14 +143,14 @@
                             <td>rqHeader.customerIxd（8–10 碼統編）；msgId 亦由統編組成。</td>
                         </tr>
                         <tr>
-                            <th scope="row">mTLS 憑證（cert/key/CA）</th>
+                            <th scope="row">TLS 憑證材料（cert/key/CA；V2.9 opt-in）</th>
                             <td>{% if config.client_cert_path.is_some() && config.client_key_path.is_some() && config.ca_cert_path.is_some() %}<span class="badge badge-success">三件套已設定</span>{% else if config.client_cert_path.is_some() || config.client_key_path.is_some() || config.ca_cert_path.is_some() %}<span class="badge badge-warning">部分設定</span>{% else %}<span class="badge badge-info">未設定</span>{% endif %}</td>
-                            <td>雙向 SSL 必要；路徑指向憑證檔，正式串接時由傳輸層載入。</td>
+                            <td>V2.9：2-Way SSL 已移除；憑證為 opt-in，配置後由傳輸層載入。</td>
                         </tr>
                         <tr>
                             <th scope="row">rsStatus 代碼語意</th>
                             <td><span class="badge badge-success">已定義</span></td>
-                            <td><code>910000</code> = 成功；信封：rqHeader（msgId=統編+YYYYMMDD+7碼流水、requestTime、customerIxd、sourceSystem）、回應 rsHeader.msgId 回拋。</td>
+                            <td><code>910000</code> = 成功；信封：rqHeader（msgId=統編+YYYYMMDD+7碼流水、requestTime、customerIxd；V2.9 移除 sourceSystem）、回應 rsHeader.msgId 回拋。</td>
                         </tr>
                     </tbody>
                 </table>
@@ -329,14 +329,14 @@
                 </div>
                 <div class="form-row">
                     <label for="cfg-ext">外部沙盒/正式端點（https:// 開頭；留空＝保留現值）</label>
-                    <input class="input" type="url" id="cfg-ext" name="esun_external_url" value="{{ config.esun_external_url }}" placeholder="https://eospt.testesunbank.com.tw:9443">
+                    <input class="input" type="url" id="cfg-ext" name="esun_external_url" value="{{ config.esun_external_url }}" placeholder="https://eospu.testesunbank.com.tw:9443">
                 </div>
                 <div class="form-row">
-                    <label for="cfg-cert">mTLS 用戶端憑證路徑（留空＝保留現值）</label>
+                    <label for="cfg-cert">TLS 用戶端憑證路徑（V2.9 opt-in；留空＝保留現值）</label>
                     <input class="input" type="text" id="cfg-cert" name="client_cert_path" value="{{ config.client_cert_path.as_deref().unwrap_or("") }}" placeholder="certs\client.crt">
                 </div>
                 <div class="form-row">
-                    <label for="cfg-key">mTLS 用戶端私鑰路徑（留空＝保留現值）</label>
+                    <label for="cfg-key">TLS 用戶端私鑰路徑（V2.9 opt-in；留空＝保留現值）</label>
                     <input class="input" type="text" id="cfg-key" name="client_key_path" value="{{ config.client_key_path.as_deref().unwrap_or("") }}" placeholder="certs\client.key">
                 </div>
                 <div class="form-row">

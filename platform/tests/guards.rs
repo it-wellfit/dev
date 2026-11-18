@@ -160,6 +160,52 @@ fn templates_have_no_inline_styles() {
     );
 }
 
+/// 盲區補洞（2026-11-15 瀏覽器實證）：`templates_have_no_inline_styles` 只掃
+/// platform/templates，但品牌 404 頁等「內聯 HTML 字串」住在 platform/src 的
+/// .rs 常數裡（not_found_page 的 `style="text-align:center"` 曾漏網，瀏覽器
+/// 以 CSP 錯誤實證）。本測試把同一契約延伸到 .rs 內聯 HTML：
+/// 排除註解行與測試斷言行（`contains(` 之 needle 非屬性）。
+#[test]
+fn rust_inline_html_has_no_inline_styles() {
+    let root = repo_root();
+    let mut files = Vec::new();
+    collect_text_files(&root.join("platform/src"), &mut files);
+    collect_text_files(&root.join("web/src-tauri/src"), &mut files);
+    assert!(
+        files.len() >= 20,
+        "guard must scan the real tree (found {} files)",
+        files.len()
+    );
+    let mut problems = Vec::new();
+    for file in &files {
+        if file.extension().and_then(|e| e.to_str()) != Some("rs") {
+            continue;
+        }
+        let text = fs::read_to_string(file).unwrap_or_default();
+        for (idx, line) in text.lines().enumerate() {
+            let trimmed = line.trim();
+            if trimmed.starts_with("//") || trimmed.starts_with("///") {
+                continue; // 註解散文不計
+            }
+            if trimmed.contains("contains(") {
+                continue; // 測試斷言之 needle，非 HTML 屬性
+            }
+            if trimmed.contains("style=\"") {
+                problems.push(format!(
+                    "{}:{} inline style attribute (use a design-system class)",
+                    file.strip_prefix(&root).unwrap_or(file).display(),
+                    idx + 1
+                ));
+            }
+        }
+    }
+    assert!(
+        problems.is_empty(),
+        "inline style in .rs HTML strings violates CSP style-src 'self':\n{}",
+        problems.join("\n")
+    );
+}
+
 // ---------------------------------------------------------------------------
 // W6/W7（計畫 1793033568961）：KEM 控制台生成物護欄＋設計 token 收斂檢查。
 // ---------------------------------------------------------------------------
@@ -198,63 +244,25 @@ fn generated_console_has_zero_javascript_and_no_inline_styles() {
 }
 
 #[test]
-fn console_css_tokens_are_canonical_design_system_values() {
-    // W7（grill-E 全收斂）：console.css 的自造色值必須逐字存在於
-    // web/assets/design-system.css canonical 調色（漂移即攔截）。
+fn console_css_is_byte_identical_to_living_ledger_ssot() {
+    // W7（2026-11-17 修訂）：CSS 單一來源護欄——console.css 必須與
+    // docs/design/living-ledger.css 逐字一致（SSOT；取代舊 token 名稱
+    // 啟發式與 canonical 色值比對——Living Ledger 設計語言已將
+    // --bg/--accent/--ink 列為合法 token）。
+    // 〔C-01 舊規則歷史〕grill-E 全收斂的 token 名稱啟發式
+    // （console_css_tokens_are_canonical_design_system_values：自造色值
+    // 逐字存在於 design-system.css＋legacy 黑名單）於 2026-11-12 前有效，
+    // 由本規則（逐字 SSOT，強度更高）取代。
     let root = repo_root();
     let console_css = fs::read_to_string(root.join("knowledge/console/assets/console.css"))
         .expect("console.css must exist");
-    let design = fs::read_to_string(root.join("web/assets/design-system.css"))
-        .expect("design-system.css must exist");
-    // 抽取 console.css 的色值字面值（#rgb/#rrggbb）。
-    let mut problems = Vec::new();
-    let mut in_def = false;
-    for line in console_css.lines() {
-        let l = line.trim();
-        if l.starts_with(":root{") || l.starts_with("--color-") {
-            in_def = true;
-        }
-        if l.starts_with('}') {
-            in_def = false;
-        }
-        // 僅檢查 :root 定義區的色值（規則區的 color-mix 引用不受限）。
-        if !in_def {
-            continue;
-        }
-        for tok in l.split([';', '{', '}']) {
-            let tok = tok.trim();
-            if let Some(hash) = tok.find('#') {
-                let hex = &tok[hash..];
-                let hex = hex.split(' ').next().unwrap_or(hex);
-                let valid = hex.len() == 4 || hex.len() == 7;
-                if !valid {
-                    continue;
-                }
-                if !design.to_uppercase().contains(&hex.to_uppercase()) {
-                    problems.push(format!("non-canonical color {hex} (line: {tok})"));
-                }
-            }
-        }
-    }
-    assert!(
-        problems.is_empty(),
-        "console.css token drift (grill-E 全收斂違反):\n{}",
-        problems.join("\n")
+    let canonical = fs::read_to_string(root.join("docs/design/living-ledger.css"))
+        .expect("living-ledger.css must exist");
+    assert_eq!(
+        console_css, canonical,
+        "console.css 與 living-ledger.css 不一致（SSOT 漂移）——\
+         請執行 cargo run -p kem -- --root knowledge console 重新生成"
     );
-    // 舊詞彙 token 不得殘留（W7 收斂完成後的防回歸）。
-    for legacy in [
-        "--bg:",
-        "--accent:",
-        "--ink:",
-        "--muted:",
-        "--s1:",
-        "--font:",
-    ] {
-        assert!(
-            !console_css.contains(legacy),
-            "legacy token {legacy} survived convergence"
-        );
-    }
 }
 
 /// 憲章 §2.2（每個 .rs 第一行 `#![forbid(unsafe_code)]`）與 ADR-0014：
@@ -323,5 +331,36 @@ fn unsafe_code_is_absent_and_forbidden_at_crate_roots() {
         problems.is_empty(),
         "unsafe 邊界違反（ADR-0014）：\n{}",
         problems.join("\n")
+    );
+}
+
+/// XP-002（G4.12）列印樣式閘：`design-system.css` 必須具備列印頁首頁尾與分頁樣式
+/// （`@page`、列印頁首/頁尾、`.print-header`/`.print-footer`、`@media print`），
+/// 否則報表列印會缺頁首頁尾或分頁資訊（整合計畫 III-2）。
+#[test]
+fn design_system_has_print_header_footer_and_pagination() {
+    let root = repo_root();
+    let css_path = root.join("web/assets/design-system.css");
+    let text = std::fs::read_to_string(&css_path)
+        .unwrap_or_else(|e| panic!("read {}: {e}", css_path.display()));
+    let mut problems = Vec::new();
+    for needle in ["@page", "@media print", ".print-header", ".print-footer"] {
+        if !text.contains(needle) {
+            problems.push(format!("缺少 {needle}"));
+        }
+    }
+    // 文件快照必須與正式資產同步（single source of truth）。
+    let doc_snapshot = root.join("docs/design-system.css");
+    if doc_snapshot.is_file() {
+        let doc = std::fs::read_to_string(&doc_snapshot).expect("read docs snapshot");
+        if doc != text {
+            problems
+                .push("docs/design-system.css 與 web/assets/design-system.css 未同步".to_string());
+        }
+    }
+    assert!(
+        problems.is_empty(),
+        "列印樣式閘失敗：{}",
+        problems.join("；")
     );
 }

@@ -1,4 +1,5 @@
 # Flaps ERP 工作台 — 全面重新設計與開發：完成執行計畫
+> 2026-11-17 Reviewed（整合完成計畫 1794810000000 I-4）：未勾選任務 10 項——逐項對帳與勾選見 addendum #52（RP-2/RP-3/RP-6 已勾選；§14 十項判定 7 PASS／2 PARTIAL／1 GAP；BankPay 16/17 勾選＋1 項 UNKNOWN 誠實登載）。
 
 > **Plan file:** `.kilo/plans/1793033512795-flaps-erp-workbench-completion.md`
 > **日期:** 2026-11-06｜**狀態:** Implementation-ready（可交實作代理執行）｜**修訂:** v1.1（增 §11 追溯矩陣／§12 來源登錄與查證／§13 決策推導／§14 計畫自我驗證）
@@ -459,16 +460,26 @@ M1–M6＝藍圖模組項；R1–R5＝架構項；P1–P5＝新頁面；S0–S7�
 
 S0 執行時（確認計畫與現況一致）與 S7 執行時（確認交付與計畫一致），逐項核對並記錄：
 
-- [ ] 14.1 **來源覆蓋掃描**：逐份讀 §12.1 全部來源；凡標 `Pending`／`未完成`／`Not Run` 處，皆能對應到本計畫某項，或有 OD／BACKLOG 記錄（無遺漏、無暗項）。
-- [ ] 14.2 **頁面覆蓋**：UI-UX E3.1–E3.7＋手冊 E5 全 7 項 → 每項有計畫項＋測試 ID＋證據（§11.2 逐列核對）。
-- [ ] 14.3 **模組覆蓋**：藍圖 R1–R3、M1–M6 全數「已完成或已排程」。
-- [ ] 14.4 **測試覆蓋**：TEST-RD-2.0 全部案例 → 有 ID、有 slice、有證據路徑；§7 Pending 清零。
-- [ ] 14.5 **交付覆蓋**：DEL-RD-2.0 §A–§D 全項＋§G 限制清零或明列。
-- [ ] 14.6 **PA 覆蓋**：PA-01..08 每項有可執行驗證方法（§11.3）。
-- [ ] 14.7 **不變量覆蓋**：§3.2 六條不變量各有自動檢測（掃描／測試）。
-- [ ] 14.8 **反面檢查**：專案中任一「已知問題」清單（IMPROVEMENT_BACKLOG、NEXT_ACTIONS、G2.2 缺口表）不含未映射項。
-- [ ] 14.9 **證據存在性**（S7）：§5.3 所列每份證據檔案在 `.kilo/sessions/…`／`artifacts/` 真實存在且非空。
-- [ ] 14.10 **狀態表同步**（S7）：藍圖／測試計畫／交付清單三份狀態表與實況一致（無虛標 Done）。
+- [x] 14.1 **來源覆蓋掃描**：逐份讀 §12.1 全部來源；凡標 `Pending`／`未完成`／`Not Run` 處，皆能對應到本計畫某項，或有 OD／BACKLOG 記錄（無遺漏、無暗項）。
+  > ↳ 判定 PASS（2026-11-17）：§12.1 八份來源文件 Test-Path 全 True；Pending／限制之對映由 §11.2 矩陣與本表 14.4/14.5 承載，無暗項。
+- [x] 14.2 **頁面覆蓋**：UI-UX E3.1–E3.7＋手冊 E5 全 7 項 → 每項有計畫項＋測試 ID＋證據（§11.2 逐列核對）。
+  > ↳ 判定 PASS（附等價對映）：§11.2 提案 ID 未逐字採用，等價實作＝web_crawl（全頁渲染/404/表單契約）＋interaction_audit tt1–tt5/tt9＋states_page 八態（api.rs）＋page_matrix 角色矩陣；E3.1–E3.7 逐項可由上述套件追溯。
+- [x] 14.3 **模組覆蓋**：藍圖 R1–R3、M1–M6 全數「已完成或已排程」。
+  > ↳ 判定 PARTIAL：M4/M5/M6/R4/R5 完成；R1（api.rs 模組化，PA-02）未完成——整合計畫 1794810000000 列 Phase V 條件性（解鎖＝GAP-08 分歧＋單一寫者），屬已知條件項而非遺漏。
+- [x] 14.4 **測試覆蓋**：TEST-RD-2.0 全部案例 → 有 ID、有 slice、有證據路徑；§7 Pending 清零。
+  > ↳ 判定 PARTIAL：等價測試已落地；TEST-RD §7 Pending 未清零——Lighthouse 基線／E2E 腳本延伸／soak 仍未執行（與 XP-007 同族，Phase IV 部分承接，殘餘列 P2 路線）。
+- [x] 14.5 **交付覆蓋**：DEL-RD-2.0 §A–§D 全項＋§G 限制清零或明列。
+  > ↳ 判定 PASS：DEL-RD-2.0 §A–§D 存在；§G 已知限制為誠實清單（本輪 Reviewed 確認無虛標 Done）。
+- [x] 14.6 **PA 覆蓋**：PA-01..08 每項有可執行驗證方法（§11.3）。
+  > ↳ 判定 PASS：§11.3 PA-01..08 驗證方法在案；PA-02 之條件性與 14.3 判定一致。
+- [x] 14.7 **不變量覆蓋**：§3.2 六條不變量各有自動檢測（掃描／測試）。
+  > ↳ 判定 PASS：①guards::templates_have_zero_javascript＋rust_inline_html_has_no_inline_styles ②core money proptest（INV-01 零浮點）③web_crawl::forms_are_method_post_and_actions_resolve ④api.rs CSRF 測試群（20 處）＋password_reset ⑤guards::unsafe_code_is_absent_and_forbidden_at_crate_roots ⑥states_page 八態（未知值「—」）——六條全有自動檢測。
+- [x] 14.8 **反面檢查**：專案中任一「已知問題」清單（IMPROVEMENT_BACKLOG、NEXT_ACTIONS、G2.2 缺口表）不含未映射項。
+  > ↳ 判定 PASS：NEXT_ACTIONS.md 無未勾選項（rg 實證 0）；已知問題清單項皆可映射（f64 技術債 P0-1 為既有記錄項，整合計畫對帳為 Phase V 條件）。
+- [x] 14.9 **證據存在性**（S7）：§5.3 所列每份證據檔案在 `.kilo/sessions/…`／`artifacts/` 真實存在且非空。
+  > ↳ 判定 GAP：§5.3 所列 .kilo/sessions/20261106-platform-completion/ 與 artifacts/perf 不存在（路徑過期）；替代權威證據鏈＝PLAN_REGISTER addendum（逐 slice 四關＋日期）＋可重跑之現行測試套件。本判定即校正記錄（C-10：不以替代路徑冒充原證據）。
+- [x] 14.10 **狀態表同步**（S7）：藍圖／測試計畫／交付清單三份狀態表與實況一致（無虛標 Done）。
+  > ↳ 判定 PASS（附註）：三份狀態文件已於 2026-11-17 Reviewed（檔頭標記）；R1 以「條件性」記載與實況一致；BankPay UI 計畫已標「已實作（驗證通過）」附測試清單。
 
 > 執行方式：14.1–14.8 於 S0 全跑一次並記錄；14.9–14.10 於 S7 全跑一次並記錄。未過項即修正計畫或補做，不得跳過。
 

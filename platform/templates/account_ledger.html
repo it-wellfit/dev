@@ -38,6 +38,16 @@
                         <option value="{{ a.account_id }}" {% if selected == a.account_id %}selected{% endif %}>{{ a.account_code }} {{ a.account_name }}</option>
                         {% endfor %}
                     </select>
+                    <label for="ledger-date-from">起日</label>
+                    <input class="input" type="date" id="ledger-date-from" name="date_from" value="{{ quick_from }}">
+                    <label for="ledger-date-to">迄日</label>
+                    <input class="input" type="date" id="ledger-date-to" name="date_to" value="{{ quick_to }}">
+                </div>
+                <div class="form-row ledger-quick" role="group" aria-label="快速日期範圍">
+                    <span class="hint">快捷：</span>
+                    <a class="chip-btn" href="/reports/ledger?account={{ selected }}&amp;date_from={{ quick_from }}&amp;date_to={{ quick_to }}">最近 30 天</a>
+                    <a class="chip-btn" href="/reports/ledger?account={{ selected }}&amp;date_from={{ month_prefix }}-01&amp;date_to={{ quick_to }}">本月</a>
+                    <a class="chip-btn" href="/reports/ledger?account={{ selected }}&amp;date_from={{ year_prefix }}-01-01&amp;date_to={{ quick_to }}">今年</a>
                 </div>
                 <div class="form-actions">
                     <button class="btn btn-primary" type="submit">查詢</button>

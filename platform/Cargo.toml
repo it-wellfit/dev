@@ -25,7 +25,7 @@ chrono = { version = "0.4", features = ["serde"] }
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "http2"] }
 
 # Zero-JS web tier (ADR-0002): axum HTTP server + server-rendered templates
-axum = { version = "0.7", features = ["http1", "form", "tokio", "multipart"] }
+axum = { version = "0.8", features = ["http1", "form", "tokio", "multipart"] }
 askama = { version = "0.16", default-features = false, features = ["derive", "std"] }
 # Authentication (G-1): Argon2id password hashing (OWASP recommended params)
 argon2 = { version = "0.5", features = ["std"] }
@@ -72,6 +72,8 @@ tower = { version = "0.5", features = ["util"] }
 # 性質測試（INV-01 金額算術；計畫 1793033761021 Q7 預授權）：
 # proptest 1.12.0 已在 Cargo.lock 依賴圖內，此處引用同一鎖定版本。
 proptest = "1.12"
+# 契約測試（計畫 1793782615513 §6）：NavModel/渲染輸出快照；Rust-native、零 Node。
+insta = "1"
 
 [build-dependencies]
 

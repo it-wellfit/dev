@@ -54,3 +54,42 @@ powershell -File scripts\reset-demo.ps1
 ```
 
 重置會刪除展示資料庫並重新種入相同的 [DEMO] 資料——**不會**影響 `data\auxbridge.db`（正式資料庫檔案獨立）。
+
+## 6. 本機單機 Demo（8096）與登入疑難排除
+
+> 2026-11-15 實證（見 `docs/PLAN_REGISTER.md` addendum #49）。此節描述「單機演示模式」：
+> 直接啟動 release 執行檔、使用正式資料庫 `data\auxbridge.db`（repo 根相對）、僅在本機 127.0.0.1 提供服務。
+
+### 6.1 啟動
+
+| 步驟 | 做法 | 成功判準 |
+|------|------|----------|
+| 1 | 雙擊桌面上的 `start_auxbridge.bat`（ASCII-only 啟動器：cmd 無法可靠解析 UTF-8 中文路徑，故於執行期解析 repo 路徑） | 日誌出現 `AuxBridge server listening on http://127.0.0.1:8096 (zero-JS UI)` |
+| 2 | 瀏覽器開啟 http://127.0.0.1:8096 | 導向 `/login`，標題「登入 — AuxBridge 整合工作台」 |
+| 3 | 以 `admin` 登入 | 進入總覽 `/`，右上顯示 `使用者：admin`、角色 `ADMIN` |
+
+| 帳號 | 密碼 | 說明 |
+|------|------|------|
+| admin | Admin123456 | 僅限本機單機演示；密碼由啟動器的 `AUXBRIDGE_ADMIN_PASSWORD` 決定，服務啟動時會自動與資料庫同步（故改過密碼後重啟即恢復） |
+
+### 6.2 疑難排除（症狀 → 可能原因 → 處理方式）
+
+| 症狀 | 可能原因 | 處理方式 |
+|------|----------|----------|
+| 瀏覽器顯示無法連線 | 服務未啟動，或舊行程仍佔用 8096 | 關閉舊 `auxbridge-server.exe` 行程後重新執行啟動器；以 `Test-NetConnection 127.0.0.1 -Port 8096` 確認 |
+| 登入頁可開、但登入一直失敗 | 資料庫內 admin 密碼與環境變數不一致 | 環境變數為部署端權威：重啟服務即自動同步（並撤銷舊 session）；此為刻意取捨，見 UX_CONTRACTS「已知限制」 |
+| 某頁 404（例如 `/forgot-password`） | 執行檔版本落後於原始碼（源碼已加路由、二進位未重建） | `cargo build --release -p platform --bin auxbridge-server --locked --target-dir web/src-tauri/target` 後重新啟動服務 |
+| 忘了密碼 | 需要自助重設 | 登入頁「忘記密碼？」→ 登記請求 → 管理員於 `/admin/users` 核發一次性連結（30 分鐘有效、用後即焚；重設後所有 session 失效） |
+| 登入後立刻被登出 | 密碼剛被同步或重設，舊 session 已撤銷 | 重新登入即可 |
+| 頁面樣式錯亂 | 舊版 CSS 快取 | 強制重新整理（Ctrl+F5）；樣式 SSOT 為 `web/assets/design-system.css` |
+
+### 6.3 命令列驗證（不需瀏覽器）
+
+```powershell
+# 登入（PRG：預期 303，並取得 session cookie）
+curl.exe -s -c "$env:TEMP\cookies.txt" -b "$env:TEMP\cookies.txt" -X POST "http://127.0.0.1:8096/login" `
+  -H "Content-Type: application/x-www-form-urlencoded" --data "username=admin&password=Admin123456" -o NUL -w "%{http_code}`n"
+
+# 免登入頁可達（預期 200）
+curl.exe -s -o NUL -w "%{http_code}`n" "http://127.0.0.1:8096/forgot-password"
+```

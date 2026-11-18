@@ -79,6 +79,8 @@ pub struct AppState {
         std::sync::Arc<tokio::sync::Mutex<crate::bankpay::model::EsunConfig>>,
     /// G4.9 (D3-04) runtime feature flags (env-driven; defaults ON).
     pub flags: crate::flags::Flags,
+    /// Process start time（可觀測性 §8.2）：`/api/health` 回報 `uptime_s`。
+    pub(crate) started_at: std::time::Instant,
 }
 
 impl AppState {
@@ -107,6 +109,7 @@ impl AppState {
             search,
             bankpay_config: std::sync::Arc::new(tokio::sync::Mutex::new(bankpay_config)),
             flags,
+            started_at: std::time::Instant::now(),
         };
         // 自愈搜尋索引（2026-11-12）：啟動即從 DB 填充——重啟後 /search 立即
         // 可用，無需人工 reindex；嵌入腿為 best-effort（無 embedder → BM25-only）。
@@ -463,11 +466,16 @@ pub fn router(state: AppState) -> Router {
         )
         .route("/assets/design-system.css", get(design_system_css))
         .route("/api/health", get(health))
+        // 部署探針別名（計畫 1793782615513 §4.4）：deploy.ps1 以 /health 判定
+        // 就緒（liveness）；/ready 為 readiness 語義別名——單二進位 SQLite
+        // 應用中兩者同源（同 probe：DB 可達＋migrations 已套用即就緒）。
+        .route("/health", get(health))
+        .route("/ready", get(health))
         // 桌面版（Tauri）UI 對照：純靜態設計文件，無任何資料，公開供比對。
         .route("/tauri-preview", get(tauri_preview))
         .route("/assets/legacy-1420.css", get(legacy_1420_css))
         .route("/assets/ui-v2.css", get(UI_V2_CSS))
-        .route("/assets/fonts/:file", get(serve_font))
+        .route("/assets/fonts/{file}", get(serve_font))
         // 公開路由 body 上限（2026-11-12 規格補洞）：登入表單僅需數百 bytes；
         // 未設限時任意大小 POST 可被用來消耗記憶體（DefaultBodyLimit 僅掛在
         // protected 群組）。64KiB 為寬裕且安全之上界。
@@ -478,12 +486,12 @@ pub fn router(state: AppState) -> Router {
         // W6：知識控制台靜態伺服（session 保護；grill-A 多候選根解析）。
         .route("/console", get(console_index))
         .route("/console/", get(console_files))
-        .route("/console/*path", get(console_files))
+        .route("/console/{*path}", get(console_files))
         .route(
             "/transactions",
             get(transactions_page).post(create_transaction),
         )
-        .route("/transactions/:id", get(transaction_detail_page))
+        .route("/transactions/{id}", get(transaction_detail_page))
         .route("/reviews/bulk", post(reviews_bulk))
         .route("/admin/users", get(admin_users).post(admin_create_user))
         .route("/admin/audit_evidence.csv", get(admin_audit_evidence_csv))
@@ -516,7 +524,7 @@ pub fn router(state: AppState) -> Router {
         .route("/accounts", get(accounts_page).post(accounts_create))
         .route("/accounts/toggle", post(accounts_toggle))
         // F4 收斂（計畫 1793033568961 W3）：科目詳情快照頁（LEDGER_READ 閘於 handler）。
-        .route("/accounts/:id", get(crate::pages::account_detail_page))
+        .route("/accounts/{id}", get(crate::pages::account_detail_page))
         .route("/ai-decisions", get(ai_decisions_page))
         .route("/ai-decisions/reject", post(ai_decisions_reject))
         // ── 工作室頁面批次（27+ 頁；零 JS，session 保護）──
@@ -549,8 +557,9 @@ pub fn router(state: AppState) -> Router {
         )
         .route("/import/history", get(crate::pages::import_history_page))
         .route("/help", get(crate::pages::help_page))
+        .route("/help/tutorial", get(crate::tutorial::tutorial_page))
         .route(
-            "/bankpay/batches/:batch_id",
+            "/bankpay/batches/{batch_id}",
             get(crate::pages::bankpay_batch_detail),
         )
         .route("/status", get(crate::pages::status_page))
@@ -670,7 +679,7 @@ async fn not_found_page() -> Response {
 <link rel="stylesheet" href="/assets/design-system.css">
 </head>
 <body>
-<main class="container login-panel" style="text-align:center">
+<main class="container login-panel text-center">
 <h1>404・找不到頁面</h1>
 <p class="app-subtitle">問題：此網址不存在或已移動。可能原因：連結過期或輸入錯誤。處理方式：返回工作台首頁重新導航。</p>
 <p><a class="btn btn-primary" href="/">返回工作台</a></p>
@@ -962,6 +971,11 @@ async fn health(State(state): State<AppState>) -> Response {
             "transactions": transactions,
             "service": "auxbridge-server",
             "version": env!("CARGO_PKG_VERSION"),
+            // 部署溯源（計畫 1793782615513 §8.2）：BUILD_COMMIT/BUILD_TIME 由
+            // platform/build.rs 注入；uptime 由 AppState.started_at 起算。
+            "commit": env!("BUILD_COMMIT"),
+            "build_time": env!("BUILD_TIME"),
+            "uptime_s": state.started_at.elapsed().as_secs(),
         })),
     )
         .into_response()
@@ -1339,12 +1353,8 @@ async fn admin_create_user(
     if !can_manage_users(&state, &session.user_id).await {
         return render_admin_forbidden(&state, &session).await;
     }
-    if form.csrf_token != session.csrf_token {
-        return (
-            StatusCode::FORBIDDEN,
-            "CSRF 驗證失敗；請重新整理頁面後再操作。".to_string(),
-        )
-            .into_response();
+    if let Some(response) = auth::csrf_mismatch(&form.csrf_token, &session.csrf_token) {
+        return response;
     }
 
     match admin_create_user_validated(&state, &form, &session).await {
@@ -1464,12 +1474,8 @@ async fn admin_toggle_user(
     if !can_manage_users(&state, &session.user_id).await {
         return render_admin_forbidden(&state, &session).await;
     }
-    if form.csrf_token != session.csrf_token {
-        return (
-            StatusCode::FORBIDDEN,
-            "CSRF 驗證失敗；請重新整理頁面後再操作。".to_string(),
-        )
-            .into_response();
+    if let Some(response) = auth::csrf_mismatch(&form.csrf_token, &session.csrf_token) {
+        return response;
     }
     if form.user_id == session.user_id {
         return (
@@ -1752,12 +1758,8 @@ async fn admin_issue_reset(
     if !can_manage_users(&state, &session.user_id).await {
         return render_admin_forbidden(&state, &session).await;
     }
-    if form.csrf_token != session.csrf_token {
-        return (
-            StatusCode::FORBIDDEN,
-            "CSRF 驗證失敗；請重新整理頁面後再操作。".to_string(),
-        )
-            .into_response();
+    if let Some(response) = auth::csrf_mismatch(&form.csrf_token, &session.csrf_token) {
+        return response;
     }
     let request: Option<(String, String)> =
         sqlx::query_as("SELECT username, status FROM password_reset_requests WHERE request_id = ?")
@@ -1851,12 +1853,8 @@ async fn admin_reset_password(
     if !can_manage_users(&state, &session.user_id).await {
         return render_admin_forbidden(&state, &session).await;
     }
-    if form.csrf_token != session.csrf_token {
-        return (
-            StatusCode::FORBIDDEN,
-            "CSRF 驗證失敗；請重新整理頁面後再操作。".to_string(),
-        )
-            .into_response();
+    if let Some(response) = auth::csrf_mismatch(&form.csrf_token, &session.csrf_token) {
+        return response;
     }
     let (exists, existing_username): (i64, Option<String>) =
         sqlx::query_as("SELECT COUNT(*), MAX(username) FROM users WHERE user_id = ?")
@@ -2049,12 +2047,8 @@ async fn ai_suggest(
     Form(form): Form<DraftParseForm>,
 ) -> Response {
     // CSRF (T-08): synchronizer token check before any work.
-    if form.csrf_token != session.csrf_token {
-        return (
-            StatusCode::FORBIDDEN,
-            "CSRF 驗證失敗；請重新整理頁面後再操作。".to_string(),
-        )
-            .into_response();
+    if let Some(response) = auth::csrf_mismatch(&form.csrf_token, &session.csrf_token) {
+        return response;
     }
     // AIS-001: flag gate (default OFF) - 503 with enablement guidance.
     if !ai_suggest_enabled(&state).await {
@@ -2207,12 +2201,8 @@ async fn drafts_adopt(
     session: Extension<Session>,
     Form(form): Form<DraftAdoptForm>,
 ) -> Response {
-    if form.csrf_token != session.csrf_token {
-        return (
-            StatusCode::FORBIDDEN,
-            "CSRF 驗證失敗；請重新整理頁面後再操作。".to_string(),
-        )
-            .into_response();
+    if let Some(response) = auth::csrf_mismatch(&form.csrf_token, &session.csrf_token) {
+        return response;
     }
     let amount_minor = match auxbridge_core::parse_decimal_to_minor(&form.amount, 2) {
         Ok(v) => v,
@@ -2795,12 +2785,8 @@ async fn ai_decisions_reject(
     session: Extension<Session>,
     Form(form): Form<DraftRejectForm>,
 ) -> Response {
-    if form.csrf_token != session.csrf_token {
-        return (
-            StatusCode::FORBIDDEN,
-            "CSRF 驗證失敗；請重新整理頁面後再操作。".to_string(),
-        )
-            .into_response();
+    if let Some(response) = auth::csrf_mismatch(&form.csrf_token, &session.csrf_token) {
+        return response;
     }
     let deleted = sqlx::query("DELETE FROM drafts WHERE draft_id = ?")
         .bind(&form.draft_id)
@@ -2828,12 +2814,8 @@ async fn accounts_toggle(
     if !can_manage_users(&state, &session.user_id).await {
         return render_admin_forbidden(&state, &session).await;
     }
-    if form.csrf_token != session.csrf_token {
-        return (
-            StatusCode::FORBIDDEN,
-            "CSRF 驗證失敗；請重新整理頁面後再操作。".to_string(),
-        )
-            .into_response();
+    if let Some(response) = auth::csrf_mismatch(&form.csrf_token, &session.csrf_token) {
+        return response;
     }
     let result = sqlx::query(
         "UPDATE accounts SET is_active = CASE WHEN is_active THEN 0 ELSE 1 END WHERE account_id = ?",
@@ -3182,12 +3164,8 @@ async fn reviews_bulk(
         )
             .into_response();
     }
-    if form.csrf_token != session.csrf_token {
-        return (
-            StatusCode::FORBIDDEN,
-            "CSRF 驗證失敗；請重新整理頁面後再操作。".to_string(),
-        )
-            .into_response();
+    if let Some(response) = auth::csrf_mismatch(&form.csrf_token, &session.csrf_token) {
+        return response;
     }
     let (new_status, decision_label) = match form.decision.as_str() {
         "approve" => ("POSTED", "核准"),
@@ -5162,12 +5140,8 @@ async fn mapping_apply(
         )
             .into_response();
     }
-    if form.csrf_token != session.csrf_token {
-        return (
-            StatusCode::FORBIDDEN,
-            "CSRF 驗證失敗；請重新整理頁面後再操作。".to_string(),
-        )
-            .into_response();
+    if let Some(response) = auth::csrf_mismatch(&form.csrf_token, &session.csrf_token) {
+        return response;
     }
     let parse_col = |s: &str| -> Option<usize> { s.trim().parse::<usize>().ok() };
     let mapping: Vec<Option<usize>> = vec![
@@ -5304,12 +5278,8 @@ async fn import_confirm(
         )
             .into_response();
     }
-    if form.csrf_token != session.csrf_token {
-        return (
-            StatusCode::FORBIDDEN,
-            "CSRF 驗證失敗；請重新整理頁面後再操作。".to_string(),
-        )
-            .into_response();
+    if let Some(response) = auth::csrf_mismatch(&form.csrf_token, &session.csrf_token) {
+        return response;
     }
 
     // IMP-003: mechanical guard against double-confirmation.
@@ -5607,12 +5577,8 @@ async fn drafts_parse(
     session: Extension<Session>,
     Form(form): Form<DraftParseForm>,
 ) -> Response {
-    if form.csrf_token != session.csrf_token {
-        return (
-            StatusCode::FORBIDDEN,
-            "CSRF 驗證失敗；請重新整理頁面後再操作。".to_string(),
-        )
-            .into_response();
+    if let Some(response) = auth::csrf_mismatch(&form.csrf_token, &session.csrf_token) {
+        return response;
     }
     let text = form.text.trim().to_string();
     if text.is_empty() || text.len() > 10_000 {
@@ -5842,12 +5808,8 @@ async fn wizard_step2(
     nav: Extension<crate::nav::NavModel>,
     Form(form): Form<WizardStep2Form>,
 ) -> Response {
-    if form.csrf_token != session.csrf_token {
-        return (
-            StatusCode::FORBIDDEN,
-            "CSRF 驗證失敗；請重新整理頁面後再操作。".to_string(),
-        )
-            .into_response();
+    if let Some(response) = auth::csrf_mismatch(&form.csrf_token, &session.csrf_token) {
+        return response;
     }
 
     // 步驟 1 → 步驟 2：使用者已選模板，渲染細節表單（借貸欄位尚未填，
@@ -7094,8 +7056,11 @@ mod tests {
         let (app, _pool, cookie, _csrf) = seeded_app_with_admin().await;
         let mut checked = 0usize;
         for page in console_manifest::PAGES.iter() {
-            if page.method != console_manifest::Method::Get || page.path.contains(':') {
-                continue; // POST-only 與模板路徑（:id/:batch_id）不在此契約內
+            if page.method != console_manifest::Method::Get
+                || page.path.contains(':')
+                || page.path.contains('{')
+            {
+                continue; // POST-only 與模板路徑（axum 0.7 `:id`／0.8 `{id}`）不在此契約內
             }
             let (status, body, _) = send(
                 app.clone(),

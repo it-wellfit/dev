@@ -170,12 +170,12 @@ async fn every_page_renders_with_shared_components() {
             continue;
         }
         // Detail routes need a concrete id: accounts take an account id,
-        // transactions a transaction id.
-        let concrete = if uri.contains(":id") {
+        // transactions a transaction id. axum 0.8 語法為 `{id}`（0.7 為 `:id`）。
+        let concrete = if uri.contains(":id") || uri.contains("{id}") {
             if uri.starts_with("/accounts") {
-                uri.replace(":id", "ACC-A")
+                uri.replace(":id", "ACC-A").replace("{id}", "ACC-A")
             } else {
-                uri.replace(":id", "TX-1")
+                uri.replace(":id", "TX-1").replace("{id}", "TX-1")
             }
         } else {
             (*uri).to_string()
@@ -310,6 +310,7 @@ async fn forms_are_method_post_and_actions_resolve() {
         "/admin/users",
         "/search",
         "/bankpay",
+        "/forgot-password",
     ];
     let mut failures: Vec<String> = Vec::new();
     let mut forms = 0usize;
@@ -332,8 +333,9 @@ async fn forms_are_method_post_and_actions_resolve() {
             }
         }
         // Known WRITE forms must be POST (login/logout live on their own pages;
-        // these pages' write actions: import upload, new wizard, profile save).
-        if uri == "/import" || uri == "/new" || uri == "/profile" {
+        // these pages' write actions: import upload, new wizard, profile save,
+        // password-reset request).
+        if uri == "/import" || uri == "/new" || uri == "/profile" || uri == "/forgot-password" {
             let write_form = body.contains("method=\"post\"");
             if !write_form {
                 failures.push(format!("{uri}: write page must have a POST form"));
@@ -458,4 +460,88 @@ async fn static_assets_served() {
             "{uri} content-type {actual_ct} (want {want_ct})"
         );
     }
+}
+
+/// 密碼重設家族（TT-1 登入可及性）：免登入頁必須可達、零 JS、表單指向自身，
+/// 且管理端必須提供一次性連結核發入口（CSRF + POST）。這條路徑是使用者被
+/// 鎖在「無法登入」時唯一的自助逃生門，故以獨立測試守住。
+#[tokio::test]
+async fn password_reset_family_is_reachable_and_zero_js() {
+    let pool = in_memory_pool().await;
+    let state = platform::api::AppState::new(pool.clone())
+        .await
+        .expect("app state");
+    seed(&pool).await;
+    let app = platform::api::router(state);
+
+    // 1) 登入頁必須提供自助入口（使用者找得到路）。
+    let (status, login_body) = get(&app, "/login", None).await;
+    assert_eq!(status, StatusCode::OK, "login page must render");
+    assert!(
+        login_body.contains("href=\"/forgot-password\""),
+        "login page must link to the forgot-password flow"
+    );
+
+    // 2) 忘記密碼頁（免登入）必須渲染 POST 表單並指向自身。
+    let (status, forgot_body) = get(&app, "/forgot-password", None).await;
+    assert_eq!(
+        status,
+        StatusCode::OK,
+        "forgot-password must render for visitors"
+    );
+    assert!(
+        !forgot_body.contains("<script"),
+        "forgot-password must keep the zero-JS contract"
+    );
+    assert!(
+        forgot_body.contains("action=\"/forgot-password\""),
+        "the request form must post to itself"
+    );
+    assert!(
+        forgot_body.contains("method=\"post\""),
+        "the request form must be an explicit POST"
+    );
+    assert!(
+        forgot_body.contains("name=\"username\""),
+        "the request form must carry the username field"
+    );
+
+    // 3) 重設頁（無 token）必須解釋不可重設，而不是 500 或空白。
+    let (status, reset_body) = get(&app, "/reset-password", None).await;
+    assert_eq!(
+        status,
+        StatusCode::OK,
+        "reset-password must render for visitors"
+    );
+    assert!(
+        reset_body.contains("無法重設"),
+        "a missing token must be explained on the page"
+    );
+    assert!(
+        !reset_body.contains("<script"),
+        "reset-password must keep the zero-JS contract"
+    );
+
+    // 4) 有待處理請求時，管理端必須提供核發入口（一次性連結）且帶 CSRF。
+    //    先以公開端登記一個請求，模擬使用者真的被鎖在門外的情境。
+    let request = Request::builder()
+        .method("POST")
+        .uri("/forgot-password")
+        .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+        .body(Body::from("username=finance"))
+        .unwrap();
+    let (status, _) = send(app.clone(), request).await;
+    assert_eq!(status, StatusCode::OK, "forgot-password submit must render");
+
+    let cookie = login(&app, "admin", ADMIN_PASSWORD).await;
+    let (status, admin_body) = get(&app, "/admin/users", Some(&cookie)).await;
+    assert_eq!(status, StatusCode::OK, "admin users page must render");
+    assert!(
+        admin_body.contains("action=\"/admin/users/issue_reset\""),
+        "admin page must expose the issue-reset form for a pending request"
+    );
+    assert!(
+        admin_body.contains("name=\"csrf_token\""),
+        "the issue-reset form must carry a CSRF token"
+    );
 }

@@ -18,66 +18,7 @@ use chrono::Utc;
 use std::fmt::Write as _;
 use std::path::Path;
 
-const CSS: &str = r##":root{
-  --bg:#f4f6f9;--surface:#ffffff;--ink:#1b2733;--muted:#5c6b7a;--accent:#0b5cab;
-  --ok:#177245;--warn:#9a5b00;--err:#b3261e;--border:#d9dfe7;--chip:#eef2f7;
-  --s1:4px;--s2:8px;--s3:16px;--s4:24px;--s5:36px;--radius:10px;--shadow:0 1px 3px rgba(16,32,48,.08);
-  --font:"Microsoft JhengHei","PingFang TC","Noto Sans TC",system-ui,sans-serif;
-  --mono:Consolas,"Cascadia Mono",monospace}
-@media (prefers-color-scheme:dark){:root{
-  --bg:#10161d;--surface:#182029;--ink:#e8edf3;--muted:#9db0c2;--accent:#6db3f2;
-  --ok:#5cd6a2;--warn:#f0b45c;--err:#ff8f86;--border:#2c3947;--chip:#212c38;
-  --shadow:0 1px 3px rgba(0,0,0,.4)}}
-*{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);line-height:1.65}
-header{background:var(--surface);border-bottom:1px solid var(--border);padding:var(--s3) var(--s4);position:sticky;top:0;z-index:2}
-h1{margin:0;font-size:1.3rem;letter-spacing:.02em}
-.sub{margin:2px 0 0;color:var(--muted);font-size:.82rem}
-nav{display:flex;gap:var(--s2);margin-top:var(--s2);flex-wrap:wrap}
-nav a{padding:6px 14px;border-radius:999px;text-decoration:none;color:var(--ink);border:1px solid var(--border);font-size:.88rem}
-nav a:hover{background:var(--chip)}
-nav a:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
-main{max-width:1100px;margin:0 auto;padding:var(--s4)}
-.panel{display:none;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:var(--s3);box-shadow:var(--shadow)}
-.panel:target{display:block}
-#overview{display:block}
-nav a:has(+) .noop,nav a[href="#overview"]{border-color:var(--border)}
-body:has(#claims:target) a[href="#claims"],
-body:has(#gov:target) a[href="#gov"],
-body:has(#ledger:target) a[href="#ledger"],
-body:has(#overview:target) a[href="#overview"]{background:var(--chip);border-color:var(--accent);color:var(--accent);font-weight:600}
-.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:var(--s2)}
-.card{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:var(--s2) var(--s3)}
-.card .num{font-size:1.65rem;font-weight:700}
-.card .label{color:var(--muted);font-size:.78rem}
-.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:var(--s3)}
-h2{font-size:1rem;margin:0 0 var(--s2)}
-h2 small{font-weight:400;color:var(--muted)}
-table{width:100%;border-collapse:collapse;font-size:.86rem}
-th{text-align:left;color:var(--muted);font-weight:600;border-bottom:2px solid var(--border);padding:6px var(--s2);white-space:nowrap}
-td{padding:8px var(--s2);border-bottom:1px solid var(--border);vertical-align:top}
-tbody tr:hover{background:color-mix(in srgb,var(--accent) 5%,transparent)}
-code,.mono{font-family:var(--mono);font-size:.82rem}
-a{color:var(--accent)}
-a:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:3px}
-.pill{display:inline-block;border-radius:999px;padding:1px 10px;font-size:.72rem;font-weight:600;background:var(--chip);color:var(--muted)}
-.pill.published{background:color-mix(in srgb,var(--ok) 15%,var(--surface));color:var(--ok)}
-.pill.superseded,.pill.deprecated{background:color-mix(in srgb,var(--warn) 16%,var(--surface));color:var(--warn)}
-.pill.draft,.pill.pending_review{background:var(--chip);color:var(--muted)}
-.type{font-size:.72rem;color:var(--muted)}
-.bar{position:relative;height:8px;background:var(--chip);border-radius:99px;min-width:90px}
-.bar i{position:absolute;inset:0 auto 0 0;border-radius:99px;background:var(--accent)}
-.bar.hi i{background:var(--ok)}.bar.lo i{background:var(--warn)}
-.banner{border-left:4px solid var(--err);background:color-mix(in srgb,var(--err) 8%,var(--surface));padding:var(--s3);border-radius:var(--radius);margin-bottom:var(--s3)}
-.banner strong{color:var(--err)}
-.empty{color:var(--muted);text-align:center;padding:var(--s5) var(--s3)}
-.empty code{background:var(--chip);padding:2px 8px;border-radius:6px}
-.next{font-size:.8rem;color:var(--muted);margin-top:var(--s2)}
-footer{color:var(--muted);font-size:.76rem;padding:var(--s4);max-width:1100px;margin:0 auto}
-@media print{header{position:static}.panel{display:block!important;margin-bottom:var(--s3)}nav{display:none}}
-@media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
-html{scroll-behavior:smooth}
-"##;
+const CSS: &str = include_str!("../../../docs/design/living-ledger.css");
 fn esc(s: &str) -> String {
     s.replace("&", "&amp;")
         .replace("<", "&lt;")
@@ -305,17 +246,17 @@ pub fn write_dashboard(
     if ledger_tail.is_empty() {
         h.push_str("<div class=\"empty\">帳本尚無條目——所有裁決與歸檔決策都會記入此處。</div>");
     } else {
-        h.push_str("<table><thead><tr><th scope=\"col\">Seq</th><th scope=\"col\">動作</th><th scope=\"col\">主張</th><th scope=\"col\">時間 (UTC)</th></tr></thead><tbody>");
+        h.push_str("<ul class=\"timeline\">");
         for (seq, action, claim, ts) in ledger_tail.iter().take(12) {
             let _ = write!(
                 h,
-                "<tr><td class=\"mono\">{seq}</td><td>{}</td><td><code>{}</code></td><td class=\"mono\">{}</td></tr>",
+                "<li><span class=\"seq\">#{seq}</span><div>{} · <code>{}</code></div><div class=\"fresh\">{}</div></li>",
                 esc(action),
                 esc(claim),
                 esc(ts)
             );
         }
-        h.push_str("</tbody></table>");
+        h.push_str("</ul>");
     }
     h.push_str("</section>\n");
 

@@ -1,7 +1,9 @@
 # UI 迭代計畫 v2 — 體驗契約 × 一流產品化（P0–P2）
+> 2026-11-17 Reviewed（整合完成計畫 1794810000000 I-4）：掃描無未勾選任務（\- [ ]\=0）；無未關閉程式任務。證據：PLAN_REGISTER addendum #52。
 
 > 日期：2026-11-13｜狀態：Implementation-Ready（切換可編輯代理執行）
 > **⚠️ 執行順序（2026-11-13 更新）：W11 緊急回滾必須第一個執行**——使用者實測所有頁面主體被壓成 ~60px 垂直細條、每字一行（漢堡抽屜 CSS 副作用，畫面崩壞＝P0）。W1–W10 在 W11 驗證通過前**暫停**。
+> **W11c ROOT CAUSE (CSS line-by-line audit)**: ui-v2.css lines 386-425 orphan rules are OUTSIDE the @media block - mobile styles apply at ALL widths, destroying desktop sidebar grid. Fix: move lines 388-425 inside @media.
 > 依據：`docs/standards/EXPERIENCE_CONTRACTS.md`、`docs/design/UI_DESIGN_DECONSTRUCTION_v1.0.md`、`docs/standards/NAMING_AND_BOUNDARY_DECREE.md`、`docs/standards/REQUIREMENTS_TRACEABILITY.md`
 
 ## 0. 已交付基線（2026-11-13 實證）

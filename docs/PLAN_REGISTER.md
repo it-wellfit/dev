@@ -12,7 +12,7 @@ This register is the navigation point for planning documents. Each project retai
 | Project | Keep as primary navigation / evidence | Current disposition | Required next decision or evidence |
 |---|---|---|---|
 | ARES (workspace root) | [ARES master spec](ARES_MASTER_SPEC.md), [implementation plan](ARES_IMPLEMENTATION_PLAN.md); the root `Cargo.toml` and source are the factual workspace baseline | Both planning documents remain proposals. The current workspace uses `resolver = "2"` and `core/`, `platform/`, `web/`; the proposed Cargo design describes a different crate layout and has an inconsistent member/API inventory. No approved executable plan is evidenced. | The owner must decide whether ARES replaces, coexists with, or is separate from the current root workspace; define the REA fork/provider boundary; then reconcile the Cargo proposal and acceptance evidence. |
-| Wellfit | [Wellfit plan register](../Wellfit/PLAN.md), [BankPay decisions](../Wellfit/docs/bankpay/08-open-questions-and-decisions.md), [project evidence snapshot](../Wellfit/docs/project/CURRENT_STATE.md) | The plan register is current navigation; the project evidence snapshot is historical. The local E.Sun V2.8 PDF supports API-first integration; real-account/sandbox and end-to-end validation remain blocked. The BankPay quality review records that CLI export currently does not dispatch a network request; API protocol selection is not evidence of working integration. ISMS scope and applicability remain owner decisions. | Approve the ISMS boundary and accountable owner. Re-run project checks on a named revision before updating any current-state or completion claim. |
+| Wellfit | [Wellfit plan register](../Wellfit/PLAN.md), [BankPay decisions](../Wellfit/docs/bankpay/08-open-questions-and-decisions.md), [project evidence snapshot](../Wellfit/docs/project/CURRENT_STATE.md) | The plan register is current navigation; the project evidence snapshot is historical. The local E.Sun V2.9 PDF supports API-first integration (9 endpoints registered as KB source #10); real-account/UAT and end-to-end validation remain blocked (smoke script ready, not executed). The BankPay quality review records that CLI export currently does not dispatch a network request; API protocol selection is not evidence of working integration. ISMS scope and applicability remain owner decisions. | Approve the ISMS boundary and accountable owner. Re-run project checks on a named revision before updating any current-state or completion claim. |
 | ekpi-platform | [Documentation map](../ekpi-platform/docs/README.md), [phase gates](../ekpi-platform/docs/quality/phase-gates.md), and revision-bound [assurance evidence](../ekpi-platform/docs/assurance/README.md) | Phase A is not approved and Phase B is blocked. Existing assurance applies to revision `279c919`; the reviewed checkout is dirty at `c0c0e33`, so prior test evidence does not establish current-tree status. No approved delivery roadmap was found. | Reconcile README/charter claims to the canonical assurance record. Obtain named product, pilot, security, and data owners; rerun evidence on the current revision before claiming any gate passed. |
 | SyncMesh | [Project charter](../SyncMesh/PROJECT_CHARTER.md) for intent; [`Cargo.toml`](../SyncMesh/Cargo.toml) and source for implementation facts; [traceability ledger](../SyncMesh/docs/TRACEABILITY.md) for acceptance status | Prototype status only. The manifest declares version `0.1.0` and four crates; charter/spec completion and version claims conflict. The 14 target acceptance cases are `NOT RUN`; no release sign-off is evidenced. **Security documents claim TLS/mutual authentication, but the inspected transport is TCP-only with no TLS implementation.** | Resolve intended release/version and feature scope; correct security claims before any deployment; confirm ADRs and name acceptance owners. Record actual test commands, results, and supported-platform evidence before updating release claims. |
 
@@ -22,7 +22,7 @@ This register is the navigation point for planning documents. Each project retai
 
 | Topic | Recommended decision | Evidence and limit |
 |---|---|---|
-| E.Sun integration mode | Use the bank security-component API as the canonical boundary; default to the JSON payload (`formatType=2`). Use the fixed-width file payload (`formatType=1`) only for the one-debit/one-credit case specified by the bank document. Do not design a file-drop-only integration. | The local [E.Sun V2.8 technical document](../Wellfit/docs/bankpay/references/【玉山銀行】企業ERP銀企直連串接_技術文件V2.8_v1.pdf) documents API rules, both payload types, and a separate media-file specification. This resolves the architecture-description conflict, not bank account access or live acceptance. |
+| E.Sun integration mode | Use the bank security-component API as the canonical boundary; default to the JSON payload (`formatType=2`). Use the fixed-width file payload (`formatType=1`) only for the one-debit/one-credit case specified by the bank document. Do not design a file-drop-only integration. | The local [E.Sun V2.9 technical document](../玉山串接專案/【玉山銀行】企業ERP銀企直連串接_技術文件V2.9.pdf) documents API rules, both payload types, and a separate media-file specification; V2.9 routes `formatType=1` to the single-payment bank-verified case only (`validation.rs` enforces it). This resolves the architecture-description conflict, not bank account access or live acceptance. |
 | Wellfit ISMS documents | Recommended hierarchy: `KNB-MASTER.md` is a short governance/index document; `KNB-ISO-MASTER.md` is the sole detailed ISO-control reference; `KNB-INDUSTRY-MASTER.md` is an applicability proposal. Keep `001`–`010` as historical inputs, not active plans. | This is a document-management recommendation only. The responsible owner must approve organizational scope, standards, identity assumptions, and the execution roadmap. Version/date claims are not verified; the official ISO catalogue returned HTTP 403 during review, which means `UNKNOWN`, not pass or fail. |
 | ERP/AI data boundary | Keep inference local and prohibit cloud fallback for ERP data until the data owner approves an explicit exception with data classification, provider, retention, access, and audit controls. | The Flaps architecture proposal states local-only data handling, while the Phase 2 plan proposes cloud fallback. The local-only constraint is the consistent, lower-risk default; changing it requires owner authorization. |
 | “Latest technology” plans | Treat version tables and “latest” claims as dated observations, not architecture decisions. Adopt a dependency or platform only when the project owner approves the need and the exact version is verified against the project's manifest and an authoritative release source. | The EKPI migration proposal's proposed stack differs from current project manifests. Wellfit's encoding plans also contain speculative Base-N/envelope/analytics formats. No such adoption is implied by this review. |
@@ -279,7 +279,7 @@ Executed by the plan/code lane per `.kilo/plans/1793034142477-apihub-tauri-uiux-
 | Item | Disposition | Evidence |
 |---|---|---|
 | 受眾分層 IA（使用者裁決） | 操作者／管理者／技術人員三層；主導覽 `can_manage_users` 閘控管理與技術入口（並行流已重構為下拉分組）；操作者頁尾不帶開發文件連結 | `platform/templates/index.html` nav（20:59 版：管理下拉含 API 中樞/日誌/設定） |
-| E.Sun V2.8 契約目錄 | 8 契約端點入 catalog（`esun_endpoints()`：path/name/contract_ref §47–§299/平台對應/誠實標示「模擬對應3·未串接5」）；KPI 卡契約 8｜原生 12 | `apihub.rs::esun_endpoints()`＋`api_catalog.html`（含 KPI 定義 tooltip） |
+| E.Sun V2.9 契約目錄 | 9 契約端點入 catalog（`esun_endpoints()`：path/name/contract_ref V2.9 §4.(一)–(九)／平台對應/誠實標示「模擬對應3·未串接6」）；KPI 卡契約 9｜原生 12 | `apihub.rs::esun_endpoints()`＋`api_catalog.html`（含 KPI 定義 tooltip） |
 | 治理四頁（T2） | `/admin/api/records`（源 bankpay_audits＋bankpay_batches，HTTP 狀態實錄）、`/admin/api/codes`（僅列已驗證 910000＋rsStatus 語義）、`/admin/api/release`（RC-01..06 誠實狀態：3 已驗證/2 待憑證/1 未串接）、`/admin/api/net`（本地設定與程式面檢查；不做網路探測） | `apihub.rs` 處理器＋4 模板＋api.rs 路由；catalog 頁首入口連結已加 |
 | 檢索頁（T3） | `/search?q=`（Tantivy；空索引誠實回空態；RAG 升級後呈現融合結果） | `workbench.rs::search_page`＋`search.html`＋index 導覽「檢索」連結 |
 | 重複路由修復 | `/bankpay/exceptions`、`/import/history`、`/help` 各註冊兩次（axum 啟動 panic）→ 移除第二份 | api.rs 編輯（21:07） |
@@ -711,6 +711,63 @@ This addendum records execution facts only; it does not approve product scope, c
 | 全頁面稽核 | 37 頁：0 PUA/0 模板殘留/37 頁 SVG/渲染零錯誤；試算表 165,750=165,750 平衡；月報含首日（11-01）邊界正確；稽核軌跡 5×交易過帳＋LOGIN_SUCCEEDED；搜尋/草稿/體驗室全通 | 本節（實測腳本輸出） |
 | 教訓 | 測試腳本 cookie 檔尾 CRLF 污染 header（POST 帶 body 時 415；GET 不受影響）——Trim 後全通；產品無 bug | 本節 |
 
+## 2026-11-15 addendum #49（登入可及性補洞：環境變數密碼同步＋部署面重建＋啟動器修復＋契約校驗擴充）
+
+| Item | Disposition | Evidence |
+|---|---|---|
+| **根因（使用者回報「無法登入」）** | 兩層根因：① `seed_admin_if_empty` 只要 `users` 表非空即 `return`，`AUXBRIDGE_ADMIN_PASSWORD` 於首次啟動後完全失效——資料庫密碼一旦被改動，維運端再也無法用環境變數進入自己的部署；② 8096 服務實際執行的是 2026-11-13 的舊 release 執行檔，該二進位**不含**密碼重設路由（`/forgot-password` 回 404），源碼與部署面脫節 | 舊 `auth.rs` 實作（count>0 → return）；curl：重啟前 `forgot=404` |
+| **修正（部署端密碼為權威）** | 環境變數存在時：`admin` 雜湊與環境變數不符即旋轉密碼並**撤銷該帳號所有 session**（密碼變更必須使既有登入失效）；環境變數缺席時維持「首次啟動隨機密碼」原行為（絕不靜默安裝預設密碼）。環境變數讀取與核心邏輯分離為 `seed_admin`（可測），避開 edition 2024 `std::env::set_var` 為 unsafe 與 crate 頂端 `#![forbid(unsafe_code)]` 之衝突 | `platform/src/auth.rs::seed_admin`／`sync_admin_password`；5 項單元測試（建立／旋轉／保留／冪等／撤銷 session）全綠 |
+| **部署面重建** | `cargo build --release -p platform --bin auxbridge-server --locked --target-dir web/src-tauri/target`（舊執行檔被行程鎖定須先停止服務）→ 34,517,504 → **34,874,368 bytes**（2026-11-15 17:53）；重啟後 `/forgot-password` 200、`/reset-password` 200 | curl：forgot 404→200；exe LastWriteTime／Length |
+| **啟動器路徑編碼損壞修復** | `Desktop\start_auxbridge.bat` 原以 UTF-8 寫入中文 repo 路徑，cmd 讀取後路徑變成 `????`（雙擊無法 cd 到 repo）→ 改寫為 **ASCII-only** 啟動器：執行期以 PowerShell 解析 `Desktop/*/Projects/2026/Dev`（以 `platform/Cargo.toml` 為存在性標記），不寫死任何中文路徑 | `start_auxbridge.bat` 1,000 bytes、non-ASCII=0；啟動日誌「AuxBridge starting from …\Dev」 |
+| **端到端實證（部署後，2026-11-15）** | ① Playwright 全新 isolated context 登入 → `/` 標題「AuxBridge 整合工作台」、使用者 `admin`、角色 ADMIN、`<script>`=0、console error=0；② `/forgot-password` 200＋POST 表單指向自身＋帳號欄位；③ `/reset-password`（無 token）200＋「無法重設」說明；④ **密碼同步 E2E**：管理端改密 → 舊密碼登入 200（拒）→ 重啟服務 → 環境變數密碼登入 303（可）、前一個密碼 200（拒） | curl/Playwright 實測輸出（本節） |
+| **測試擴充** | `platform/tests/web_crawl.rs` 新增第 7 閘門 `password_reset_family_is_reachable_and_zero_js`（登入頁入口連結／免登入表單 method＋action／token 缺失說明／管理端核發表單含 CSRF），並將 `/forgot-password` 納入表單 method 契約巡檢 | web_crawl 7/7 綠；password_reset 2/2 綠（先前未重跑之斷言已修正並通過） |
+| **四關** | `cargo fmt --all -- --check` 0；`cargo clippy --workspace --all-targets --locked -- -D warnings` 0；`cargo test --workspace --locked -j 2` 0 failed；`cargo audit` 未重跑（依賴圖未變動） | 本節實測（2026-11-15） |
+| 誠實揭露 | 環境變數密碼為部署端權威＝「設定即生效」；若需保留資料庫既有密碼，啟動時**不設定** `AUXBRIDGE_ADMIN_PASSWORD` 即維持原行為。偽陽性處置：`secret_scan` 將 `let password = match … {` 判為硬編碼憑證，已改寫為等價的 `unwrap_or_else` 形式（非放寬掃描規則） | `secret_scan` 4/4 綠 |
+| 未竟 | 玉山 Sandbox 憑證（OQ-E3）仍為外部阻塞；互動教學（TT-9）／工作流設計器（TT-10）仍列 P2 路線（未實作，不以本輪證據冒充） | `docs/engineering/UX_CONTRACTS.md` |
+
+## 2026-11-15 addendum #50（TT-9 互動教學落地＋404 內聯樣式 CSP 違規修復＋測試盲區補洞）
+
+| Item | Disposition | Evidence |
+|---|---|---|
+| **TT-9 互動教學（使用者明示 P2：缺 AI 操作教學）** | 新頁 `/help/tutorial`（manifest `help.tutorial`；system 群組；Gate::All）：七步引導（登入→總覽→建立交易→匯入→報表→稽核→進階），每步「目標／怎麼做／成功判準／常見錯誤」四欄＋真實頁面深連結；互動原語＝原生 `<details>`＋頁內錨點（TT-1/TT-2 同族，零 JS、零新 CSS） | `platform/src/tutorial.rs`＋`platform/templates/help_tutorial.html`＋`console_manifest` PAGES（Dynamic 55→56） |
+| **自動校驗** | `interaction_audit::tt9_tutorial_steps_structure_and_links`：7 步結構＋四欄 marker ≥7＋錨點→同頁目標（TT-1 同律）＋全部深連結可達（不得教使用者撞 404）＋零 JS＋首步預設展開 | interaction_audit 6/6 綠；web_crawl 7/7；page_matrix 4/4；platform lib 167/167（`all_manifest_pages_render_under_contract` 自動涵蓋新頁） |
+| **瀏覽器實證（部署面）** | 重建 `auxbridge-server.exe`（34,890,240 bytes，2026-11-15 20:10）並重啟：`/help/tutorial` 200、7 步渲染、導覽入口存在、`#step-3` 錨點命中、scripts=0 | curl＋Playwright 實測（isolated context） |
+| **缺陷：404 頁 CSP 違規（瀏覽器實證抓到）** | 品牌 404 頁（`api.rs::not_found_page` 內聯 HTML）含 `style="text-align:center"`，被 CSP `style-src 'self'` 阻擋（瀏覽器 console 實證）→ 改用既有 token class `.text-center`（design-system.css:1901 已存在，零新規則） | Playwright：`inlineStyleAttr=false`、`textAlign=center`、CSP 錯誤消失 |
+| **測試盲區補洞** | `guards::templates_have_no_inline_styles` 只掃 `platform/templates`，.rs 內聯 HTML 字串漏網 → 新增 `guards::rust_inline_html_has_no_inline_styles`（掃 platform/src＋web/src-tauri/src 的 .rs；排除註解行與 `contains(` 斷言行） | guards 7/7 綠 |
+| **四關** | fmt 0；clippy -D warnings 0；`cargo test --workspace --locked -j 2` 0 failed；experience_traceability/trace_guard/design_lab 全綠（文件與實作不脫鉤） | 本節實測（2026-11-15） |
+| 未竟 | 工作流設計器（TT-10）維持 P2 路線；OQ-E3 玉山 Sandbox 憑證外部阻塞 | `docs/engineering/UX_CONTRACTS.md`；XP-006 |
+## 2026-11-17 addendum #51 (最佳整合計畫執行：狀態對帳＋可完成項落地；含 axum 0.8)
+
+承接整合計畫 `1794810000000`（執行期間該檔被並行流移除；任務清單與狀態見 `docs/engineering/INTEGRATED_COMPLETION_REPORT_2026-11-17.md`）。
+
+| Item | Disposition | Evidence |
+|---|---|---|
+| axum 0.7 → 0.8 | **完成**：`platform/Cargo.toml` 升 0.8.9；6 處路由語法遷移；axum 0.8 移除 `OptionalFromRequestParts` → 新增 `auth::ClientPeer`（自 extensions 提取，無者回 None） | `cargo check -p platform --all-targets` EXIT=0；根測試 390 passed／0 failed |
+| SBOM 同步 | **完成**：重產 `docs/release/sbom/platform.cdx.json` | `sbom_freshness` 3 tests 全綠 |
+| XP-002 列印閘（III-2） | **完成**：`guards.rs::design_system_has_print_header_footer_and_pagination` | 1 passed |
+| XP-003 匯出（III-3） | **驗證完成**：3 tests（`Content-Disposition`、角色門禁、必要欄位） | 3 tests ok |
+| BankPay §9（I-2） | **PASS** | `bankpay_api` 16＋`bankpay_persistence` 1＋具名 2 測試 ok |
+| docs/README 稽核（II-3） | **完成**：§6.3 登記根 `README.md`（工作區入口） | `docs/README.md` §6.3 |
+| 未竟 | **NOT DONE／UNKNOWN（誠實）**：II-1、II-2、III-1（`api.rs` 並行活躍）、IV（需 :8090） | 見報告 §I／§K |
+
+This addendum records execution facts only; it does not approve product scope, certification, or release.
+## 2026-11-17 addendum #52（整合計畫第二輪：II-1/II-2/III-1/IV 落地＋CSRF 13 處收斂＋匯出契約測試）
+
+承 addendum #51 未竟欄——II-1、II-2、III-1、IV 已於第二輪執行；判定細節見 `docs/engineering/INTEGRATED_COMPLETION_REPORT_2026-11-17.md` §M。
+
+| Item | Disposition | Evidence |
+|---|---|---|
+| I-1 RP.4 校正 | 完成 | RP-2/3/5/6/7/8 全部改 ✅（實證：兩份 .html 存在、`1794395575776` 計畫 397 行）；GAP-RP-01/02 解除 |
+| I-3 §14 自我驗證 | 完成 | 10 項判定（7 PASS／2 PARTIAL／1 GAP——§5.3 證據路徑過期誠實登載，替代鏈＝PLAN_REGISTER addenda） |
+| I-4 Reviewed 標記 | 完成 | 42 計畫檔檔頭 Reviewed 標記；僅 3 檔曾有未勾選任務且已逐項對帳（RP-2/3/6 勾選、§14 判定、BankPay 16/17） |
+| II-1 四方互鏈 | 完成（互鏈不重寫） | 操作手冊 §3.2 連結化＋產品線報告附錄C／效能架構 P4／RPA-ECOM／A1 手冊反向互鏈；五檔 grep 各 ≥1、目標全存在 |
+| II-2 RP-3 刷新 | 完成 | 平台線報告檔頭刷新（167 lib＋36 整合檔／p95 4.18ms／TTFB 6.89ms，證據源 addendum #47 G4.7）；產品線報告 P1–P4 階段狀態（P2–P4 BLOCKED 附解鎖條件） |
+| III-1 CSRF 收斂 | 完成 | 13 處同構區塊 → `auth::csrf_mismatch` 單一判定（2 異構流程保留）；PIN `authenticated_posts_reject_bad_csrf` 零修改 6/6；新增單元測試 1 項（auth lib 11 passed） |
+| III-3 匯出契約 | 完成 | `export_contract::monthly_csv_export_contract`（檔名＝報表名＋期間／欄序穩定／金額 minor 與 DB 對帳／無浮點）1 passed |
+| IV-1 E2E 全走查 | PASS（HTTP 層）＋瀏覽器截圖 | :8091 拋棄式實例（臨時 DB 已清）：錯密碼 200＋訊息／登入 303／預覽 303／確認 303／**重複確認 409**／缺 CSRF 422／錯 CSRF 403／月報借貸平衡 net=0／稽核 LOGIN+IMPORT；儀表板／交易／稽核截圖 |
+| IV-2／IV-3 | PARTIAL | 瀏覽器 MCP 無 resize／printToPDF → 視覺矩陣與 PDF UNKNOWN；替代證據＝responsive_css 3 綠（360/640/768/1024）＋@page 規則＋print 閘測試 |
+| 四關 | PASS | fmt 0／clippy workspace --all-targets -D warnings 0／test workspace 0 failed（60 suites，含 export_contract、characterization PIN）／audit 0（1 allowed unmaintained warning） |
+| 誠實揭露 | — | 整合計畫檔 `1794810000000` 已被並行流移除（見 #51），本輪以報告 §M 為任務對帳 SSOT；docs/README 根 README 登記同時存在 §2.1 索引列（本輪）與 §6.3 稽核注記（#51），兩者互補不衝突。V-1..V-3 維持 WONTFIX／BLOCKED／NOT VERIFIED。 |
 ## Consolidation rules
 
 1. Keep one current navigation register and one acceptance/evidence ledger per project. Detailed requirements belong in their project documents.

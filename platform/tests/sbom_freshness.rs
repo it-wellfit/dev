@@ -208,6 +208,12 @@ fn root_sboms_match_resolved_graph() {
 /// 桌面套件（獨立 workspace）的 SBOM 必須與其解析圖一致。
 #[test]
 fn desktop_sbom_matches_resolved_graph() {
+    // 環境閘（2026-11-18）：desktop SBOM 對帳需要 web/src-tauri checkout——
+    // 該目錄若不在 CI workspace（deployment 慣例排除桌面殼），顯式 SKIP。
+    if !repo_root().join("web/src-tauri").is_dir() {
+        eprintln!("SKIP desktop_sbom: web/src-tauri 不在此 checkout（桌面殼不入 git 時）");
+        return;
+    }
     let root = repo_root();
     let manifest = root.join("web/src-tauri/Cargo.toml");
     let meta = load_metadata(&manifest);

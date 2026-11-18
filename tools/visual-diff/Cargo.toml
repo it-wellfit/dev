@@ -1,0 +1,15 @@
+[package]
+name = "visual-diff"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.99"
+license = "LicenseRef-Proprietary"
+publish = false
+description = "像素級視覺回歸比對（計畫 1793782615513 §7.3；零 Node，Rust image crate）"
+
+[[bin]]
+name = "visual-diff"
+path = "src/main.rs"
+
+[dependencies]
+image = { version = "0.25", default-features = false, features = ["png"] }

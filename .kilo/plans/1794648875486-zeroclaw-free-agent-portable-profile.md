@@ -1,4 +1,5 @@
 # 計畫：ZeroClaw 免費個人助理（無 Node、Windows 優先、可攜可擴充）
+> 2026-11-17 Reviewed（整合完成計畫 1794810000000 I-4）：掃描無未勾選任務（\- [ ]\=0）；無未關閉程式任務。證據：PLAN_REGISTER addendum #52。
 
 日期：2026-11-14｜狀態：待審核（refine r2）｜範圍：本工作區（Dev）＋可轉移至 Windows 10/11、Linux、macOS
 
@@ -156,3 +157,111 @@ OpenClaw（Node）安裝；Telegram／Slack／Discord 等通道；常駐服務�
 - Q1：是否允許 `ollama pull nomic-embed-text`（約 274 MB）以啟用記憶檢索？預設**不 pull**，改用 `markdown` memory。
 - Q2：是否允許 agent 寫入 workspace 以外的暫存路徑？預設**僅 workspace**。
 - Q3：Phase 2（Telegram＋常駐）是否要另外開立計畫？預設**是**，本計畫不涵蓋。
+
+## 11. 實作紀錄（2026-11-15）
+
+**已交付**：`agents/zeroclaw/` 的 `README.md`、`.gitignore`、`config/zeroclaw.toml.tmpl`、
+`scripts/install.ps1`、`scripts/install.sh`、`scripts/verify.ps1`、`scripts/verify.sh`、
+`scripts/uninstall.ps1`、`scripts/measure-models.ps1`（模型選型量測）。
+
+**安裝（Windows，實際執行）**
+
+| 步驟 | 結果 |
+|---|---|
+| 下載 `zeroclaw-x86_64-pc-windows-msvc.zip` | 32.7 MiB |
+| SHA-256 vs pinned 值 | 相符（`f81fd10b…2afd6d`），且與 release `SHA256SUMS` 一致 |
+| 解壓／PATH／config | `%USERPROFILE%\.zeroclaw\bin`、使用者 PATH、config.toml 就位 |
+| `zeroclaw --version` | `0.9.0 (6c78ba5)` |
+| `config migrate --json` | `valid: true`（schema_version 4） |
+| `security status --agent assistant` | supervised；high-risk blocked；sandbox none（如預期）；`workspace-only: true`、`rw roots: 0`、`public bind: false`、`pairing required: true` |
+| `verify.ps1 -Full` | V1–V10 全 PASS（gateway 啟動時 V8 亦 PASS：`/health` 200、`/` 200） |
+| `uninstall.ps1` | 乾淨主機上空跑：PATH 未誤改、無殘留 |
+
+**模型選型實測（同一 prompt＋`list_directory` 工具，每模型獨立子行程）**
+
+| 模型 | 工具呼叫 | 冷 | 暖 | tokens |
+|---|---|---|---|---|
+| qwen3.5:4b | 是 | 10.4 s | ~2.1 s | 87 |
+| llama3.1:8b | 是 | 11.9 s | ~11.7 s | 21 |
+| qwen2.5:7b-instruct | 是 | 11.3 s | ~11.3 s | 24 |
+
+→ 探用 `qwen3.5:4b`（唯一暖啟動 <3 s）。
+
+**過程中修掉的問題（已回寫腳本／模板）**
+
+1. 渲染 config 時 Windows 路徑被多重轉義（`C:\\\\Users`）→ 改為正確的 TOML `\\`。
+2. `fallback` 指向沒有金鑰的 provider 會**啟動即失敗**（fail-closed）→ 模板改為預設註解，金鑰備妥後再開。
+3. `allowed_roots` 原本指向不存在的 `~/.zeroclaw/workspace`；實際 workspace 為
+   `~/.zeroclaw/agents/<alias>/workspace`（永遠可寫）→ 改為 `[]`。
+4. 版本遷移會注入 `[tools] optional = ["*"]`（等於開啟所有選配工具）→ 模板顯式設為 `[]`。
+5. `measure-models.ps1` 在同一長連線下連發工具請求會遇 Ollama 400 → 改為每模型獨立子行程＋
+   每請求獨立 HttpClient。
+
+**未完成（標 UNKNOWN，不得視為 PASS）**
+
+- Gemini 免費層：無 `GEMINI_API_KEY` → `fallback` 維持關閉，免費層回退未實測。
+- LAN 綁定外部實測：無第二台機器；目前只有 `security status` 的 `public bind: false` 佐證。
+- 常駐（Phase 2）未安裝，符合第一階段預期。
+
+## 12. 實作紀錄（第二輪，2026-11-15）
+
+**政策行為實測（非互動 CLI；全部以 runtime log 佐證）**
+
+| 情境 | 結果 |
+|---|---|
+| 讀工作區外（Documents） | 模型自我節制拒絕；未執行 |
+| 寫工作區外（Desktop） | 跳審核 → 無審核者 → **runtime 拒絕**（`denied_by_runtime: true`）；目標檔不存在 |
+| `shell` 執行 `Get-Date` | 跳審核 → **runtime 拒絕**；trace 明載 `Tool call not executed` |
+| 讀工作區內 `hello.txt` | 低風險自動執行，回覆逐字正確 |
+| 寫工作區內（暫時 `auto_approve=["file_write"]`） | 成功寫入且內容相符；隨後還原 `auto_approve=[]` |
+
+**模型行為（關鍵發現）**
+
+- `qwen3.5:4b` 被拒絕後吐空回應 → 重試 3 次 → 回合失敗（`invalid semantic completion`）。失敗可見、不謊報。
+- `llama3.1:8b` 未加身分檔前，**編造** `Get-Date` 的成功輸出（年份 2023）；加護欄後降為
+  `No results found.`（不再編造）。
+
+**新增交付**
+
+- `agents/zeroclaw/identity/{AGENTS,TOOLS,SOUL,IDENTITY,USER}.md`：護欄與人格檔（禁編造工具輸出、
+  拒絕要據實回報、僅限工作區、敏感內容不送雲端），由安裝腳本複製到 agent 工作區（不覆寫既有檔）。
+- 模板新增 `[memory] search_mode = "bm25"`（無 embedding provider 的正確設定，消除啟動警告）。
+- `install.ps1`／`install.sh`：新增身分檔安裝步驟與 `-AgentAlias`／`--agent`、`-SkipIdentity` 開關。
+
+**修正**
+
+- `verify.ps1`／`verify.sh` 的 V3 放寬為 `valid: true` **或** `migrated: true` 且 `error: null`
+  （0.9.0 的實際輸出格式）。
+
+## 13. 免費雲端路線（第三輪，2026-11-16）
+
+**已採用**：Kilo AI Gateway 免費層（`[providers.models.kilo.free]`，`kilo-auto/free`），設為
+`ollama.local` 的 `fallback`。
+
+驗證（全部可重跑）：
+
+- `GET https://api.kilo.ai/api/gateway/models` → 469 模型、13 免費（`kilo-auto/free`、
+  `nvidia/nemotron-3-ultra-550b-a55b:free`、`inclusionai/ling-3.2-flash:free`、`openrouter/free` 等）。
+- 無金鑰 `POST /v1/chat/completions` → 200、`cost: 0`；帶 tool schema → 正確回 `tool_calls`
+  （`nemotron-3-ultra-550b:free` 3.0 s）。
+- 經 ZeroClaw 端到端（暫時 `agents.assistant.model_provider = kilo.free`）：回覆正常；被政策拒絕時
+  回「被政策拒絕、非操作員決定」＋替代方案（三種模型中被拒絕後行為最佳）。
+- 本地憑證閘門需非空 `api_key` → 以 `api_key = "anonymous"` 佔位（上游忽略，實測 200）。
+
+**研究結論（附出處，2026-11 查核）**：仍免費——Gemini 免費層、Groq（30 RPM/1K 日）、
+OpenRouter `:free`（20 RPM/50 日）、SambaNova（20 RPD）、NVIDIA NIM（40 RPM）、Cloudflare（1 萬 neurons/日）、
+Cohere trial、Vercel（$5/月）、Kilo gateway（200 次/時/IP）。
+**已消失**——GitHub Models（2026-07-30 退役）、Cerebras 永久免費層、Mistral API 免費模式、
+Hugging Face 免費額度。
+現實：agent 工作負載下免費層約 3 任務/日；維持「本機為主、免費層為輔」。
+
+## 14. Fallback 韌性實測（第四輪，2026-11-17）
+
+同一情境（叫 agent 跑 `Get-Date` → 中風險需審核 → 非互動被拒）在 fallback 接線後重跑：
+
+- trace：qwen3.5 空回應 ×3 → `Exhausted retries, trying next model_provider/model` →
+  `ModelProvider recovered (failover/retry)`（`kilo.free`／`kilo-auto/free`，`original_model=qwen3.5:4b`）
+  → 免費模型完成回合（`cost_usd: 0.0`），回覆誠實說明「被政策拒絕、命令未執行」。
+- 結論：**qwen3.5 的空回應缺陷已被 fallback 補償**；「本機為主、免費層為輔」架構的韌性成立。
+- 附帶觀察：身分檔注入後 system prompt 由 9,404 字元增至 13,212 字元（`num_ctx=8192` 下仍正常運作；
+  若未來加長身分檔或長對話，優先把 `num_ctx` 上調）。

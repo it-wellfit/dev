@@ -49,7 +49,7 @@ cargo audit                                           ; # 依賴安全（.cargo/
 
 - 啟動時先盤點可用 Skills／MCP／代理（清單與使用記錄：`docs/engineering/SKILL_INVENTORY.md`）。
 - 可用代理：architect（規劃）、code-reviewer（審查）、code-skeptic（批判驗證）、test-engineer（測試）。
-- MCP：context7（官方文件）、playwright（介面驗證）、crates-io（依賴）、rust-analyzer（診斷）等；技能未載入不得假裝已執行。
+- MCP：context7（官方文件）、browser（介面驗證；純 Rust `browser-mcp`／CDP，2026-11-15 取代原 playwright／bunx 條目）、crates-io（依賴）、rust-analyzer（診斷）等；技能未載入不得假裝已執行。
 
 ## 6. Git 工作流（現狀說明）
 

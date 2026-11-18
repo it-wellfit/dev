@@ -9,6 +9,74 @@
 
 **範圍界線**：本版產物建自 `4c29a1e`（sidecar 重建＋安裝包重產）；其後 `main` 之變更（G4 治理強化、備份工具、UX 修復、Lucide 圖標等）屬下一版（見 [Unreleased]）。版本號自此統一：root workspace 六 crate 與桌面殼皆為 `0.2.0`。
 
+## [Unreleased] — 2026-11-17（整合計畫執行：axum 0.8＋列印閘＋整合報告）
+
+### Changed
+- **axum 0.7 → 0.8**：`platform/Cargo.toml` 升 0.8.9；6 處路由語法遷移（`:id`→`{id}`、`/console/*path`→`/console/{*path}`）；axum 0.8 移除 `OptionalFromRequestParts` → 新增 `auth::ClientPeer`（自 `extensions` 提取 connect-info，無者回 `None`），維持 0.7 行為。
+
+### Added
+- `guards.rs::design_system_has_print_header_footer_and_pagination`（XP-002：列印頁首頁尾／分頁樣式＋文件快照同步）。
+- `docs/engineering/INTEGRATED_COMPLETION_REPORT_2026-11-17.md`（整合計畫 A–L 執行報告與任務狀態對帳）。
+- `docs/README.md` §6.3（登記根 `README.md` 為工作區入口，非 docs 文件）。
+
+### Verified（2026-11-17 實測）
+- 根測試 390 passed／0 failed（排除環境敏感效能斷言）；BankPay §9 之 18 測試＋匯出契約 3 測試＋列印閘 1 測試全綠；fmt 0／clippy `-D warnings` 0／audit 0／deny 四層 ok；`sbom_freshness` 3 tests 綠（platform SBOM 已因 axum 重產）。
+- 已知紅燈：`guards::console_css_tokens_are_canonical_design_system_values`（`design-system.css` token 變更未同步 `console.css`）→ 屬並行設計工作未收尾，非本輪變更。
+## [Unreleased] — 2026-11-17（W11d 根因修復＋W12 精品化＋W12b/W12d 導覽修＋CI/CD 生產級架構落地）
+
+### Added
+- **CI/CD 生產級架構**（計畫 1793782615513）：`.github/workflows/ci.yml`（budget-guard 免費額度守門三級降級、rust-cache、platform-hub 子工作區）；`docs/ops/PORTS.toml` 埠號登記 SSOT；`tools/port-check.ps1`；`tools/deploy.ps1`（/health 驗證＋失敗自動回滾）；`tools/rollback.ps1`；`tools/capture-page.ps1`／`capture-baseline.ps1`（CDP 截圖管線）；`tools/visual-diff` crate（像素級比對）；`.github/PULL_REQUEST_TEMPLATE.md`
+- **可觀測性**：`platform/build.rs`（BUILD_COMMIT/TIME 注入）；`/health`＋`/ready` 別名路由（`/api/health` 擴充 commit/build_time/uptime_s）；`obs.rs` JSON 日誌格式（`AUXBRIDGE_LOG_FORMAT=json`，預設文字不變）
+- **契約測試**：`platform/tests/contract_nav.rs` 三視角快照（admin/viewer/無角色；insta）
+- **環境隔離**：`data/prod.db`（canonical，遷自 demo-auxbridge.db）、`data/staging.db`（prod 副本＋匿名化）、`data/dev.db`（種子）；`scripts/seed-dev.sql`（5 筆樣本交易、冪等、雙分錄平衡）
+- **匿名化工具**：`platform/src/bin/auxbridge-anonymize.rs`（staging 遮罩：39 交易/78 分錄/195 稽核/33 sessions；prod 防呆：路徑含 prod 拒絕執行）
+- **效能基線**：`docs/benchmarks/baseline.json`（stress 實測 p95=504ms / SLA 650ms / 42 samples）
+- **治理文件**：`docs/ops/INVENTORY.md`（現況盤點）、`DRILL_LOG.md`（回滾演練 #1：RTO 1 分鐘/RPO 0，PASS）、`BRANCH_PROTECTION.md`（GitHub 操作指引）、`DEPLOY_LOG.md`、`POSTMORTEM_TEMPLATE.md`、`docs/standards/SLO_SERVICE_LEVEL_OBJECTIVES.md`（SLO 99.5%/錯誤預算 216 分/月，專業判斷代行＋3 個月複核條款）
+- **NSIS 安裝檔**：`AuxBridge_0.2.0_x64-setup.exe` 12.3MiB（`tauri.conf.json` createUpdaterArtifacts/requireSignedVersion 改 false——updater 端點內部佔位、簽名金鑰未備，工件停用）
+- **圖示系統擴充**：`icons.rs` 新增 activity/help-circle/flask-conical/library/landmark/user 六鍵；`nav_item_icon` 封閉映射覆蓋 9 個頂層頁
+
+### Changed
+- **ui-v2.css W12 精品化**：髮絲邊框（rgba 6-16%）、表面層級貼近＋頂部微光、KPI 大數字弱標籤（28px mono/11px 寬距）、毛玻璃頂欄（品牌字 36→15px）、靜音狀態列（dot 發光/幽靈 chips）、表格薄表頭＋列 hover、實心品牌鈕＋幽靈次鈕、登入聚焦卡片、120ms 過渡紀律
+- **ui-v2.css W11d 根因修復**：`main.container` margin:0（design-system `margin:0 auto` × `container-type:inline-size` × body grid item → 48px 直條）
+- **ui-v2.css W12b 行動端**：≤480px `.btn` 換行（scrollW 372→365）、`overflow-wrap` 長 token 修復（#audit 7px 根層捲動消除）、W11c chip 規則 SUPERSEDED 歸檔（抽屜浮層遮蓋缺陷源）
+- **nav.rs**：`SectionLabel` 同名去重；`NavItem.icon_svg` 封閉映射（9 頂層頁）；`NavGroupView.contains_active`（重載後活動項自動展開）；`StudioView.flatten_solo`（單群組工作室去三連發）
+
+### Fixed
+- **W11d**：60px 中央垂直細條（「側欄/佈局損壞」最終根因）——瀏覽器實證 main 48→1210px、x 801→220、kpi-grid 1fr→4 欄
+- 麵包屑同名重複（`總覽 › 銀行支付 › 銀行支付` → 單級顯示＋桌面隱藏）
+- 帳務作業抽屜展開浮層遮蓋鄰項（W11c 矛盾規則歸檔，行內展開）
+- `#audit` 長 token 7px 根層水平捲動（元素 rect 不變之隱形溢出，僅 scrollWidth 可測）
+- 375px `.btn` nowrap 23px 溢出
+- 治理稽核/個人設定圖示與母層重複（landmark/user 新鍵去重）
+- `/health`/`/ready` 加入 `page_matrix.rs` NON_PAGE_ROUTES 白名單（路由↔manifest 防呆測試如設計擋下）
+
+### Verified — 2026-11-17 執行當下
+- `cargo fmt -- --check` EXIT=0；`cargo clippy -p platform -p visual-diff --all-targets -D warnings` EXIT=0
+- `cargo test -p platform -p visual-diff`：**42 suites / 0 failed**（lib 168、contract 3、visual-diff 4、page_matrix 4）
+- `/health` `/ready` 活體：commit=ec3a380、uptime_s、db=true、migrations_applied=11
+- obs JSON 日誌實測輸出；visual-diff 同圖 0.0000 PASS／異頁 0.7128 FAIL
+- 回滾演練：staging.db 損壞（39→0）→ 備份還原 → `/health` 39 筆（RTO 1 分鐘、RPO 0）
+- 效能基線：stress p95=504ms（SLA 650）
+- 環境：8090 prod（0.0.0.0 跨裝置）/ 8092 staging persistent 上線，/health 雙 200
+
+### Known limitations
+- NSIS updater 簽名工件已啟用：金鑰輪換（tauri signer generate）＋config pubkey 同步，setup.exe＋.sig 已產出；私鑰本機保管、密碼已記錄於 INVENTORY（內部部署裁定）
+- GitHub main 分支保護：操作指引 `docs/ops/BRANCH_PROTECTION.md`（需 Repo Admin）
+- criterion 效能基線以 stress test 代理（p95 量測已入 baseline.json）
+## [Unreleased] — 2026-11-15（工作平台全面對齊玉山 V2.9）
+
+### Changed
+- **API 中樞升級 V2.9**（`platform/src/apihub.rs`＋`api_catalog.html`/`api_codes.html`）：`esun_endpoints()` 8→**9** 支（新增 `/payment/downloadFxRemittanceVoucher` 外幣憑證下載，V2.9 §4.(九)）；contract_ref 對齊 V2.9 章節與 `V29.txt` 行號；錯誤碼對照頁由僅 910000 擴至 **V2.9 附錄全表 11 碼**（910068 RetryableLater、910069/910093/910094 欄位級、910073 查詢上限、999999）；Release checklist RC-01/RC-02/RC-04 更新（9 端點、UAT 冒煙取代 mTLS 憑證）。
+- **BankPay 連線檢查升級 V2.9**（`apihub.rs::apihub_net`＋`bankpay.html`）：URL 檢查改為 V2.9 規則（`http://IP:port` 指向元件安裝機器，UAT 8443／營運 8080 對調；https 亦接受）；連線完整度不再要求 `source_system_id`（**V2.9 已移除 SourceSystemId**，保留為選填僅供 V2.8 舊元件回測）；「V2.8 規格埠」改「V2.9 規格埠」（元件 8443/8080、外部 9443、eospt DEV 移除）；mTLS 字樣全面改為「TLS 材料三件套（opt-in）」。
+- **BankPay mock 客戶端與模型**（`bankpay/client.rs`、`model.rs`）：fail-closed 訊息與文件對齊 V2.9（9 端點、UAT 冒煙腳本已備未執行）；config 文件改 V2.9 URL 規則與 TLS 材料三件套 opt-in。
+- **Tauri 桌面殼**（`web/src-tauri/src/state.rs`）：預設 `ESUN_BASE_URL` 改 `http://127.0.0.1:8443`（V2.9 UAT 元件埠）、外部端點預設 `eospu.testesunbank.com.tw:9443`（eospt 移除）；`two_way_ssl` 標註為相容位（V2.9 已移除強制）；型別鏡射註記 V2.8→V2.9。
+- **活文件同步**：`docs/knowledge-hub/手冊-A-F.md`（架構圖/安全機制表/銀行環境表改 V2.9）、`docs/PLAN_REGISTER.md`（V2.9 文件與 9 端點目錄行）、`docs/management/營運治理機制.md`（釘選規格 V2.8→V2.9）。
+
+### Verified — 2026-11-15 實測
+- `cargo check -p platform --all-targets`（dev-target）**零錯誤**（askama 模板含 V2.9 文案編譯通過）。
+- 權威契約 `Wellfit/crates/wellfit_bankpay`（V2.9）：clippy 零警告＋`test --workspace --no-fail-fast` **484 passed / 0 failed / 19 ignored**（含 9 支 UAT 冒煙 opt-in 腳本）；UAT 連線實測**未執行＝未驗證**（`docs/bankpay/10-uat-smoke-runbook.md`）。
+- 註：平台**測試二進位連結**在本機 dev-target 對 ONNX 原生庫（paddleocr）失敗，屬既有環境限制（10 個未更動測試目標同樣失敗；`cargo check` 全綠佐證非本次變更所致）。
+
 ## [Unreleased] — 2026-11-14（UI-1 Lucide 圖標系統：emoji → stroke SVG）
 
 ### Added

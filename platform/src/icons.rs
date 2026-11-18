@@ -43,6 +43,22 @@ pub fn inner(key: &str) -> &'static str {
         "scale" => {
             r#"<path d="M16 16.5 12 8 8 16.5"/><path d="M2 16.5h6"/><path d="M16 16.5h6"/><path d="M12 2v6"/>"#
         }
+        "activity" => r#"<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>"#,
+        "help-circle" => {
+            r#"<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/>"#
+        }
+        "flask-conical" => {
+            r#"<path d="M10 2v7.5a2 2 0 0 1-.21.9L4.72 20.55a1 1 0 0 0 .9 1.45h12.76a1 1 0 0 0 .9-1.45L14.21 10.4a2 2 0 0 1-.21-.9V2"/><path d="M8.5 2h7"/><path d="M7 16h10"/>"#
+        }
+        "library" => {
+            r#"<path d="m16 6 4 14"/><path d="M12 6v14"/><path d="M8 8v12"/><path d="M4 4v16"/>"#
+        }
+        "landmark" => {
+            r#"<line x1="3" x2="21" y1="22" y2="22"/><line x1="6" x2="6" y1="18" y2="11"/><line x1="10" x2="10" y1="18" y2="11"/><line x1="14" x2="14" y1="18" y2="11"/><line x1="18" x2="18" y1="18" y2="11"/><polygon points="12 2 20 7 4 7"/>"#
+        }
+        "user" => {
+            r#"<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>"#
+        }
         _ => r#"<circle cx="12" cy="12" r="10"/>"#,
     }
 }

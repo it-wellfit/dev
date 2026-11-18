@@ -21,9 +21,11 @@ param(
     [string] $Version = "0.9.0",
     [string] $PrimaryModel = "qwen3.5:4b",
     [string] $FallbackModel = "gemini-3.8-flash",
+    [string] $AgentAlias = "assistant",
     [string] $ConfigDir,
     [switch] $Force,
     [switch] $SkipConfig,
+    [switch] $SkipIdentity,
     [switch] $RenderOnly
 )
 
@@ -170,7 +172,6 @@ if ($SkipConfig) {
             New-Item -ItemType Directory -Force -Path $ConfigDir | Out-Null
         }
 
-        $Workspace = Join-Path $ConfigDir "workspace"
         $Forbidden = @(
             (Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSScriptRoot))),
             (Join-Path $Home0 "Documents"),
@@ -183,7 +184,6 @@ if ($SkipConfig) {
 
         $TomlList = ($Forbidden | ForEach-Object { '    "' + ($_ -replace "\\", "\\") + '",' }) -join "`r`n"
         $Body = Get-Content -LiteralPath $Template -Raw -Encoding UTF8
-        $Body = $Body.Replace("__WORKSPACE__", ($Workspace -replace "\\", "\\"))
         $Body = $Body.Replace("__FORBIDDEN__", $TomlList)
         $Body = $Body.Replace("__PRIMARY_MODEL__", $PrimaryModel)
         $Body = $Body.Replace("__FALLBACK_MODEL__", $FallbackModel)
@@ -191,6 +191,31 @@ if ($SkipConfig) {
         $Utf8NoBom = New-Object System.Text.UTF8Encoding($false)
         [IO.File]::WriteAllText($ConfigPath, $Body, $Utf8NoBom)
         Write-Ok "Wrote $ConfigPath"
+    }
+}
+
+# --- 4. Identity / guardrail files -----------------------------------------
+# These are the agent's AGENTS.md, TOOLS.md, SOUL.md, IDENTITY.md, USER.md.
+# The runtime loads them from the agent workspace into every system prompt.
+$IdentitySource = Join-Path $PSScriptRoot "..\identity"
+if ($SkipIdentity) {
+    Write-Warn "Skipped identity files (-SkipIdentity)."
+} elseif (Test-Path -LiteralPath $IdentitySource) {
+    $WorkspaceDir = Join-Path (Join-Path $ConfigDir "agents") (Join-Path $AgentAlias "workspace")
+    Write-Step "Installing identity files into $WorkspaceDir"
+    if (-not (Test-Path -LiteralPath $WorkspaceDir)) {
+        New-Item -ItemType Directory -Force -Path $WorkspaceDir | Out-Null
+    }
+    $Utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+    foreach ($src in Get-ChildItem -LiteralPath $IdentitySource -Filter "*.md" -File) {
+        $dst = Join-Path $WorkspaceDir $src.Name
+        if ((Test-Path -LiteralPath $dst) -and -not $Force) {
+            Write-Warn "$($src.Name) exists and was left untouched (use -Force to overwrite)."
+        } else {
+            $text = Get-Content -LiteralPath $src.FullName -Raw -Encoding UTF8
+            [IO.File]::WriteAllText($dst, $text, $Utf8NoBom)
+            Write-Ok "$($src.Name)"
+        }
     }
 }
 

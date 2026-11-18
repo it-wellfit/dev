@@ -4,9 +4,11 @@ members = [
     "core",
     "platform",
     "web",
+    "crates/browser_mcp",
     "crates/console_manifest",
     "crates/flaps_bridge",
     "crates/kem",
+    "tools/visual-diff",
 ]
 
 # 說明：各成員自行宣告依賴（不使用 workspace 繼承），故不設 [workspace.dependencies]；

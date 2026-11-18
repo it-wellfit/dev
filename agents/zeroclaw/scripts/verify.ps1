@@ -69,10 +69,17 @@ else { Fail "V2" "missing $ConfigPath (run install.ps1 or zeroclaw quickstart)" 
 if ($cli -and (Test-Path -LiteralPath $ConfigPath)) {
     try {
         $json = (& $cli config migrate --json 2>&1) -join "`n"
-        if ($json -match '"valid"\s*:\s*true') {
-            Pass "V3" "config validates"
-        } elseif ($json -match '"valid"\s*:\s*false') {
-            Fail "V3" "config invalid: $json"
+        $obj = $null
+        try { $obj = $json | ConvertFrom-Json } catch { $obj = $null }
+        $names = @()
+        if ($obj) { $names = @($obj.PSObject.Properties.Name) }
+
+        if ($names -contains "valid") {
+            if ($obj.valid -eq $true) { Pass "V3" "config validates (valid: true)" }
+            else { Fail "V3" "config invalid: $json" }
+        } elseif (($names -contains "error") -and ($names -contains "migrated")) {
+            if ($obj.error -eq $null) { Pass "V3" "config loads (migrated: $($obj.migrated))" }
+            else { Fail "V3" "config error: $($obj.error)" }
         } else {
             Unknown "V3" "could not read validity from output: $json"
         }
@@ -85,9 +92,16 @@ if ($cli -and (Test-Path -LiteralPath $ConfigPath)) {
 
 # V4 config hygiene: no inline secrets -------------------------------------
 if (Test-Path -LiteralPath $ConfigPath) {
-    $hits = Select-String -LiteralPath $ConfigPath -Pattern '^\s*api_key\s*=\s*"' -AllMatches
-    if ($hits) { Fail "V4" "inline api_key found in config.toml (use env override or config set)" }
-    else { Pass "V4" "no inline api_key in config.toml" }
+    # The literal "anonymous" placeholder is a documented exception: the Kilo
+    # gateway serves free models without auth and ZeroClaw's local credential
+    # gate needs a non-empty value. Anything else inline is treated as a leak.
+    $hits = @(Select-String -LiteralPath $ConfigPath -Pattern '^\s*api_key\s*=\s*"([^"]*)"' -AllMatches |
+        Where-Object { $_.Matches[0].Groups[1].Value -ne "anonymous" })
+    if ($hits.Count -gt 0) {
+        Fail "V4" "inline api_key found in config.toml (use env override or config set)"
+    } else {
+        Pass "V4" "no inline api_key in config.toml (only the documented placeholder, if any)"
+    }
 } else {
     Unknown "V4" "skipped (no config)"
 }
@@ -145,7 +159,8 @@ if ($Full) {
     if ($cli) {
         try {
             $answer = (& $cli agent -a assistant -m "Reply with the single word Ready. Do not use tools." 2>&1) -join "`n"
-            if ($answer -match "(?i)ready") { Pass "V10" "completion via local model" }
+            # SOUL.md instructs Traditional Chinese, so accept both forms.
+            if ($answer -match "(?i)ready" -or $answer -match "就緒") { Pass "V10" "completion via local model" }
             else { Fail "V10" "unexpected answer: $answer" }
         } catch {
             Fail "V10" "agent call failed: $($_.Exception.Message)"

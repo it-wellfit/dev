@@ -156,11 +156,12 @@ pub struct ExportSummary {
 
 /// E.Sun 銀行連線設定。
 ///
-/// 欄位涵蓋 V2.8 連線要件（萃取自 Tauri 桌面版 `web/src-tauri/src/state.rs`
+/// 欄位涵蓋 V2.9 連線要件（萃取自 Tauri 桌面版 `web/src-tauri/src/state.rs`
 /// 的連線設定模型，兩作品同步演進——見 ADR-0012 附錄）：
-/// - 內部/外部端點 URL（內部 dev/test 為 `http://<IP>:8080`、正式 `:8443`；
-///   外部沙盒為 `https://eospt.testesunbank.com.tw:9443`）
-/// - mTLS 三件套（client cert / client key / CA）
+/// - 內部/外部端點 URL（V2.9 URL 規則：元件端 `http://IP:8443` UAT／
+///   `http://IP:8080` 營運；銀行端防火牆外部 9443；eospt DEV 已移除）
+/// - TLS 材料三件套（client cert / client key / CA；V2.9：2-Way SSL 已移除，
+///   憑證為 opt-in 能力）
 /// - 逾時秒數
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsunConfig {
@@ -171,9 +172,10 @@ pub struct EsunConfig {
     pub payer_account: Option<String>,
     /// E.Sun 外部（沙盒/正式）端點，例 `https://eospt.testesunbank.com.tw:9443`。
     pub esun_external_url: String,
-    /// mTLS 用戶端憑證路徑。
+    /// TLS 用戶端憑證路徑（V2.9：opt-in；元件端不再要求 2-Way SSL）。
     pub client_cert_path: Option<String>,
-    /// mTLS 用戶端私鑰路徑。
+
+    /// TLS 用戶端私鑰路徑（V2.9：opt-in）。
     pub client_key_path: Option<String>,
     /// E.Sun CA 憑證路徑。
     pub ca_cert_path: Option<String>,
@@ -186,7 +188,7 @@ impl Default for EsunConfig {
         Self {
             esun_mock_mode: true,
             // 誠實預設：未取得經驗證的端點規格與憑證前不猜測 URL（治理 P7；
-            // 權威 V2.8 契約實作位於 Wellfit/crates/wellfit_bankpay）。
+            // 權威 V2.9 契約實作位於 Wellfit/crates/wellfit_bankpay）。
             esun_url: String::new(),
             source_system_id: None,
             customer_id: None,

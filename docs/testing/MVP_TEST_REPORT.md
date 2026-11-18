@@ -40,7 +40,7 @@
 
 | 項目 | 理由 |
 |---|---|
-| 瀏覽器自動化 E2E | Playwright MCP 於 Phase 2 導入（煙霧已涵蓋頁面可達與零 script） |
+| 瀏覽器自動化 E2E | 純 Rust `browser-mcp`（CDP）2026-11-15 導入並完成全流程驗證（navigate→snapshot→click→screenshot；`crates/browser_mcp` 整合測試）；煙霧已涵蓋頁面可達與零 script |
 | 負載測試（k6/Locust） | 無真實流量數據；效能預算由 2k 交易測試替代 |
 | DAST | 需部署環境（Stage 2） |
 | Backup/Restore 演練 | 需部署環境（Stage 2） |

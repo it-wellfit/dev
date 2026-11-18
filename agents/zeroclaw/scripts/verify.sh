@@ -56,9 +56,12 @@ if [ -f "$CONFIG_PATH" ]; then pass V2 "config at $CONFIG_PATH"; else fail V2 "m
 if [ -n "$CLI" ] && [ -f "$CONFIG_PATH" ]; then
   JSON="$("$CLI" config migrate --json 2>&1 || true)"
   case "$JSON" in
-    *'"valid":true'*)  pass V3 "config validates" ;;
-    *'"valid":false'*) fail V3 "config invalid: $JSON" ;;
-    *)                 unknown V3 "could not read validity: $JSON" ;;
+    *'"valid":true'*)   pass V3 "config validates (valid: true)" ;;
+    *'"error":null'*'"migrated"'*|*'"migrated"'*'"error":null'*)
+      pass V3 "config loads (error: null)" ;;
+    *'"error":"'*)       fail V3 "config error: $JSON" ;;
+    *'"valid":false'*)   fail V3 "config invalid: $JSON" ;;
+    *)                  unknown V3 "could not read validity: $JSON" ;;
   esac
 else
   unknown V3 "skipped (need CLI and config)"
@@ -66,10 +69,14 @@ fi
 
 # V4 config hygiene: no inline secrets ---------------------------------------
 if [ -f "$CONFIG_PATH" ]; then
-  if grep -Eq '^[[:space:]]*api_key[[:space:]]*=[[:space:]]*"' "$CONFIG_PATH"; then
+  # The literal "anonymous" placeholder is a documented exception (Kilo gateway
+  # serves free models without auth; the local credential gate needs a value).
+  LEAK="$(grep -E '^[[:space:]]*api_key[[:space:]]*=[[:space:]]*"' "$CONFIG_PATH" \
+    | grep -v '"anonymous"' | head -n1)"
+  if [ -n "$LEAK" ]; then
     fail V4 "inline api_key found in config.toml"
   else
-    pass V4 "no inline api_key in config.toml"
+    pass V4 "no inline api_key in config.toml (only the documented placeholder, if any)"
   fi
 else
   unknown V4 "skipped (no config)"
@@ -127,8 +134,8 @@ if [ "$FULL" -eq 1 ]; then
   if [ -n "$CLI" ]; then
     ANSWER="$("$CLI" agent -a assistant -m "Reply with the single word Ready. Do not use tools." 2>&1 || true)"
     case "$ANSWER" in
-      *[Rr]eady*) pass V9 "completion via configured model" ;;
-      *)          fail V9 "unexpected answer: $ANSWER" ;;
+      *[Rr]eady*|*就緒*) pass V9 "completion via configured model" ;;
+      *)                 fail V9 "unexpected answer: $ANSWER" ;;
     esac
   else
     unknown V9 "skipped (no CLI)"

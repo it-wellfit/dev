@@ -259,11 +259,20 @@ body > :not(.site-nav) {
   position: static;
 }
 
-/* 主區：填滿右欄（列3，狀態列之下） */
+/* 主區：填滿右欄（列3，狀態列之下）
+   W11d 根因修復（2026-11-15 瀏覽器實證）：design-system.css 給 .container
+   `margin: 0 auto`（L435）與 `container-type: inline-size`（L2138）。main 作為
+   body grid 的直接子項時，auto margin 使 grid item 停用 stretch 改走
+   fit-content，而 inline-size containment 令內容感知寬度坍縮為僅剩水平
+   padding（48px）並置中於欄內 → 主內容成中央 48px 直條（每行一字），
+   且 @container page (max-width:480px) 對此 48px 誤匹配套用手機規則。
+   margin: 0 取消 auto margin、恢復 grid stretch 填滿 1fr 欄（實證：
+   main 寬 48→1210px、x 801→220、kpi-grid 1fr→4 欄）。 */
 main.container {
   grid-column: 2;
   grid-row: 3;
   max-width: none;
+  margin: 0;
   padding: var(--space-5) var(--space-6);
 }
 
@@ -384,52 +393,21 @@ body:not(:has(.site-nav)) { display: block; }
   }
 }
 
-/* ── ≤900px 補充（既有規則保留） ── */
-
-  .site-nav {
-    position: static;
-    height: auto;
-    overflow-y: visible;
-    border-right: none;
-    border-bottom: 1px solid var(--color-border);
-  }
-
-  .site-nav .container {
-    flex-direction: row;
-    flex-wrap: wrap;
-    gap: var(--space-1);
-    padding: var(--space-2);
-  }
-
-  .site-nav .container > a,
-  .site-nav details.nav-menu > summary {
-    width: auto;
-    padding: var(--space-2) var(--space-3);
-  }
-
-  .site-nav details.nav-menu .nav-menu-items {
-    position: absolute;
-    background: var(--color-surface-raised);
-    border: 1px solid var(--color-border);
-    border-radius: 4px;
-    box-shadow: var(--shadow-lg);
-    padding: var(--space-2);
-    z-index: var(--z-sticky);
-  }
-
-  /* 手機：工作室標頭收起（chip 化導航，減少垂直長度） */
-  .nav-studio-header { display: none; }
-
+/* W11c→W12 修訂（C-01 歸檔）：原「chip 化」規則與使用者裁決之方案 A
+   頂部漢堡／抽屜式導覽（上方 341-385 行區塊）矛盾——抽屜內開組被
+   position:absolute 浮層遮蓋鄰項（2026-11-15 瀏覽器實證截圖）。
+   〔SUPERSEDED 歸檔，歷史編號保留〕
+   〔歸檔〕.site-nav { position: static; height: auto; overflow-y: visible; border-right: none; border-bottom: 1px solid var(--color-border); }（抽屜區塊 L375 已有同效規則）
+   〔歸檔〕.site-nav .container { flex-direction: row; flex-wrap: wrap; gap: var(--space-1); padding: var(--space-2); }（與抽屜縱向展開矛盾）
+   〔歸檔〕.site-nav .container > a, details.nav-menu > summary { width: auto; padding: var(--space-2) var(--space-3); }（與抽屜全寬可點擊區 ≥44px 矛盾）
+   〔歸檔〕.site-nav details.nav-menu .nav-menu-items { position: absolute; background: var(--color-surface-raised); border: 1px solid var(--color-border); border-radius: 4px; box-shadow: var(--shadow-lg); padding: var(--space-2); z-index: var(--z-sticky); }（浮層遮蓋鄰項之缺陷源）
+   〔歸檔〕.nav-studio-header { display: none; }（與抽屜 IA 三層不壓平矛盾，L377 已反向） */
+@media (max-width: 900px) {
   .status-bar { position: static; }
 
   main.container { padding: var(--space-4); }
 }
 
-/* ── 精緻化：選取色（原 primary-900 深藍字在暗底不可讀） ── */
-::selection {
-  background: var(--color-primary-muted);
-  color: var(--color-primary-950);
-}
 
 /* ── 精緻化：側邊欄角色徽章（貼心設計：目前角色一眼可辨） ── */
 .site-nav .nav-role-badge {
@@ -569,4 +547,287 @@ summary:focus-visible {
 ::placeholder {
   color: var(--color-text-tertiary);
   opacity: 1;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   W12 — PREMIUM POLISH PASS（2026-11-15）
+   目標：自「可用的暗色後台」升級至 Linear/Vercel/Stripe 級精緻度。
+   手法：髮絲邊框（6-16% 白透明）· 靠近的表面層級 + 頂部微光 ·
+   大數字弱標籤 KPI · 單一品牌色點到為止 · 完整互動態
+   （hover/aria-current/focus/open）· 120ms 過渡紀律。
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── 12.1 材質基調：髮絲邊框（取代 #334155 實色重框） ── */
+:root {
+  --color-border: rgba(148, 163, 184, 0.16);
+  --color-border-subtle: rgba(148, 163, 184, 0.09);
+  --color-border-strong: rgba(148, 163, 184, 0.30);
+}
+
+body { background: #030712; }
+
+/* ── 12.2 側欄：獨立欄位質感 + 當前頁高亮 + 群組 chevron ── */
+.site-nav {
+  background: #0a101e;
+  border-right: 1px solid rgba(148, 163, 184, 0.12);
+}
+
+.site-nav .container { padding: var(--space-3) var(--space-2) var(--space-4); }
+
+.site-nav .container > a,
+.site-nav details.nav-menu > summary {
+  padding: 6px 10px;
+  border-radius: 6px;
+  color: rgba(203, 213, 225, 0.78);
+  font-size: 13px;
+  font-weight: var(--font-weight-medium);
+  transition: background-color 120ms ease, color 120ms ease;
+}
+
+.site-nav .container > a:hover,
+.site-nav details.nav-menu > summary:hover {
+  background: rgba(255, 255, 255, 0.045);
+  color: var(--color-text-primary);
+}
+
+/* 「你在這裡」訊號：品牌色薄霧底 + 亮字（頂級產品必備的當前頁態） */
+.site-nav .container > a[aria-current="page"],
+.site-nav .nav-menu-items a[aria-current="page"] {
+  background: rgba(45, 212, 191, 0.10);
+  color: #5eead4;
+  font-weight: var(--font-weight-semibold);
+}
+
+/* 工作室標頭：10px 全大寬字距 eyebrow（Linear 式分區） */
+.nav-studio-header {
+  margin-top: var(--space-4);
+  padding: 0 10px 4px;
+  font-size: 10px;
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.1em;
+  color: rgba(148, 163, 184, 0.62);
+}
+
+/* details 群組：去原生三角改自繪 chevron；展開行內縮排（不浮層） */
+.site-nav details.nav-menu > summary { list-style: none; }
+.site-nav details.nav-menu > summary::-webkit-details-marker { display: none; }
+.site-nav details.nav-menu > summary::after {
+  content: "›";
+  margin-left: auto;
+  color: var(--color-text-tertiary);
+  font-size: 14px;
+  line-height: 1;
+  transition: transform 120ms ease;
+}
+.site-nav details.nav-menu[open] > summary::after { transform: rotate(90deg); }
+
+.site-nav .nav-menu-items a {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 5px 10px 5px 30px;
+  border-bottom: none;
+  border-radius: 6px;
+  color: rgba(148, 163, 184, 0.9);
+  font-size: 12.5px;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+.site-nav .nav-menu-items a:hover {
+  background: rgba(255, 255, 255, 0.045);
+  color: var(--color-text-primary);
+}
+
+.nav-role-badge { border-radius: var(--radius-full); }
+
+/* 側欄麵包屑：降噪（去框線、11px、tertiary） */
+.nav-breadcrumb {
+  padding: 6px 10px 2px;
+  border-bottom: none;
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+}
+.nav-breadcrumb a { color: var(--color-text-tertiary); }
+.nav-breadcrumb a:hover { color: var(--color-text-primary); }
+
+/* ── 12.3 頂欄：瘦身 + 毛玻璃（品牌字降級，頁面主角是資料） ── */
+.app-header {
+  background: rgba(3, 7, 18, 0.8);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.10);
+}
+.app-header h1 {
+  font-size: 15px;
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: -0.01em;
+  line-height: var(--line-height-tight);
+}
+.app-header .app-subtitle { font-size: 12px; color: var(--color-text-tertiary); }
+.app-header .form-inline .btn { padding: 4px 12px; font-size: 12px; }
+
+/* ── 12.4 狀態列：靜音單行細帶（dot 發光、chips 幽靈化） ── */
+.status-bar {
+  background: rgba(255, 255, 255, 0.012);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.08);
+}
+.status-bar-inner { min-height: 40px; font-size: 12px; gap: var(--space-3); }
+.status-bar strong { font-weight: var(--font-weight-semibold); color: var(--color-text-secondary); }
+.status-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.status-dot-healthy { box-shadow: 0 0 8px rgba(34, 197, 94, 0.55); }
+.status-chip {
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  background: rgba(255, 255, 255, 0.025);
+  border-radius: var(--radius-full);
+  padding: 2px 10px;
+  font-size: 11.5px;
+  color: var(--color-text-secondary);
+}
+.status-detail-toggle { padding: 3px 10px; font-size: 11.5px; }
+
+/* ── 12.5 面板：靠近的表面 + 頂部微光（工藝細節） ── */
+.panel {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.018), rgba(255, 255, 255, 0) 120px), #0b1324;
+  border: 1px solid rgba(148, 163, 184, 0.13);
+  border-radius: 10px;
+  padding: var(--space-5);
+  margin-bottom: var(--space-5);
+}
+.panel h3 {
+  font-size: 14px;
+  font-weight: var(--font-weight-semibold);
+  border-bottom: none;
+  padding-bottom: 0;
+  margin-bottom: var(--space-4);
+  color: var(--color-text-primary);
+}
+
+/* ── 12.6 KPI：大數字 · 弱標籤（資料產品層級） ── */
+.kpi {
+  padding: var(--space-5);
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0) 90px), #0c1425;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+}
+.kpi dt {
+  font-size: 11px;
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-tertiary);
+  margin-bottom: var(--space-2);
+}
+.kpi dd {
+  font-family: var(--font-family-mono);
+  font-size: 28px;
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  color: var(--color-text-primary);
+}
+.kpi-grid { gap: var(--space-3); }
+
+/* ── 12.7 表格：薄表頭 + 列 hover + 髮絲分隔 ── */
+th {
+  font-size: 11px;
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-tertiary);
+  padding: 8px 12px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+}
+td {
+  padding: 10px 12px;
+  font-size: 13.5px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.07);
+}
+tbody tr:last-child td { border-bottom: none; }
+tbody tr:hover td { background: rgba(255, 255, 255, 0.02); }
+.table-wrap { border-radius: 10px; }
+
+/* ── 12.8 控制項：實心品牌鈕 + 幽靈次鈕 ── */
+.btn {
+  border-radius: 8px;
+  font-weight: var(--font-weight-medium);
+  font-size: 13.5px;
+  transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease, box-shadow 120ms ease;
+}
+.btn-primary {
+  background: linear-gradient(180deg, #2dd4bf, #14b8a6);
+  color: #04211f;
+  font-weight: var(--font-weight-semibold);
+  border: 1px solid rgba(45, 212, 191, 0.35);
+}
+.btn-primary:hover {
+  background: linear-gradient(180deg, #45dcc9, #17bdb2);
+  box-shadow: 0 2px 10px rgba(20, 184, 166, 0.25);
+}
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  color: var(--color-text-primary);
+}
+.btn-secondary:hover { background: rgba(255, 255, 255, 0.085); }
+.input { border-radius: 8px; border-color: rgba(148, 163, 184, 0.18); background: rgba(255, 255, 255, 0.025); }
+.input:focus { border-color: rgba(45, 212, 191, 0.55); }
+.form-row label { font-size: 12.5px; font-weight: var(--font-weight-medium); color: var(--color-text-secondary); }
+
+/* ── 12.9 徽章/文字輔助 ── */
+.badge {
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  font-weight: var(--font-weight-semibold);
+  padding: 2px 8px;
+}
+.section-note { font-size: 12px; color: var(--color-text-tertiary); line-height: 1.6; }
+
+/* 登入頁：精品聚焦卡片 */
+.login-panel {
+  max-width: 420px;
+  margin: 8vh auto 0;
+  border-radius: 14px;
+  padding: var(--space-8);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+}
+.login-brand h1 { font-size: 22px; letter-spacing: -0.02em; }
+
+/* ── 12.10 行動端修正 ── */
+@media (max-width: 480px) {
+  .btn { white-space: normal; }
+}
+
+/* ── 12.11 長 token 溢出（W12 實測：#audit section-note 內不可斷行字串
+   在 375px 撐出根層 7px 水平捲動；元素 rect 不變故僅能由 scrollWidth 實證） ── */
+.section-note, .form-hint { overflow-wrap: anywhere; }
+p, li, td, th, dt, dd { overflow-wrap: break-word; }
+
+/* ── 12.13 W12b 導覽往返修：桌面側欄樹含自動展開＋活動高亮，
+   麵包屑僅行動抽屜需要（桌面為冗餘路徑重複）── */
+@media (min-width: 901px) {
+  .site-nav .nav-breadcrumb { display: none; }
+}
+
+/* ── 12.14 W-C 快捷日期 chip：緊湊 pill、hover 品牌提亮、focus 雙環 ── */
+.ledger-quick { align-items: center; gap: var(--space-2); flex-wrap: wrap; }
+.chip-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--color-text-secondary);
+  font-size: 12.5px;
+  font-weight: var(--font-weight-medium);
+  text-decoration: none;
+  transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+.chip-btn:hover {
+  background: var(--color-primary-subtle);
+  border-color: rgba(45, 212, 191, 0.4);
+  color: #5eead4;
+}
+.chip-btn:focus-visible {
+  outline: 2px solid transparent;
+  box-shadow: 0 0 0 2px var(--color-background), 0 0 0 4px var(--color-primary);
 }

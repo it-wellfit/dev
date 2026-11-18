@@ -300,28 +300,56 @@ pub async fn security_headers(mut response: axum::response::Response) -> axum::r
 // Administrator bootstrap
 // ---------------------------------------------------------------------------
 
-/// Seed the initial administrator account exactly once (when no users exist).
+/// Bootstrap the administrator account at startup.
 ///
 /// Password source: `AUXBRIDGE_ADMIN_PASSWORD`; when absent, a random password is
 /// generated and printed ONCE to stdout for the operator to store. Default
 /// credentials are never silently installed.
+///
+/// 2026-11-15（登入可及性補洞，TT-1）：舊實作只要 `users` 表非空就直接 return，
+/// 導致環境變數設定的密碼在第一次啟動後完全失效——資料庫一旦被其他流程改過密碼，
+/// 維運端就再也無法用 `AUXBRIDGE_ADMIN_PASSWORD` 進入自己的部署（實測：登入頁
+/// 持續回「帳號或密碼不正確」）。現行為：環境變數視為部署端密碼的權威來源，
+/// 已存在但雜湊不符時旋轉密碼並撤銷該帳號所有 session。
+///
+/// 環境變數讀取與核心邏輯分離（`seed_admin`），使測試可在不動用行程全域環境
+/// 變數的前提下驗證同步行為（edition 2024 的 `std::env::set_var` 為 unsafe，
+/// 與 crate 頂端 `#![forbid(unsafe_code)]` 衝突，不得於測試中使用）。
 pub async fn seed_admin_if_empty(pool: &SqlitePool) -> Result<(), Box<dyn std::error::Error>> {
+    let configured = std::env::var("AUXBRIDGE_ADMIN_PASSWORD")
+        .ok()
+        .map(|p| p.trim().to_string())
+        .filter(|p| !p.is_empty());
+    seed_admin(pool, configured).await
+}
+
+/// Core bootstrap logic (testable): `configured` is the operator-provided
+/// password; `None` means "first run, generate a random password once".
+///
+/// - `users` 表為空：以 `configured`（或隨機密碼）建立 `admin`。
+/// - `users` 表非空且 `configured = None`：保持既有密碼不動（原行為）。
+/// - `users` 表非空且 `configured = Some(p)`：若 `admin` 的雜湊無法通過 `p`
+///   驗證，則旋轉密碼並撤銷該帳號所有 session（密碼變更必須使既有登入失效）。
+pub async fn seed_admin(
+    pool: &SqlitePool,
+    configured: Option<String>,
+) -> Result<(), Box<dyn std::error::Error>> {
     let (count,): (i64,) = sqlx::query_as("SELECT COUNT(*) FROM users")
         .fetch_one(pool)
         .await?;
     if count > 0 {
+        if let Some(password) = configured.as_deref() {
+            sync_admin_password(pool, "admin", password).await?;
+        }
         return Ok(());
     }
 
-    let password = match std::env::var("AUXBRIDGE_ADMIN_PASSWORD") {
-        Ok(p) if !p.trim().is_empty() => p.trim().to_string(),
-        _ => {
-            let random = uuid::Uuid::new_v4().to_string().replace('-', "");
-            let random = random[..16].to_string();
-            println!("=== 首次啟動：已建立管理員帳號 admin，密碼（僅顯示這一次）：{random} ===");
-            random
-        }
-    };
+    let password = configured.unwrap_or_else(|| {
+        let random = uuid::Uuid::new_v4().to_string().replace('-', "");
+        let random = random[..16].to_string();
+        println!("=== 首次啟動：已建立管理員帳號 admin，密碼（僅顯示這一次）：{random} ===");
+        random
+    });
 
     let hash = hash_password(&password)?;
     sqlx::query(
@@ -335,6 +363,62 @@ pub async fn seed_admin_if_empty(pool: &SqlitePool) -> Result<(), Box<dyn std::e
     Ok(())
 }
 
+/// Align the stored `admin` credential with the operator-configured password.
+///
+/// Returns `true` when the hash was rotated. Sessions of that account are
+/// revoked on rotation: a password change must invalidate existing sessions
+/// (same rule as `POST /admin/users/reset_password`).
+async fn sync_admin_password(
+    pool: &SqlitePool,
+    username: &str,
+    password: &str,
+) -> Result<bool, Box<dyn std::error::Error>> {
+    let row: Option<(String, String)> =
+        sqlx::query_as("SELECT user_id, password_hash FROM users WHERE username = ?")
+            .bind(username)
+            .fetch_optional(pool)
+            .await?;
+    let Some((user_id, stored_hash)) = row else {
+        return Ok(false);
+    };
+    if verify_password(password, &stored_hash) {
+        return Ok(false);
+    }
+    let hash = hash_password(password)?;
+    sqlx::query("UPDATE users SET password_hash = ? WHERE user_id = ?")
+        .bind(&hash)
+        .bind(&user_id)
+        .execute(pool)
+        .await?;
+    let _ = sqlx::query("DELETE FROM sessions WHERE user_id = ?")
+        .bind(&user_id)
+        .execute(pool)
+        .await;
+    println!("管理員密碼已依環境變數同步（user_id={user_id}）；既有登入階段已撤銷。");
+    Ok(true)
+}
+
+/// Single CSRF verdict for POST forms (PRE-R1b, 2026-11-17).
+///
+/// Returns `None` when the submitted token matches the acting session
+/// (the request may proceed); otherwise the canonical 403 response. This is
+/// the ONE place the canonical verdict lives — handlers must not hand-roll
+/// the comparison. 13 former copies in `api.rs` were consolidated here;
+/// heterogeneous flows (dashboard index re-render, decision fail-macro)
+/// intentionally keep their own rendering paths and do NOT use this helper.
+pub fn csrf_mismatch(submitted: &str, session_csrf: &str) -> Option<Response> {
+    if submitted == session_csrf {
+        None
+    } else {
+        Some(
+            (
+                StatusCode::FORBIDDEN,
+                "CSRF 驗證失敗；請重新整理頁面後再操作。".to_string(),
+            )
+                .into_response(),
+        )
+    }
+}
 /// Validate credentials; returns the user_id when valid and active.
 pub async fn authenticate(pool: &SqlitePool, username: &str, password: &str) -> Option<String> {
     let row: Option<(String, String, i64)> =
@@ -412,10 +496,36 @@ async fn primary_role_code(pool: &SqlitePool, user_id: &str) -> Option<String> {
 }
 
 /// POST /login — rate-limit check, authenticate, create a session (303 PRG).
+/// 用戶端位址（可選）。
+///
+/// 為何需要：axum 0.8 移除 OptionalFromRequestParts，Option<ConnectInfo<..>>
+/// 不再是合法 extractor；此型別自 extensions 提取，未經 connect-info 的測試
+/// 環境（oneshot）仍可回 None，行為與 0.7 相同。
+#[derive(Clone, Copy, Debug)]
+pub struct ClientPeer(pub Option<std::net::SocketAddr>);
+
+impl<S> axum::extract::FromRequestParts<S> for ClientPeer
+where
+    S: Send + Sync,
+{
+    type Rejection = std::convert::Infallible;
+
+    async fn from_request_parts(
+        parts: &mut axum::http::request::Parts,
+        _state: &S,
+    ) -> Result<Self, Self::Rejection> {
+        Ok(ClientPeer(
+            parts
+                .extensions
+                .get::<ConnectInfo<std::net::SocketAddr>>()
+                .map(|info| info.0),
+        ))
+    }
+}
 pub async fn post_login(
     State(state): State<AppState>,
     headers: HeaderMap,
-    peer: Option<ConnectInfo<std::net::SocketAddr>>,
+    peer: ClientPeer,
     Form(form): Form<LoginForm>,
 ) -> Response {
     // P1-7: consecutive-failure lockout per username (checked BEFORE any
@@ -436,7 +546,7 @@ pub async fn post_login(
             // rows are purged whenever a new session is created.
             let _ = purge_expired_sessions(&state.pool).await;
             // 稽核：登入成功必可溯源（2026-11-12 規格補洞）。
-            let (ip, ua) = request_context_with_peer(&headers, peer.map(|p| p.0));
+            let (ip, ua) = request_context_with_peer(&headers, peer.0);
             crate::pages::write_event_ctx(
                 &state.pool,
                 "LOGIN_SUCCEEDED",
@@ -482,7 +592,7 @@ pub async fn post_login(
                 Duration::from_secs(LOGIN_LOCKOUT_SECS),
             );
             // 稽核：登入失敗（含嘗試帳號）必可溯源——暴力破解調查的基本資料。
-            let (ip, ua) = request_context_with_peer(&headers, peer.map(|c| c.0));
+            let (ip, ua) = request_context_with_peer(&headers, peer.0);
             crate::pages::write_event_ctx(
                 &state.pool,
                 "LOGIN_FAILED",
@@ -531,7 +641,7 @@ pub struct LogoutForm {
 pub async fn post_logout(
     State(state): State<AppState>,
     headers: HeaderMap,
-    peer: Option<ConnectInfo<std::net::SocketAddr>>,
+    peer: ClientPeer,
     Form(form): Form<LogoutForm>,
 ) -> Response {
     if let Some(session) = current_session(&state, &headers).await
@@ -539,7 +649,7 @@ pub async fn post_logout(
     {
         let _ = delete_session(&state.pool, &session.session_id).await;
         // 稽核：登出（工作階段撤銷）可溯源（2026-11-12 規格補洞）。
-        let (ip, ua) = request_context_with_peer(&headers, peer.map(|p| p.0));
+        let (ip, ua) = request_context_with_peer(&headers, peer.0);
         crate::pages::write_event_ctx(
             &state.pool,
             "LOGOUT",
@@ -714,7 +824,7 @@ mod tests {
             post_login(
                 State(state.clone()),
                 HeaderMap::new(),
-                None,
+                ClientPeer(None),
                 Form(form("wrong")),
             )
             .await;
@@ -724,7 +834,7 @@ mod tests {
         let response = post_login(
             State(state.clone()),
             HeaderMap::new(),
-            None,
+            ClientPeer(None),
             Form(form("correct-horse")),
         )
         .await;
@@ -749,5 +859,133 @@ mod tests {
         .execute(pool)
         .await
         .expect("seed");
+    }
+
+    #[test]
+    fn csrf_mismatch_is_single_verdict_point() {
+        assert!(
+            csrf_mismatch("tok", "tok").is_none(),
+            "matching token must let the request proceed"
+        );
+        let response = csrf_mismatch("wrong", "tok").expect("mismatch must yield response");
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
+    }
+    /// In-memory pool with all migrations applied (test helper).
+    async fn migrated_pool() -> SqlitePool {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .expect("pool");
+        crate::db::DatabaseManager::new(pool.clone())
+            .initialize()
+            .await
+            .expect("migrations");
+        pool
+    }
+
+    #[tokio::test]
+    async fn seed_admin_creates_admin_with_configured_password() {
+        let pool = migrated_pool().await;
+        seed_admin(&pool, Some("configured-pass-123".to_string()))
+            .await
+            .expect("seed");
+        assert_eq!(
+            authenticate(&pool, "admin", "configured-pass-123").await,
+            Some("user-admin".to_string()),
+            "the configured password must authenticate right after the first bootstrap"
+        );
+        assert!(
+            authenticate(&pool, "admin", "wrong-password")
+                .await
+                .is_none(),
+            "a wrong password must still be rejected"
+        );
+    }
+
+    #[tokio::test]
+    async fn seed_admin_rotates_password_when_configured_password_changed() {
+        let pool = migrated_pool().await;
+        seed_admin(&pool, Some("old-pass-123".to_string()))
+            .await
+            .expect("seed");
+        seed_admin(&pool, Some("new-pass-456".to_string()))
+            .await
+            .expect("reseed");
+        assert_eq!(
+            authenticate(&pool, "admin", "new-pass-456").await,
+            Some("user-admin".to_string()),
+            "the newly configured password must work after rotation"
+        );
+        assert!(
+            authenticate(&pool, "admin", "old-pass-123").await.is_none(),
+            "the previous password must stop working after rotation"
+        );
+    }
+
+    #[tokio::test]
+    async fn seed_admin_keeps_existing_password_when_none_configured() {
+        let pool = migrated_pool().await;
+        seed_admin(&pool, Some("kept-pass-123".to_string()))
+            .await
+            .expect("seed");
+        seed_admin(&pool, None).await.expect("reseed");
+        assert_eq!(
+            authenticate(&pool, "admin", "kept-pass-123").await,
+            Some("user-admin".to_string()),
+            "without a configured password the stored hash must be preserved"
+        );
+    }
+
+    #[tokio::test]
+    async fn seed_admin_is_idempotent_when_password_already_matches() {
+        let pool = migrated_pool().await;
+        seed_admin(&pool, Some("same-pass-123".to_string()))
+            .await
+            .expect("seed");
+        let (before,): (String,) =
+            sqlx::query_as("SELECT password_hash FROM users WHERE username = 'admin'")
+                .fetch_one(&pool)
+                .await
+                .expect("hash");
+        seed_admin(&pool, Some("same-pass-123".to_string()))
+            .await
+            .expect("reseed");
+        let (after,): (String,) =
+            sqlx::query_as("SELECT password_hash FROM users WHERE username = 'admin'")
+                .fetch_one(&pool)
+                .await
+                .expect("hash");
+        assert_eq!(
+            before, after,
+            "a matching configured password must not rewrite the stored hash"
+        );
+    }
+
+    #[tokio::test]
+    async fn seed_admin_revokes_sessions_when_password_rotated() {
+        let pool = migrated_pool().await;
+        seed_admin(&pool, Some("old-pass-123".to_string()))
+            .await
+            .expect("seed");
+        create_session(&pool, "user-admin").await.expect("session");
+        let (before,): (i64,) =
+            sqlx::query_as("SELECT COUNT(*) FROM sessions WHERE user_id = 'user-admin'")
+                .fetch_one(&pool)
+                .await
+                .expect("count");
+        assert_eq!(before, 1, "a session row must exist before the rotation");
+        seed_admin(&pool, Some("new-pass-456".to_string()))
+            .await
+            .expect("reseed");
+        let (after,): (i64,) =
+            sqlx::query_as("SELECT COUNT(*) FROM sessions WHERE user_id = 'user-admin'")
+                .fetch_one(&pool)
+                .await
+                .expect("count");
+        assert_eq!(
+            after, 0,
+            "rotating the password must revoke every session of that account"
+        );
     }
 }

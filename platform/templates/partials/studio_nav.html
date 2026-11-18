@@ -4,7 +4,13 @@
    IA：home（總覽）置頂 → 工作室標頭（nav-studio-header）→ 所屬群組
    （無權限入口不渲染，NavModel 已過濾；目前頁 aria-current="page"；
    群組為 <details> 零 JS 下拉；角色徽章僅在有 role_code 時渲染）。
-   W4：輸出尾端附帶資料八態掛點（每頁 DOM 契約）。 #}
+   W4：輸出尾端附帶資料八態掛點（每頁 DOM 契約）。
+   W12b（2026-11-15 導覽往返體驗修）：
+   ① 含當前頁的群組輸出 `open`——重載後活動項不再藏於摺疊組內；
+   ② flatten_solo 工作室（單群組且群名＝室名）跳過群組層直接列項，
+      消除「銀行支付」室名＋群名＋頁名三連發；
+   ③ 頂層/扁平項渲染 nav_item_icon 封閉映射圖標（與群組視覺語言一致）；
+   ④ 麵包屑群名＝室名時單級顯示（「銀行支付 › 銀行支付」去重）。 #}
 {% import "partials/state_anchors.html" as state_anchors %}
 {% macro site_nav(nav) %}
 <nav class="site-nav" aria-label="主導覽">
@@ -14,24 +20,31 @@
     <input type="checkbox" id="nav-toggle" class="nav-toggle" aria-label="切換導覽選單">
     <label for="nav-toggle" class="nav-drawer-summary">☰ 選單</label>
     <div class="container">
-        <a href="{{ nav.home.href }}"{% if nav.home.active %} aria-current="page"{% endif %}>{{ nav.home.label }}</a>
+        <a href="{{ nav.home.href }}"{% if nav.home.active %} aria-current="page"{% endif %}>{% if !nav.home.icon_svg.is_empty() %}<span class="ico-slot">{{ nav.home.icon_svg|safe }}</span>{% endif %}{{ nav.home.label }}</a>
         {% if let Some(sec) = nav.section %}
         <div class="nav-breadcrumb" aria-label="麵包屑">
             <a href="/">總覽</a>
             <span aria-hidden="true">›</span>
+            {% if sec.group_label != sec.studio_label %}
             <span>{{ sec.studio_label }}</span>
             <span aria-hidden="true">›</span>
+            {% endif %}
             <span>{{ sec.group_label }}</span>
         </div>
         {% endif %}
         {% for it in nav.top %}
-        <a href="{{ it.href }}"{% if it.active %} aria-current="page"{% endif %}>{{ it.label }}</a>
+        <a href="{{ it.href }}"{% if it.active %} aria-current="page"{% endif %}>{% if !it.icon_svg.is_empty() %}<span class="ico-slot">{{ it.icon_svg|safe }}</span>{% endif %}{{ it.label }}</a>
         {% endfor %}
         {% for s in nav.studios %}
         <div class="nav-studio-header"><span class="ico-slot">{{ s.icon_svg|safe }}</span>{{ s.label }}</div>
         {% for g in s.groups %}
-        {% if g.is_menu %}
-        <details class="nav-menu">
+        {% if s.flatten_solo %}
+        {# 單群組工作室：跳過群組層，項目直接列於室標頭下（去同名三連發） #}
+        {% for it in g.items %}
+        <a href="{{ it.href }}"{% if it.active %} aria-current="page"{% endif %}>{{ it.label }}</a>
+        {% endfor %}
+        {% else if g.is_menu %}
+        <details class="nav-menu"{% if g.contains_active %} open{% endif %}>
             <summary><span class="ico-slot">{{ g.icon_svg|safe }}</span>{{ g.label }}</summary>
             <div class="nav-menu-items">
                 {% for it in g.items %}
@@ -41,7 +54,7 @@
         </details>
         {% else %}
         {% for it in g.items %}
-        <a href="{{ it.href }}"{% if it.active %} aria-current="page"{% endif %}>{{ it.label }}</a>
+        <a href="{{ it.href }}"{% if it.active %} aria-current="page"{% endif %}>{% if !it.icon_svg.is_empty() %}<span class="ico-slot">{{ it.icon_svg|safe }}</span>{% endif %}{{ it.label }}</a>
         {% endfor %}
         {% endif %}
         {% endfor %}

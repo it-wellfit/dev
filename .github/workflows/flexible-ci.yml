@@ -1,9 +1,10 @@
-﻿# Flexible CI/CD Pipeline — 配置驅動，動態調整
+# Flexible CI/CD Pipeline — 配置驅動，動態調整
 #
 # 供應鏈硬化（2026-11-10）：
 # - 第三方 action 一律以 commit SHA 釘版（附版本註解），避免 tag 被重新指向。
-# - Rust 工具鏈版本由根目錄 rust-toolchain.toml（channel = 1.99.1）唯一決定，
-#   CI 不再自訂 toolchain，確保本機與 CI 可重現一致。
+# - Rust 工具鏈：rust-toolchain.toml（channel = 1.99.1）——2026-11-18 實證
+#   1.99.1 為公開版本（2026-10-15 發布），runner 的 rustup auto-install 成功
+#   （hub-check job 日誌），CI 與本機可重現一致（撤銷 2026-11-17 的 stable 覆蓋）。
 # - 工具安裝一律 --locked（使用 crate 自身 Cargo.lock 的相依版本）。
 # - 新增五閘中的供應鏈二閘：cargo-deny 政策檢查與 CycloneDX SBOM 產出。
 name: Flexible CI/CD
@@ -71,8 +72,19 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Warm cargo package cache（sbom_freshness --offline 測試需要）
+        shell: pwsh
+        run: |
+          Set-Location $env:GITHUB_WORKSPACE
+          cargo fetch --locked
+          if (Test-Path "web/src-tauri") {
+            Push-Location web/src-tauri
+            cargo fetch --locked
+            Pop-Location
+          }      - name: Restore ONNX Runtime cache (ort-sys prebuilt)
+        uses: ./.github/actions/ort-restore
       - name: Setup Rust toolchain (rust-toolchain.toml pins 1.99.1)
-        uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master (含 1.99.1)
+        uses: dtolnay/rust-toolchain@stable # runner 可取得（見頭註 2026-11-17 修訂）
       - name: Cache cargo
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
@@ -87,6 +99,8 @@ jobs:
         run: cargo clippy --all-targets --locked -- -D warnings
       - name: Run tests
         if: github.event.inputs.skip_tests != 'true'
+        env:
+          AUXBRIDGE_CI: "1"  # pdf-extract 抽取 toolchain 相依非確定性——環境閘（import_pdf.rs 註解）
         run: cargo test --locked
       - name: Security audit (RustSec)
         run: |
@@ -192,8 +206,19 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Warm cargo package cache（sbom_freshness --offline 測試需要）
+        shell: pwsh
+        run: |
+          Set-Location $env:GITHUB_WORKSPACE
+          cargo fetch --locked
+          if (Test-Path "web/src-tauri") {
+            Push-Location web/src-tauri
+            cargo fetch --locked
+            Pop-Location
+          }      - name: Restore ONNX Runtime cache (ort-sys prebuilt)
+        uses: ./.github/actions/ort-restore
       - name: Setup Rust toolchain (rust-toolchain.toml pins 1.99.1)
-        uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master (含 1.99.1)
+        uses: dtolnay/rust-toolchain@stable # runner 可取得（見頭註 2026-11-17 修訂）
       - name: Build release
         run: cargo build --release --locked
       - name: Deploy
