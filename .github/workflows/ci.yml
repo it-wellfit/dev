@@ -60,6 +60,8 @@ jobs:
   unit:
     runs-on: windows-latest
     needs: [budget-guard, lint]
+    env:
+      AUXBRIDGE_CI: "1"  # 與 integration 同：環境相依測試閘（pdf-extract toolchain 相依）
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
