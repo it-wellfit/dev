@@ -35,7 +35,7 @@ jobs:
           # 近似值：所有 runner 的牆鐘秒數總和（list API 不分 OS；保守計入預算）。
           SECONDS_USED=$(gh api --paginate \
             "/repos/${GITHUB_REPOSITORY}/actions/runs?created=%3E=${MONTH_START}&per_page=100" \
-            --jq '[.workflow_runs[] | select(.run_started_at != null) | ((.updated_at | fromdateiso8601) - (.run_started_at | fromdateiso8601))] | add // 0')
+            --jq '[.workflow_runs[] | select(.run_started_at != null and .updated_at != null and (.updated_at > .run_started_at)) | ((.updated_at | fromdateiso8601) - (.run_started_at | fromdateiso8601))] | map(select(. > 0)) | add // 0')
           USED_MIN=$(( SECONDS_USED / 60 ))
           # 預算：2000 raw 分鐘/月（免費層）。Windows 2× 計費 → 有效 Windows 分鐘 = 1000。
           # 原始分鐘守門（不分 OS），閾值：80% 預警降級、100% 極簡。
