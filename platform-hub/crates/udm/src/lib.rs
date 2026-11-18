@@ -90,11 +90,15 @@ impl TryFrom<MoneyCents> for Decimal4 {
     type Error = UnitConversionError;
 
     fn try_from(value: MoneyCents) -> Result<Self, Self::Error> {
-        value.0.checked_mul(100).map(Self).ok_or(UnitConversionError {
-            from_scale: MoneyCents::SCALE,
-            to_scale: Decimal4::SCALE,
-            raw: value.0,
-        })
+        value
+            .0
+            .checked_mul(100)
+            .map(Self)
+            .ok_or(UnitConversionError {
+                from_scale: MoneyCents::SCALE,
+                to_scale: Decimal4::SCALE,
+                raw: value.0,
+            })
     }
 }
 
