@@ -63,6 +63,9 @@ jobs:
     env:
       AUXBRIDGE_CI: "1"  # 與 integration 同：環境相依測試閘（pdf-extract toolchain 相依）
     steps:
+      - name: Warm cargo package cache (sbom_freshness --offline 測試需 minisign-verify 等 index/套件)
+        run: cargo fetch --locked
+        working-directory: web/src-tauri
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
