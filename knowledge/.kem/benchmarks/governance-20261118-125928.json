@@ -1,0 +1,52 @@
+{
+  "scenario": "governance",
+  "steps": [
+    {
+      "step": "capture",
+      "millis": 2,
+      "ok": true,
+      "detail": "raw/bench/2026-11-18-seed.md (45 B)"
+    },
+    {
+      "step": "ingest",
+      "millis": 7,
+      "ok": true,
+      "detail": "T1 accept"
+    },
+    {
+      "step": "vet2",
+      "millis": 20307,
+      "ok": true,
+      "detail": "models=[qwen3.5:4b,Qwen3.8-27B,gpt-oss:20b] agreement=0.60 top=Some(1)"
+    },
+    {
+      "step": "package",
+      "millis": 10,
+      "ok": true,
+      "detail": "C:\\Users\\STEPHA~1.HUA\\AppData\\Local\\Temp\\kem-bench-1795006747862386100\\.kem/packages\\claim-20261118-001.md (sha 1c1d560980b0…)"
+    },
+    {
+      "step": "review",
+      "millis": 8,
+      "ok": true,
+      "detail": "disposition=defer recorded"
+    },
+    {
+      "step": "finalize",
+      "millis": 9,
+      "ok": true,
+      "detail": "index + log + dashboard regenerated"
+    },
+    {
+      "step": "doctor",
+      "millis": 2,
+      "ok": true,
+      "detail": "entries=4 chain_ok=true claims=1 queue=0"
+    }
+  ],
+  "total_millis": 20352,
+  "within_target": true,
+  "generated_at": "2026-11-18T12:59:28.215899800+00:00",
+  "bench_root": "C:\\Users\\STEPHA~1.HUA\\AppData\\Local\\Temp\\kem-bench-1795006747862386100",
+  "vet2_executed": true
+}

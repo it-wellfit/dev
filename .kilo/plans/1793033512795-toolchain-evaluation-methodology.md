@@ -201,6 +201,18 @@ P3：P < 10   →  觀察清單（Backlog）
 | 3.0 – 3.9 | 進入 POC 驗證（模組四），POC 通過才入選 |
 | < 3.0 | 排除；例外條件：該 P0 情境無任何替代工具，則記錄風險並要求供應商改進計畫 |
 
+**平手裁決（Tie-breaker，依序套用）**
+1. D1 功能覆蓋率高者勝（P0 情境不可打折）。
+2. 仍平手：D4 三年 TCO 低者勝。
+3. 仍平手：以 POC 實測單一 P0 情境的 TTFV 決勝（附計時證據）。
+4. 仍平手：升級負責人裁決，記錄於 ADR。
+
+**複審觸發（Re-evaluation Triggers，任一成立即重跑模組二）**
+- 所支撐的 P0/P1 情境變更（新增、刪除、升級）。
+- 供應鏈事件：斷更、重大漏洞、授權條款變更。
+- 每季治理節奏之全量重審（§4.3）。
+- 既有工具（incumbent）不豁免：同樣適用複審與退役評估。
+
 ---
 
 ## 模組三：組合策略與架構模式
@@ -231,7 +243,7 @@ P3：P < 10   →  觀察清單（Backlog）
 | 介面類型 | 標準要求 |
 |---|---|
 | **API** | 遵循 OpenAPI 規格；版本化（URI 或 header）；向下相容政策（deprecation 提前 ≥1 個版本公告） |
-| **CLI** | 統一退出碼語意：`0`＝成功、`1`＝失敗、`2`＝使用錯誤；stdout 僅放資料、診斷訊息走 stderr；支援 `--format json` 機器可讀輸出 |
+| **CLI** | 退出碼語意必須**逐工具宣告並文件化**（不得假設全鏈一致）：預設基準 `0`＝成功、`1`＝失敗、`2`＝特定第二語意（如「成功但發現差異」）；每工具在 Runbook 附退出碼對照表（既有先例：wellfit CLI `0`＝match、`2`＝diffs、`1`＝error）；stdout 僅放資料、診斷訊息走 stderr；支援 `--format json` 機器可讀輸出 |
 | **事件匯流排（Event Bus）** | 採用 CloudEvents 1.0 信封；至少一次交付（at-least-once）＋消費端冪等（idempotency）；死信佇列（DLQ, Dead Letter Queue）必設 |
 
 ### 3.4 決策樹：自建／採購／開源／混合（Build / Buy / Open Source / Hybrid）
@@ -262,6 +274,22 @@ flowchart TD
 2. 「自建」裁定必須同時回答：**誰維護？何時棄用？** 無答案即不得自建。
 3. 「採購」裁定必須附：退出條款（exit clause）、資料匯出驗證、鎖定風險（lock-in risk）評級。
 4. 任何選擇的 ADR 須包含「替代方案（已否決）」節，記錄為何其他路徑落選。
+
+### 3.5 工具生命週期（Tool Lifecycle：入選 → 複審 → 退役）
+
+```
+入選（模組二＋三） ──► 週期複審（依模組二「複審觸發」） ──► 三種結局
+   ├─ 續任（Retain）：複審通過，記錄日期與證據
+   ├─ 降層（Demote）：Core → Adjacent / Satellite，依新評分重劃層級
+   └─ 退役（Retire）：走退役清單，禁止直接停用
+```
+
+**退役清單（Retirement Checklist，全項完成才可下線）**
+1. 替代路徑已上線並通過驗證（成功準則比照 §4.1 POC 格式）。
+2. 資料遷移完成，或經確認無需遷移（含匯出格式實測驗證）。
+3. 依賴清點：所有引用該工具的腳本／CI／文件已改接或標記棄用。
+4. Runbook 更新（新流程生效）；舊流程就地標 `SUPERSEDED`。
+5. ADR 記錄退役決策與日期；產出物歸檔不刪除（C-01）。
 
 ---
 
@@ -296,12 +324,12 @@ flowchart TD
 - R4：對既有工具鏈產生不可逆變更
 
 ## 5. 產出物（Deliverables）
-- POC 報告（含 Evidence-Driven A–L 節構）：實測數據、截圖、退出碼紀錄
+- POC 報告：實測數據、截圖、退出碼紀錄；章節結構必須逐節對應 C-13 規定之 Evidence-Driven A–L 節（節名 SSOT：`.kilo/plans/1794365729846-master-prompt-evidence-driven-evolution.md`——實作時**先讀該檔取節名**，不得憑記憶填寫）
 - 五維度計分表更新（回填模組二）
 - 入選／排除建議 + 理由
 ```
 
-**POC 紀律**：POC 產生的腳本與筆記**視為正式資產**入版控（不散落個人資料夾）；POC 結束後環境須還原（還原步驟寫入 POC 計畫書 §1）。
+**POC 紀律**：POC 產生的腳本與筆記**視為正式資產**入版控（不散落個人資料夾）；POC 結束後環境須還原（還原步驟寫入 POC 計畫書 §1）。**失敗路徑**：POC 未達成功準則或觸發回滾 → 留存失敗證據 → 依序驗證次一候選工具；全部候選失敗 → 回模組二重評（或回模組一重審該情境是否成立），禁止「默認採用失敗品」。
 
 ### 4.2 關鍵指標追蹤儀表板（Metrics Dashboard）
 
@@ -359,7 +387,7 @@ C4 四層：Context（系統情境）→ Container（容器）→ Component（�
 ```mermaid
 flowchart LR
     user["支援工程師"]
-    erp["Flaps ERP 系統"]
+    erp["FlapsErp（輔翼ERP，原廠第三方系統）"]
     system["診斷工具鏈系統"]
     user -->|發起診斷、讀取報告| system
     system -->|量測行程／IO／網路| erp
@@ -506,10 +534,44 @@ flowchart TD
 
 ---
 
+## 六、落地實施計畫（Rollout Plan，本文件之實作任務清單）
+
+> 本節為實作代理（implementation agent）的執行清單：模組一～五為**內容規格**，本節為**落地任務**。全程只新增文件與登記，不修改既有代碼。
+
+### 任務清單（依序執行）
+
+1. **取證 C-13 A–L 節名**：讀 `.kilo/plans/1794365729846-master-prompt-evidence-driven-evolution.md`，將 A–L 節名原樣抄錄進 POC 範本註腳（禁止憑記憶填寫）。
+2. **建立文件落點**：依附錄 A 建立 `docs/toolchain/` 五份文件骨架（requirements / scoring / composition / validation＋debt-register / risks）；方法論本文置於 `docs/standards/TOOLCHAIN_METHODOLOGY.md`（與 GOVERNANCE_STANDARD、SHARED_STANDARDS 同層）。
+3. **登記**：`docs/PLAN_REGISTER.md` 新增 addendum 條目；`docs/README.md` 加入口連結；產出之 ADR 登記 `docs/adr/` 並更新 ADR_REGISTER。
+4. **對齊既有治理**：將 §6.1 治理對照表寫入方法論本文，逐條連結既有規則 ID，不複寫條文（SSOT）。
+5. **試點驗證（Pilot，煙霧測試級範圍）**：以真實案例「ERP 效能診斷工具鏈評估（候選含 Sysinternals Suite）」走模組一→五；範圍**刻意收斂**——1 條 L1 目標、2 條 L2 情境、3 個候選工具、1 份 POC——目的在驗證方法論自身可用性，而非完成完整專案。產出全部七項交付物（每項允許最小可用規模）。
+6. **驗收門檻（Methodology Gate）**：①試點七項交付物齊備且附證據 ②無證據項全標 UNKNOWN 並列補測清單 ③以五級制之一（PASS／CONDITIONAL PASS／BLOCKED／REJECTED／NOT VERIFIED）記錄於試點報告。
+7. **狀態流轉**：試點 PASS 後本文件 Draft → Active；修訂依 §5.5 版本控管規範。
+
+### 6.1 治理對照表（Alignment with Existing Governance）
+
+| 本方法論機制 | 對齊之既有規則 | 關係 |
+|---|---|---|
+| 貫穿性紀律「證據驅動」 | C-13（Evidence-Driven 制度）、C-10（誠實註記 UNKNOWN） | 本文件為其應用於工具鏈領域之實例化 |
+| 先量測後動刀 | C-03 | 直接引用，不重述 |
+| 修訂不刪除 | C-01、C-02 | §5.5 為其文件面落地 |
+| 寫入通道／PS 5.1 限制 | C-09 | Runbook 範本命令慣例（`;` 串接、不用 `&&`）之來源 |
+| 文件與代碼同一提交 | SHARED_STANDARDS §4.3 | §5.5「同一提交」規範 |
+| 命名分離（AuxBridge／FlapsErp） | NAMING_AND_BOUNDARY_DECREE | C4 範本之系統命名依據 |
+| 衍生檔 drift gate | ADR-0014（KB 衍生檔治理） | 模組四「驗證段→閘門段」模式同源 |
+
+### 6.2 範圍外（Out of Scope）
+
+- 不實作任何量測腳本或 CI 變更（屬後續工具鏈專案本身）。
+- 不更動既有 ADR／標準文件內容（僅新增連結與登記條目）。
+
+---
+
 ## 附錄 A：模組產出物總表（Deliverables Matrix）
 
 | 模組 | 產出物 | 必要性 | 版控位置建議 |
 |---|---|---|---|
+| 0 | 方法論本文（含 §六 落地計畫） | 必要 | `docs/standards/TOOLCHAIN_METHODOLOGY.md` |
 | 一 | 需求拆解書（含分級矩陣） | 必要 | `docs/toolchain/requirements.md` |
 | 二 | 評分矩陣＋證據附錄 | 必要 | `docs/toolchain/scoring.md` |
 | 三 | 分層設計＋決策樹走查紀錄 | 必要 | `docs/toolchain/composition.md` |

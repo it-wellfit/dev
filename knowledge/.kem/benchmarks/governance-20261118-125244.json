@@ -1,0 +1,22 @@
+{
+  "scenario": "governance",
+  "steps": [
+    {
+      "step": "capture",
+      "millis": 2,
+      "ok": true,
+      "detail": "raw/bench/2026-11-18-seed.md (45 B)"
+    },
+    {
+      "step": "ingest",
+      "millis": 5,
+      "ok": false,
+      "detail": "T1 Reject: groundedness: quote not found verbatim in docs/bench.md"
+    }
+  ],
+  "total_millis": 9,
+  "within_target": false,
+  "generated_at": "2026-11-18T12:52:44.934937200+00:00",
+  "bench_root": "C:\\Users\\STEPHA~1.HUA\\AppData\\Local\\Temp\\kem-bench-1795006364924246000",
+  "vet2_executed": true
+}

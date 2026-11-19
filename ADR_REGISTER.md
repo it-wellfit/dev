@@ -14,6 +14,7 @@
 | [0012](docs/adr/ADR-0012-bankpay-integration-boundary.md) | 銀行支付整合邊界 | Accepted | 2026-11-09 | 專案架構 |
 | [0013](docs/adr/ADR-0013-cross-platform-strategy.md) | 跨平台策略（Tauri 殼＋零 JS Web） | Accepted | 2026-11-09 | 專案架構 |
 | [0014](docs/adr/ADR-0014-unsafe-boundary-and-supply-chain-policy.md) | unsafe 邊界、供應鏈政策與 SBOM 閘 | Accepted | 2026-11-12 | 專案架構 |
+| [0015](docs/adr/ADR-0015-erp-diagnosis-toolchain.md) | ERP 效能診斷工具鏈採用 Sysinternals Suite（Satellite 層） | Accepted | 2026-11-19 | 方法論負責人 |
 
 ## 使用規則
 
@@ -26,3 +27,4 @@
 | 日期 | 版本 | 說明 |
 |---|---|---|
 | 2026-11-12 | v1.0 | 建立登記表；補登 ADR-0001..0014 |
+| 2026-11-19 | v1.1 | 補登 ADR-0015（ERP 效能診斷工具鏈） |

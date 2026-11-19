@@ -5,7 +5,6 @@
 //! 重生成路徑——衍生視圖永不分叉。
 
 use crate::filing::{load_claims, status_counts, write_index, write_log};
-use crate::ledger::LedgerEntry;
 use crate::schema::{Claim, KemError};
 use chrono::Utc;
 use std::path::Path;

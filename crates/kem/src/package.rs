@@ -81,10 +81,7 @@ pub struct DecisionPackage {
 }
 
 /// 從帳本提取指定主張的最新聯合裁決（actor=kem-t2 且 detail 含 models_used）。
-pub fn extract_ensemble(
-    ledger_entries: &[LedgerEntry],
-    claim_id: &str,
-) -> Option<EnsembleSummary> {
+pub fn extract_ensemble(ledger_entries: &[LedgerEntry], claim_id: &str) -> Option<EnsembleSummary> {
     let e = ledger_entries
         .iter()
         .rev()
@@ -192,8 +189,9 @@ pub fn generate(
         notes: Vec::new(),
     };
     if unverified > 0 {
-        risk.notes
-            .push(format!("證據 {unverified} 筆逐字驗證失敗——先執行 kem sync 診斷"));
+        risk.notes.push(format!(
+            "證據 {unverified} 筆逐字驗證失敗——先執行 kem sync 診斷"
+        ));
     }
 
     // ── 選項（四選一全列，依據資料驅動） ──
@@ -268,7 +266,8 @@ pub fn generate(
     } else {
         format!(
             "accept：聯合多數支持（durability={:?}, agreement {:.2}）且零風險訊號",
-            top, ensemble.as_ref().map(|e| e.agreement).unwrap_or(0.0)
+            top,
+            ensemble.as_ref().map(|e| e.agreement).unwrap_or(0.0)
         )
     };
 
@@ -318,16 +317,14 @@ pub fn render_markdown(pkg: &DecisionPackage) -> String {
     let _ = writeln!(m, "\n## 3. 聯合裁決（五模型）\n");
     match &pkg.ensemble {
         Some(e) => {
-            let _ = writeln!(
-                m,
-                "- 模型：{}",
-                e.models_used.join("、")
-            );
+            let _ = writeln!(m, "- 模型：{}", e.models_used.join("、"));
             let _ = writeln!(
                 m,
                 "- 一致率：{:.2}｜多數 durability：{}",
                 e.agreement,
-                e.top_score.map(|t| t.to_string()).unwrap_or_else(|| "—".into())
+                e.top_score
+                    .map(|t| t.to_string())
+                    .unwrap_or_else(|| "—".into())
             );
             for (model, score) in &e.votes {
                 let _ = writeln!(m, "  - {model} → durability={score}");
@@ -387,7 +384,12 @@ pub fn write_package(root: &Path, pkg: &DecisionPackage) -> Result<PathBuf, KemE
 /// 最新決策包條目（供儀表板治理面板）： (claim_id, sha, 生成時間)。
 pub fn latest_package(ledger_entries: &[LedgerEntry]) -> Option<(String, String, String)> {
     let e = ledger_entries.iter().rev().find(|e| {
-        e.actor == "kem-package" && e.claim_id == e.detail.get("claim_id").and_then(|c| c.as_str()).unwrap_or_default()
+        e.actor == "kem-package"
+            && e.claim_id
+                == e.detail
+                    .get("claim_id")
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_default()
             || (e.actor == "kem-package" && !e.claim_id.is_empty())
     })?;
     let sha = e
@@ -398,8 +400,6 @@ pub fn latest_package(ledger_entries: &[LedgerEntry]) -> Option<(String, String,
         .to_string();
     Some((e.claim_id.clone(), sha, e.ts.to_rfc3339()))
 }
-
-
 
 #[cfg(test)]
 mod tests {
@@ -478,9 +478,20 @@ mod tests {
         std::fs::write(dir.path().join("evidence.md"), "the verbatim quote").unwrap();
         let claims = vec![claim("claim-20261117-001", 0.9)];
         let entries = ledger_with_vet2("claim-20261117-001", 0.8, 4);
-        let pkg = generate(&claims, &entries, &[], "claim-20261117-001", dir.path(), Utc::now())
-            .unwrap();
-        assert!(pkg.recommendation.starts_with("accept"), "{}", pkg.recommendation);
+        let pkg = generate(
+            &claims,
+            &entries,
+            &[],
+            "claim-20261117-001",
+            dir.path(),
+            Utc::now(),
+        )
+        .unwrap();
+        assert!(
+            pkg.recommendation.starts_with("accept"),
+            "{}",
+            pkg.recommendation
+        );
         assert!(pkg.evidence[0].verified);
         assert!(!pkg.risk.stale_confidence);
         assert!(!pkg.package_sha.is_empty());
@@ -492,9 +503,20 @@ mod tests {
         std::fs::write(dir.path().join("evidence.md"), "the verbatim quote").unwrap();
         let claims = vec![claim("claim-20261117-001", 0.9)];
         let entries = ledger_with_vet2("claim-20261117-001", 0.4, 2);
-        let pkg = generate(&claims, &entries, &[], "claim-20261117-001", dir.path(), Utc::now())
-            .unwrap();
-        assert!(pkg.recommendation.starts_with("defer"), "{}", pkg.recommendation);
+        let pkg = generate(
+            &claims,
+            &entries,
+            &[],
+            "claim-20261117-001",
+            dir.path(),
+            Utc::now(),
+        )
+        .unwrap();
+        assert!(
+            pkg.recommendation.starts_with("defer"),
+            "{}",
+            pkg.recommendation
+        );
         assert!(pkg.risk.low_agreement);
     }
 
@@ -504,10 +526,24 @@ mod tests {
         std::fs::write(dir.path().join("evidence.md"), "the verbatim quote").unwrap();
         let claims = vec![claim("claim-20261117-001", 0.31)];
         let entries = ledger_with_vet2("claim-20261117-001", 0.8, 4);
-        let pkg = generate(&claims, &entries, &[], "claim-20261117-001", dir.path(), Utc::now())
-            .unwrap();
-        assert!(pkg.recommendation.starts_with("supersede"), "{}", pkg.recommendation);
-        assert!(pkg.risk.stale_confidence);
+        let pkg = generate(
+            &claims,
+            &entries,
+            &[],
+            "claim-20261117-001",
+            dir.path(),
+            Utc::now(),
+        )
+        .unwrap();
+        // 優先序（by design）：L3 lint finding（同一閾值）先於 supersede 建議——
+        // 陳舊 published 主張是治理缺陷，修復優先；supersede 訊號保留於風險登記。
+        assert!(
+            pkg.recommendation.starts_with("先修復"),
+            "{}",
+            pkg.recommendation
+        );
+        assert!(pkg.risk.stale_confidence, "supersede 訊號須保留於風險登記");
+        assert!(!pkg.risk.lint_findings.is_empty());
     }
 
     #[test]
@@ -516,11 +552,22 @@ mod tests {
         // 不建立 evidence.md → 逐字驗證失敗
         let claims = vec![claim("claim-20261117-001", 0.9)];
         let entries = ledger_with_vet2("claim-20261117-001", 0.8, 4);
-        let pkg = generate(&claims, &entries, &[], "claim-20261117-001", dir.path(), Utc::now())
-            .unwrap();
+        let pkg = generate(
+            &claims,
+            &entries,
+            &[],
+            "claim-20261117-001",
+            dir.path(),
+            Utc::now(),
+        )
+        .unwrap();
         assert!(!pkg.evidence[0].verified);
         assert_eq!(pkg.risk.unverified_evidence, 1);
-        assert!(pkg.recommendation.contains("kem sync"), "{}", pkg.recommendation);
+        assert!(
+            pkg.recommendation.contains("kem sync"),
+            "{}",
+            pkg.recommendation
+        );
     }
 
     #[test]
@@ -529,10 +576,24 @@ mod tests {
         std::fs::write(dir.path().join("evidence.md"), "the verbatim quote").unwrap();
         let claims = vec![claim("claim-20261107-001", 0.9)];
         let entries = ledger_with_vet2("claim-20261107-001", 0.8, 4);
-        let pkg = generate(&claims, &entries, &[], "claim-20261107-001", dir.path(), Utc::now())
-            .unwrap();
+        let pkg = generate(
+            &claims,
+            &entries,
+            &[],
+            "claim-20261107-001",
+            dir.path(),
+            Utc::now(),
+        )
+        .unwrap();
         let md = render_markdown(&pkg);
-        for sec in ["## 1. 主張", "## 2. 證據", "## 3. 聯合裁決", "## 4. 選項", "## 5. 建議", "## 6. 風險登記"] {
+        for sec in [
+            "## 1. 主張",
+            "## 2. 證據",
+            "## 3. 聯合裁決",
+            "## 4. 選項",
+            "## 5. 建議",
+            "## 6. 風險登記",
+        ] {
             assert!(md.contains(sec), "missing {sec}");
         }
         assert!(md.contains(&pkg.package_sha));
@@ -546,8 +607,15 @@ mod tests {
         std::fs::write(dir.path().join("evidence.md"), "the verbatim quote").unwrap();
         let claims = vec![claim("claim-20261117-001", 0.9)];
         let entries = ledger_with_vet2("claim-20261107-001", 0.8, 4);
-        let pkg = generate(&claims, &entries, &[], "claim-20261117-001", dir.path(), Utc::now())
-            .unwrap();
+        let pkg = generate(
+            &claims,
+            &entries,
+            &[],
+            "claim-20261117-001",
+            dir.path(),
+            Utc::now(),
+        )
+        .unwrap();
         let path = write_package(dir.path(), &pkg).unwrap();
         assert!(path.ends_with(".kem/packages/claim-20261117-001.md"));
         assert!(path.exists());
@@ -558,8 +626,15 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let claims = vec![claim("claim-20261117-001", 0.9)];
         let entries = ledger_with_vet2("claim-20261107-001", 0.8, 4);
-        let err = generate(&claims, &entries, &[], "claim-20261117-999", dir.path(), Utc::now())
-            .unwrap_err();
+        let err = generate(
+            &claims,
+            &entries,
+            &[],
+            "claim-20261117-999",
+            dir.path(),
+            Utc::now(),
+        )
+        .unwrap_err();
         assert!(matches!(err, KemError::NotFound(_)));
     }
 }

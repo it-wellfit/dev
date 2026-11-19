@@ -6,7 +6,6 @@
 //! 絕不虛構耗時；總時超出 10 分鐘目標 → within_target=false。
 
 use crate::capture::capture_source;
-use crate::embed;
 use crate::evolve;
 use crate::filing;
 use crate::gov;
@@ -14,7 +13,7 @@ use crate::ledger::{LedgerAction, LedgerEntry};
 use crate::package;
 use crate::schema::{Claim, ClaimStatus, ClaimType, Evidence, KemError, Track};
 use crate::vetting::{Outcome, VetContext, record_verdict, stage_claim, vet_t1};
-use chrono::{DateTime, Utc};
+use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use std::time::Instant;
@@ -103,25 +102,17 @@ pub fn run_governance(
 ) -> Result<BenchmarkReport, KemError> {
     let nanos = Utc::now()
         .timestamp_nanos_opt()
-        .unwrap_or_else(|| Utc::now().timestamp_millis() as i64);
+        .unwrap_or_else(|| Utc::now().timestamp_millis());
     let bench_root: PathBuf = std::env::temp_dir().join(format!("kem-bench-{nanos}"));
     std::fs::create_dir_all(bench_root.join("docs"))?;
     std::fs::create_dir_all(bench_root.join(".kem"))?;
     let ledger = bench_root.join(".kem/ledger.jsonl");
-    let queue = bench_root.join(".kem/review-queue.jsonl");
     let mut t = Timer::new();
 
     // ── capture：L0 擷取（不可變源檔） ──
     let s0 = Instant::now();
     let src_content = "Bench: KEM 決策治理切片量測源檔。\n";
-    let src = capture_source(
-        &bench_root,
-        "bench",
-        "seed",
-        "md",
-        src_content,
-        Utc::now(),
-    )?;
+    let src = capture_source(&bench_root, "bench", "seed", "md", src_content, Utc::now())?;
     let ledger_ok = true; // capture_source 冪等即成功
     t.record(
         "capture",
@@ -130,11 +121,9 @@ pub fn run_governance(
         format!("{} ({} B)", src.rel_path, src.bytes),
     );
 
-    // 證據檔（暫存庫內，相對路徑 docs/bench.md）
+    // 證據檔（暫存庫內，相對路徑 docs/bench.md）——內容＝主張引證（body），
+    // 否則 T1 groundedness 正確拒絕（fail-closed by design）。
     let ev_rel = "docs/bench.md";
-    let ev_abs = bench_root.join(ev_rel);
-    std::fs::create_dir_all(ev_abs.parent().unwrap())?;
-    std::fs::write(&ev_abs, src_content)?;
 
     // ── ingest：T1 三閘裁決＋歸檔 ──
     let s1 = Instant::now();
@@ -144,6 +133,8 @@ pub fn run_governance(
         "Bench: decision governance slice works end to end.",
         ev_rel,
     );
+    std::fs::create_dir_all(bench_root.join("docs"))?;
+    std::fs::write(bench_root.join(ev_rel), &claim.body)?;
     // 證據解析基底＝暫存庫（與生產 cmd_ingest 的 cwd 語義一致）
     let ctx = VetContext::new(bench_root.clone(), Vec::new());
     let verdict = vet_t1(&claim, &ctx);
@@ -155,18 +146,16 @@ pub fn run_governance(
     };
     t.record("ingest", s1, ingest_ok, ingest_detail);
     if !ingest_ok {
-        return Ok(finish(
+        return finish(
             &t,
             include_vet2,
             &bench_root,
             production_root,
             "T1 rejected the seeded claim — benchmark invalid".into(),
-        )?);
+        );
     }
     record_verdict(&ledger, "kem-bench", &claim.id, &verdict, Utc::now())?;
     stage_claim(&bench_root.join("claims"), &claim)?;
-    let entries_now = read_entries(&ledger)?;
-
     // ── vet2：五模型聯合（可略；不可達=degraded 誠實標記） ──
     let mut vet2_executed = false;
     if include_vet2 {
@@ -174,12 +163,7 @@ pub fn run_governance(
         let pool = evolve_pool();
         let rt = tokio::runtime::Runtime::new()
             .map_err(|e| KemError::InvalidInput(format!("tokio runtime: {e}")))?;
-        let verdict = rt.block_on(evolve::scs_vote(
-            &pool,
-            &claim.title,
-            &claim.body,
-            5,
-        ));
+        let verdict = rt.block_on(evolve::scs_vote(&pool, &claim.title, &claim.body, 5));
         vet2_executed = !verdict.llm_unreachable;
         let detail = if verdict.llm_unreachable {
             "degraded — all endpoints unreachable (honest UNKNOWN)".into()
@@ -234,7 +218,7 @@ pub fn run_governance(
     // ── review：H1 人工複核（benchmark 自動 defer，記錄处置） ──
     let s4 = Instant::now();
     gov::record_disposition(
-        &queue,
+        &bench_root.join(".kem/review-queue.jsonl"),
         &claim.id,
         gov::Disposition::Defer,
         "kem-bench",
@@ -261,9 +245,13 @@ pub fn run_governance(
         std::slice::from_ref(&claim),
         0,
         &[],
-        &[
-            (1, "package".into(), claim.id.clone(), Utc::now().to_rfc3339()),
-        ],
+        &[(
+            1,
+            "package".into(),
+            claim.id.clone(),
+            Utc::now().to_rfc3339(),
+        )],
+        None,
         None,
     )
     .is_ok();
@@ -276,7 +264,11 @@ pub fn run_governance(
 
     // ── doctor：健康檢查 ──
     let s6 = Instant::now();
-    let health = gov::doctor(&bench_root, &ledger, &queue_path)?;
+    let health = gov::doctor(
+        &bench_root,
+        &ledger,
+        &bench_root.join(".kem/review-queue.jsonl"),
+    )?;
     t.record(
         "doctor",
         s6,
@@ -287,13 +279,13 @@ pub fn run_governance(
         ),
     );
 
-    Ok(finish(
+    finish(
         &t,
         vet2_executed || include_vet2,
         &bench_root,
         production_root,
         String::new(),
-    )?)
+    )
 }
 
 fn evolve_pool() -> Vec<evolve::ModelEntry> {

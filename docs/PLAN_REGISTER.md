@@ -953,3 +953,16 @@ This addendum records execution facts only; it does not approve product scope, c
 | 未竟 | `/api/v1` 版本化（需 ADR）；瀏覽器響應式矩陣（人工）；向量腿效能基線（需 embedder）； CCM M2 登入事件（既有 GAP） | 本 addendum |
 
 This addendum records execution facts only; it does not approve product scope, certification, or release.
+
+
+## 2026-11-19 addendum #48 (工具鏈評估方法論落地 TOOLCHAIN_METHODOLOGY v1.0)
+
+| Item | Disposition | Evidence |
+|---|---|---|
+| 方法論本文 | 新增 docs/standards/TOOLCHAIN_METHODOLOGY.md（v1.0 Draft）：五大模組 + 模板 + 快速啟動清單 + 治理對齊 + A-L 節名註腳 | plan 1793033512795 |
+| 工具鏈產出物骨架 | 新增 docs/toolchain/ 六份（requirements/scoring/composition/validation/debt-register/risks） | 附錄 A |
+| Pilot 案例 | ERP 效能診斷工具鏈評估（候選含 Sysinternals Suite）： smoke-test 級範圍，產出七項交付物 | docs/toolchain/* |
+| ADR | 新增 ADR-0015（Accepted）：採用 Sysinternals Suite 為 Satellite 層診斷工具 | docs/adr/ADR-0015-erp-diagnosis-toolchain.md |
+| 試點判定 | CONDITIONAL PASS：交付物齊備且附證據；TTFV/CSV 相容性/POC 未量測項標 UNKNOWN 並列入補測清單 | docs/toolchain/validation.md |
+
+This addendum records execution facts only; it does not approve product scope, certification, or release.

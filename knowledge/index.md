@@ -1,6 +1,6 @@
 # Knowledge Index (generated — do not edit)
 
-- Generated: 2026-11-17T11:11:42.264455200+00:00 | Schema: 1 | Visible claims: 20
+- Generated: 2026-11-18T12:52:45.431511+00:00 | Schema: 1 | Visible claims: 20
 
 ## adr-0004
 

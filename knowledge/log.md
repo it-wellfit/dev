@@ -1,9 +1,11 @@
 # Decision Log (generated — do not edit)
 
-- Entries: 103 | Verified: appended-only
+- Entries: 105 | Verified: appended-only
 
 | Seq | Time (UTC) | Actor | Action | Claim |
 |-----|------------|-------|--------|-------|
+| 105 | 2026-11-18T12:52:44.517039300+00:00 | kem-package | Package | claim-20261107-001 |
+| 104 | 2026-11-18T12:38:11.165183+00:00 | kem-package | Package | claim-20261107-001 |
 | 103 | 2026-11-09T10:11:03.632930100+00:00 | kem-t2 | Vet | claim-20261107-001 |
 | 102 | 2026-11-09T10:10:23.226296400+00:00 | kem-sync | Sync | claim-20261107-020 |
 | 101 | 2026-11-09T10:10:23.226296400+00:00 | kem-sync | Sync | claim-20261107-019 |

@@ -9,9 +9,11 @@ use chrono::Utc;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
-use kem::filing::{load_claims, write_index, write_log};
+use kem::filing::load_claims;
 use kem::ledger::LedgerAction;
-use kem::schema::{Claim, KemError, ValidationContext, known_ids_of, validate_claim};
+use kem::schema::{
+    Claim, ClaimStatus, KemError, Track, ValidationContext, known_ids_of, validate_claim,
+};
 use kem::seed::{seed_claims, seed_raw_sources};
 use kem::vetting::{Outcome, VetContext, record_verdict, stage_claim, vet_t1};
 
@@ -22,7 +24,7 @@ struct Args {
 }
 
 fn parse_args() -> Result<Args, String> {
-    const VALUE_FLAGS: [&str; 23] = [
+    const VALUE_FLAGS: [&str; 24] = [
         "root",
         "topic",
         "name",
@@ -46,6 +48,7 @@ fn parse_args() -> Result<Args, String> {
         "rerank-base",
         "hyde-model",
         "hyde-base",
+        "scenario",
     ];
     let mut argv = std::env::args().skip(1);
     let mut root = PathBuf::from("knowledge");
@@ -107,13 +110,15 @@ fn run() -> Result<(), KemError> {
         "eval" => cmd_eval(&root, &args.flags),
         "embed" => cmd_embed(&root, &ledger, &args.flags),
         "console" => cmd_console(&root, &ledger),
+        "package" => cmd_package(&root, &ledger, &args.flags),
+        "benchmark" => cmd_benchmark(&root, &args.flags),
         "sync" => cmd_sync(&root, &ledger),
         "supersede" => cmd_supersede(&root, &ledger, &args.flags),
         "vet2" => cmd_vet2(&root, &ledger, &args.flags),
         "lint" => cmd_lint(&root),
         "doctor" => cmd_doctor(&root, &ledger),
         "status" => cmd_status(&root, &ledger),
-        "review" => cmd_review(&root, &args.flags),
+        "review" => cmd_review(&root, &ledger, &args.flags),
         other => Err(KemError::InvalidInput(format!("unknown command {other:?}"))),
     }
 }
@@ -344,6 +349,80 @@ fn cmd_finalize(root: &Path, ledger: &Path) -> Result<(), KemError> {
         Ok(())
     } else {
         Err(KemError::SchemaViolation(format!("{findings} findings")))
+    }
+}
+
+/// O1: 決策包生成——證據＋選項＋建議＋風險（H1 決策包，M10/M11）。
+fn cmd_package(
+    root: &Path,
+    ledger: &Path,
+    flags: &std::collections::HashMap<String, String>,
+) -> Result<(), KemError> {
+    let claim_id = flag(flags, "claim")?;
+    let claims = load_claims(&root.join("claims"))?;
+    let entries = if ledger.exists() {
+        kem::ledger::read_all(ledger)?
+    } else {
+        Vec::new()
+    };
+    let queue = kem::gov::pending_queue(&root.join(".kem/review-queue.jsonl"))?;
+    let pkg = kem::package::generate(
+        &claims,
+        &entries,
+        &queue,
+        &claim_id,
+        Path::new("."),
+        Utc::now(),
+    )?;
+    if flags.contains_key("stdout") {
+        println!("{}", kem::package::render_markdown(&pkg));
+    }
+    let path = kem::package::write_package(root, &pkg)?;
+    kem::ledger::append(
+        ledger,
+        "kem-package",
+        LedgerAction::Package,
+        &claim_id,
+        serde_json::json!({"package_sha": pkg.package_sha, "path": path.display().to_string()}),
+        Utc::now(),
+    )?;
+    println!(
+        "package: {} written (sha {}…)",
+        path.display(),
+        &pkg.package_sha[..12]
+    );
+    Ok(())
+}
+
+/// O5: 時間到價值量測（M1）——隔離暫存庫跑完整治理切片。
+fn cmd_benchmark(
+    root: &Path,
+    flags: &std::collections::HashMap<String, String>,
+) -> Result<(), KemError> {
+    let scenario = flags
+        .get("scenario")
+        .cloned()
+        .unwrap_or_else(|| "governance".into());
+    let include_vet2 = !flags.contains_key("no-vet2");
+    let report = kem::benchmark::run_governance(root, include_vet2)?;
+    for s in &report.steps {
+        println!(
+            "{:>10}  {:>6} ms  {}",
+            s.step,
+            s.millis,
+            if s.ok { "ok" } else { "DEGRADED" }
+        );
+    }
+    println!(
+        "benchmark [{scenario}]: total {} ms (target {} ms) — within_target={}",
+        report.total_millis,
+        kem::benchmark::TARGET_MILLIS,
+        report.within_target
+    );
+    if report.within_target {
+        Ok(())
+    } else {
+        Err(KemError::InvalidInput("benchmark over target".into()))
     }
 }
 
@@ -964,9 +1043,11 @@ fn cmd_status(root: &Path, ledger: &Path) -> Result<(), KemError> {
     Ok(())
 }
 
-/// P4 M7: record a review disposition (queue stays append-only).
+/// O2/O3: 審查处置——先印決策包（H1 決策包），記錄 package_sha 於帳本；
+/// supersede 处置自動生成繼任者草稿並走 T1 裁決（O3）。
 fn cmd_review(
     root: &Path,
+    ledger: &Path,
     flags: &std::collections::HashMap<String, String>,
 ) -> Result<(), KemError> {
     let claim_id = flag(flags, "claim")?;
@@ -986,12 +1067,85 @@ fn cmd_review(
         .cloned()
         .unwrap_or_else(|| "human".into());
     let note = flags.get("note").cloned().unwrap_or_default();
+
+    // O2：先印決策包（H1 決策包——證據＋選項＋建議＋風險）
+    let claims = load_claims(&root.join("claims"))?;
+    let entries = if ledger.exists() {
+        kem::ledger::read_all(ledger)?
+    } else {
+        Vec::new()
+    };
+    let queue = kem::gov::pending_queue(&root.join(".kem/review-queue.jsonl"))?;
+    let pkg = kem::package::generate(
+        &claims,
+        &entries,
+        &queue,
+        &claim_id,
+        Path::new("."),
+        Utc::now(),
+    )?;
+    println!("{}", kem::package::render_markdown(&pkg));
+
+    // O3：supersede-as-decision——自動生成繼任者草稿＋T1 裁決
+    if disp == kem::gov::Disposition::Supersede {
+        let mut successor = claims
+            .iter()
+            .find(|c| c.id == claim_id)
+            .cloned()
+            .ok_or_else(|| KemError::NotFound(claim_id.clone()))?;
+        successor.id = String::new(); // 下方以 next_id 補號
+        successor.track = Track::A;
+        successor.title = format!("{}（修訂 v2）", successor.title);
+        if !note.is_empty() {
+            successor.body = format!("{}\n\n[修訂依據] {}", successor.body, note);
+        }
+        successor.status = ClaimStatus::Published;
+        successor.superseded_by = None;
+        let existing = load_claims(&root.join("claims"))?;
+        successor.id = next_id(&existing, &known_ids_of(existing.iter()))?;
+        let mut all_claims = claims.clone();
+        match kem::evolve::supersede(
+            root,
+            ledger,
+            &mut all_claims,
+            successor,
+            &claim_id,
+            Utc::now(),
+        ) {
+            Ok(()) => println!("supersede: 繼任者已歸檔（Track A）"),
+            Err(e) => {
+                append_jsonl(
+                    &root.join(".kem/review-queue.jsonl"),
+                    &serde_json::json!({
+                        "claim_id": claim_id, "verdict": "supersede-rejected",
+                        "reasons": [format!("{e}")], "at": Utc::now().to_rfc3339()
+                    }),
+                )?;
+                eprintln!("supersede rejected: {e}");
+            }
+        }
+    }
+
+    // O2：处置記錄 package_sha（帳本＋佇列雙重歸因）
     kem::gov::record_disposition(
         &root.join(".kem/review-queue.jsonl"),
         &claim_id,
         disp,
         &reviewer,
         &note,
+        &pkg.package_sha,
+        Utc::now(),
+    )?;
+    kem::ledger::append(
+        ledger,
+        "kem-review",
+        LedgerAction::Review,
+        &claim_id,
+        serde_json::json!({
+            "disposition": format!("{disp:?}").to_lowercase(),
+            "package_sha": pkg.package_sha,
+            "reviewer": reviewer
+        }),
         Utc::now(),
     )?;
     println!("review recorded: {claim_id} {disp:?} by {reviewer}");

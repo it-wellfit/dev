@@ -98,3 +98,11 @@
   - Test battery GREEN: platform 140/0 (1 filtered=stress_10000 known LIMIT), kem 58/0, flaps_core 42/0, flaps_bridge 7/0; root fmt+clippy clean; shell clippy -D warnings exit 0.
   - P1 backlog remains (documented, untouched): G4 nested src-tauri/src-tauri dedupe (archive-first), G5 frontendDist cleanup, G7 single-instance, G8 port policy, G9 updater/signing, G10 deep links, G13 release profile, G15 WCAG 2.2 audit.
 - Living Ledger 設計語言落地（2026-11-17）：docs/design/LIVING_LEDGER_DESIGN_LANGUAGE.md（三方向探索：Ledger Classic／Instrument Dark／Living Ledger 採用；色彩 WCAG 實算全 AA；字體三系；間距階；簽名元件規格）；docs/design/living-ledger.css 單一來源（include_str! 嵌入 dashboard.rs＋console.rs，SSOT 護欄取代舊 token 啟發式）；dashboard 帳本段升級為時間軸（ul.timeline＋seq 徽章 12 條實測）；71 tests 綠（含 SSOT 相等護欄）、clippy/fmt 乾淨、console 44 頁 script=0、console.css 與 living-ledger.css 位元組一致。
+- Phase O 決策治理縱切片 COMPLETE (2026-11-18):
+  - O1 kem package --claim ID: 決策包生成（證據逐字驗證＋五模型裁決摘要＋四選項資料驅動依據＋建議優先序＋風險登記＋sha 歸因）→ knowledge/.kem/packages/<id>.md；live: claim-001 sha 0afc8893efbf
+  - O2 review 整合: 先印決策包→处置記錄 package_sha（佇列＋帳本雙歸因）
+  - O3 supersede-as-decision: disposition=supersede 自動生成 Track A 繼任者→T1 裁決→歸檔或拒絕入隊
+  - O4 dashboard 治理面板: 最新決策包（claim＋sha）＋修正雙重審查佇列標題缺陷＋補 id=gov 錨點
+  - O5 kem benchmark --scenario governance: LIVE 7 步驟全 ok，總 20,352 ms（目標 600,000 ms，within_target=true）；vet2 五模型 20,307 ms 實際執行
+  - O6 金標 5 情境（governance_golden.rs）6/6 綠：happy path／捏造拒絕／批次內重複／supersede 生命週期／package+defer 閉環＋總時 <10min
+  - 教訓：測試資料引證必須與檔案內容逐字一致（T1 fail-closed 三度攔截測試自身的捏造——機制驗證）；views.rs 上移（finalize_views 函式庫化）；LedgerAction::Package variant

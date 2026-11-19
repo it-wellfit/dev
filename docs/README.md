@@ -212,3 +212,9 @@
 | 文件 | 位置 | 說明 |
 |---|---|---|
 | `README.md`（工作區入口） | 根目錄（4,693 B，2026-11-11） | FlapsErp / Wellfit 整合工作區之入口說明；屬**工作區入口文件**，非 `docs/` 索引文件，故不列入本索引之文件分類（整合計畫 II-3 裁定：登記為工作區入口）。 |
+
+## 工具鏈評估方法論（Toolchain Evaluation Methodology）
+
+- [standards/TOOLCHAIN_METHODOLOGY.md](standards/TOOLCHAIN_METHODOLOGY.md) — 五大模組 + 模板 + 快速啟動清單（v1.0 Draft）
+- [	oolchain/](toolchain/) — 評估產出物目錄（requirements/scoring/composition/validation/debt-register/risks）
+- ADR-0015 — ERP 效能診斷工具鏈採用 Sysinternals Suite（Satellite 層）
